@@ -7,6 +7,16 @@ namespace ImageCare.UI.Avalonia.Collections;
 
 public class SortedObservableCollection<T> : ObservableCollection<T>
 {
+    public SortedObservableCollection() { }
+
+    public SortedObservableCollection(IEnumerable<T> collection)
+    {
+        foreach (var item in collection)
+        {
+            InsertItem(item);
+        }
+    }
+
     public void InsertItem(T item, IComparer<T>? comparer = null)
     {
         var indexToInsert = BinarySearch(Items, 0, Count, item, comparer);

@@ -96,7 +96,7 @@ public sealed class LocalFileSystemFolderService : IFolderService
                    });
     }
 
-    private async Task<DirectoryModel> GetCustomDirectoriesLevelAsync(DirectoryModel directoryModel, bool preview = false, string searchPattern = "*")
+    private async Task<DirectoryModel> GetCustomDirectoriesLevelAsync(DirectoryModel directoryModel, bool preview = false)
     {
         return await Task.Run(
                    () =>

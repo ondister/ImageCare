@@ -6,10 +6,11 @@ using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 using ImageCare.Core.Services;
+using ImageCare.UI.Avalonia.Collections;
 
 namespace ImageCare.UI.Avalonia.ViewModels.Domain;
 
-internal abstract class FileSystemItemViewModel : ViewModelBase
+internal abstract class FileSystemItemViewModel : ViewModelBase,IComparable<FileSystemItemViewModel>
 {
     protected readonly IFolderService FolderService;
     private bool _isExpanded;
@@ -19,7 +20,7 @@ internal abstract class FileSystemItemViewModel : ViewModelBase
         FolderService = folderService;
         Name = name;
         Path = path;
-        ChildFileSystemItems = new ObservableCollection<FileSystemItemViewModel>(children);
+        ChildFileSystemItems = new SortedObservableCollection<FileSystemItemViewModel>(children);
     }
 
     [field: ObservableProperty]
@@ -28,7 +29,7 @@ internal abstract class FileSystemItemViewModel : ViewModelBase
     [field: ObservableProperty]
     public string Path { get; }
 
-    public ObservableCollection<FileSystemItemViewModel> ChildFileSystemItems { get; }
+    public SortedObservableCollection<FileSystemItemViewModel> ChildFileSystemItems { get; }
 
     public bool IsExpanded
     {
@@ -60,7 +61,7 @@ internal abstract class FileSystemItemViewModel : ViewModelBase
                 {
                     var fileSystemItemViewModel = factoryFunc.Invoke(directoryModel.Name, directoryModel.Path, FoldersViewModel.GetFileSystemItemChildren(directoryModel.DirectoryModels, directoryModel.FileModels, FolderService), FolderService);
 
-                    ChildFileSystemItems.Add(fileSystemItemViewModel);
+                    ChildFileSystemItems.InsertItem(fileSystemItemViewModel);
                 }
             }
 
@@ -69,7 +70,7 @@ internal abstract class FileSystemItemViewModel : ViewModelBase
                 if (FoldersViewModel.FileSystemItemsFactories.TryGetValue(currentDirectoryModel.GetType(), out var factoryFunc))
                 {
                     var fileSystemItemViewModel = factoryFunc.Invoke(fileModel.Name, fileModel.FullName, FoldersViewModel.GetFileSystemItemChildren([], [], FolderService), FolderService);
-                    ChildFileSystemItems.Add(fileSystemItemViewModel);
+                    ChildFileSystemItems.InsertItem(fileSystemItemViewModel);
                 }
             }
         }
@@ -78,5 +79,21 @@ internal abstract class FileSystemItemViewModel : ViewModelBase
 
         }
       
+    }
+
+    /// <inheritdoc />
+    public int CompareTo(FileSystemItemViewModel? other)
+    {
+        if (ReferenceEquals(this, other))
+        {
+            return 0;
+        }
+
+        if (ReferenceEquals(null, other))
+        {
+            return 1;
+        }
+
+        return string.Compare(Path, other.Path, StringComparison.Ordinal);
     }
 }

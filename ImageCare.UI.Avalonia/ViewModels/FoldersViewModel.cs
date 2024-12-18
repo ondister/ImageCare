@@ -1,16 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Input;
 
-using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 
 using ImageCare.Core.Domain;
 using ImageCare.Core.Services;
+using ImageCare.UI.Avalonia.Collections;
 using ImageCare.UI.Avalonia.Messages;
 using ImageCare.UI.Avalonia.ViewModels.Domain;
 
@@ -18,7 +16,7 @@ using Prism.Regions;
 
 namespace ImageCare.UI.Avalonia.ViewModels;
 
-internal class FoldersViewModel:ViewModelBase
+internal class FoldersViewModel : ViewModelBase
 {
     public static readonly Dictionary<Type, Func<string, string, IEnumerable<FileSystemItemViewModel>, IFolderService, FileSystemItemViewModel>> FileSystemItemsFactories = new()
     {
@@ -38,10 +36,10 @@ internal class FoldersViewModel:ViewModelBase
         _folderService = folderService;
         OnViewLoadedCommand = new AsyncRelayCommand(OnViewLoaded);
 
-        FileSystemItemViewModels = new ObservableCollection<FileSystemItemViewModel>();
+        FileSystemItemViewModels = new SortedObservableCollection<FileSystemItemViewModel>();
     }
 
-    public ObservableCollection<FileSystemItemViewModel> FileSystemItemViewModels { get; }
+    public SortedObservableCollection<FileSystemItemViewModel> FileSystemItemViewModels { get; }
 
     public ICommand OnViewLoadedCommand { get; }
 
@@ -54,7 +52,7 @@ internal class FoldersViewModel:ViewModelBase
             {
                 WeakReferenceMessenger.Default.Send(new FolderSelectedMessage(new DirectoryModel(_selectedFileSystemItem.Name, _selectedFileSystemItem.Path), Mode));
             }
-        } 
+        }
     }
 
     public string Mode { get; private set; }
@@ -65,20 +63,8 @@ internal class FoldersViewModel:ViewModelBase
         Mode = (string)navigationContext.Parameters["mode"];
     }
 
-    private async Task OnViewLoaded()
-    {
-        var root = await _folderService.GetDirectoryModelAsync();
-
-        if (FileSystemItemsFactories.TryGetValue(root.GetType(), out var factoryFunc))
-        {
-            var rootViewModel = factoryFunc.Invoke(root.Name, root.Path, GetFileSystemItemChildren(root.DirectoryModels, root.FileModels, _folderService), _folderService);
-
-            FileSystemItemViewModels.Add(rootViewModel);
-        }
-    }
-
     internal static IEnumerable<FileSystemItemViewModel> GetFileSystemItemChildren(IEnumerable<DirectoryModel> directoryModels,
-                                                                           IEnumerable<FileModel> fileModels,IFolderService folderService)
+                                                                                   IEnumerable<FileModel> fileModels, IFolderService folderService)
     {
         var children = new List<FileSystemItemViewModel>();
 
@@ -93,17 +79,18 @@ internal class FoldersViewModel:ViewModelBase
             children.Add(directoryViewModel);
         }
 
-        foreach (var fileModel in fileModels)
-        {
-            if (!FileSystemItemsFactories.TryGetValue(fileModel.GetType(), out var factoryFunc))
-            {
-                continue;
-            }
-
-            var fileViewModel = factoryFunc.Invoke(fileModel.Name, fileModel.FullName, GetFileSystemItemChildren([], [], folderService), folderService);
-            children.Add(fileViewModel);
-        }
-
         return children;
+    }
+
+    private async Task OnViewLoaded()
+    {
+        var root = await _folderService.GetDirectoryModelAsync();
+
+        if (FileSystemItemsFactories.TryGetValue(root.GetType(), out var factoryFunc))
+        {
+            var rootViewModel = factoryFunc.Invoke(root.Name, root.Path, GetFileSystemItemChildren(root.DirectoryModels, root.FileModels, _folderService), _folderService);
+
+            FileSystemItemViewModels.InsertItem(rootViewModel);
+        }
     }
 }
