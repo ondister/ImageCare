@@ -1,0 +1,13 @@
+<prism:PrismApplication xmlns="https://github.com/avaloniaui"
+                        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                        x:Class="ImageCare.UI.Avalonia.App"
+                        xmlns:prism="http://prismlibrary.com/"
+                        xmlns:themes="clr-namespace:Material.Styles.Themes;assembly=Material.Styles">
+             <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
+
+
+    <prism:PrismApplication.Styles>
+        <StyleInclude Source="Styles/GridSplitter.axaml"/>
+        <themes:MaterialTheme BaseTheme="Dark" PrimaryColor="LightBlue" SecondaryColor="Blue" />
+    </prism:PrismApplication.Styles>
+</prism:PrismApplication>

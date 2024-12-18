@@ -1,0 +1,79 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:prism="http://prismlibrary.com/"
+             xmlns:viewModels="clr-namespace:ImageCare.UI.Avalonia.ViewModels"
+             xmlns:domain="clr-namespace:ImageCare.UI.Avalonia.ViewModels.Domain"
+             xmlns:i="clr-namespace:Avalonia.Xaml.Interactivity;assembly=Avalonia.Xaml.Interactivity"
+             xmlns:idd="clr-namespace:Avalonia.Xaml.Interactions.DragAndDrop;assembly=Avalonia.Xaml.Interactions.DragAndDrop"
+             prism:ViewModelLocator.AutoWireViewModel="True"
+             x:Class="ImageCare.UI.Avalonia.Views.PreviewImageView"
+             x:DataType="viewModels:PreviewImageViewModel">
+
+    <Grid Margin="2">
+
+        <ListBox ItemsSource="{Binding ImagePreviews}"
+                 SelectedItem="{Binding SelectedPreview, Mode=TwoWay}"
+                 ScrollViewer.HorizontalScrollBarVisibility="Visible"
+                 SelectionMode="Single"
+                 DragDrop.AllowDrop="True">
+
+            <!--Behavior for dropping image from preview list-->
+            <i:Interaction.Behaviors>
+                <i:BehaviorCollection>
+                    <idd:ContextDropBehavior Handler="{Binding ImagePreviewDropHandler}" />
+                </i:BehaviorCollection>
+            </i:Interaction.Behaviors>
+
+            <ListBox.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <StackPanel Orientation="Horizontal" />
+                </ItemsPanelTemplate>
+            </ListBox.ItemsPanel>
+
+            <ListBox.Styles>
+                <Style Selector="Grid.class1">
+                    <Setter Property="Background" Value="OrangeRed" />
+                </Style>
+                <Style Selector="Grid.class2">
+                    <Setter Property="Background" Value="Transparent" />
+                </Style>
+            </ListBox.Styles>
+
+            <ListBox.ItemTemplate>
+                <DataTemplate DataType="domain:ImagePreviewViewModel">
+                    <Grid RowDefinitions="*,Auto"
+                          Classes.class1="{Binding Selected }"
+                          Classes.class2="{Binding !Selected }">
+                        <Grid Grid.Row="0"
+                              Grid.ColumnDefinitions="*,Auto"
+                              Grid.RowDefinitions="Auto,*">
+
+                            <Image Grid.Column="0"
+                                   Grid.Row="0"
+                                   Grid.RowSpan="2"
+                                   Grid.ColumnSpan="2"
+                                   Source="{Binding PreviewBitmap}" MaxWidth="300" />
+                            <Button Grid.Row="0"
+                                    Grid.Column="1"
+                                    Content="X"
+                                    Command="{Binding RemoveImagePreviewCommand}" />
+                        </Grid>
+                        <TextBlock Grid.Row="1"
+                                   Text="{Binding Title}" />
+
+                        <!--Behavior for dragging image-->
+                        <i:Interaction.Behaviors>
+                            <i:BehaviorCollection>
+                                <idd:ContextDragBehavior />
+                            </i:BehaviorCollection>
+                        </i:Interaction.Behaviors>
+                    </Grid>
+
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+
+    </Grid>
+
+
+</UserControl>

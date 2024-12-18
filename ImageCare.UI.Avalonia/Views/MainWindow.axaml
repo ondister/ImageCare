@@ -1,0 +1,63 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:ImageCare.UI.Avalonia.ViewModels"
+        xmlns:prism="http://prismlibrary.com/"
+        xmlns:ui="clr-namespace:ImageCare.UI.Avalonia"
+        x:Class="ImageCare.UI.Avalonia.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Icon="/Assets/avalonia-logo.ico"
+        Title="ImageCare.UI.Avalonia"
+        MinHeight="600"
+        MinWidth="800"
+        WindowState="Maximized"
+        prism:ViewModelLocator.AutoWireViewModel="True">
+
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" MinHeight="200" />
+        </Grid.RowDefinitions>
+
+        <Grid Grid.Row="0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" MinWidth="300" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" MinWidth="300" />
+            </Grid.ColumnDefinitions>
+
+            <ContentControl Grid.Column="0"
+                            prism:RegionManager.RegionName="{x:Static ui:RegionNames.SourceFoldersRegion}" />
+            <ContentControl Grid.Column="1" prism:RegionManager.RegionName="{x:Static ui:RegionNames.MainImageViewRegion}" />
+            <GridSplitter Grid.Column="1"
+                          HorizontalAlignment="Left"
+                          VerticalAlignment="Stretch" />
+            <ContentControl Grid.Column="2"
+                            prism:RegionManager.RegionName="{x:Static ui:RegionNames.TargetFoldersRegion}" />
+            <GridSplitter Grid.Column="2"
+                          HorizontalAlignment="Left"
+                          VerticalAlignment="Stretch" />
+
+        </Grid>
+
+        <GridSplitter Grid.Row="1"
+                      HorizontalAlignment="Stretch"
+                      VerticalAlignment="Top" />
+        <Grid Grid.Row="1" ColumnDefinitions="*,*">
+            <ContentControl Grid.Column="0" prism:RegionManager.RegionName="{x:Static ui:RegionNames.SourcePreviewImageRegion}" />
+            <ContentControl Grid.Column="1" prism:RegionManager.RegionName="{x:Static ui:RegionNames.TargetPreviewImageRegion}" />
+            <GridSplitter Grid.Column="1"
+                          HorizontalAlignment="Left"
+                          VerticalAlignment="Stretch" />
+        </Grid>
+       
+
+    </Grid>
+    <!--Triggers for view loading and unloading. They use for subscribe to the production state changing-->
+    <Interaction.Behaviors>
+        <EventTriggerBehavior EventName="Loaded">
+            <InvokeCommandAction Command="{Binding OnViewLoadedCommand}" />
+        </EventTriggerBehavior>
+    </Interaction.Behaviors>
+
+</Window>

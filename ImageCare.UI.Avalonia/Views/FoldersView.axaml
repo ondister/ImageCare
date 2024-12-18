@@ -1,0 +1,50 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:prism="http://prismlibrary.com/"
+             xmlns:viewModels="clr-namespace:ImageCare.UI.Avalonia.ViewModels"
+             xmlns:domain="clr-namespace:ImageCare.UI.Avalonia.ViewModels.Domain"
+             x:Class="ImageCare.UI.Avalonia.Views.FoldersView"
+             prism:ViewModelLocator.AutoWireViewModel="True"
+             x:DataType="viewModels:FoldersViewModel">
+    <Grid Margin="2">
+        <TreeView  ItemsSource="{Binding FileSystemItemViewModels}"
+                   SelectedItem="{Binding SelectedFileSystemItem}"
+                  SelectionMode="Single">
+
+            <TreeView.Styles>
+                <Style Selector="TreeViewItem" x:DataType="domain:FileSystemItemViewModel">
+                    <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}"/>
+                </Style>
+            </TreeView.Styles>
+
+            <TreeView.DataTemplates>
+                <TreeDataTemplate DataType="domain:DeviceViewModel" ItemsSource="{Binding ChildFileSystemItems}" >
+                    <TextBlock Foreground="Red" Text="{Binding Name}" />
+                </TreeDataTemplate>
+                <TreeDataTemplate DataType="domain:FixedDriveViewModel" ItemsSource="{Binding ChildFileSystemItems}">
+                    <TextBlock Foreground="Green" Text="{Binding Name}" />
+                </TreeDataTemplate>
+                <TreeDataTemplate DataType="domain:NetworkDriveViewModel" ItemsSource="{Binding ChildFileSystemItems}">
+                    <TextBlock Foreground="Blue" Text="{Binding Name}" />
+                </TreeDataTemplate>
+                <TreeDataTemplate DataType="domain:RemovableDriveViewModel" ItemsSource="{Binding ChildFileSystemItems}">
+                    <TextBlock Foreground="YellowGreen" Text="{Binding Name}" />
+                </TreeDataTemplate>
+                <TreeDataTemplate DataType="domain:DirectoryViewModel" ItemsSource="{Binding ChildFileSystemItems}">
+                    <TextBlock Foreground="SaddleBrown" Text="{Binding Name}" />
+                </TreeDataTemplate>
+                <DataTemplate DataType="domain:FileViewModel">
+                    <TextBlock Text="{Binding Name}" />
+                </DataTemplate>
+            </TreeView.DataTemplates>
+
+        </TreeView>
+    </Grid>
+
+    <!--Triggers for view loading and unloading. They use for subscribe to the production state changing-->
+    <Interaction.Behaviors>
+        <EventTriggerBehavior EventName="Loaded">
+            <InvokeCommandAction Command="{Binding OnViewLoadedCommand}" />
+        </EventTriggerBehavior>
+    </Interaction.Behaviors>
+</UserControl>
