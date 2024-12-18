@@ -8,6 +8,7 @@ using CommunityToolkit.Mvvm.Messaging;
 
 using ImageCare.Core.Domain;
 using ImageCare.Core.Services;
+using ImageCare.Core.Services.ConfigurationService;
 using ImageCare.UI.Avalonia.Collections;
 using ImageCare.UI.Avalonia.Messages;
 using ImageCare.UI.Avalonia.ViewModels.Domain;
@@ -29,11 +30,14 @@ internal class FoldersViewModel : ViewModelBase
     };
 
     private readonly IFolderService _folderService;
+    private readonly IConfigurationService _configurationService;
     private DirectoryViewModel? _selectedFileSystemItem;
 
-    public FoldersViewModel(IFolderService folderService)
+    public FoldersViewModel(IFolderService folderService, 
+                            IConfigurationService configurationService)
     {
         _folderService = folderService;
+        _configurationService = configurationService;
         OnViewLoadedCommand = new AsyncRelayCommand(OnViewLoaded);
 
         FileSystemItemViewModels = new SortedObservableCollection<FileSystemItemViewModel>();
