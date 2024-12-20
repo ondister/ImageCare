@@ -1,0 +1,14 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mvvm="http://prismlibrary.com/"
+             xmlns:viewModels="clr-namespace:ImageCare.UI.Avalonia.ViewModels"
+             x:Class="ImageCare.UI.Avalonia.Views.BottomBarView"
+             mvvm:ViewModelLocator.AutoWireViewModel="True"
+             x:DataType="viewModels:BottomBarViewModel">
+
+    <Grid Margin="2"
+          ColumnDefinitions="Auto,Auto,8">
+        <Button Content="Log"
+                Command="{Binding  OpenLogWindowCommand}"/>
+    </Grid>
+</UserControl>

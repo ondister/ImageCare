@@ -1,16 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Threading.Tasks;
 
-using CommunityToolkit.Mvvm.ComponentModel;
-
 using ImageCare.Core.Services;
-using ImageCare.UI.Avalonia.Collections;
+using ImageCare.Mvvm;
+using ImageCare.Mvvm.Collections;
 
 namespace ImageCare.UI.Avalonia.ViewModels.Domain;
 
-internal abstract class FileSystemItemViewModel : ViewModelBase,IComparable<FileSystemItemViewModel>
+internal abstract class FileSystemItemViewModel : ViewModelBase, IComparable<FileSystemItemViewModel>
 {
     protected readonly IFolderService FolderService;
     private bool _isExpanded;
@@ -23,10 +21,8 @@ internal abstract class FileSystemItemViewModel : ViewModelBase,IComparable<File
         ChildFileSystemItems = new SortedObservableCollection<FileSystemItemViewModel>(children);
     }
 
-    [field: ObservableProperty]
-    public string Name { get; set; }
+    public string Name { get; }
 
-    [field: ObservableProperty]
     public string Path { get; }
 
     public SortedObservableCollection<FileSystemItemViewModel> ChildFileSystemItems { get; }
@@ -47,6 +43,22 @@ internal abstract class FileSystemItemViewModel : ViewModelBase,IComparable<File
                 SeedFileSystemItemsAsync();
             }
         }
+    }
+
+    /// <inheritdoc />
+    public int CompareTo(FileSystemItemViewModel? other)
+    {
+        if (ReferenceEquals(this, other))
+        {
+            return 0;
+        }
+
+        if (ReferenceEquals(null, other))
+        {
+            return 1;
+        }
+
+        return string.Compare(Path, other.Path, StringComparison.Ordinal);
     }
 
     private async Task SeedFileSystemItemsAsync()
@@ -74,26 +86,6 @@ internal abstract class FileSystemItemViewModel : ViewModelBase,IComparable<File
                 }
             }
         }
-        catch (Exception exception)
-        {
-
-        }
-      
-    }
-
-    /// <inheritdoc />
-    public int CompareTo(FileSystemItemViewModel? other)
-    {
-        if (ReferenceEquals(this, other))
-        {
-            return 0;
-        }
-
-        if (ReferenceEquals(null, other))
-        {
-            return 1;
-        }
-
-        return string.Compare(Path, other.Path, StringComparison.Ordinal);
+        catch (Exception exception) { }
     }
 }

@@ -10,13 +10,13 @@ public sealed class LocalFileSystemWatcherService : IFileSystemWatcherService, I
     private readonly FileSystemWatcher _filesWatcher;
     private readonly FileSystemWatcher _directoriesWatcher;
 
-    private readonly Subject<FileModel> _fileCreatedSubject = new();
-    private readonly Subject<FileModel> _fileDeletedSubject = new();
-    private readonly Subject<FileRenamedModel> _fileRenamedSubject = new();
+    private readonly Subject<FileModel> _fileCreatedSubject;
+    private readonly Subject<FileModel> _fileDeletedSubject;
+    private readonly Subject<FileRenamedModel> _fileRenamedSubject;
 
-    private readonly Subject<DirectoryModel> _directoryCreatedSubject = new();
-    private readonly Subject<DirectoryModel> _directoryDeletedSubject = new();
-    private readonly Subject<DirectoryRenamedModel> _directoryRenamedSubject = new();
+    private readonly Subject<DirectoryModel> _directoryCreatedSubject;
+    private readonly Subject<DirectoryModel> _directoryDeletedSubject;
+    private readonly Subject<DirectoryRenamedModel> _directoryRenamedSubject;
 
     public LocalFileSystemWatcherService()
     {

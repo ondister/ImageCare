@@ -5,19 +5,20 @@ using System.Reactive.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
-using Avalonia.Threading;
-
 using CommunityToolkit.Mvvm.Messaging;
 
 using ImageCare.Core.Domain;
 using ImageCare.Core.Services;
 using ImageCare.Core.Services.FileOperationsService;
+using ImageCare.Mvvm;
+using ImageCare.Mvvm.Collections;
 using ImageCare.UI.Avalonia.Behaviors;
-using ImageCare.UI.Avalonia.Collections;
 using ImageCare.UI.Avalonia.Messages;
 using ImageCare.UI.Avalonia.ViewModels.Domain;
 
 using Prism.Regions;
+
+using Serilog;
 
 namespace ImageCare.UI.Avalonia.ViewModels;
 
@@ -27,6 +28,7 @@ internal class PreviewImageViewModel : ViewModelBase, IRecipient<FolderSelectedM
     private readonly IFolderService _folderService;
     private readonly IFileSystemWatcherService _fileSystemWatcherService;
     private readonly IFileOperationsService _fileOperationsService;
+    private readonly ILogger _logger;
     private readonly SynchronizationContext _synchronizationContext;
     private ImagePreviewViewModel? _selectedPreview;
     private CompositeDisposable fileSystemWatcherCompositeDisposable;
@@ -35,6 +37,7 @@ internal class PreviewImageViewModel : ViewModelBase, IRecipient<FolderSelectedM
                                  IFolderService folderService,
                                  IFileSystemWatcherService fileSystemWatcherService,
                                  IFileOperationsService fileOperationsService,
+                                 ILogger logger,
                                  ImagePreviewDropHandler imagePreviewDropHandler,
                                  SynchronizationContext synchronizationContext)
     {
@@ -42,6 +45,7 @@ internal class PreviewImageViewModel : ViewModelBase, IRecipient<FolderSelectedM
         _folderService = folderService;
         _fileSystemWatcherService = fileSystemWatcherService;
         _fileOperationsService = fileOperationsService;
+        _logger = logger;
         _synchronizationContext = synchronizationContext;
 
         WeakReferenceMessenger.Default.Register<FolderSelectedMessage>(this);
@@ -138,19 +142,40 @@ internal class PreviewImageViewModel : ViewModelBase, IRecipient<FolderSelectedM
 
     private void OnFileCreated(FileModel fileModel)
     {
-        CreateImagePreviewFromPath(fileModel.FullName);
+        try
+        {
+            CreateImagePreviewFromPath(fileModel.FullName);
+        }
+        catch (Exception exception)
+        {
+            _logger.Error(exception, "Unexpected Error");
+        }
     }
 
     private void OnFileDeleted(FileModel fileModel)
     {
-        RemoveImagePreviewByPath(fileModel.FullName);
+        try
+        {
+            RemoveImagePreviewByPath(fileModel.FullName);
+        }
+        catch (Exception exception)
+        {
+            _logger.Error(exception, "Unexpected Error");
+        }
     }
 
     private void OnFileRenamed(FileRenamedModel model)
     {
-        RemoveImagePreviewByPath(model.OldFileModel.FullName);
+        try
+        {
+            RemoveImagePreviewByPath(model.OldFileModel.FullName);
 
-        CreateImagePreviewFromPath(model.NewFileModel.FullName);
+            CreateImagePreviewFromPath(model.NewFileModel.FullName);
+        }
+        catch (Exception exception)
+        {
+            _logger.Error(exception, "Unexpected Error");
+        }
     }
 
     private void CreateImagePreviewFromPath(string filePath)
@@ -178,7 +203,7 @@ internal class PreviewImageViewModel : ViewModelBase, IRecipient<FolderSelectedM
 
             if (ImagePreviews.Count > indexToRemove)
             {
-                _synchronizationContext.Post(d => { SelectedPreview = ImagePreviews[indexToRemove]; },null);
+                _synchronizationContext.Post(d => { SelectedPreview = ImagePreviews[indexToRemove]; }, null);
             }
 
             if (ImagePreviews.Count == 0)

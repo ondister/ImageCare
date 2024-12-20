@@ -1,22 +1,37 @@
-﻿using Avalonia;
-using System;
+﻿using System;
+using System.Threading.Tasks;
 
-namespace ImageCare.UI.Avalonia
+using Avalonia;
+
+using Serilog;
+
+namespace ImageCare.UI.Avalonia;
+
+internal sealed class Program
 {
-    internal sealed class Program
+    [STAThread]
+    public static async Task Main(string[] args)
     {
-        // Initialization code. Don't use any Avalonia, third-party APIs or any
-        // SynchronizationContext-reliant code before AppMain is called: things aren't initialized
-        // yet and stuff might break.
-        [STAThread]
-        public static void Main(string[] args) => BuildAvaloniaApp()
-            .StartWithClassicDesktopLifetime(args);
+        try
+        {
+            TaskScheduler.UnobservedTaskException += TaskScheduler_UnobservedTaskException;
+            AppBuilder.Configure<App>()
+                      .UsePlatformDetect()
+                      .StartWithClassicDesktopLifetime(args);
+        }
+        catch (Exception exception)
+        {
+            var message = "Fatal Exception in the Application.\nApplication will be terminated.";
+            Log.Fatal(exception, message);
+        }
+        finally
+        {
+            await Log.CloseAndFlushAsync();
+        }
+    }
 
-        // Avalonia configuration, don't remove; also used by visual designer.
-        public static AppBuilder BuildAvaloniaApp()
-            => AppBuilder.Configure<App>()
-                .UsePlatformDetect()
-                .WithInterFont()
-                .LogToTrace();
+    private static void TaskScheduler_UnobservedTaskException(object? sender, UnobservedTaskExceptionEventArgs e)
+    {
+        Log.Error(e.Exception, "Unhandled task exception.");
     }
 }

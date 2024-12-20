@@ -27,7 +27,7 @@ public sealed class FileSystemImageService : IFileSystemImageService
 
     public async Task<Stream> GetImageStreamAsync(ImagePreview imagePreview)
     {
-       return await _fileOperationsRetryPolicy.ExecuteAsync(async () => await GetImageStreamInternalAsync(imagePreview));
+        return await _fileOperationsRetryPolicy.ExecuteAsync(async () => await GetImageStreamInternalAsync(imagePreview));
     }
 
     /// <inheritdoc />

@@ -10,6 +10,7 @@ using ImageCare.Core.Domain;
 using ImageCare.Core.Domain.MediaFormats;
 using ImageCare.Core.Services;
 using ImageCare.Core.Services.FileOperationsService;
+using ImageCare.Mvvm;
 
 namespace ImageCare.UI.Avalonia.ViewModels.Domain;
 
@@ -19,8 +20,7 @@ internal class ImagePreviewViewModel : ViewModelBase, IComparable<ImagePreviewVi
     private readonly IFileSystemImageService _imageService;
     private readonly IFileOperationsService _fileOperationsService;
     private Bitmap? _previewBitmap;
-    private string? _title;
-    private bool _selected = false;
+    private bool _selected;
 
     public ImagePreviewViewModel(ImagePreview imagePreview, 
                                  IFileSystemImageService imageService,
@@ -76,7 +76,7 @@ internal class ImagePreviewViewModel : ViewModelBase, IComparable<ImagePreviewVi
         }
         catch (Exception exception)
         {
-
+            throw;
         }
     }
 

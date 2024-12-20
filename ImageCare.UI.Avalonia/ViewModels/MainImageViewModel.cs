@@ -7,7 +7,10 @@ using CommunityToolkit.Mvvm.Messaging;
 
 using ImageCare.Core.Domain;
 using ImageCare.Core.Services;
+using ImageCare.Mvvm;
 using ImageCare.UI.Avalonia.Messages;
+
+using Serilog;
 
 namespace ImageCare.UI.Avalonia.ViewModels;
 
@@ -16,7 +19,7 @@ internal class MainImageViewModel : ViewModelBase, IRecipient<ImagePreviewSelect
     private readonly IFileSystemImageService _imageService;
     private Bitmap? _mainBitmap;
 
-    public MainImageViewModel(IFileSystemImageService imageService)
+    public MainImageViewModel(IFileSystemImageService imageService, ILogger logger)
     {
         _imageService = imageService;
 
@@ -56,6 +59,9 @@ internal class MainImageViewModel : ViewModelBase, IRecipient<ImagePreviewSelect
                 MainBitmap = new Bitmap(imageStream);
             }
         }
-        catch (Exception exception) { }
+        catch (Exception exception)
+        {
+            throw exception;
+        }
     }
 }

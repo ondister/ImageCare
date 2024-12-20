@@ -1,0 +1,68 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:viewModels="clr-namespace:ImageCare.Modules.Logging.ViewModels"
+             x:Class="ImageCare.Modules.Logging.Views.LogViewerView"
+             x:DataType="viewModels:LogViewerViewModel">
+
+    <Grid Margin="2" RowDefinitions="Auto, *">
+
+        <Grid Grid.Row="0" 
+              Margin="0,0,0,2"
+              ColumnDefinitions="Auto,Auto,*">
+
+            <ToggleButton Grid.Column="0"
+                          Content="Errors"
+                          IsChecked="{Binding ShowErrors}"/>
+
+<ToggleButton Grid.Column="1"
+              Content="Warnings"
+              IsChecked="{Binding ShowWarnings}"/>
+
+            <Button Grid.Column="2" Command="{Binding FilterErrors}">Errors</Button>
+        </Grid>
+
+        <Grid Grid.Row="1">
+            <ListBox ItemsSource="{Binding MessageViewModels}"
+                     Grid.IsSharedSizeScope="True">
+                <ListBox.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <VirtualizingStackPanel />
+                    </ItemsPanelTemplate>
+                </ListBox.ItemsPanel>
+                <ListBox.DataTemplates>
+                    <DataTemplate DataType="viewModels:ErrorLogMessageViewModel">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition SharedSizeGroup="type" />
+                                <ColumnDefinition SharedSizeGroup="dateTime" />
+                                <ColumnDefinition SharedSizeGroup="message" />
+                                <ColumnDefinition SharedSizeGroup="exception" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Error" />
+                            <TextBlock Grid.Column="1" Text="{Binding Timestamp}" />
+                            <TextBlock Grid.Column="2" Text="{Binding Message}" />
+                            <TextBlock Grid.Column="3" Text="{Binding ExceptionMessage}" />
+                        </Grid>
+                    </DataTemplate>
+
+                    <DataTemplate DataType="viewModels:WarningLogMessageViewModel">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition SharedSizeGroup="type" />
+                                <ColumnDefinition SharedSizeGroup="dateTime" />
+                                <ColumnDefinition SharedSizeGroup="message" />
+                                <ColumnDefinition SharedSizeGroup="exception" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Warning" />
+                            <TextBlock Grid.Column="1" Text="{Binding Timestamp}" />
+                            <TextBlock Grid.Column="2" Text="{Binding Message}" />
+                            <TextBlock Grid.Column="3" Text="{Binding ExceptionMessage}" />
+                        </Grid>
+                    </DataTemplate>
+
+                </ListBox.DataTemplates>
+            </ListBox>
+        </Grid>
+    </Grid>
+
+</UserControl>

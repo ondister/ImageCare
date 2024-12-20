@@ -11,4 +11,6 @@ public static class RegionNames
     public const string SourcePreviewImageRegion = "SourcePreviewImageRegion";
 
     public const string TargetFoldersRegion = "TargetFoldersRegion";
+
+    public const string BottomBarRegion = "BottomBarRegion";
 }

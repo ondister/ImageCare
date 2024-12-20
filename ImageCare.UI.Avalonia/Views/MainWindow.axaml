@@ -17,6 +17,7 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" MinHeight="200" />
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
         <Grid Grid.Row="0">
@@ -43,6 +44,7 @@
         <GridSplitter Grid.Row="1"
                       HorizontalAlignment="Stretch"
                       VerticalAlignment="Top" />
+
         <Grid Grid.Row="1" ColumnDefinitions="*,*">
             <ContentControl Grid.Column="0" prism:RegionManager.RegionName="{x:Static ui:RegionNames.SourcePreviewImageRegion}" />
             <ContentControl Grid.Column="1" prism:RegionManager.RegionName="{x:Static ui:RegionNames.TargetPreviewImageRegion}" />
@@ -50,7 +52,10 @@
                           HorizontalAlignment="Left"
                           VerticalAlignment="Stretch" />
         </Grid>
-       
+
+
+        <ContentControl Grid.Row="2"
+                        prism:RegionManager.RegionName="{x:Static ui:RegionNames.BottomBarRegion}" />
 
     </Grid>
     <!--Triggers for view loading and unloading. They use for subscribe to the production state changing-->

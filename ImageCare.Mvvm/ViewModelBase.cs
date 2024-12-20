@@ -1,7 +1,8 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
+
 using Prism.Regions;
 
-namespace ImageCare.UI.Avalonia.ViewModels
+namespace ImageCare.Mvvm
 {
     public class ViewModelBase : ObservableObject, INavigationAware
     {

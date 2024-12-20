@@ -4,23 +4,23 @@ using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 
-using DryIoc;
-
 using ImageCare.Core.Services;
 using ImageCare.Core.Services.ConfigurationService;
 using ImageCare.Core.Services.FileOperationsService;
+using ImageCare.Modules.Logging;
+using ImageCare.Mvvm;
+using ImageCare.Mvvm.Views;
 using ImageCare.UI.Avalonia.Behaviors;
 using ImageCare.UI.Avalonia.Views;
 
 using Prism.DryIoc;
 using Prism.Ioc;
+using Prism.Modularity;
 
 namespace ImageCare.UI.Avalonia;
 
 public class App : PrismApplication
 {
-    private IContainer _container;
-
     public override void Initialize()
     {
         AvaloniaXamlLoader.Load(this);
@@ -37,26 +37,11 @@ public class App : PrismApplication
         base.OnFrameworkInitializationCompleted();
     }
 
-    /// <inheritdoc />
-    protected override void RegisterTypes(IContainerRegistry containerRegistry)
+    protected override void ConfigureModuleCatalog(IModuleCatalog moduleCatalog)
     {
-        containerRegistry.Register<MainWindow>();
+        base.ConfigureModuleCatalog(moduleCatalog);
 
-        containerRegistry.RegisterForNavigation<FoldersView>();
-        containerRegistry.RegisterForNavigation<MainImageView>();
-        containerRegistry.RegisterForNavigation<PreviewImageView>();
-
-        containerRegistry.RegisterSingleton<IFolderService, LocalFileSystemFolderService>();
-        containerRegistry.RegisterSingleton<IFileSystemImageService, FileSystemImageService>();
-        containerRegistry.RegisterSingleton<IFileOperationsService, LocalFileSystemFileOperationsService>();
-        containerRegistry.RegisterSingleton<IConfigurationService, JsonConfigurationService>();
-
-        containerRegistry.RegisterInstance<SynchronizationContext>(SynchronizationContext.Current);
-
-        containerRegistry.Register<IFileSystemWatcherService, LocalFileSystemWatcherService>();
-        containerRegistry.Register<ImagePreviewDropHandler, ImagePreviewDropHandler>();
-
-        _container = containerRegistry.GetContainer();
+        moduleCatalog.AddModule<LoggerModule>();
     }
 
     /// <inheritdoc />
@@ -69,7 +54,29 @@ public class App : PrismApplication
 
     protected virtual void OnShutdownRequested(object? sender, ShutdownRequestedEventArgs e)
     {
-        var configurationService = _container.Resolve<IConfigurationService>();
+        var configurationService = Container.Resolve<IConfigurationService>();
         configurationService.SaveConfiguration();
+    }
+
+    protected override void RegisterTypes(IContainerRegistry containerRegistry)
+    {
+        containerRegistry.Register<MainWindow>();
+
+        containerRegistry.RegisterForNavigation<FoldersView>();
+        containerRegistry.RegisterForNavigation<MainImageView>();
+        containerRegistry.RegisterForNavigation<PreviewImageView>();
+        containerRegistry.RegisterForNavigation<BottomBarView>();
+
+        containerRegistry.RegisterSingleton<IFolderService, LocalFileSystemFolderService>();
+        containerRegistry.RegisterSingleton<IFileSystemImageService, FileSystemImageService>();
+        containerRegistry.RegisterSingleton<IFileOperationsService, LocalFileSystemFileOperationsService>();
+        containerRegistry.RegisterSingleton<IConfigurationService, JsonConfigurationService>();
+
+        containerRegistry.RegisterInstance<SynchronizationContext>(SynchronizationContext.Current);
+
+        containerRegistry.Register<IFileSystemWatcherService, LocalFileSystemWatcherService>();
+        containerRegistry.Register<ImagePreviewDropHandler, ImagePreviewDropHandler>();
+
+        containerRegistry.RegisterDialogWindow<ChildWindow>("childWindow");
     }
 }
