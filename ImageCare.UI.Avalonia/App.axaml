@@ -2,12 +2,34 @@
                         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                         x:Class="ImageCare.UI.Avalonia.App"
                         xmlns:prism="http://prismlibrary.com/"
-                        xmlns:themes="clr-namespace:Material.Styles.Themes;assembly=Material.Styles">
-             <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
-
+                        xmlns:semi="https://irihi.tech/semi"
+                        xmlns:u-semi="https://irihi.tech/ursa/themes/semi">
 
     <prism:PrismApplication.Styles>
-        <StyleInclude Source="Styles/GridSplitter.axaml"/>
-        <themes:MaterialTheme BaseTheme="Dark" PrimaryColor="LightBlue" SecondaryColor="Blue" />
+        <semi:SemiTheme Locale="ru-RU" />
+        <u-semi:SemiTheme Locale="ru-RU" />
+
+        <StyleInclude Source="avares://IconPacks.Avalonia.Lucide/Lucide.axaml" />
+
     </prism:PrismApplication.Styles>
+
+    <Application.Resources>
+        <ResourceDictionary>
+
+            <ResourceDictionary.ThemeDictionaries>
+                <ResourceDictionary x:Key="Dark">
+                    <SolidColorBrush x:Key="ToggleButtonPrimaryCheckedBackground"
+                                     Color="{DynamicResource SemiIndigo2Color}" />
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
+
+            <ResourceDictionary.MergedDictionaries>
+                <MergeResourceInclude Source="/Styles/Sizes.axaml" />
+            </ResourceDictionary.MergedDictionaries>
+
+        </ResourceDictionary>
+
+    </Application.Resources>
+
+
 </prism:PrismApplication>

@@ -1,13 +1,15 @@
 ﻿using System.Collections.Concurrent;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
+
 using ImageCare.Modules.Logging.Models;
+
 using Serilog.Core;
 using Serilog.Events;
 
 namespace ImageCare.Modules.Logging.Services;
 
-internal sealed class LogEventService : ILogEventSink, ILogEventService,ILogNotificationService, IDisposable
+internal sealed class LogEventService : ILogEventSink, ILogEventService, ILogNotificationService, IDisposable
 {
     private readonly Subject<LogMessage> _errorReceivedSubject;
     private readonly Subject<LogMessage> _warningReceivedSubject;
@@ -40,7 +42,7 @@ internal sealed class LogEventService : ILogEventSink, ILogEventService,ILogNoti
     public IObservable<bool> MessagesCleared => _messagesClearedSubject.AsObservable();
 
     /// <inheritdoc />
-    public IObservable<int> ErrorsCountUpdated =>_errorsCountSubject.AsObservable();
+    public IObservable<int> ErrorsCountUpdated => _errorsCountSubject.AsObservable();
 
     /// <inheritdoc />
     public IObservable<int> WarningsCountUpdated => _warningsCountSubject.AsObservable();
@@ -109,5 +111,15 @@ internal sealed class LogEventService : ILogEventSink, ILogEventService,ILogNoti
             case LogEventLevel.Fatal:
                 break;
         }
+    }
+
+    public int GetErrorsCount()
+    {
+        return _errorMessages.Count;
+    }
+
+    public int GetWarningsCount()
+    {
+        return _warningMessages.Count;
     }
 }

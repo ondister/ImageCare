@@ -1,34 +1,138 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:viewModels="clr-namespace:ImageCare.Modules.Logging.ViewModels"
+             xmlns:iconPacks="https://github.com/MahApps/IconPacks.Avalonia"
+             xmlns:u="https://irihi.tech/ursa"
+             xmlns:system="clr-namespace:System;assembly=System.Runtime"
              x:Class="ImageCare.Modules.Logging.Views.LogViewerView"
              x:DataType="viewModels:LogViewerViewModel">
 
-    <Grid Margin="2" RowDefinitions="Auto, *">
+    <UserControl.Resources>
+        <Thickness x:Key="MarginAll.Small">2</Thickness>
+        <Thickness x:Key="MarginBottom.Small">0,0,0,2</Thickness>
+        <Thickness x:Key="MarginHorizontal.Small">2,0,2,0</Thickness>
+        <system:Double x:Key="Icon.Size.Small">16</system:Double>
+        <SolidColorBrush x:Key="Brushes.Warning" Color="{DynamicResource SemiAmber4Color}" />
+        <SolidColorBrush x:Key="Brushes.Error" Color="{DynamicResource SemiRed4Color}" />
+    </UserControl.Resources>
 
-        <Grid Grid.Row="0" 
-              Margin="0,0,0,2"
+    <UserControl.Styles>
+
+        <StyleInclude Source="avares://IconPacks.Avalonia.Lucide/Lucide.axaml" />
+
+        <Style Selector="TextBlock">
+            <Setter Property="Margin" Value="{StaticResource MarginAll.Small}" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+
+        <Style Selector="StackPanel.TextBlock">
+            <Setter Property="Margin" Value="{StaticResource MarginHorizontal.Small}" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+
+        <Style Selector="Button">
+            <Setter Property="Margin" Value="{StaticResource MarginAll.Small}" />
+        </Style>
+
+        <Style Selector="ToggleButton">
+            <Setter Property="Margin" Value="{StaticResource MarginAll.Small}" />
+        </Style>
+
+        <Style Selector="iconPacks|PackIconLucide">
+            <Setter Property="Margin" Value="{StaticResource MarginHorizontal.Small}" />
+            <Setter Property="Width" Value="{StaticResource Icon.Size.Small}" />
+            <Setter Property="Height" Value="{StaticResource Icon.Size.Small}" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="HorizontalAlignment" Value="Left" />
+        </Style>
+
+    </UserControl.Styles>
+
+    <Grid Margin="2" RowDefinitions="Auto, Auto, *">
+
+        <!--Buttons-->
+        <Grid Grid.Row="0"
+              Margin="{StaticResource MarginBottom.Small}"
               ColumnDefinitions="Auto,Auto,*">
+            <ToggleButton IsChecked="{Binding ShowErrors}">
+                <StackPanel Orientation="Horizontal">
+                    <iconPacks:PackIconLucide Kind="OctagonX"
+                                              Foreground="{StaticResource Brushes.Error}" />
+                    <TextBlock Text="Errors" />
+                    <TextBlock Text="{Binding ErrorsCount}" />
+                </StackPanel>
+            </ToggleButton>
 
-            <ToggleButton Grid.Column="0"
-                          Content="Errors"
-                          IsChecked="{Binding ShowErrors}"/>
+            <ToggleButton Grid.Column="1"
+                          IsChecked="{Binding ShowWarnings}">
+                <StackPanel Orientation="Horizontal">
+                    <iconPacks:PackIconLucide Kind="TriangleAlert"
+                                              Foreground="{StaticResource Brushes.Warning}" />
+                    <TextBlock Text="Warnings" />
+                    <TextBlock Text="{Binding WarningsCount}" />
+                </StackPanel>
+            </ToggleButton>
 
-<ToggleButton Grid.Column="1"
-              Content="Warnings"
-              IsChecked="{Binding ShowWarnings}"/>
-
-            <Button Grid.Column="2" Command="{Binding FilterErrors}">Errors</Button>
+            <Button Grid.Column="2"
+                    HorizontalAlignment="Right"
+                    Command="{Binding ClearMessagesCommand}">
+                <StackPanel Orientation="Horizontal">
+                    <iconPacks:PackIconLucide Kind="Eraser" />
+                    <TextBlock Text="Clear Messages" />
+                </StackPanel>
+            </Button>
         </Grid>
 
-        <Grid Grid.Row="1">
+        <u:Divider Grid.Row="1"
+                   HorizontalContentAlignment="Center" />
+
+        <!--List of messages with headers-->
+        <Grid Grid.Row="2">
             <ListBox ItemsSource="{Binding MessageViewModels}"
                      Grid.IsSharedSizeScope="True">
+                <ListBox.Styles>
+                    <Style Selector="ListBoxItem">
+                        <Setter Property="Padding" Value="0" />
+                    </Style>
+                </ListBox.Styles>
+                <ListBox.Template>
+                    <ControlTemplate>
+
+                        <Grid RowDefinitions="Auto,*">
+                            <Grid Grid.Row="0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition SharedSizeGroup="type" />
+                                    <ColumnDefinition SharedSizeGroup="dateTime" />
+                                    <ColumnDefinition SharedSizeGroup="message" />
+                                    <ColumnDefinition SharedSizeGroup="exception" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0"
+                                           Text="Type" />
+                                <TextBlock Grid.Column="1"
+                                           Text="Timestamp" />
+                                <TextBlock Grid.Column="2"
+                                           Text="Message" />
+                                <TextBlock Grid.Column="3"
+                                           Text="Exception message" />
+
+                            </Grid>
+
+                            <ScrollViewer Grid.Row="1">
+                                <ItemsPresenter />
+                            </ScrollViewer>
+
+                        </Grid>
+
+                    </ControlTemplate>
+                </ListBox.Template>
+
+
                 <ListBox.ItemsPanel>
                     <ItemsPanelTemplate>
                         <VirtualizingStackPanel />
                     </ItemsPanelTemplate>
                 </ListBox.ItemsPanel>
+
                 <ListBox.DataTemplates>
                     <DataTemplate DataType="viewModels:ErrorLogMessageViewModel">
                         <Grid>
@@ -36,12 +140,16 @@
                                 <ColumnDefinition SharedSizeGroup="type" />
                                 <ColumnDefinition SharedSizeGroup="dateTime" />
                                 <ColumnDefinition SharedSizeGroup="message" />
-                                <ColumnDefinition SharedSizeGroup="exception" />
+                                <ColumnDefinition />
                             </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="Error" />
-                            <TextBlock Grid.Column="1" Text="{Binding Timestamp}" />
-                            <TextBlock Grid.Column="2" Text="{Binding Message}" />
-                            <TextBlock Grid.Column="3" Text="{Binding ExceptionMessage}" />
+                            <iconPacks:PackIconLucide Grid.Column="0"
+                                                      Kind="OctagonX" Foreground="{StaticResource Brushes.Error}" />
+                            <TextBlock Grid.Column="1"
+                                       Text="{Binding Timestamp, StringFormat=G}" />
+                            <TextBlock Grid.Column="2"
+                                       MaxWidth="400" Text="{Binding Message}" TextWrapping="Wrap" />
+                            <TextBlock Grid.Column="3"
+                                       Text="{Binding ExceptionMessage}" TextWrapping="Wrap" />
                         </Grid>
                     </DataTemplate>
 
@@ -51,12 +159,19 @@
                                 <ColumnDefinition SharedSizeGroup="type" />
                                 <ColumnDefinition SharedSizeGroup="dateTime" />
                                 <ColumnDefinition SharedSizeGroup="message" />
-                                <ColumnDefinition SharedSizeGroup="exception" />
+                                <ColumnDefinition />
                             </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="Warning" />
-                            <TextBlock Grid.Column="1" Text="{Binding Timestamp}" />
-                            <TextBlock Grid.Column="2" Text="{Binding Message}" />
-                            <TextBlock Grid.Column="3" Text="{Binding ExceptionMessage}" />
+                            <iconPacks:PackIconLucide Grid.Column="0"
+                                                      Kind="TriangleAlert"
+                                                      Foreground="{StaticResource Brushes.Warning}" />
+                            <TextBlock Grid.Column="1"
+                                       Text="{Binding Timestamp, StringFormat=G}" />
+                            <TextBlock Grid.Column="2"
+                                       MaxWidth="400"
+                                       Text="{Binding Message}" TextWrapping="Wrap" />
+                            <TextBlock Grid.Column="3"
+                                       Text="{Binding ExceptionMessage}"
+                                       TextWrapping="Wrap" />
                         </Grid>
                     </DataTemplate>
 

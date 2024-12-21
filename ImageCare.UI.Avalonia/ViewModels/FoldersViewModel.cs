@@ -61,7 +61,7 @@ internal class FoldersViewModel : ViewModelBase
             if (SetProperty(ref _selectedFileSystemItem, value) && _selectedFileSystemItem != null)
             {
                 WeakReferenceMessenger.Default.Send(new FolderSelectedMessage(new DirectoryModel(_selectedFileSystemItem.Name, _selectedFileSystemItem.Path), Mode));
-                _logger.Warning(_selectedFileSystemItem.Path);
+                _logger.Warning(new InvalidOperationException("ireberuberriuerivuheriuherhuwh0rvhn908run1 reggggrgergergergergergergergergergergergergergergergergergergergerg"),$"{_selectedFileSystemItem.Path} fghjkeerifjdreogfmf,erhjkiuygrfsfghuil;-09;lkjhgfdspoiuytrepreoiuytrewlkj      hgfdiuytrekjuytrekuytrelkiuytre,mnboiuytre");
             }
         }
     }

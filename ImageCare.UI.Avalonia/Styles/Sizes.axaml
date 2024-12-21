@@ -1,0 +1,13 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:system="clr-namespace:System;assembly=System.Runtime">
+
+    <Thickness x:Key="MarginAll.Small">2</Thickness>
+    <Thickness x:Key="MarginBottom.Small">0,0,0,2</Thickness>
+    <Thickness x:Key="MarginHorizontal.Small">2,0,2,0</Thickness>
+
+    <Thickness x:Key="MarginTop.Medium">0,4,0,0</Thickness>
+    <Thickness x:Key="MarginTop.Large"> 0,6,0,0</Thickness>
+
+    <system:Double x:Key="Icon.Size.Small">16</system:Double>
+</ResourceDictionary>

@@ -4,8 +4,6 @@ using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Windows.Input;
 
-using CommunityToolkit.Mvvm.Input;
-
 using DynamicData;
 using DynamicData.Binding;
 
@@ -13,28 +11,31 @@ using ImageCare.Modules.Logging.Models;
 using ImageCare.Modules.Logging.Services;
 using ImageCare.Mvvm;
 
+using Prism.Commands;
 using Prism.Services.Dialogs;
-
-using Serilog;
 
 namespace ImageCare.Modules.Logging.ViewModels;
 
-internal sealed class LogViewerViewModel : ViewModelBase, IDialogAware
+internal sealed class LogViewerViewModel : ViewModelBase, IDialogAware, IDisposable
 {
     private readonly ILogEventService _logEventService;
-    private readonly ILogger _logger;
+    private readonly ILogNotificationService _logNotificationService;
     private readonly ReadOnlyObservableCollection<LogMessageViewModel> _messageViewModels;
     private readonly SourceList<LogMessageViewModel> _sourceList = new();
 
     private readonly Subject<string> _filterChanged;
     private CompositeDisposable _compositeDisposable;
+
     private bool _showWarnings = true;
     private bool _showErrors = true;
+    private int _errorsCount;
+    private int _warningsCount;
 
-    public LogViewerViewModel(ILogEventService logEventService, ILogger logger)
+    public LogViewerViewModel(ILogEventService logEventService, ILogNotificationService logNotificationService)
     {
         _logEventService = logEventService;
-        _logger = logger;
+        _logNotificationService = logNotificationService;
+
         _filterChanged = new Subject<string>();
 
         var filter = _filterChanged.AsObservable().Select(BuildFilter);
@@ -46,7 +47,7 @@ internal sealed class LogViewerViewModel : ViewModelBase, IDialogAware
                    .Subscribe();
         _filterChanged.OnNext(string.Empty);
 
-        FilterErrors = new AsyncRelayCommand(fe);
+        ClearMessagesCommand = new DelegateCommand(ClearMessages, CanClearMessages).ObservesProperty(() => MessageViewModels.Count);
     }
 
     public bool ShowWarnings
@@ -73,7 +74,19 @@ internal sealed class LogViewerViewModel : ViewModelBase, IDialogAware
         }
     }
 
-    public ICommand FilterErrors { get; }
+    public int ErrorsCount
+    {
+        get => _errorsCount;
+        set => SetProperty(ref _errorsCount, value);
+    }
+
+    public int WarningsCount
+    {
+        get => _warningsCount;
+        set => SetProperty(ref _warningsCount, value);
+    }
+
+    public ICommand ClearMessagesCommand { get; }
 
     public ReadOnlyObservableCollection<LogMessageViewModel> MessageViewModels => _messageViewModels;
 
@@ -93,18 +106,27 @@ internal sealed class LogViewerViewModel : ViewModelBase, IDialogAware
         {
             _logEventService.ErrorReceived.Subscribe(OnErrorReceived),
             _logEventService.WarningReceived.Subscribe(OnWarningReceived),
-            _logEventService.MessagesCleared.Subscribe(OnMessagesCleared)
+            _logEventService.MessagesCleared.Subscribe(OnMessagesCleared),
+
+            _logNotificationService.ErrorsCountUpdated.Subscribe(OnErrorsCountUpdated),
+            _logNotificationService.WarningsCountUpdated.Subscribe(OnWarningsCountUpdated)
         };
 
-        foreach (var message in _logEventService.GetLastErrors())
+        var errors = _logEventService.GetLastErrors().ToList();
+        foreach (var message in errors)
         {
             _sourceList.Add(new ErrorLogMessageViewModel(message.Timestamp, message.Message, message.ExceptionMessage));
         }
 
-        foreach (var message in _logEventService.GetLastWarnings())
+        ErrorsCount = errors.Count;
+
+        var warnings = _logEventService.GetLastWarnings().ToList();
+        foreach (var message in warnings)
         {
             _sourceList.Add(new WarningLogMessageViewModel(message.Timestamp, message.Message, message.ExceptionMessage));
         }
+
+        WarningsCount = warnings.Count;
     }
 
     /// <inheritdoc />
@@ -115,6 +137,14 @@ internal sealed class LogViewerViewModel : ViewModelBase, IDialogAware
 
     /// <inheritdoc />
     public event Action<IDialogResult>? RequestClose;
+
+    /// <inheritdoc />
+    public void Dispose()
+    {
+        _sourceList.Dispose();
+        _filterChanged.Dispose();
+        _compositeDisposable.Dispose();
+    }
 
     private Func<LogMessageViewModel, bool> BuildFilter(string filterPropertyName)
     {
@@ -139,26 +169,6 @@ internal sealed class LogViewerViewModel : ViewModelBase, IDialogAware
         };
     }
 
-    private async Task fe()
-    {
-        await Task.Run(
-            () =>
-            {
-                for (var index = 0; index < 20; index++)
-                {
-                    _logger.Error(new InvalidOperationException($"emessage{index}"), index.ToString());
-                }
-            });
-        await Task.Run(
-            () =>
-            {
-                for (var index = 0; index < 20; index++)
-                {
-                    _logger.Warning(new InvalidOperationException($"wmessage{index}"), index.ToString());
-                }
-            });
-    }
-
     private void OnErrorReceived(LogMessage message)
     {
         _sourceList.Add(new ErrorLogMessageViewModel(message.Timestamp, message.Message, message.ExceptionMessage));
@@ -172,5 +182,25 @@ internal sealed class LogViewerViewModel : ViewModelBase, IDialogAware
     private void OnMessagesCleared(bool obj)
     {
         _sourceList.Clear();
+    }
+
+    private void OnErrorsCountUpdated(int errorsCount)
+    {
+        ErrorsCount = errorsCount;
+    }
+
+    private void OnWarningsCountUpdated(int warningsCount)
+    {
+        WarningsCount = warningsCount;
+    }
+
+    private bool CanClearMessages()
+    {
+        return MessageViewModels.Count != 0;
+    }
+
+    private void ClearMessages()
+    {
+        _logEventService.ClearMessages();
     }
 }

@@ -2,13 +2,42 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mvvm="http://prismlibrary.com/"
              xmlns:viewModels="clr-namespace:ImageCare.UI.Avalonia.ViewModels"
+             xmlns:u="https://irihi.tech/ursa"
+             xmlns:iconPacks="https://github.com/MahApps/IconPacks.Avalonia"
              x:Class="ImageCare.UI.Avalonia.Views.BottomBarView"
              mvvm:ViewModelLocator.AutoWireViewModel="True"
              x:DataType="viewModels:BottomBarViewModel">
 
-    <Grid Margin="2"
-          ColumnDefinitions="Auto,Auto,8">
-        <Button Content="Log"
-                Command="{Binding  OpenLogWindowCommand}"/>
+    <UserControl.Styles>
+
+        <Style Selector="iconPacks|PackIconLucide">
+            <Setter Property="Width" Value="{StaticResource Icon.Size.Small}" />
+            <Setter Property="Height" Value="{StaticResource Icon.Size.Small}" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+
+    </UserControl.Styles>
+
+    <Grid RowDefinitions="Auto,*">
+        <u:Divider Grid.Row="0"
+                   HorizontalContentAlignment="Center" />
+
+        <Grid Grid.Row="1" ColumnDefinitions="Auto,Auto,*"
+              Margin="{StaticResource MarginTop.Medium}">
+            <u:Badge  Margin="{StaticResource MarginTop.Large}"
+                      Header="{Binding MessagesCount}"
+                      OverflowCount="99">
+
+                <u:IconButton Classes="Small"
+                              Content="Messages List"
+                              IconPlacement="Left"
+                              Command="{Binding  OpenLogWindowCommand}">
+                    <u:IconButton.Icon>
+
+                        <iconPacks:PackIconLucide Kind="List" />
+                    </u:IconButton.Icon>
+                </u:IconButton>
+            </u:Badge>
+        </Grid>
     </Grid>
 </UserControl>

@@ -13,7 +13,7 @@
         prism:ViewModelLocator.AutoWireViewModel="True">
 
 
-    <Grid>
+    <Grid Margin="2">
         <Grid.RowDefinitions>
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" MinHeight="200" />

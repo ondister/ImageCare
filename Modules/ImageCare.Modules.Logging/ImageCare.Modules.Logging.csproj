@@ -12,6 +12,8 @@
       <PackageReference Include="Avalonia.Xaml.Interactivity" Version="11.2.0.1" />
       <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
       <PackageReference Include="DynamicData" Version="9.0.4" />
+      <PackageReference Include="IconPacks.Avalonia.Lucide" Version="1.0.0" />
+      <PackageReference Include="Irihi.Ursa" Version="1.6.2" />
       <PackageReference Include="Material.Avalonia" Version="3.8.0" />
       <PackageReference Include="Prism.Avalonia" Version="8.1.97.11073" />
       <PackageReference Include="Prism.Core" Version="8.1.97" />

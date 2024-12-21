@@ -13,7 +13,6 @@
 
         <ListBox ItemsSource="{Binding ImagePreviews}"
                  SelectedItem="{Binding SelectedPreview, Mode=TwoWay}"
-                 ScrollViewer.HorizontalScrollBarVisibility="Visible"
                  SelectionMode="AlwaysSelected"
                  DragDrop.AllowDrop="True">
 
@@ -32,7 +31,7 @@
 
             <ListBox.Styles>
                 <Style Selector="Grid.class1">
-                    <Setter Property="Background" Value="OrangeRed" />
+                    <Setter Property="Background" Value="#ff0073cf" />
                 </Style>
                 <Style Selector="Grid.class2">
                     <Setter Property="Background" Value="Transparent" />
@@ -47,7 +46,6 @@
                         <Grid Grid.Row="0"
                               Grid.ColumnDefinitions="*,Auto"
                               Grid.RowDefinitions="Auto,*">
-
                             <Image Grid.Column="0"
                                    Grid.Row="0"
                                    Grid.RowSpan="2"

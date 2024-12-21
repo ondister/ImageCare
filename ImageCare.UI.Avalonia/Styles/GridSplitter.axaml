@@ -1,7 +1,0 @@
-<Styles xmlns="https://github.com/avaloniaui"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <Style Selector="GridSplitter">
-        <Setter Property="CornerRadius" Value="2" />
-        <Setter Property="BorderThickness" Value="2" />
-    </Style>
-</Styles>
