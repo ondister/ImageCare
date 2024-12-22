@@ -1,5 +1,6 @@
 ﻿using ImageCare.Core.Domain;
 using ImageCare.Core.Domain.MediaFormats;
+using ImageCare.Core.Exceptions;
 
 using Polly;
 using Polly.Retry;
@@ -8,6 +9,8 @@ namespace ImageCare.Core.Services;
 
 public sealed class FileSystemImageService : IFileSystemImageService
 {
+    private const string _exceptionMessage = "Unexpected exception in Json configuration service";
+
     private static readonly int soiOffsetIndex = 0xe2;
     private static readonly int lenOffsetIndex = 0x34;
     private readonly AsyncRetryPolicy _fileOperationsRetryPolicy;
@@ -27,7 +30,14 @@ public sealed class FileSystemImageService : IFileSystemImageService
 
     public async Task<Stream> GetImageStreamAsync(ImagePreview imagePreview)
     {
-        return await _fileOperationsRetryPolicy.ExecuteAsync(async () => await GetImageStreamInternalAsync(imagePreview));
+        try
+        {
+            return await _fileOperationsRetryPolicy.ExecuteAsync(async () => await GetImageStreamInternalAsync(imagePreview));
+        }
+        catch (Exception exception)
+        {
+            throw new ServiceException(_exceptionMessage, exception);
+        }
     }
 
     /// <inheritdoc />
@@ -42,13 +52,16 @@ public sealed class FileSystemImageService : IFileSystemImageService
     /// <inheritdoc />
     public async Task<ImagePreview?> GetImagePreviewAsync(string imagePath)
     {
-        var fileInfo = new FileInfo(imagePath);
-        if (fileInfo.Exists)
+        try
         {
+            var fileInfo = new FileInfo(imagePath);
+
             return await CreateImagePreviewAsync(new FileModel(fileInfo.Name, fileInfo.FullName));
         }
-
-        return null;
+        catch (Exception exception)
+        {
+            throw new ServiceException(_exceptionMessage, exception);
+        }
     }
 
     public static uint SwapBytes(uint x)

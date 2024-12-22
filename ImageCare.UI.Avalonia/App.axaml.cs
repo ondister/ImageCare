@@ -8,7 +8,6 @@ using ImageCare.Core.Services;
 using ImageCare.Core.Services.ConfigurationService;
 using ImageCare.Core.Services.FileOperationsService;
 using ImageCare.Modules.Logging;
-using ImageCare.Mvvm;
 using ImageCare.Mvvm.Views;
 using ImageCare.UI.Avalonia.Behaviors;
 using ImageCare.UI.Avalonia.Views;
@@ -50,8 +49,6 @@ public class App : PrismApplication
         return Container.Resolve<MainWindow>();
     }
 
-    protected override void OnInitialized() { }
-
     protected virtual void OnShutdownRequested(object? sender, ShutdownRequestedEventArgs e)
     {
         var configurationService = Container.Resolve<IConfigurationService>();
@@ -72,7 +69,7 @@ public class App : PrismApplication
         containerRegistry.RegisterSingleton<IFileOperationsService, LocalFileSystemFileOperationsService>();
         containerRegistry.RegisterSingleton<IConfigurationService, JsonConfigurationService>();
 
-        containerRegistry.RegisterInstance<SynchronizationContext>(SynchronizationContext.Current);
+        containerRegistry.RegisterInstance(SynchronizationContext.Current);
 
         containerRegistry.Register<IFileSystemWatcherService, LocalFileSystemWatcherService>();
         containerRegistry.Register<ImagePreviewDropHandler, ImagePreviewDropHandler>();

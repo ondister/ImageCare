@@ -14,16 +14,19 @@ using Serilog;
 
 namespace ImageCare.UI.Avalonia.ViewModels;
 
-internal class MainImageViewModel : ViewModelBase, IRecipient<ImagePreviewSelectedMessage>
+internal class MainImageViewModel : ViewModelBase, IRecipient<FolderSelectedMessage>, IRecipient<ImagePreviewSelectedMessage>
 {
     private readonly IFileSystemImageService _imageService;
+    private readonly ILogger _logger;
     private Bitmap? _mainBitmap;
 
     public MainImageViewModel(IFileSystemImageService imageService, ILogger logger)
     {
         _imageService = imageService;
+        _logger = logger;
 
-        WeakReferenceMessenger.Default.Register(this);
+        WeakReferenceMessenger.Default.Register<FolderSelectedMessage>(this);
+        WeakReferenceMessenger.Default.Register<ImagePreviewSelectedMessage>(this);
     }
 
     public Bitmap? MainBitmap
@@ -42,7 +45,13 @@ internal class MainImageViewModel : ViewModelBase, IRecipient<ImagePreviewSelect
             return;
         }
 
-        LoadPreviewAsync(message.Value);
+        _ = LoadImageAsync(message.Value);
+    }
+
+    /// <inheritdoc />
+    public void Receive(FolderSelectedMessage message)
+    {
+        ClearPreview();
     }
 
     private void ClearPreview()
@@ -50,7 +59,7 @@ internal class MainImageViewModel : ViewModelBase, IRecipient<ImagePreviewSelect
         MainBitmap = null;
     }
 
-    private async Task LoadPreviewAsync(ImagePreview imagePreview)
+    private async Task LoadImageAsync(ImagePreview imagePreview)
     {
         try
         {
@@ -61,7 +70,7 @@ internal class MainImageViewModel : ViewModelBase, IRecipient<ImagePreviewSelect
         }
         catch (Exception exception)
         {
-            throw exception;
+            _logger.Error(exception, $"Unexpected exception during loading main image {imagePreview.Url}");
         }
     }
 }

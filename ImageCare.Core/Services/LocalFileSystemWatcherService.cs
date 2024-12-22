@@ -35,11 +35,9 @@ public sealed class LocalFileSystemWatcherService : IFileSystemWatcherService, I
         _directoryDeletedSubject = new Subject<DirectoryModel>();
         _directoryRenamedSubject = new Subject<DirectoryRenamedModel>();
 
-        try
-        {
+
             CreateObservables();
-        }
-        catch (Exception exception) { }
+
     }
 
     /// <inheritdoc />

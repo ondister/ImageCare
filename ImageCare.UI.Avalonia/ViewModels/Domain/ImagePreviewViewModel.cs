@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
 
@@ -12,6 +13,8 @@ using ImageCare.Core.Services;
 using ImageCare.Core.Services.FileOperationsService;
 using ImageCare.Mvvm;
 
+using Serilog;
+
 namespace ImageCare.UI.Avalonia.ViewModels.Domain;
 
 internal class ImagePreviewViewModel : ViewModelBase, IComparable<ImagePreviewViewModel>
@@ -19,20 +22,23 @@ internal class ImagePreviewViewModel : ViewModelBase, IComparable<ImagePreviewVi
     private readonly ImagePreview _imagePreview;
     private readonly IFileSystemImageService _imageService;
     private readonly IFileOperationsService _fileOperationsService;
+    private readonly ILogger _logger;
     private Bitmap? _previewBitmap;
     private bool _selected;
 
-    public ImagePreviewViewModel(ImagePreview imagePreview, 
+    public ImagePreviewViewModel(ImagePreview imagePreview,
                                  IFileSystemImageService imageService,
-                                 IFileOperationsService fileOperationsService)
+                                 IFileOperationsService fileOperationsService,
+                                 ILogger logger)
     {
         _imagePreview = imagePreview;
         _imageService = imageService;
         _fileOperationsService = fileOperationsService;
+        _logger = logger;
 
         RemoveImagePreviewCommand = new AsyncRelayCommand(RemoveImagePreviewAsync);
 
-        LoadPreviewAsync();
+        _ = LoadPreviewAsync();
     }
 
     public string? Title => _imagePreview.Title;
@@ -49,7 +55,7 @@ internal class ImagePreviewViewModel : ViewModelBase, IComparable<ImagePreviewVi
 
     public Bitmap? PreviewBitmap
     {
-        get => _previewBitmap;
+        get =>_previewBitmap;
         set => SetProperty(ref _previewBitmap, value);
     }
 
@@ -76,12 +82,19 @@ internal class ImagePreviewViewModel : ViewModelBase, IComparable<ImagePreviewVi
         }
         catch (Exception exception)
         {
-            throw;
+            _logger.Error(exception, $"Unexpected exception during creating bitmap preview for file {Url}");
         }
     }
 
     private async Task RemoveImagePreviewAsync()
     {
-        await _fileOperationsService.DeleteImagePreviewAsync(new ImagePreview(Title, Url, MediaFormat));
+        try
+        {
+            await _fileOperationsService.DeleteImagePreviewAsync(new ImagePreview(Title, Url, MediaFormat));
+        }
+        catch (Exception exception)
+        {
+            _logger.Error(exception, $"Unexpected exception during preview deletion for file {Url}");
+        }
     }
 }

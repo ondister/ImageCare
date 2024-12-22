@@ -1,4 +1,5 @@
 ﻿using ImageCare.Core.Domain;
+using ImageCare.Core.Exceptions;
 
 namespace ImageCare.Core.Services;
 
@@ -43,7 +44,7 @@ public sealed class LocalFileSystemFolderService : IFolderService
     /// <inheritdoc />
     public async Task<IEnumerable<FileModel>> GetFileModelAsync(DirectoryModel directoryModel, string searchPattern)
     {
-        return await Task.Run(async () => { return await GetFileModelAsync(directoryModel.Path, searchPattern); });
+        return await Task.Run(async () => await GetFileModelAsync(directoryModel.Path, searchPattern));
     }
 
     public async Task<IEnumerable<FileModel>> GetFileModelAsync(string directoryPath, string searchPattern)
@@ -59,10 +60,7 @@ public sealed class LocalFileSystemFolderService : IFolderService
                            return files;
                        }
 
-                       foreach (var fileInfo in directoryInfo.EnumerateFiles(searchPattern))
-                       {
-                           files.Add(new FileModel(fileInfo.Name, fileInfo.FullName));
-                       }
+                       files.AddRange(directoryInfo.EnumerateFiles(searchPattern).Select(fileInfo => new FileModel(fileInfo.Name, fileInfo.FullName)));
 
                        return files;
                    });
@@ -125,7 +123,7 @@ public sealed class LocalFileSystemFolderService : IFolderService
                            }
                            catch (UnauthorizedAccessException)
                            {
-                               // Ignored.
+                              // Ignored.
                            }
 
                            if (preview)

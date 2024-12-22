@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
@@ -86,13 +87,21 @@ internal class PreviewImageViewModel : ViewModelBase, IRecipient<FolderSelectedM
     {
         if (message.Mode == Mode)
         {
-            LoadImagePreviewsAsync(message.Value);
+            _ = LoadImagePreviewsAsync(message.Value);
 
             SelectedFolderPath = message.Value.Path;
 
             if (!string.IsNullOrWhiteSpace(SelectedFolderPath))
             {
-                _fileSystemWatcherService.SetWatchingDirectory(SelectedFolderPath);
+                try
+                {
+                    _fileSystemWatcherService.SetWatchingDirectory(SelectedFolderPath);
+                }
+
+                catch (Exception exception)
+                {
+                    _logger.Error(exception, $"Unexpected exception during set watching directory {SelectedFolderPath}");
+                }
             }
         }
     }
@@ -132,12 +141,16 @@ internal class PreviewImageViewModel : ViewModelBase, IRecipient<FolderSelectedM
             ImagePreviews.Clear();
 
             var files = await _folderService.GetFileModelAsync(directoryModel, "*");
+         
             await foreach (var previewImage in _imageService.GetImagePreviewsAsync(files))
             {
-                ImagePreviews.Add(new ImagePreviewViewModel(previewImage, _imageService, _fileOperationsService));
+                ImagePreviews.Add(new ImagePreviewViewModel(previewImage, _imageService, _fileOperationsService, _logger));
             }
         }
-        catch (Exception exception) { }
+        catch (Exception exception)
+        {
+            _logger.Error(exception, $"Unexpected exception during loading image previews from folder: {directoryModel.Path}");
+        }
     }
 
     private void OnFileCreated(FileModel fileModel)
@@ -148,7 +161,7 @@ internal class PreviewImageViewModel : ViewModelBase, IRecipient<FolderSelectedM
         }
         catch (Exception exception)
         {
-            _logger.Error(exception, "Unexpected Error");
+            _logger.Error(exception, $"Unexpected exception during handling of file creation: {fileModel.FullName}");
         }
     }
 
@@ -160,7 +173,7 @@ internal class PreviewImageViewModel : ViewModelBase, IRecipient<FolderSelectedM
         }
         catch (Exception exception)
         {
-            _logger.Error(exception, "Unexpected Error");
+            _logger.Error(exception, $"Unexpected exception during handling of file deletion: {fileModel.FullName}");
         }
     }
 
@@ -174,7 +187,7 @@ internal class PreviewImageViewModel : ViewModelBase, IRecipient<FolderSelectedM
         }
         catch (Exception exception)
         {
-            _logger.Error(exception, "Unexpected Error");
+            _logger.Error(exception, $"Unexpected exception during handling of file renaming: {model.OldFileModel.FullName}");
         }
     }
 
@@ -189,7 +202,7 @@ internal class PreviewImageViewModel : ViewModelBase, IRecipient<FolderSelectedM
                                  return;
                              }
 
-                             ImagePreviews.InsertItem(new ImagePreviewViewModel(task.Result, _imageService, _fileOperationsService));
+                             ImagePreviews.InsertItem(new ImagePreviewViewModel(task.Result, _imageService, _fileOperationsService, _logger));
                          });
     }
 
@@ -208,8 +221,8 @@ internal class PreviewImageViewModel : ViewModelBase, IRecipient<FolderSelectedM
 
             if (ImagePreviews.Count == 0)
             {
-                WeakReferenceMessenger.Default.Send(new ImagePreviewSelectedMessage(ImagePreview.Empty, Mode));
                 _synchronizationContext.Post(d => { SelectedPreview = null; }, null);
+                WeakReferenceMessenger.Default.Send(new ImagePreviewSelectedMessage(ImagePreview.Empty, Mode));
             }
         }
     }

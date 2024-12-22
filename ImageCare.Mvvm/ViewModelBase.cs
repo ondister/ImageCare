@@ -6,7 +6,6 @@ namespace ImageCare.Mvvm
 {
     public class ViewModelBase : ObservableObject, INavigationAware
     {
-      
         public bool IsNavigationTarget(NavigationContext navigationContext)
         {
             // Auto-allow navigation

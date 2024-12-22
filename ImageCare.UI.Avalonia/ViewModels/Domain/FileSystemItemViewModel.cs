@@ -6,22 +6,31 @@ using ImageCare.Core.Services;
 using ImageCare.Mvvm;
 using ImageCare.Mvvm.Collections;
 
+using Serilog;
+
 namespace ImageCare.UI.Avalonia.ViewModels.Domain;
 
 internal abstract class FileSystemItemViewModel : ViewModelBase, IComparable<FileSystemItemViewModel>
 {
     protected readonly IFolderService FolderService;
+    private readonly ILogger _logger;
     private bool _isExpanded;
 
-    protected FileSystemItemViewModel(string name, string path, IEnumerable<FileSystemItemViewModel> children, IFolderService folderService)
+    protected FileSystemItemViewModel(string? name,
+                                      string path,
+                                      IEnumerable<FileSystemItemViewModel> children,
+                                      IFolderService folderService,
+                                      ILogger logger)
     {
         FolderService = folderService;
+        _logger = logger;
         Name = name;
         Path = path;
+
         ChildFileSystemItems = new SortedObservableCollection<FileSystemItemViewModel>(children);
     }
 
-    public string Name { get; }
+    public string? Name { get; }
 
     public string Path { get; }
 
@@ -40,7 +49,7 @@ internal abstract class FileSystemItemViewModel : ViewModelBase, IComparable<Fil
                 }
 
                 ChildFileSystemItems.Clear();
-                SeedFileSystemItemsAsync();
+                _ = SeedFileSystemItemsAsync();
             }
         }
     }
@@ -71,7 +80,7 @@ internal abstract class FileSystemItemViewModel : ViewModelBase, IComparable<Fil
             {
                 if (FoldersViewModel.FileSystemItemsFactories.TryGetValue(currentDirectoryModel.GetType(), out var factoryFunc))
                 {
-                    var fileSystemItemViewModel = factoryFunc.Invoke(directoryModel.Name, directoryModel.Path, FoldersViewModel.GetFileSystemItemChildren(directoryModel.DirectoryModels, directoryModel.FileModels, FolderService), FolderService);
+                    var fileSystemItemViewModel = factoryFunc.Invoke(directoryModel.Name, directoryModel.Path, FoldersViewModel.GetFileSystemItemChildren(directoryModel.DirectoryModels, FolderService,_logger), FolderService, _logger);
 
                     ChildFileSystemItems.InsertItem(fileSystemItemViewModel);
                 }
@@ -81,11 +90,14 @@ internal abstract class FileSystemItemViewModel : ViewModelBase, IComparable<Fil
             {
                 if (FoldersViewModel.FileSystemItemsFactories.TryGetValue(currentDirectoryModel.GetType(), out var factoryFunc))
                 {
-                    var fileSystemItemViewModel = factoryFunc.Invoke(fileModel.Name, fileModel.FullName, FoldersViewModel.GetFileSystemItemChildren([], [], FolderService), FolderService);
+                    var fileSystemItemViewModel = factoryFunc.Invoke(fileModel.Name, fileModel.FullName, FoldersViewModel.GetFileSystemItemChildren([], FolderService, _logger), FolderService,_logger);
                     ChildFileSystemItems.InsertItem(fileSystemItemViewModel);
                 }
             }
         }
-        catch (Exception exception) { }
+        catch (Exception exception)
+        {
+            _logger.Error(exception, $"Unexpected exception during getting files from folder: {Path}");
+        }
     }
 }

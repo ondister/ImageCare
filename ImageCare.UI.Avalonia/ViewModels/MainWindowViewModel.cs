@@ -6,6 +6,7 @@ using ImageCare.Mvvm;
 
 using Prism.Regions;
 
+
 namespace ImageCare.UI.Avalonia.ViewModels;
 
 public class MainWindowViewModel : ViewModelBase
@@ -15,6 +16,7 @@ public class MainWindowViewModel : ViewModelBase
     public MainWindowViewModel(IRegionManager regionManager)
     {
         _regionManager = regionManager;
+
         OnViewLoadedCommand = new RelayCommand(OnViewLoaded);
     }
 

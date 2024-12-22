@@ -13,6 +13,7 @@
 
         <ListBox ItemsSource="{Binding ImagePreviews}"
                  SelectedItem="{Binding SelectedPreview, Mode=TwoWay}"
+                 ScrollViewer.HorizontalScrollBarVisibility="Auto"
                  SelectionMode="AlwaysSelected"
                  DragDrop.AllowDrop="True">
 
@@ -25,7 +26,7 @@
 
             <ListBox.ItemsPanel>
                 <ItemsPanelTemplate>
-                    <StackPanel Orientation="Horizontal" />
+                    <VirtualizingStackPanel Orientation="Horizontal" />
                 </ItemsPanelTemplate>
             </ListBox.ItemsPanel>
 

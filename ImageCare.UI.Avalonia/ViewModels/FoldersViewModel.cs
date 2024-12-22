@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Threading.Tasks;
 using System.Windows.Input;
 
@@ -14,6 +13,7 @@ using ImageCare.Mvvm;
 using ImageCare.Mvvm.Collections;
 using ImageCare.UI.Avalonia.Messages;
 using ImageCare.UI.Avalonia.ViewModels.Domain;
+
 using Prism.Regions;
 
 using Serilog;
@@ -22,27 +22,24 @@ namespace ImageCare.UI.Avalonia.ViewModels;
 
 internal class FoldersViewModel : ViewModelBase
 {
-    public static readonly Dictionary<Type, Func<string, string, IEnumerable<FileSystemItemViewModel>, IFolderService, FileSystemItemViewModel>> FileSystemItemsFactories = new()
+    public static readonly Dictionary<Type, Func<string?, string, IEnumerable<FileSystemItemViewModel>, IFolderService, ILogger, FileSystemItemViewModel>> FileSystemItemsFactories = new()
     {
-        { typeof(FileModel), (name, path, children, folderService) => new FileViewModel(name, path, children, folderService) },
-        { typeof(DirectoryModel), (name, path, children, folderService) => new DirectoryViewModel(name, path, children, folderService) },
-        { typeof(DeviceModel), (name, path, children, folderService) => new DeviceViewModel(name, path, children, folderService) },
-        { typeof(FixedDriveModel), (name, path, children, folderService) => new FixedDriveViewModel(name, path, children, folderService) },
-        { typeof(RemovableDriveModel), (name, path, children, folderService) => new RemovableDriveViewModel(name, path, children, folderService) },
-        { typeof(NetworkDriveModel), (name, path, children, folderService) => new NetworkDriveViewModel(name, path, children, folderService) }
+        { typeof(FileModel), (name, path, children, folderService, logger) => new FileViewModel(name, path, children, folderService, logger) },
+        { typeof(DirectoryModel), (name, path, children, folderService, logger) => new DirectoryViewModel(name, path, children, folderService, logger) },
+        { typeof(DeviceModel), (name, path, children, folderService, logger) => new DeviceViewModel(name, path, children, folderService, logger) },
+        { typeof(FixedDriveModel), (name, path, children, folderService, logger) => new FixedDriveViewModel(name, path, children, folderService, logger) },
+        { typeof(RemovableDriveModel), (name, path, children, folderService, logger) => new RemovableDriveViewModel(name, path, children, folderService, logger) },
+        { typeof(NetworkDriveModel), (name, path, children, folderService, logger) => new NetworkDriveViewModel(name, path, children, folderService, logger) }
     };
 
     private readonly IFolderService _folderService;
-    private readonly IConfigurationService _configurationService;
     private readonly ILogger _logger;
     private DirectoryViewModel? _selectedFileSystemItem;
 
-    public FoldersViewModel(IFolderService folderService, 
-                            IConfigurationService configurationService,
+    public FoldersViewModel(IFolderService folderService,
                             ILogger logger)
     {
         _folderService = folderService;
-        _configurationService = configurationService;
         _logger = logger;
         OnViewLoadedCommand = new AsyncRelayCommand(OnViewLoaded);
 
@@ -61,7 +58,6 @@ internal class FoldersViewModel : ViewModelBase
             if (SetProperty(ref _selectedFileSystemItem, value) && _selectedFileSystemItem != null)
             {
                 WeakReferenceMessenger.Default.Send(new FolderSelectedMessage(new DirectoryModel(_selectedFileSystemItem.Name, _selectedFileSystemItem.Path), Mode));
-                _logger.Warning(new InvalidOperationException("ireberuberriuerivuheriuherhuwh0rvhn908run1 reggggrgergergergergergergergergergergergergergergergergergergergerg"),$"{_selectedFileSystemItem.Path} fghjkeerifjdreogfmf,erhjkiuygrfsfghuil;-09;lkjhgfdspoiuytrepreoiuytrewlkj      hgfdiuytrekjuytrekuytrelkiuytre,mnboiuytre");
             }
         }
     }
@@ -74,8 +70,7 @@ internal class FoldersViewModel : ViewModelBase
         Mode = (string)navigationContext.Parameters["mode"];
     }
 
-    internal static IEnumerable<FileSystemItemViewModel> GetFileSystemItemChildren(IEnumerable<DirectoryModel> directoryModels,
-                                                                                   IEnumerable<FileModel> fileModels, IFolderService folderService)
+    internal static IEnumerable<FileSystemItemViewModel> GetFileSystemItemChildren(IEnumerable<DirectoryModel> directoryModels, IFolderService folderService, ILogger logger)
     {
         var children = new List<FileSystemItemViewModel>();
 
@@ -86,7 +81,12 @@ internal class FoldersViewModel : ViewModelBase
                 continue;
             }
 
-            var directoryViewModel = factoryFunc.Invoke(directoryModel.Name, directoryModel.Path, GetFileSystemItemChildren(directoryModel.DirectoryModels, directoryModel.FileModels, folderService), folderService);
+            var directoryViewModel = factoryFunc.Invoke(
+                directoryModel.Name,
+                directoryModel.Path,
+                GetFileSystemItemChildren(directoryModel.DirectoryModels, folderService, logger),
+                folderService,
+                logger);
             children.Add(directoryViewModel);
         }
 
@@ -95,13 +95,20 @@ internal class FoldersViewModel : ViewModelBase
 
     private async Task OnViewLoaded()
     {
-        var root = await _folderService.GetDirectoryModelAsync();
-
-        if (FileSystemItemsFactories.TryGetValue(root.GetType(), out var factoryFunc))
+        try
         {
-            var rootViewModel = factoryFunc.Invoke(root.Name, root.Path, GetFileSystemItemChildren(root.DirectoryModels, root.FileModels, _folderService), _folderService);
+            var root = await _folderService.GetDirectoryModelAsync();
 
-            FileSystemItemViewModels.InsertItem(rootViewModel);
+            if (FileSystemItemsFactories.TryGetValue(root.GetType(), out var factoryFunc))
+            {
+                var rootViewModel = factoryFunc.Invoke(root.Name, root.Path, GetFileSystemItemChildren(root.DirectoryModels, _folderService, _logger), _folderService, _logger);
+
+                FileSystemItemViewModels.InsertItem(rootViewModel);
+            }
+        }
+        catch (Exception exception)
+        {
+            _logger.Error(exception,"Unexpected exception during root folders loading");
         }
     }
 }
