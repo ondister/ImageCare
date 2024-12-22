@@ -16,7 +16,7 @@ internal class BottomBarViewModel : ViewModelBase
     private readonly IDialogService _dialogService;
     private readonly ILogNotificationService _logNotificationService;
     private CompositeDisposable _compositeDisposable;
-    private int _messagesCount;
+    private int? _messagesCount;
 
     private int _errorsCount;
     private int _warningsCount;
@@ -29,7 +29,7 @@ internal class BottomBarViewModel : ViewModelBase
         OpenLogWindowCommand = new DelegateCommand(OpenLogWindow);
     }
 
-    public int MessagesCount
+    public int? MessagesCount
     {
         get => _messagesCount;
         set => SetProperty(ref _messagesCount, value);
@@ -70,6 +70,10 @@ internal class BottomBarViewModel : ViewModelBase
     private void UpdateMessagesCount()
     {
         MessagesCount = _errorsCount + _warningsCount;
+        if (MessagesCount == 0)
+        {
+            MessagesCount = null;
+        }
     }
 
     private void OnErrorsMessagesCountUpdated(int errorsCount)
