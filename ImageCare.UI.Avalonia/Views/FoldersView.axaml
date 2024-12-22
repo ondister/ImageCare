@@ -6,10 +6,17 @@
              x:Class="ImageCare.UI.Avalonia.Views.FoldersView"
              prism:ViewModelLocator.AutoWireViewModel="True"
              x:DataType="viewModels:FoldersViewModel">
-    <Grid Margin="2">
-        <TreeView  ItemsSource="{Binding FileSystemItemViewModels}"
+
+    <Grid Margin="{StaticResource MarginAll.Small}" RowDefinitions="Auto,*">
+
+        <TextBlock Grid.Row="0"
+                   Margin="{StaticResource MarginAll.Small}"
+                   Text="Folders"/>
+
+        <TreeView  Grid.Row="1"
+                   ItemsSource="{Binding FileSystemItemViewModels}"
                    SelectedItem="{Binding SelectedFileSystemItem}"
-                  SelectionMode="Single">
+                   SelectionMode="Single">
 
             <TreeView.Styles>
                 <Style Selector="TreeViewItem" x:DataType="domain:FileSystemItemViewModel">

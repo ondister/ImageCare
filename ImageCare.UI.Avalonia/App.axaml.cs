@@ -58,6 +58,7 @@ public class App : PrismApplication
     protected override void RegisterTypes(IContainerRegistry containerRegistry)
     {
         containerRegistry.Register<MainWindow>();
+        containerRegistry.Register<MainWindowTitleRightView>();
 
         containerRegistry.RegisterForNavigation<FoldersView>();
         containerRegistry.RegisterForNavigation<MainImageView>();

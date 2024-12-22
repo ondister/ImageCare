@@ -16,7 +16,14 @@
 
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+    <PackageReference Include="Irihi.Ursa" Version="1.6.2" />
     <PackageReference Include="Prism.Avalonia" Version="8.1.97.11073" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="Ursa">
+      <HintPath>..\..\..\Users\user\.nuget\packages\irihi.ursa\1.6.2\lib\net8.0\Ursa.dll</HintPath>
+    </Reference>
   </ItemGroup>
 
 </Project>

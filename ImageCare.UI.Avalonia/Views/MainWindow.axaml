@@ -1,21 +1,27 @@
-<Window xmlns="https://github.com/avaloniaui"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:vm="using:ImageCare.UI.Avalonia.ViewModels"
-        xmlns:prism="http://prismlibrary.com/"
-        xmlns:ui="clr-namespace:ImageCare.UI.Avalonia"
-        x:Class="ImageCare.UI.Avalonia.Views.MainWindow"
-        x:DataType="vm:MainWindowViewModel"
-        Icon="/Assets/avalonia-logo.ico"
-        Title="ImageCare.UI.Avalonia"
-        MinHeight="600"
-        MinWidth="800"
-        WindowState="Maximized"
-        prism:ViewModelLocator.AutoWireViewModel="True">
+<u:UrsaWindow xmlns="https://github.com/avaloniaui"
+              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+              xmlns:vm="using:ImageCare.UI.Avalonia.ViewModels"
+              xmlns:prism="http://prismlibrary.com/"
+              xmlns:ui="clr-namespace:ImageCare.UI.Avalonia"
+              xmlns:u="https://irihi.tech/ursa"
+              xmlns:views="clr-namespace:ImageCare.UI.Avalonia.Views"
+              x:Class="ImageCare.UI.Avalonia.Views.MainWindow"
+              x:DataType="vm:MainWindowViewModel"
+              Icon="/Assets/avalonia-logo.ico"
+              Title="ImageCare.UI.Avalonia"
+              MinHeight="600"
+              MinWidth="800"
+              WindowState="Maximized"
+              prism:ViewModelLocator.AutoWireViewModel="True">
 
+    <u:UrsaWindow.RightContent>
+        <views:MainWindowTitleRightView />
+    </u:UrsaWindow.RightContent>
 
     <Grid Margin="2">
         <Grid.RowDefinitions>
             <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" /> <!--Splitter-->
             <RowDefinition Height="Auto" MinHeight="200" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
@@ -23,38 +29,51 @@
         <Grid Grid.Row="0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" MinWidth="300" />
+                <ColumnDefinition Width="Auto" /> <!--Splitter-->
                 <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" /> <!--Splitter-->
                 <ColumnDefinition Width="Auto" MinWidth="300" />
             </Grid.ColumnDefinitions>
 
             <ContentControl Grid.Column="0"
                             prism:RegionManager.RegionName="{x:Static ui:RegionNames.SourceFoldersRegion}" />
-            <ContentControl Grid.Column="1" prism:RegionManager.RegionName="{x:Static ui:RegionNames.MainImageViewRegion}" />
+
             <GridSplitter Grid.Column="1"
-                          HorizontalAlignment="Left"
-                          VerticalAlignment="Stretch" />
+                          VerticalAlignment="Stretch"
+                          ShowsPreview="True" />
+
             <ContentControl Grid.Column="2"
+                            prism:RegionManager.RegionName="{x:Static ui:RegionNames.MainImageViewRegion}" />
+
+            <GridSplitter Grid.Column="3"
+                          VerticalAlignment="Stretch"
+                          ShowsPreview="True" />
+
+            <ContentControl Grid.Column="4"
                             prism:RegionManager.RegionName="{x:Static ui:RegionNames.TargetFoldersRegion}" />
-            <GridSplitter Grid.Column="2"
-                          HorizontalAlignment="Left"
-                          VerticalAlignment="Stretch" />
 
         </Grid>
 
         <GridSplitter Grid.Row="1"
                       HorizontalAlignment="Stretch"
-                      VerticalAlignment="Top" />
+                      ShowsPreview="True" />
 
-        <Grid Grid.Row="1" ColumnDefinitions="*,*">
-            <ContentControl Grid.Column="0" prism:RegionManager.RegionName="{x:Static ui:RegionNames.SourcePreviewImageRegion}" />
-            <ContentControl Grid.Column="1" prism:RegionManager.RegionName="{x:Static ui:RegionNames.TargetPreviewImageRegion}" />
+        <Grid Grid.Row="2" ColumnDefinitions="*,Auto,*">
+            <ContentControl Grid.Column="0"
+                            Margin="{StaticResource MarginRight.Medium}"
+                            prism:RegionManager.RegionName="{x:Static ui:RegionNames.SourcePreviewImageRegion}" />
+
             <GridSplitter Grid.Column="1"
-                          HorizontalAlignment="Left"
-                          VerticalAlignment="Stretch" />
+                          VerticalAlignment="Stretch"
+                          ShowsPreview="True"/>
+
+            <ContentControl Grid.Column="2"
+                            Margin="{StaticResource MarginLeft.Medium}"
+                            prism:RegionManager.RegionName="{x:Static ui:RegionNames.TargetPreviewImageRegion}" />
         </Grid>
 
 
-        <ContentControl Grid.Row="2"
+        <ContentControl Grid.Row="3"
                         prism:RegionManager.RegionName="{x:Static ui:RegionNames.BottomBarRegion}" />
 
     </Grid>
@@ -65,4 +84,4 @@
         </EventTriggerBehavior>
     </Interaction.Behaviors>
 
-</Window>
+</u:UrsaWindow>

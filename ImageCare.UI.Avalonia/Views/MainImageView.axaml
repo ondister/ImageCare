@@ -6,7 +6,7 @@
              prism:ViewModelLocator.AutoWireViewModel="True"
              x:DataType="viewModels:MainImageViewModel">
 
-    <Grid Margin="2">
+    <Grid Margin="{StaticResource MarginAll.Small}">
         <Image Source="{Binding MainBitmap}" />
     </Grid>
 </UserControl>

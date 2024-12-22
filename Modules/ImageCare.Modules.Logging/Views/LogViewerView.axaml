@@ -48,46 +48,9 @@
 
     </UserControl.Styles>
 
-    <Grid Margin="2" RowDefinitions="Auto, Auto, *">
-
-        <!--Buttons-->
-        <Grid Grid.Row="0"
-              Margin="{StaticResource MarginBottom.Small}"
-              ColumnDefinitions="Auto,Auto,*">
-            <ToggleButton IsChecked="{Binding ShowErrors}">
-                <StackPanel Orientation="Horizontal">
-                    <iconPacks:PackIconLucide Kind="OctagonX"
-                                              Foreground="{StaticResource Brushes.Error}" />
-                    <TextBlock Text="Errors" />
-                    <TextBlock Text="{Binding ErrorsCount}" />
-                </StackPanel>
-            </ToggleButton>
-
-            <ToggleButton Grid.Column="1"
-                          IsChecked="{Binding ShowWarnings}">
-                <StackPanel Orientation="Horizontal">
-                    <iconPacks:PackIconLucide Kind="TriangleAlert"
-                                              Foreground="{StaticResource Brushes.Warning}" />
-                    <TextBlock Text="Warnings" />
-                    <TextBlock Text="{Binding WarningsCount}" />
-                </StackPanel>
-            </ToggleButton>
-
-            <Button Grid.Column="2"
-                    HorizontalAlignment="Right"
-                    Command="{Binding ClearMessagesCommand}">
-                <StackPanel Orientation="Horizontal">
-                    <iconPacks:PackIconLucide Kind="Eraser" />
-                    <TextBlock Text="Clear Messages" />
-                </StackPanel>
-            </Button>
-        </Grid>
-
-        <u:Divider Grid.Row="1"
-                   HorizontalContentAlignment="Center" />
-
+    <Grid Margin="{StaticResource MarginAll.Small}" RowDefinitions="*,Auto, Auto">
         <!--List of messages with headers-->
-        <Grid Grid.Row="2">
+        <Grid Grid.Row="0">
             <ListBox ItemsSource="{Binding MessageViewModels}"
                      Grid.IsSharedSizeScope="True">
                 <ListBox.Styles>
@@ -177,6 +140,42 @@
 
                 </ListBox.DataTemplates>
             </ListBox>
+        </Grid>
+
+        <u:Divider Grid.Row="1"
+                   HorizontalContentAlignment="Center" />
+
+        <!--Buttons-->
+        <Grid Grid.Row="2"
+              Margin="{StaticResource MarginBottom.Small}"
+              ColumnDefinitions="Auto,Auto,*">
+            <ToggleButton IsChecked="{Binding ShowErrors}">
+                <StackPanel Orientation="Horizontal">
+                    <iconPacks:PackIconLucide Kind="OctagonX"
+                                              Foreground="{StaticResource Brushes.Error}" />
+                    <TextBlock Text="Errors" />
+                    <TextBlock Text="{Binding ErrorsCount}" />
+                </StackPanel>
+            </ToggleButton>
+
+            <ToggleButton Grid.Column="1"
+                          IsChecked="{Binding ShowWarnings}">
+                <StackPanel Orientation="Horizontal">
+                    <iconPacks:PackIconLucide Kind="TriangleAlert"
+                                              Foreground="{StaticResource Brushes.Warning}" />
+                    <TextBlock Text="Warnings" />
+                    <TextBlock Text="{Binding WarningsCount}" />
+                </StackPanel>
+            </ToggleButton>
+
+            <Button Grid.Column="2"
+                    HorizontalAlignment="Right"
+                    Command="{Binding ClearMessagesCommand}">
+                <StackPanel Orientation="Horizontal">
+                    <iconPacks:PackIconLucide Kind="Eraser" />
+                    <TextBlock Text="Clear Messages" />
+                </StackPanel>
+            </Button>
         </Grid>
     </Grid>
 

@@ -1,14 +1,10 @@
-using System;
-
-using Avalonia.Controls;
-
-using Prism.Regions;
+using Ursa.Controls;
 
 namespace ImageCare.UI.Avalonia.Views;
 
-public partial class MainWindow:Window
+public partial class MainWindow : UrsaWindow
 {
-    public MainWindow(IRegionManager regionManager)
+    public MainWindow()
     {
         InitializeComponent();
     }

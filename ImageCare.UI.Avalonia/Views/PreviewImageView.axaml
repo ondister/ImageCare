@@ -9,7 +9,7 @@
              x:Class="ImageCare.UI.Avalonia.Views.PreviewImageView"
              x:DataType="viewModels:PreviewImageViewModel">
 
-    <Grid Margin="2">
+    <Grid Margin="{StaticResource MarginAll.Small}">
 
         <ListBox ItemsSource="{Binding ImagePreviews}"
                  SelectedItem="{Binding SelectedPreview, Mode=TwoWay}"
