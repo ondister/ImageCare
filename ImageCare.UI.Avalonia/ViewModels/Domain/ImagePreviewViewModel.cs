@@ -75,7 +75,7 @@ internal class ImagePreviewViewModel : ViewModelBase, IComparable<ImagePreviewVi
     {
         try
         {
-            await using (var imageStream = await _imageService.GetImageStreamAsync(_imagePreview))
+            await using (var imageStream = await _imageService.GetJpegImageStreamAsync(_imagePreview))
             {
                 PreviewBitmap = Bitmap.DecodeToWidth(imageStream, 300);
             }

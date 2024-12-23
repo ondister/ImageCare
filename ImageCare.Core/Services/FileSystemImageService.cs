@@ -28,7 +28,7 @@ public sealed class FileSystemImageService : IFileSystemImageService
                                          });
     }
 
-    public async Task<Stream> GetImageStreamAsync(ImagePreview imagePreview)
+    public async Task<Stream> GetJpegImageStreamAsync(ImagePreview imagePreview)
     {
         try
         {

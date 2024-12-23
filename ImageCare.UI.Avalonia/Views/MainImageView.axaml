@@ -2,11 +2,16 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:prism="http://prismlibrary.com/"
              xmlns:viewModels="clr-namespace:ImageCare.UI.Avalonia.ViewModels"
+             xmlns:u="https://irihi.tech/ursa"
              x:Class="ImageCare.UI.Avalonia.Views.MainImageView"
              prism:ViewModelLocator.AutoWireViewModel="True"
              x:DataType="viewModels:MainImageViewModel">
 
     <Grid Margin="{StaticResource MarginAll.Small}">
-        <Image Source="{Binding MainBitmap}" />
+        <u:ImageViewer
+            Name="MainViewer"
+            Background="Transparent"
+            MinScale="1.0"
+            Source="{Binding MainBitmap}" />
     </Grid>
 </UserControl>

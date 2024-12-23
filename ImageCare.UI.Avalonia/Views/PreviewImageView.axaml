@@ -45,8 +45,8 @@
                           Classes.class1="{Binding Selected }"
                           Classes.class2="{Binding !Selected }">
                         <Grid Grid.Row="0"
-                              Grid.ColumnDefinitions="*,Auto"
-                              Grid.RowDefinitions="Auto,*">
+                              ColumnDefinitions="*,Auto"
+                              RowDefinitions="Auto,*">
                             <Image Grid.Column="0"
                                    Grid.Row="0"
                                    Grid.RowSpan="2"

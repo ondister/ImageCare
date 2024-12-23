@@ -1,10 +1,12 @@
 ﻿using System;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 
+using Avalonia;
 using Avalonia.Media.Imaging;
+using Avalonia.Platform;
 
 using CommunityToolkit.Mvvm.Messaging;
-
 using ImageCare.Core.Domain;
 using ImageCare.Core.Services;
 using ImageCare.Mvvm;
@@ -63,9 +65,10 @@ internal class MainImageViewModel : ViewModelBase, IRecipient<FolderSelectedMess
     {
         try
         {
-            await using (var imageStream = await _imageService.GetImageStreamAsync(imagePreview))
+            await using (var imageStream = await _imageService.GetJpegImageStreamAsync(imagePreview))
             {
                 MainBitmap = new Bitmap(imageStream);
+
             }
         }
         catch (Exception exception)

@@ -4,7 +4,7 @@ namespace ImageCare.Core.Services;
 
 public interface IFileSystemImageService
 {
-    Task<Stream> GetImageStreamAsync(ImagePreview imagePreview);
+    Task<Stream> GetJpegImageStreamAsync(ImagePreview imagePreview);
 
     IAsyncEnumerable<ImagePreview> GetImagePreviewsAsync(IEnumerable<FileModel> fileModels);
 
