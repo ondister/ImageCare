@@ -14,7 +14,7 @@
         <ListBox ItemsSource="{Binding ImagePreviews}"
                  SelectedItem="{Binding SelectedPreview, Mode=TwoWay}"
                  ScrollViewer.HorizontalScrollBarVisibility="Auto"
-                 SelectionMode="AlwaysSelected"
+                 SelectionMode="Single"
                  DragDrop.AllowDrop="True">
 
             <!--Behavior for dropping image from preview list-->

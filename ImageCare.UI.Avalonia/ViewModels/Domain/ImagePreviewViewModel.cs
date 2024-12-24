@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
 
@@ -55,7 +54,7 @@ internal class ImagePreviewViewModel : ViewModelBase, IComparable<ImagePreviewVi
 
     public Bitmap? PreviewBitmap
     {
-        get =>_previewBitmap;
+        get => _previewBitmap;
         set => SetProperty(ref _previewBitmap, value);
     }
 
@@ -75,7 +74,7 @@ internal class ImagePreviewViewModel : ViewModelBase, IComparable<ImagePreviewVi
     {
         try
         {
-            await using (var imageStream = await _imageService.GetJpegImageStreamAsync(_imagePreview))
+            await using (var imageStream = await _imageService.GetJpegImageStreamAsync(_imagePreview, ImagePreviewSize.Medium))
             {
                 PreviewBitmap = Bitmap.DecodeToWidth(imageStream, 300);
             }

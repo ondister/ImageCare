@@ -2,7 +2,10 @@
 using ImageCare.Core.Domain.MediaFormats;
 using ImageCare.Core.Exceptions;
 
+using LibRawDotNet;
+
 using Polly;
+using Polly.Fallback;
 using Polly.Retry;
 
 namespace ImageCare.Core.Services;
@@ -23,16 +26,27 @@ public sealed class FileSystemImageService : IFileSystemImageService
                                          5,
                                          retryAttempt =>
                                          {
-                                             var delay = TimeSpan.FromMilliseconds(Math.Pow(20, retryAttempt));
+                                             var delay = TimeSpan.FromMilliseconds(Math.Pow(25, retryAttempt));
                                              return delay;
                                          });
     }
 
-    public async Task<Stream> GetJpegImageStreamAsync(ImagePreview imagePreview)
+    public async Task<Stream> GetJpegImageStreamAsync(ImagePreview imagePreview, ImagePreviewSize imagePreviewSize, CancellationToken cancellationToken = default)
     {
         try
         {
-            return await _fileOperationsRetryPolicy.ExecuteAsync(async () => await GetImageStreamInternalAsync(imagePreview));
+            return await _fileOperationsRetryPolicy.ExecuteAsync(
+                       async () =>
+                       {
+                           return await Task.Run(
+                                      () =>
+                                      {
+                                          using (var libRawData = LibRawData.OpenFile(imagePreview.Url))
+                                          {
+                                              return libRawData.GetPreviewJpegStream((int)imagePreviewSize);
+                                          }
+                                      });
+                       });
         }
         catch (Exception exception)
         {

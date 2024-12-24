@@ -37,11 +37,11 @@ public class LibRawDataTests
     [TestCase(0)]
     [TestCase(1)]
     [TestCase(2)]
-    public async Task LibRawDataTests_GetPreviewJpegStream_WithRightIndex_StreamIsNotNullAsync(int index)
+    public void LibRawDataTests_GetPreviewJpegStream_WithRightIndex_StreamIsNotNull(int index)
     {
         using (var libRawData = LibRawData.OpenFile(_canonCr3FilePath))
         {
-            var stream = await libRawData.GetPreviewJpegStream(index);
+            var stream = libRawData.GetPreviewJpegStream(index);
             Assert.IsNotNull(stream);
         }
     }
@@ -51,12 +51,12 @@ public class LibRawDataTests
     {
         const int wrongPreviewIndex = 4;
 
-        Assert.ThrowsAsync<LibRawException>(
-            async () =>
+        Assert.Throws<LibRawException>(
+            () =>
             {
                 using (var libRawData = LibRawData.OpenFile(_canonCr3FilePath))
                 {
-                    _ = await libRawData.GetPreviewJpegStream(wrongPreviewIndex);
+                    _ = libRawData.GetPreviewJpegStream(wrongPreviewIndex);
                 }
             });
     }
@@ -64,9 +64,14 @@ public class LibRawDataTests
     [Test]
     public void RunLibRawDataBenchmarks()
     {
+        var maxLoadingTime = TimeSpan.FromMilliseconds(150);
         var config = new ManualConfig().WithOption(ConfigOptions.DisableOptimizationsValidator, true);
         config.AddLogger(ConsoleLogger.Default);
         config.AddJob(Job.Dry);
         var summary = BenchmarkRunner.Run<LibRawDotNetBenchmarks>(config);
+
+        Assert.That(TimeSpan.FromMicroseconds(summary.Reports[0].ResultStatistics.Mean * 0.001), Is.LessThan(maxLoadingTime));
+        Assert.That(TimeSpan.FromMicroseconds(summary.Reports[1].ResultStatistics.Mean * 0.001), Is.LessThan(maxLoadingTime));
+        Assert.That(TimeSpan.FromMicroseconds(summary.Reports[2].ResultStatistics.Mean * 0.001), Is.LessThan(maxLoadingTime));
     }
 }

@@ -8,10 +8,8 @@
              x:DataType="viewModels:MainImageViewModel">
 
     <Grid Margin="{StaticResource MarginAll.Small}">
-        <u:ImageViewer
+        <Image
             Name="MainViewer"
-            Background="Transparent"
-            MinScale="1.0"
             Source="{Binding MainBitmap}" />
     </Grid>
 </UserControl>

@@ -75,7 +75,7 @@ internal class PreviewImageViewModel : ViewModelBase, IRecipient<FolderSelectedM
             SetProperty(ref _selectedPreview, value);
             if (_selectedPreview != null)
             {
-                _selectedPreview.Selected = true;
+                _selectedPreview.Selected = true; 
                 WeakReferenceMessenger.Default.Send(new ImagePreviewSelectedMessage(new ImagePreview(_selectedPreview.Title, _selectedPreview.Url, _selectedPreview.MediaFormat), Mode));
             }
         }
@@ -141,7 +141,7 @@ internal class PreviewImageViewModel : ViewModelBase, IRecipient<FolderSelectedM
             ImagePreviews.Clear();
 
             var files = await _folderService.GetFileModelAsync(directoryModel, "*");
-         
+            
             await foreach (var previewImage in _imageService.GetImagePreviewsAsync(files))
             {
                 ImagePreviews.Add(new ImagePreviewViewModel(previewImage, _imageService, _fileOperationsService, _logger));

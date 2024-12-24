@@ -1,12 +1,10 @@
 ﻿using System;
-using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 
-using Avalonia;
 using Avalonia.Media.Imaging;
-using Avalonia.Platform;
 
 using CommunityToolkit.Mvvm.Messaging;
+
 using ImageCare.Core.Domain;
 using ImageCare.Core.Services;
 using ImageCare.Mvvm;
@@ -38,6 +36,12 @@ internal class MainImageViewModel : ViewModelBase, IRecipient<FolderSelectedMess
     }
 
     /// <inheritdoc />
+    public void Receive(FolderSelectedMessage message)
+    {
+        ClearPreview();
+    }
+
+    /// <inheritdoc />
     public void Receive(ImagePreviewSelectedMessage message)
     {
         if (message.Value == ImagePreview.Empty)
@@ -50,12 +54,6 @@ internal class MainImageViewModel : ViewModelBase, IRecipient<FolderSelectedMess
         _ = LoadImageAsync(message.Value);
     }
 
-    /// <inheritdoc />
-    public void Receive(FolderSelectedMessage message)
-    {
-        ClearPreview();
-    }
-
     private void ClearPreview()
     {
         MainBitmap = null;
@@ -65,10 +63,9 @@ internal class MainImageViewModel : ViewModelBase, IRecipient<FolderSelectedMess
     {
         try
         {
-            await using (var imageStream = await _imageService.GetJpegImageStreamAsync(imagePreview))
+            await using (var imageStream = await _imageService.GetJpegImageStreamAsync(imagePreview, ImagePreviewSize.Large))
             {
                 MainBitmap = new Bitmap(imageStream);
-
             }
         }
         catch (Exception exception)
