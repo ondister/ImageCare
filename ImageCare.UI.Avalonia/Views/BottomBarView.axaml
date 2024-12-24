@@ -33,7 +33,6 @@
                               IconPlacement="Left"
                               Command="{Binding  OpenLogWindowCommand}">
                     <u:IconButton.Icon>
-
                         <iconPacks:PackIconLucide Kind="List" />
                     </u:IconButton.Icon>
                 </u:IconButton>

@@ -3,13 +3,63 @@
              xmlns:prism="http://prismlibrary.com/"
              xmlns:viewModels="clr-namespace:ImageCare.UI.Avalonia.ViewModels"
              xmlns:u="https://irihi.tech/ursa"
+             xmlns:iconPacks="https://github.com/MahApps/IconPacks.Avalonia"
              x:Class="ImageCare.UI.Avalonia.Views.MainImageView"
              prism:ViewModelLocator.AutoWireViewModel="True"
-             x:DataType="viewModels:MainImageViewModel">
+             x:DataType="viewModels:MainImageViewModel"
+             x:Name="This"
+             ResetMatrixCommand="{Binding ResetMatrixCommand, Mode=OneWayToSource}">
 
-    <Grid Margin="{StaticResource MarginAll.Small}">
-        <Image
-            Name="MainViewer"
-            Source="{Binding MainBitmap}" />
+    <Grid Margin="{StaticResource MarginAll.Small}"
+          ColumnDefinitions="*,Auto">
+        <ZoomBorder x:Name="ZoomBorder"
+                    Grid.Column="0"
+                    Grid.ColumnSpan="2"
+                    Stretch="None"
+                    ZoomSpeed="1.1"
+                    EnableConstrains="True"
+                    EnablePan="True"
+                    PanButton="Left"
+                    ClipToBounds="True"
+                    Focusable="True"
+                    MinZoomX="1"
+                    MinZoomY="1"
+                    VerticalAlignment="Stretch"
+                    HorizontalAlignment="Stretch">
+            <TransitioningContentControl Content="{Binding  MainBitmap}">
+                <TransitioningContentControl.PageTransition>
+                    <CompositePageTransition>
+                        <CrossFade Duration="0:00:00.100" 
+                                   FadeInEasing="CircularEaseIn" 
+                                   FadeOutEasing="CircularEaseOut" />
+                    </CompositePageTransition>
+                </TransitioningContentControl.PageTransition>
+                <TransitioningContentControl.ContentTemplate>
+                    <DataTemplate DataType="Bitmap">
+                        <Image x:Name="Image"
+                               Name="MainViewer"
+                               Source="{Binding}" />
+                    </DataTemplate>
+                </TransitioningContentControl.ContentTemplate>
+            </TransitioningContentControl>
+
+        </ZoomBorder>
+
+        <Grid Grid.Column="1"
+              RowDefinitions="*,Auto, Auto"
+              Margin="{StaticResource MarginAll.Small}">
+            <u:IconButton Grid.Row="1"
+                          Margin="{StaticResource MarginAll.Small}"
+                          Theme="{DynamicResource SolidIconButton}"
+                          IsEnabled="{Binding !!MainBitmap}"
+                          Command="{Binding ElementName=This, Path=ResetMatrixCommand}">
+                <u:IconButton.Icon>
+                    <iconPacks:PackIconLucide Kind="Scaling"
+                                              Height="{StaticResource Icon.Size.Small}"
+                                              Width="{StaticResource Icon.Size.Small}" />
+                </u:IconButton.Icon>
+            </u:IconButton>
+        </Grid>
     </Grid>
+
 </UserControl>

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using System.Windows.Input;
 
 using Avalonia.Media.Imaging;
 
@@ -35,6 +36,8 @@ internal class MainImageViewModel : ViewModelBase, IRecipient<FolderSelectedMess
         set => SetProperty(ref _mainBitmap, value);
     }
 
+    public ICommand? ResetMatrixCommand { get; set; }
+
     /// <inheritdoc />
     public void Receive(FolderSelectedMessage message)
     {
@@ -50,6 +53,8 @@ internal class MainImageViewModel : ViewModelBase, IRecipient<FolderSelectedMess
 
             return;
         }
+
+        ResetMatrixCommand?.Execute(null);
 
         _ = LoadImageAsync(message.Value);
     }
