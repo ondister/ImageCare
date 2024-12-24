@@ -2,6 +2,7 @@
 
 using CommunityToolkit.Mvvm.Input;
 
+using ImageCare.Core.Domain;
 using ImageCare.Mvvm;
 
 using Prism.Regions;
@@ -24,11 +25,11 @@ public class MainWindowViewModel : ViewModelBase
 
     private void OnViewLoaded()
     {
-        _regionManager.RequestNavigate(RegionNames.SourceFoldersRegion, "FoldersView", OnNavigationResult, new NavigationParameters { { "mode", "Source" } });
-        _regionManager.RequestNavigate(RegionNames.TargetFoldersRegion, "FoldersView", new NavigationParameters { { "mode", "Target" } });
+        _regionManager.RequestNavigate(RegionNames.SourceFoldersRegion, "FoldersView", OnNavigationResult, new NavigationParameters { { "panel", FileManagerPanel.Right } });
+        _regionManager.RequestNavigate(RegionNames.TargetFoldersRegion, "FoldersView", new NavigationParameters { { "panel", FileManagerPanel.Left} });
         _regionManager.RequestNavigate(RegionNames.MainImageViewRegion, "MainImageView");
-        _regionManager.RequestNavigate(RegionNames.SourcePreviewImageRegion, "PreviewImageView", new NavigationParameters { { "mode", "Source" } });
-        _regionManager.RequestNavigate(RegionNames.TargetPreviewImageRegion, "PreviewImageView", new NavigationParameters { { "mode", "Target" } });
+        _regionManager.RequestNavigate(RegionNames.SourcePreviewImageRegion, "PreviewImageView", new NavigationParameters { { "panel", FileManagerPanel.Right } });
+        _regionManager.RequestNavigate(RegionNames.TargetPreviewImageRegion, "PreviewImageView", new NavigationParameters { { "panel", FileManagerPanel.Left } });
         _regionManager.RequestNavigate(RegionNames.BottomBarRegion, "BottomBarView");
     }
 

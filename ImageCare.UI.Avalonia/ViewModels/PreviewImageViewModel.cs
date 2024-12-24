@@ -5,15 +5,12 @@ using System.Reactive.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
-using CommunityToolkit.Mvvm.Messaging;
-
 using ImageCare.Core.Domain;
 using ImageCare.Core.Services;
 using ImageCare.Core.Services.FileOperationsService;
 using ImageCare.Mvvm;
 using ImageCare.Mvvm.Collections;
 using ImageCare.UI.Avalonia.Behaviors;
-using ImageCare.UI.Avalonia.Messages;
 using ImageCare.UI.Avalonia.ViewModels.Domain;
 
 using Prism.Regions;
@@ -22,7 +19,7 @@ using Serilog;
 
 namespace ImageCare.UI.Avalonia.ViewModels;
 
-internal class PreviewImageViewModel : ViewModelBase, IRecipient<FolderSelectedMessage>, IRecipient<ImagePreviewSelectedMessage>
+internal class PreviewImageViewModel : ViewModelBase
 {
     private readonly IFileSystemImageService _imageService;
     private readonly IFolderService _folderService;
@@ -48,9 +45,6 @@ internal class PreviewImageViewModel : ViewModelBase, IRecipient<FolderSelectedM
         _logger = logger;
         _synchronizationContext = synchronizationContext;
 
-        WeakReferenceMessenger.Default.Register<FolderSelectedMessage>(this);
-        WeakReferenceMessenger.Default.Register<ImagePreviewSelectedMessage>(this);
-
         ImagePreviews = [];
         ImagePreviewDropHandler = imagePreviewDropHandler;
     }
@@ -59,7 +53,7 @@ internal class PreviewImageViewModel : ViewModelBase, IRecipient<FolderSelectedM
 
     public ImagePreviewDropHandler ImagePreviewDropHandler { get; }
 
-    public string Mode { get; private set; }
+    public FileManagerPanel FileManagerPanel { get; private set; }
 
     public ImagePreviewViewModel? SelectedPreview
     {
@@ -75,55 +69,26 @@ internal class PreviewImageViewModel : ViewModelBase, IRecipient<FolderSelectedM
             if (_selectedPreview != null)
             {
                 _selectedPreview.Selected = true;
-                WeakReferenceMessenger.Default.Send(new ImagePreviewSelectedMessage(new ImagePreview(_selectedPreview.Title, _selectedPreview.Url, _selectedPreview.MediaFormat), Mode));
+
+                _fileOperationsService.SetSelectedPreview(new SelectedImagePreview(_selectedPreview.Title, _selectedPreview.Url, _selectedPreview.MediaFormat, FileManagerPanel));
             }
         }
     }
 
     public string SelectedFolderPath { get; set; }
 
-    public void Receive(FolderSelectedMessage message)
-    {
-        if (message.Mode == Mode)
-        {
-            _ = LoadImagePreviewsAsync(message.Value);
-
-            SelectedFolderPath = message.Value.Path;
-
-            if (!string.IsNullOrWhiteSpace(SelectedFolderPath))
-            {
-                try
-                {
-                    _fileSystemWatcherService.SetWatchingDirectory(SelectedFolderPath);
-                }
-
-                catch (Exception exception)
-                {
-                    _logger.Error(exception, $"Unexpected exception during set watching directory {SelectedFolderPath}");
-                }
-            }
-        }
-    }
-
-    /// <inheritdoc />
-    public void Receive(ImagePreviewSelectedMessage message)
-    {
-        if (message.Mode != Mode)
-        {
-            SelectedPreview = null;
-        }
-    }
-
     /// <inheritdoc />
     public override void OnNavigatedTo(NavigationContext navigationContext)
     {
-        Mode = (string)navigationContext.Parameters["mode"];
+        FileManagerPanel = (FileManagerPanel)navigationContext.Parameters["panel"];
 
         fileSystemWatcherCompositeDisposable = new CompositeDisposable
         {
             _fileSystemWatcherService.FileCreated.DistinctUntilChanged(model => model.FullName).Subscribe(OnFileCreated),
             _fileSystemWatcherService.FileDeleted.DistinctUntilChanged(model => model.FullName).Subscribe(OnFileDeleted),
-            _fileSystemWatcherService.FileRenamed.DistinctUntilChanged(model => model.NewFileModel.FullName).Subscribe(OnFileRenamed)
+            _fileSystemWatcherService.FileRenamed.DistinctUntilChanged(model => model.NewFileModel.FullName).Subscribe(OnFileRenamed),
+            _folderService.FileSystemItemSelected.Subscribe(OnFolderSelected),
+            _fileOperationsService.ImagePreviewSelected.Subscribe(OnImagePreviewSelected)
         };
     }
 
@@ -221,8 +186,39 @@ internal class PreviewImageViewModel : ViewModelBase, IRecipient<FolderSelectedM
             if (ImagePreviews.Count == 0)
             {
                 _synchronizationContext.Post(d => { SelectedPreview = null; }, null);
-                WeakReferenceMessenger.Default.Send(new ImagePreviewSelectedMessage(ImagePreview.Empty, Mode));
+                _fileOperationsService.SetSelectedPreview(new SelectedImagePreview(ImagePreview.Empty.Title, ImagePreview.Empty.Url, ImagePreview.Empty.MediaFormat, FileManagerPanel));
             }
+        }
+    }
+
+    private void OnFolderSelected(SelectedDirectory selectedFileSystemItem)
+    {
+        if (selectedFileSystemItem.FileManagerPanel == FileManagerPanel)
+        {
+            _ = LoadImagePreviewsAsync(selectedFileSystemItem);
+
+            SelectedFolderPath = selectedFileSystemItem.Path;
+
+            if (!string.IsNullOrWhiteSpace(SelectedFolderPath))
+            {
+                try
+                {
+                    _fileSystemWatcherService.SetWatchingDirectory(SelectedFolderPath);
+                }
+
+                catch (Exception exception)
+                {
+                    _logger.Error(exception, $"Unexpected exception during set watching directory {SelectedFolderPath}");
+                }
+            }
+        }
+    }
+
+    private void OnImagePreviewSelected(SelectedImagePreview selectedImagePreview)
+    {
+        if (selectedImagePreview.FileManagerPanel != FileManagerPanel)
+        {
+            SelectedPreview = null;
         }
     }
 }

@@ -1,33 +1,45 @@
 ﻿using System;
+using System.Reactive.Disposables;
+using System.Reactive.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
 
 using Avalonia.Media.Imaging;
 
-using CommunityToolkit.Mvvm.Messaging;
-
 using ImageCare.Core.Domain;
 using ImageCare.Core.Services;
+using ImageCare.Core.Services.FileOperationsService;
 using ImageCare.Mvvm;
-using ImageCare.UI.Avalonia.Messages;
+
+using Prism.Regions;
 
 using Serilog;
 
 namespace ImageCare.UI.Avalonia.ViewModels;
 
-internal class MainImageViewModel : ViewModelBase, IRecipient<FolderSelectedMessage>, IRecipient<ImagePreviewSelectedMessage>
+internal class MainImageViewModel : ViewModelBase
 {
     private readonly IFileSystemImageService _imageService;
+    private readonly IFolderService _folderService;
+    private readonly IFileOperationsService _fileOperationsService;
     private readonly ILogger _logger;
+    private readonly SynchronizationContext _synchronizationContext;
     private Bitmap? _mainBitmap;
 
-    public MainImageViewModel(IFileSystemImageService imageService, ILogger logger)
+    private CompositeDisposable? _compositeDisposable;
+
+    public MainImageViewModel(IFileSystemImageService imageService,
+                              IFolderService folderService,
+                              IFileOperationsService fileOperationsService,
+                              ILogger logger,
+                              SynchronizationContext synchronizationContext)
     {
         _imageService = imageService;
+        _folderService = folderService;
+        _fileOperationsService = fileOperationsService;
         _logger = logger;
-
-        WeakReferenceMessenger.Default.Register<FolderSelectedMessage>(this);
-        WeakReferenceMessenger.Default.Register<ImagePreviewSelectedMessage>(this);
+        _synchronizationContext = synchronizationContext;
     }
 
     public Bitmap? MainBitmap
@@ -39,15 +51,27 @@ internal class MainImageViewModel : ViewModelBase, IRecipient<FolderSelectedMess
     public ICommand? ResetMatrixCommand { get; set; }
 
     /// <inheritdoc />
-    public void Receive(FolderSelectedMessage message)
+    public override void OnNavigatedTo(NavigationContext navigationContext)
     {
-        ClearPreview();
+        _compositeDisposable = new CompositeDisposable
+        {
+            _folderService.FileSystemItemSelected.Subscribe(OnFolderSelected),
+            _fileOperationsService.ImagePreviewSelected.
+                                   Throttle(TimeSpan.FromMilliseconds(150))
+                                   .ObserveOn(_synchronizationContext)
+                                   .Subscribe(OnImagePreviewSelected)
+        };
     }
 
     /// <inheritdoc />
-    public void Receive(ImagePreviewSelectedMessage message)
+    public override void OnNavigatedFrom(NavigationContext navigationContext)
     {
-        if (message.Value == ImagePreview.Empty)
+        _compositeDisposable?.Dispose();
+    }
+
+    private void OnImagePreviewSelected(SelectedImagePreview imagePreview)
+    {
+        if (imagePreview == ImagePreview.Empty)
         {
             ClearPreview();
 
@@ -56,7 +80,12 @@ internal class MainImageViewModel : ViewModelBase, IRecipient<FolderSelectedMess
 
         ResetMatrixCommand?.Execute(null);
 
-        _ = LoadImageAsync(message.Value);
+        _ = LoadImageAsync(imagePreview);
+    }
+
+    private void OnFolderSelected(SelectedDirectory item)
+    {
+        ClearPreview();
     }
 
     private void ClearPreview()

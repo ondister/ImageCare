@@ -1,9 +1,12 @@
-﻿using ImageCare.Core.Domain;
-using ImageCare.Core.Exceptions;
+﻿using System.Collections.Concurrent;
+using System.Reactive.Linq;
+using System.Reactive.Subjects;
+
+using ImageCare.Core.Domain;
 
 namespace ImageCare.Core.Services;
 
-public sealed class LocalFileSystemFolderService : IFolderService
+public sealed class LocalFileSystemFolderService : IFolderService, IDisposable
 {
     private static readonly Dictionary<DriveType, Func<DriveInfo, DriveModel>> _driveModelFactoryMethods = new()
     {
@@ -11,6 +14,23 @@ public sealed class LocalFileSystemFolderService : IFolderService
         { DriveType.Removable, drive => new RemovableDriveModel(drive.Name, drive.RootDirectory.FullName) { RootDirectory = new DirectoryModel(drive.RootDirectory.Name, drive.RootDirectory.FullName) } },
         { DriveType.Network, drive => new NetworkDriveModel(drive.Name, drive.RootDirectory.FullName) { RootDirectory = new DirectoryModel(drive.RootDirectory.Name, drive.RootDirectory.FullName) } }
     };
+    private readonly Subject<SelectedDirectory> _selectedDirectorySubject;
+
+    private readonly ConcurrentDictionary<FileManagerPanel, DirectoryModel> _selectedDirectories = new();
+
+    public LocalFileSystemFolderService()
+    {
+        _selectedDirectorySubject = new Subject<SelectedDirectory>();
+    }
+
+    /// <inheritdoc />
+    public IObservable<SelectedDirectory> FileSystemItemSelected => _selectedDirectorySubject.AsObservable();
+
+    /// <inheritdoc />
+    public void Dispose()
+    {
+        _selectedDirectorySubject.Dispose();
+    }
 
     /// <inheritdoc />
     public async Task<DirectoryModel> GetDirectoryModelAsync(DirectoryModel? directoryModel = null)
@@ -64,6 +84,13 @@ public sealed class LocalFileSystemFolderService : IFolderService
 
                        return files;
                    });
+    }
+
+    /// <inheritdoc />
+    public void SetSelectedDirectory(SelectedDirectory selectedDirectory)
+    {
+        _selectedDirectories.AddOrUpdate(selectedDirectory.FileManagerPanel, _ => selectedDirectory, (_, _) => selectedDirectory);
+        _selectedDirectorySubject.OnNext(selectedDirectory);
     }
 
     private async Task<DirectoryModel> GetRootDirectoriesLevelAsync()
@@ -123,7 +150,7 @@ public sealed class LocalFileSystemFolderService : IFolderService
                            }
                            catch (UnauthorizedAccessException)
                            {
-                              // Ignored.
+                               // Ignored.
                            }
 
                            if (preview)

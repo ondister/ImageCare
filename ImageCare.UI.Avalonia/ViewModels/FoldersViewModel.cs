@@ -4,14 +4,11 @@ using System.Threading.Tasks;
 using System.Windows.Input;
 
 using CommunityToolkit.Mvvm.Input;
-using CommunityToolkit.Mvvm.Messaging;
 
 using ImageCare.Core.Domain;
 using ImageCare.Core.Services;
-using ImageCare.Core.Services.ConfigurationService;
 using ImageCare.Mvvm;
 using ImageCare.Mvvm.Collections;
-using ImageCare.UI.Avalonia.Messages;
 using ImageCare.UI.Avalonia.ViewModels.Domain;
 
 using Prism.Regions;
@@ -57,17 +54,17 @@ internal class FoldersViewModel : ViewModelBase
         {
             if (SetProperty(ref _selectedFileSystemItem, value) && _selectedFileSystemItem != null)
             {
-                WeakReferenceMessenger.Default.Send(new FolderSelectedMessage(new DirectoryModel(_selectedFileSystemItem.Name, _selectedFileSystemItem.Path), Mode));
+                _folderService.SetSelectedDirectory(new SelectedDirectory(_selectedFileSystemItem.Name, _selectedFileSystemItem.Path, FileManagerPanel));
             }
         }
     }
 
-    public string Mode { get; private set; }
+    public FileManagerPanel FileManagerPanel { get; private set; }
 
     /// <inheritdoc />
     public override void OnNavigatedTo(NavigationContext navigationContext)
     {
-        Mode = (string)navigationContext.Parameters["mode"];
+        FileManagerPanel = (FileManagerPanel)navigationContext.Parameters["panel"];
     }
 
     internal static IEnumerable<FileSystemItemViewModel> GetFileSystemItemChildren(IEnumerable<DirectoryModel> directoryModels, IFolderService folderService, ILogger logger)

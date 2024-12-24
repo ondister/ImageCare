@@ -1,5 +1,4 @@
 ﻿using System;
-using System.IO;
 using System.Reactive.Disposables;
 using System.Windows.Input;
 
@@ -16,7 +15,7 @@ internal class BottomBarViewModel : ViewModelBase
 {
     private readonly IDialogService _dialogService;
     private readonly ILogNotificationService _logNotificationService;
-    private CompositeDisposable _compositeDisposable;
+    private CompositeDisposable? _compositeDisposable;
     private int? _messagesCount;
 
     private int _errorsCount;
@@ -59,7 +58,7 @@ internal class BottomBarViewModel : ViewModelBase
     {
         base.OnNavigatedFrom(navigationContext);
 
-        _compositeDisposable.Dispose();
+        _compositeDisposable?.Dispose();
     }
 
     private void OpenLogWindow()

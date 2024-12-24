@@ -1,10 +1,32 @@
-﻿using ImageCare.Core.Domain;
+﻿using System.Collections.Concurrent;
+using System.Reactive.Linq;
+using System.Reactive.Subjects;
+
+using ImageCare.Core.Domain;
 using ImageCare.Core.Services.FileOperationsService.Native;
 
 namespace ImageCare.Core.Services.FileOperationsService;
 
-public sealed class LocalFileSystemFileOperationsService : IFileOperationsService
+public sealed class LocalFileSystemFileOperationsService : IFileOperationsService, IDisposable
 {
+    private readonly Subject<SelectedImagePreview> _selectedImagePreviewSubject;
+
+    private readonly ConcurrentDictionary<FileManagerPanel, ImagePreview> _selectedImagePreviews = new();
+
+    public LocalFileSystemFileOperationsService()
+    {
+        _selectedImagePreviewSubject = new Subject<SelectedImagePreview>();
+    }
+
+    /// <inheritdoc />
+    public IObservable<SelectedImagePreview> ImagePreviewSelected => _selectedImagePreviewSubject.AsObservable();
+
+    /// <inheritdoc />
+    public void Dispose()
+    {
+        _selectedImagePreviewSubject.Dispose();
+    }
+
     public Task<OperationResult> MoveWithProgressAsync(string source, string destination, IProgress<OperationInfo> progress, CancellationToken cancellationToken = default)
     {
         return Task.Run(
@@ -84,6 +106,13 @@ public sealed class LocalFileSystemFileOperationsService : IFileOperationsServic
         {
             return OperationResult.Failed;
         }
+    }
+
+    /// <inheritdoc />
+    public void SetSelectedPreview(SelectedImagePreview selectedImagePreview)
+    {
+        _selectedImagePreviews.AddOrUpdate(selectedImagePreview.FileManagerPanel, _ => selectedImagePreview, (_, _) => selectedImagePreview);
+        _selectedImagePreviewSubject.OnNext(selectedImagePreview);
     }
 
     private OperationResult MoveWithProgress(string source, string destination, IProgress<OperationInfo> progress, CancellationToken cancellationToken = default)

@@ -10,7 +10,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="Models\" />
     <AvaloniaResource Include="Assets\**" />
   </ItemGroup>
 
@@ -27,7 +26,6 @@
     <PackageReference Include="Avalonia.Xaml.Interactions" Version="11.2.0.1" />
     <PackageReference Include="Avalonia.Xaml.Interactions.DragAndDrop" Version="11.2.0.1" />
     <PackageReference Include="Avalonia.Xaml.Interactivity" Version="11.2.0.1" />
-    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
     <PackageReference Include="Irihi.Ursa" Version="1.6.2" />
     <PackageReference Include="Irihi.Ursa.Themes.Semi" Version="1.6.2" />
     <PackageReference Include="Material.Avalonia.Dialogs" Version="3.8.0" />

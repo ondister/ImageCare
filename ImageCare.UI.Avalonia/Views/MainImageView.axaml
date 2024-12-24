@@ -24,24 +24,11 @@
                     Focusable="True"
                     MinZoomX="1"
                     MinZoomY="1"
-                    VerticalAlignment="Stretch"
-                    HorizontalAlignment="Stretch">
-            <TransitioningContentControl Content="{Binding  MainBitmap}">
-                <TransitioningContentControl.PageTransition>
-                    <CompositePageTransition>
-                        <CrossFade Duration="0:00:00.100" 
-                                   FadeInEasing="CircularEaseIn" 
-                                   FadeOutEasing="CircularEaseOut" />
-                    </CompositePageTransition>
-                </TransitioningContentControl.PageTransition>
-                <TransitioningContentControl.ContentTemplate>
-                    <DataTemplate DataType="Bitmap">
-                        <Image x:Name="Image"
-                               Name="MainViewer"
-                               Source="{Binding}" />
-                    </DataTemplate>
-                </TransitioningContentControl.ContentTemplate>
-            </TransitioningContentControl>
+                    VerticalAlignment="Stretch">
+
+            <Image x:Name="Image"
+                   Name="MainViewer"
+                   Source="{Binding MainBitmap}" />
 
         </ZoomBorder>
 

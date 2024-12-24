@@ -9,5 +9,6 @@ public sealed class FileModel
     }
 
     public string? Name { get; }
+
     public string FullName { get; }
 }
