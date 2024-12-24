@@ -29,7 +29,7 @@ public class DirectoryModel
         _files.Add(fileModel);
     }
 
-    internal void AddDirectory(DirectoryModel directoryModel)
+    public void AddDirectory(DirectoryModel directoryModel)
     {
         _directories.Add(directoryModel);
     }

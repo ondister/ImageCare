@@ -46,7 +46,7 @@ public class ImagePreviewDropHandler : DropHandlerBase
     private bool Validate<T>(ListBox listBox, DragEventArgs e, object? sourceContext, object? targetContext, bool bExecute) where T : ImagePreviewViewModel
     {
         if (sourceContext is not T sourceImagePreview
-         || targetContext is not PreviewImageViewModel previewImageViewModel
+         || targetContext is not PreviewPanelViewModel previewImageViewModel
          || listBox.GetVisualAt(e.GetPosition(listBox)) is not Control targetControl)
         {
             return true;

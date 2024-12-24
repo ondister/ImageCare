@@ -1,7 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Windows.Input;
+
+using AutoMapper;
 
 using CommunityToolkit.Mvvm.Input;
 
@@ -19,31 +20,24 @@ namespace ImageCare.UI.Avalonia.ViewModels;
 
 internal class FoldersViewModel : ViewModelBase
 {
-    public static readonly Dictionary<Type, Func<string?, string, IEnumerable<FileSystemItemViewModel>, IFolderService, ILogger, FileSystemItemViewModel>> FileSystemItemsFactories = new()
-    {
-        { typeof(FileModel), (name, path, children, folderService, logger) => new FileViewModel(name, path, children, folderService, logger) },
-        { typeof(DirectoryModel), (name, path, children, folderService, logger) => new DirectoryViewModel(name, path, children, folderService, logger) },
-        { typeof(DeviceModel), (name, path, children, folderService, logger) => new DeviceViewModel(name, path, children, folderService, logger) },
-        { typeof(FixedDriveModel), (name, path, children, folderService, logger) => new FixedDriveViewModel(name, path, children, folderService, logger) },
-        { typeof(RemovableDriveModel), (name, path, children, folderService, logger) => new RemovableDriveViewModel(name, path, children, folderService, logger) },
-        { typeof(NetworkDriveModel), (name, path, children, folderService, logger) => new NetworkDriveViewModel(name, path, children, folderService, logger) }
-    };
-
     private readonly IFolderService _folderService;
+    private readonly IMapper _mapper;
     private readonly ILogger _logger;
     private DirectoryViewModel? _selectedFileSystemItem;
 
     public FoldersViewModel(IFolderService folderService,
+                            IMapper mapper,
                             ILogger logger)
     {
         _folderService = folderService;
+        _mapper = mapper;
         _logger = logger;
         OnViewLoadedCommand = new AsyncRelayCommand(OnViewLoaded);
 
-        FileSystemItemViewModels = new SortedObservableCollection<FileSystemItemViewModel>();
+        FileSystemItemViewModels = new SortedObservableCollection<DirectoryViewModel>();
     }
 
-    public SortedObservableCollection<FileSystemItemViewModel> FileSystemItemViewModels { get; }
+    public SortedObservableCollection<DirectoryViewModel> FileSystemItemViewModels { get; }
 
     public ICommand OnViewLoadedCommand { get; }
 
@@ -67,45 +61,18 @@ internal class FoldersViewModel : ViewModelBase
         FileManagerPanel = (FileManagerPanel)navigationContext.Parameters["panel"];
     }
 
-    internal static IEnumerable<FileSystemItemViewModel> GetFileSystemItemChildren(IEnumerable<DirectoryModel> directoryModels, IFolderService folderService, ILogger logger)
-    {
-        var children = new List<FileSystemItemViewModel>();
-
-        foreach (var directoryModel in directoryModels)
-        {
-            if (!FileSystemItemsFactories.TryGetValue(directoryModel.GetType(), out var factoryFunc))
-            {
-                continue;
-            }
-
-            var directoryViewModel = factoryFunc.Invoke(
-                directoryModel.Name,
-                directoryModel.Path,
-                GetFileSystemItemChildren(directoryModel.DirectoryModels, folderService, logger),
-                folderService,
-                logger);
-            children.Add(directoryViewModel);
-        }
-
-        return children;
-    }
-
     private async Task OnViewLoaded()
     {
         try
         {
             var root = await _folderService.GetDirectoryModelAsync();
 
-            if (FileSystemItemsFactories.TryGetValue(root.GetType(), out var factoryFunc))
-            {
-                var rootViewModel = factoryFunc.Invoke(root.Name, root.Path, GetFileSystemItemChildren(root.DirectoryModels, _folderService, _logger), _folderService, _logger);
-
-                FileSystemItemViewModels.InsertItem(rootViewModel);
-            }
+            var rootViewModel = _mapper.Map<DirectoryViewModel>(root);
+            FileSystemItemViewModels.InsertItem(rootViewModel);
         }
         catch (Exception exception)
         {
-            _logger.Error(exception,"Unexpected exception during root folders loading");
+            _logger.Error(exception, "Unexpected exception during root folders loading");
         }
     }
 }

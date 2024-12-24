@@ -19,7 +19,7 @@
                    SelectionMode="Single">
 
             <TreeView.Styles>
-                <Style Selector="TreeViewItem" x:DataType="domain:FileSystemItemViewModel">
+                <Style Selector="TreeViewItem" x:DataType="domain:DirectoryViewModel">
                     <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}"/>
                 </Style>
             </TreeView.Styles>
@@ -40,9 +40,6 @@
                 <TreeDataTemplate DataType="domain:DirectoryViewModel" ItemsSource="{Binding ChildFileSystemItems}">
                     <TextBlock Foreground="SaddleBrown" Text="{Binding Name}" />
                 </TreeDataTemplate>
-                <DataTemplate DataType="domain:FileViewModel">
-                    <TextBlock Text="{Binding Name}" />
-                </DataTemplate>
             </TreeView.DataTemplates>
 
         </TreeView>

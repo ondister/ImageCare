@@ -4,6 +4,8 @@ using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Windows.Input;
 
+using AutoMapper;
+
 using DynamicData;
 using DynamicData.Binding;
 
@@ -20,6 +22,7 @@ internal sealed class LogViewerViewModel : ViewModelBase, IDialogAware, IDisposa
 {
     private readonly ILogEventService _logEventService;
     private readonly ILogNotificationService _logNotificationService;
+    private readonly IMapper _mapper;
     private readonly ReadOnlyObservableCollection<LogMessageViewModel> _messageViewModels;
     private readonly SourceList<LogMessageViewModel> _sourceList = new();
 
@@ -31,10 +34,13 @@ internal sealed class LogViewerViewModel : ViewModelBase, IDialogAware, IDisposa
     private int _errorsCount;
     private int _warningsCount;
 
-    public LogViewerViewModel(ILogEventService logEventService, ILogNotificationService logNotificationService)
+    public LogViewerViewModel(ILogEventService logEventService,
+                              ILogNotificationService logNotificationService,
+                              IMapper mapper)
     {
         _logEventService = logEventService;
         _logNotificationService = logNotificationService;
+        _mapper = mapper;
 
         _filterChanged = new Subject<string>();
 
@@ -115,7 +121,7 @@ internal sealed class LogViewerViewModel : ViewModelBase, IDialogAware, IDisposa
         var errors = _logEventService.GetLastErrors().ToList();
         foreach (var message in errors)
         {
-            _sourceList.Add(new ErrorLogMessageViewModel(message.Timestamp, message.Message, message.ExceptionMessage));
+            _sourceList.Add(_mapper.Map<ErrorLogMessageViewModel>(message));
         }
 
         ErrorsCount = errors.Count;
@@ -123,7 +129,7 @@ internal sealed class LogViewerViewModel : ViewModelBase, IDialogAware, IDisposa
         var warnings = _logEventService.GetLastWarnings().ToList();
         foreach (var message in warnings)
         {
-            _sourceList.Add(new WarningLogMessageViewModel(message.Timestamp, message.Message, message.ExceptionMessage));
+            _sourceList.Add(_mapper.Map<WarningLogMessageViewModel>(message));
         }
 
         WarningsCount = warnings.Count;
@@ -171,12 +177,12 @@ internal sealed class LogViewerViewModel : ViewModelBase, IDialogAware, IDisposa
 
     private void OnErrorReceived(LogMessage message)
     {
-        _sourceList.Add(new ErrorLogMessageViewModel(message.Timestamp, message.Message, message.ExceptionMessage));
+        _sourceList.Add(_mapper.Map<ErrorLogMessageViewModel>(message));
     }
 
     private void OnWarningReceived(LogMessage message)
     {
-        _sourceList.Add(new WarningLogMessageViewModel(message.Timestamp, message.Message, message.ExceptionMessage));
+        _sourceList.Add(_mapper.Map<WarningLogMessageViewModel>(message));
     }
 
     private void OnMessagesCleared(bool obj)

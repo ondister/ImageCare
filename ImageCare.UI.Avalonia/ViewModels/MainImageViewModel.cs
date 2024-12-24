@@ -56,10 +56,9 @@ internal class MainImageViewModel : ViewModelBase
         _compositeDisposable = new CompositeDisposable
         {
             _folderService.FileSystemItemSelected.Subscribe(OnFolderSelected),
-            _fileOperationsService.ImagePreviewSelected.
-                                   Throttle(TimeSpan.FromMilliseconds(150))
-                                   .ObserveOn(_synchronizationContext)
-                                   .Subscribe(OnImagePreviewSelected)
+            _fileOperationsService.ImagePreviewSelected.Throttle(TimeSpan.FromMilliseconds(150))
+                                  .ObserveOn(_synchronizationContext)
+                                  .Subscribe(OnImagePreviewSelected)
         };
     }
 

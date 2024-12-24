@@ -1,5 +1,7 @@
 ﻿using System.Collections.Generic;
 
+using AutoMapper;
+
 using ImageCare.Core.Services;
 
 using Serilog;
@@ -11,8 +13,9 @@ internal class DriveViewModel : DirectoryViewModel
     /// <inheritdoc />
     public DriveViewModel(string? name,
                           string path,
-                          IEnumerable<FileSystemItemViewModel> children,
+                          IEnumerable<DirectoryViewModel> children,
                           IFolderService folderService,
+                          IMapper mapper,
                           ILogger logger)
-        : base(name, path, children, folderService, logger) { }
+        : base(name, path, children, folderService, mapper, logger) { }
 }

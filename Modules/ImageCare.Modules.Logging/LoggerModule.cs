@@ -1,4 +1,7 @@
-﻿using Prism.Ioc;
+﻿
+using ImageCare.Modules.Logging.Mapping;
+
+using Prism.Ioc;
 using Prism.Modularity;
 
 using Serilog;

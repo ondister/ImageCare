@@ -1,18 +1,21 @@
 ﻿using System.Collections.Generic;
 
+using AutoMapper;
+
 using ImageCare.Core.Services;
 
 using Serilog;
 
 namespace ImageCare.UI.Avalonia.ViewModels.Domain;
 
-internal sealed class DeviceViewModel : FileSystemItemViewModel
+internal sealed class DeviceViewModel : DriveViewModel
 {
     /// <inheritdoc />
     public DeviceViewModel(string? name,
                            string path,
-                           IEnumerable<FileSystemItemViewModel> children,
+                           IEnumerable<DirectoryViewModel> children,
                            IFolderService folderService,
+                           IMapper mapper,
                            ILogger logger)
-        : base(name, path, children, folderService, logger) { }
+        : base(name, path, children, folderService, mapper, logger) { }
 }

@@ -40,4 +40,10 @@
     <ProjectReference Include="..\ImageCare.Mvvm\ImageCare.Mvvm.csproj" />
     <ProjectReference Include="..\Modules\ImageCare.Modules.Logging\ImageCare.Modules.Logging.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="Views\PreviewPanelView.axaml.cs">
+      <DependentUpon>PreviewPanelView.axaml</DependentUpon>
+    </Compile>
+  </ItemGroup>
 </Project>

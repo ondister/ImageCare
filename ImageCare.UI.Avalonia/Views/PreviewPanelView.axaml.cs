@@ -2,9 +2,9 @@ using Avalonia.Controls;
 
 namespace ImageCare.UI.Avalonia.Views;
 
-public partial class PreviewImageView : UserControl
+public partial class PreviewPanelView : UserControl
 {
-    public PreviewImageView()
+    public PreviewPanelView()
     {
         InitializeComponent();
     }

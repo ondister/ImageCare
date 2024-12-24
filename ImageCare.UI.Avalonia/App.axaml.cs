@@ -10,6 +10,7 @@ using ImageCare.Core.Services.FileOperationsService;
 using ImageCare.Modules.Logging;
 using ImageCare.Mvvm.Views;
 using ImageCare.UI.Avalonia.Behaviors;
+using ImageCare.UI.Avalonia.Mapping;
 using ImageCare.UI.Avalonia.Views;
 
 using Prism.DryIoc;
@@ -62,7 +63,7 @@ public class App : PrismApplication
 
         containerRegistry.RegisterForNavigation<FoldersView>();
         containerRegistry.RegisterForNavigation<MainImageView>();
-        containerRegistry.RegisterForNavigation<PreviewImageView>();
+        containerRegistry.RegisterForNavigation<PreviewPanelView>();
         containerRegistry.RegisterForNavigation<BottomBarView>();
 
         containerRegistry.RegisterSingleton<IFolderService, LocalFileSystemFolderService>();
@@ -70,6 +71,7 @@ public class App : PrismApplication
         containerRegistry.RegisterSingleton<IFileOperationsService, LocalFileSystemFileOperationsService>();
         containerRegistry.RegisterSingleton<IConfigurationService, JsonConfigurationService>();
 
+        containerRegistry.RegisterInstance(new ApplicationMapper(Container).GetMapper());
         containerRegistry.RegisterInstance(SynchronizationContext.Current);
 
         containerRegistry.Register<IFileSystemWatcherService, LocalFileSystemWatcherService>();

@@ -5,6 +5,8 @@ using System.Reactive.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
+using AutoMapper;
+
 using ImageCare.Core.Domain;
 using ImageCare.Core.Services;
 using ImageCare.Core.Services.FileOperationsService;
@@ -19,21 +21,23 @@ using Serilog;
 
 namespace ImageCare.UI.Avalonia.ViewModels;
 
-internal class PreviewImageViewModel : ViewModelBase
+internal class PreviewPanelViewModel : ViewModelBase
 {
     private readonly IFileSystemImageService _imageService;
     private readonly IFolderService _folderService;
     private readonly IFileSystemWatcherService _fileSystemWatcherService;
     private readonly IFileOperationsService _fileOperationsService;
+    private readonly IMapper _mapper;
     private readonly ILogger _logger;
     private readonly SynchronizationContext _synchronizationContext;
     private ImagePreviewViewModel? _selectedPreview;
-    private CompositeDisposable fileSystemWatcherCompositeDisposable;
+    private CompositeDisposable _fileSystemWatcherCompositeDisposable;
 
-    public PreviewImageViewModel(IFileSystemImageService imageService,
+    public PreviewPanelViewModel(IFileSystemImageService imageService,
                                  IFolderService folderService,
                                  IFileSystemWatcherService fileSystemWatcherService,
                                  IFileOperationsService fileOperationsService,
+                                 IMapper mapper,
                                  ILogger logger,
                                  ImagePreviewDropHandler imagePreviewDropHandler,
                                  SynchronizationContext synchronizationContext)
@@ -42,6 +46,7 @@ internal class PreviewImageViewModel : ViewModelBase
         _folderService = folderService;
         _fileSystemWatcherService = fileSystemWatcherService;
         _fileOperationsService = fileOperationsService;
+        _mapper = mapper;
         _logger = logger;
         _synchronizationContext = synchronizationContext;
 
@@ -70,7 +75,7 @@ internal class PreviewImageViewModel : ViewModelBase
             {
                 _selectedPreview.Selected = true;
 
-                _fileOperationsService.SetSelectedPreview(new SelectedImagePreview(_selectedPreview.Title, _selectedPreview.Url, _selectedPreview.MediaFormat, FileManagerPanel));
+                _fileOperationsService.SetSelectedPreview(new SelectedImagePreview(_mapper.Map<ImagePreview>(_selectedPreview), FileManagerPanel));
             }
         }
     }
@@ -82,7 +87,7 @@ internal class PreviewImageViewModel : ViewModelBase
     {
         FileManagerPanel = (FileManagerPanel)navigationContext.Parameters["panel"];
 
-        fileSystemWatcherCompositeDisposable = new CompositeDisposable
+        _fileSystemWatcherCompositeDisposable = new CompositeDisposable
         {
             _fileSystemWatcherService.FileCreated.DistinctUntilChanged(model => model.FullName).Subscribe(OnFileCreated),
             _fileSystemWatcherService.FileDeleted.DistinctUntilChanged(model => model.FullName).Subscribe(OnFileDeleted),
@@ -95,7 +100,7 @@ internal class PreviewImageViewModel : ViewModelBase
     /// <inheritdoc />
     public override void OnNavigatedFrom(NavigationContext navigationContext)
     {
-        fileSystemWatcherCompositeDisposable.Dispose();
+        _fileSystemWatcherCompositeDisposable.Dispose();
     }
 
     private async Task LoadImagePreviewsAsync(DirectoryModel directoryModel)
@@ -108,7 +113,7 @@ internal class PreviewImageViewModel : ViewModelBase
 
             await foreach (var previewImage in _imageService.GetImagePreviewsAsync(files))
             {
-                ImagePreviews.Add(new ImagePreviewViewModel(previewImage, _imageService, _fileOperationsService, _logger));
+                ImagePreviews.Add(_mapper.Map<ImagePreviewViewModel>(previewImage));
             }
         }
         catch (Exception exception)
@@ -166,7 +171,7 @@ internal class PreviewImageViewModel : ViewModelBase
                                  return;
                              }
 
-                             ImagePreviews.InsertItem(new ImagePreviewViewModel(task.Result, _imageService, _fileOperationsService, _logger));
+                             ImagePreviews.InsertItem(_mapper.Map<ImagePreviewViewModel>(task.Result));
                          });
     }
 

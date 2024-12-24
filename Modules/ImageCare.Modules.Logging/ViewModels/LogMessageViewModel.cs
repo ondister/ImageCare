@@ -2,7 +2,7 @@
 
 namespace ImageCare.Modules.Logging.ViewModels;
 
-internal class LogMessageViewModel : ViewModelBase, IComparable<LogMessageViewModel>
+internal abstract class LogMessageViewModel : ViewModelBase, IComparable<LogMessageViewModel>
 {
     public LogMessageViewModel(DateTimeOffset timestamp, string message, string? exceptionMessage)
     {

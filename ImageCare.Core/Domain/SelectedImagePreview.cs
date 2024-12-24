@@ -11,5 +11,8 @@ public class SelectedImagePreview : ImagePreview
         FileManagerPanel = fileManagerPanel;
     }
 
+    public SelectedImagePreview(ImagePreview imagePreview, FileManagerPanel fileManagerPanel)
+        : this(imagePreview.Title, imagePreview.Url, imagePreview.MediaFormat, fileManagerPanel) { }
+
     public FileManagerPanel FileManagerPanel { get; }
 }

@@ -6,8 +6,8 @@
              xmlns:i="clr-namespace:Avalonia.Xaml.Interactivity;assembly=Avalonia.Xaml.Interactivity"
              xmlns:idd="clr-namespace:Avalonia.Xaml.Interactions.DragAndDrop;assembly=Avalonia.Xaml.Interactions.DragAndDrop"
              prism:ViewModelLocator.AutoWireViewModel="True"
-             x:Class="ImageCare.UI.Avalonia.Views.PreviewImageView"
-             x:DataType="viewModels:PreviewImageViewModel">
+             x:Class="ImageCare.UI.Avalonia.Views.PreviewPanelView"
+             x:DataType="viewModels:PreviewPanelViewModel">
 
     <Grid Margin="{StaticResource MarginAll.Small}">
 

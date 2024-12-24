@@ -2,6 +2,8 @@
 using System.Threading.Tasks;
 using System.Windows.Input;
 
+using AutoMapper;
+
 using Avalonia.Media.Imaging;
 
 using CommunityToolkit.Mvvm.Input;
@@ -18,21 +20,28 @@ namespace ImageCare.UI.Avalonia.ViewModels.Domain;
 
 internal class ImagePreviewViewModel : ViewModelBase, IComparable<ImagePreviewViewModel>
 {
-    private readonly ImagePreview _imagePreview;
     private readonly IFileSystemImageService _imageService;
     private readonly IFileOperationsService _fileOperationsService;
+    private readonly IMapper _mapper;
     private readonly ILogger _logger;
     private Bitmap? _previewBitmap;
     private bool _selected;
 
-    public ImagePreviewViewModel(ImagePreview imagePreview,
+    public ImagePreviewViewModel(string? title,
+                                 string url,
+                                 MediaFormat mediaFormat,
                                  IFileSystemImageService imageService,
                                  IFileOperationsService fileOperationsService,
+                                 IMapper mapper,
                                  ILogger logger)
     {
-        _imagePreview = imagePreview;
+        Title = title;
+        Url = url;
+        MediaFormat = mediaFormat;
+
         _imageService = imageService;
         _fileOperationsService = fileOperationsService;
+        _mapper = mapper;
         _logger = logger;
 
         RemoveImagePreviewCommand = new AsyncRelayCommand(RemoveImagePreviewAsync);
@@ -40,11 +49,11 @@ internal class ImagePreviewViewModel : ViewModelBase, IComparable<ImagePreviewVi
         _ = LoadPreviewAsync();
     }
 
-    public string? Title => _imagePreview.Title;
+    public string? Title { get; }
 
-    public string Url => _imagePreview.Url;
+    public string Url { get; }
 
-    public MediaFormat MediaFormat => _imagePreview.MediaFormat;
+    public MediaFormat MediaFormat { get; }
 
     public bool Selected
     {
@@ -74,7 +83,7 @@ internal class ImagePreviewViewModel : ViewModelBase, IComparable<ImagePreviewVi
     {
         try
         {
-            await using (var imageStream = await _imageService.GetJpegImageStreamAsync(_imagePreview, ImagePreviewSize.Medium))
+            await using (var imageStream = await _imageService.GetJpegImageStreamAsync(_mapper.Map<ImagePreview>(this), ImagePreviewSize.Medium))
             {
                 PreviewBitmap = Bitmap.DecodeToWidth(imageStream, 300);
             }
@@ -89,7 +98,7 @@ internal class ImagePreviewViewModel : ViewModelBase, IComparable<ImagePreviewVi
     {
         try
         {
-            await _fileOperationsService.DeleteImagePreviewAsync(new ImagePreview(Title, Url, MediaFormat));
+            await _fileOperationsService.DeleteImagePreviewAsync(_mapper.Map<ImagePreview>(this));
         }
         catch (Exception exception)
         {
