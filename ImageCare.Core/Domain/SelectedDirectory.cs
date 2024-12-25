@@ -9,5 +9,8 @@ public class SelectedDirectory : DirectoryModel
         FileManagerPanel = fileManagerPanel;
     }
 
+    public SelectedDirectory(DirectoryModel directoryModel, FileManagerPanel fileManagerPanel)
+        : this(directoryModel.Name, directoryModel.Path, fileManagerPanel) { }
+
     public FileManagerPanel FileManagerPanel { get; }
 }

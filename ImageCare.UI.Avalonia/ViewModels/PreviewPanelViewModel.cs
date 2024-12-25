@@ -107,7 +107,12 @@ internal class PreviewPanelViewModel : ViewModelBase
     {
         try
         {
-            ImagePreviews.Clear();
+            ClearPreviewPanel();
+
+            if (directoryModel.Path == string.Empty)
+            {
+                return;
+            }
 
             var files = await _folderService.GetFileModelAsync(directoryModel, "*");
 
@@ -191,7 +196,7 @@ internal class PreviewPanelViewModel : ViewModelBase
             if (ImagePreviews.Count == 0)
             {
                 _synchronizationContext.Post(d => { SelectedPreview = null; }, null);
-                _fileOperationsService.SetSelectedPreview(new SelectedImagePreview(ImagePreview.Empty.Title, ImagePreview.Empty.Url, ImagePreview.Empty.MediaFormat, FileManagerPanel));
+                _fileOperationsService.SetSelectedPreview(new SelectedImagePreview(ImagePreview.Empty, FileManagerPanel));
             }
         }
     }
@@ -217,6 +222,12 @@ internal class PreviewPanelViewModel : ViewModelBase
                 }
             }
         }
+    }
+
+    private void ClearPreviewPanel()
+    {
+        ImagePreviews.Clear();
+        SelectedPreview = null;
     }
 
     private void OnImagePreviewSelected(SelectedImagePreview selectedImagePreview)

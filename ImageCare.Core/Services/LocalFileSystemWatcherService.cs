@@ -1,4 +1,5 @@
-﻿using System.Reactive.Linq;
+﻿using System.Management;
+using System.Reactive.Linq;
 using System.Reactive.Subjects;
 
 using ImageCare.Core.Domain;
@@ -36,8 +37,7 @@ public sealed class LocalFileSystemWatcherService : IFileSystemWatcherService, I
         _directoryRenamedSubject = new Subject<DirectoryRenamedModel>();
 
 
-            CreateObservables();
-
+        CreateObservables();
     }
 
     /// <inheritdoc />

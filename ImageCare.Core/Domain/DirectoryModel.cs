@@ -16,6 +16,8 @@ public class DirectoryModel
         FileModels = new ReadOnlyCollection<FileModel>(_files);
     }
 
+    public static DirectoryModel Empty { get; } = new(string.Empty, string.Empty);
+
     public string? Name { get; }
 
     public string Path { get; }

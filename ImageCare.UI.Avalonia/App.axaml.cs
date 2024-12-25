@@ -6,6 +6,7 @@ using Avalonia.Markup.Xaml;
 
 using ImageCare.Core.Services;
 using ImageCare.Core.Services.ConfigurationService;
+using ImageCare.Core.Services.DrivesWatcherService;
 using ImageCare.Core.Services.FileOperationsService;
 using ImageCare.Modules.Logging;
 using ImageCare.Mvvm.Views;
@@ -69,6 +70,7 @@ public class App : PrismApplication
         containerRegistry.RegisterSingleton<IFolderService, LocalFileSystemFolderService>();
         containerRegistry.RegisterSingleton<IFileSystemImageService, FileSystemImageService>();
         containerRegistry.RegisterSingleton<IFileOperationsService, LocalFileSystemFileOperationsService>();
+        containerRegistry.RegisterSingleton<IDrivesWatcherService, WindowsDrivesWatcherService>();
         containerRegistry.RegisterSingleton<IConfigurationService, JsonConfigurationService>();
 
         containerRegistry.RegisterInstance(new ApplicationMapper(Container).GetMapper());

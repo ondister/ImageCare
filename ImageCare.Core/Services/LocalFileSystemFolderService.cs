@@ -8,19 +8,15 @@ namespace ImageCare.Core.Services;
 
 public sealed class LocalFileSystemFolderService : IFolderService, IDisposable
 {
-    private static readonly Dictionary<DriveType, Func<DriveInfo, DriveModel>> _driveModelFactoryMethods = new()
-    {
-        { DriveType.Fixed, drive => new FixedDriveModel(drive.Name, drive.RootDirectory.FullName) { RootDirectory = new DirectoryModel(drive.RootDirectory.Name, drive.RootDirectory.FullName) } },
-        { DriveType.Removable, drive => new RemovableDriveModel(drive.Name, drive.RootDirectory.FullName) { RootDirectory = new DirectoryModel(drive.RootDirectory.Name, drive.RootDirectory.FullName) } },
-        { DriveType.Network, drive => new NetworkDriveModel(drive.Name, drive.RootDirectory.FullName) { RootDirectory = new DirectoryModel(drive.RootDirectory.Name, drive.RootDirectory.FullName) } }
-    };
     private readonly Subject<SelectedDirectory> _selectedDirectorySubject;
 
     private readonly ConcurrentDictionary<FileManagerPanel, DirectoryModel> _selectedDirectories = new();
+    private readonly DriveModelsFactory _driveModelsFactory;
 
     public LocalFileSystemFolderService()
     {
         _selectedDirectorySubject = new Subject<SelectedDirectory>();
+        _driveModelsFactory = new DriveModelsFactory();
     }
 
     /// <inheritdoc />
@@ -103,9 +99,8 @@ public sealed class LocalFileSystemFolderService : IFolderService, IDisposable
 
                        foreach (var driveInfo in drives)
                        {
-                           if (_driveModelFactoryMethods.TryGetValue(driveInfo.DriveType, out var factoryFunc))
+                           if (_driveModelsFactory.CreateDriveModel(driveInfo) is { } drive)
                            {
-                               var drive = factoryFunc.Invoke(driveInfo);
                                rootModel.AddDirectory(drive);
                                if (drive.RootDirectory == null)
                                {
@@ -121,7 +116,7 @@ public sealed class LocalFileSystemFolderService : IFolderService, IDisposable
                    });
     }
 
-    private async Task<DirectoryModel> GetCustomDirectoriesLevelAsync(DirectoryModel directoryModel, bool preview = false)
+    public async Task<DirectoryModel> GetCustomDirectoriesLevelAsync(DirectoryModel directoryModel, bool preview = false)
     {
         return await Task.Run(
                    () =>

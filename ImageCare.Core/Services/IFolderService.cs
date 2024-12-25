@@ -14,5 +14,7 @@ public interface IFolderService
 
     Task<IEnumerable<FileModel>> GetFileModelAsync(string directoryPath, string searchPattern);
 
+    Task<DirectoryModel> GetCustomDirectoriesLevelAsync(DirectoryModel directoryModel, bool preview = false);
+
     void SetSelectedDirectory(SelectedDirectory selecteddirectory);
 }
