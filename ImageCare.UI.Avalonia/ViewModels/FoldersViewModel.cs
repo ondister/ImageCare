@@ -68,6 +68,8 @@ internal class FoldersViewModel : ViewModelBase
             var root = await _folderService.GetDirectoryModelAsync();
 
             var rootViewModel = _mapper.Map<DirectoryViewModel>(root);
+            rootViewModel.IsExpanded = true;
+
             FileSystemItemViewModels.InsertItem(rootViewModel);
         }
         catch (Exception exception)

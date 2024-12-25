@@ -18,6 +18,7 @@ internal class DirectoryViewModel : ViewModelBase, IComparable<DirectoryViewMode
     private readonly ILogger _logger;
     private readonly IMapper _mapper;
     private bool _isExpanded;
+    private bool _isloaded;
 
     public DirectoryViewModel(string? name,
                               string path,
@@ -40,6 +41,12 @@ internal class DirectoryViewModel : ViewModelBase, IComparable<DirectoryViewMode
     public string Path { get; }
 
     public SortedObservableCollection<DirectoryViewModel> ChildFileSystemItems { get; }
+
+    public bool IsLoaded
+    {
+        get => _isloaded;
+        set => SetProperty(ref _isloaded, value);
+    }
 
     public bool IsExpanded
     {
@@ -77,6 +84,7 @@ internal class DirectoryViewModel : ViewModelBase, IComparable<DirectoryViewMode
 
     private async Task SeedFileSystemItemsAsync()
     {
+        IsLoaded = true;
         try
         {
             var currentDirectoryModel = await FolderService.GetDirectoryModelAsync(Path);
@@ -91,6 +99,10 @@ internal class DirectoryViewModel : ViewModelBase, IComparable<DirectoryViewMode
         catch (Exception exception)
         {
             _logger.Error(exception, $"Unexpected exception during getting files from folder: {Path}");
+        }
+        finally
+        {
+            IsLoaded = false;
         }
     }
 }

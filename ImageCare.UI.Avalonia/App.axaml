@@ -10,6 +10,8 @@
         <u-semi:SemiTheme Locale="ru-RU" />
 
         <StyleInclude Source="avares://IconPacks.Avalonia.Lucide/Lucide.axaml" />
+        <StyleInclude Source="avares://IconPacks.Avalonia.Material/Material.axaml" />
+        <StyleInclude Source="avares://AvaloniaProgressRing/Styles/ProgressRing.xaml"/>
 
     </prism:PrismApplication.Styles>
 

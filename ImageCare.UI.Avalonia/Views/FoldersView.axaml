@@ -3,42 +3,92 @@
              xmlns:prism="http://prismlibrary.com/"
              xmlns:viewModels="clr-namespace:ImageCare.UI.Avalonia.ViewModels"
              xmlns:domain="clr-namespace:ImageCare.UI.Avalonia.ViewModels.Domain"
+             xmlns:iconPacks="https://github.com/MahApps/IconPacks.Avalonia"
+             xmlns:avaloniaProgressRing="clr-namespace:AvaloniaProgressRing;assembly=AvaloniaProgressRing"
              x:Class="ImageCare.UI.Avalonia.Views.FoldersView"
              prism:ViewModelLocator.AutoWireViewModel="True"
              x:DataType="viewModels:FoldersViewModel">
 
-    <Grid Margin="{StaticResource MarginAll.Small}" RowDefinitions="Auto,*">
+    <Grid Margin="{StaticResource MarginAll.Small}">
 
-        <TextBlock Grid.Row="0"
-                   Margin="{StaticResource MarginAll.Small}"
-                   Text="Folders"/>
-
-        <TreeView  Grid.Row="1"
-                   ItemsSource="{Binding FileSystemItemViewModels}"
-                   SelectedItem="{Binding SelectedFileSystemItem}"
-                   SelectionMode="Single">
+        <TreeView ItemsSource="{Binding FileSystemItemViewModels}"
+                  SelectedItem="{Binding SelectedFileSystemItem}"
+                  SelectionMode="Single">
 
             <TreeView.Styles>
                 <Style Selector="TreeViewItem" x:DataType="domain:DirectoryViewModel">
-                    <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}"/>
+                    <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
                 </Style>
             </TreeView.Styles>
 
             <TreeView.DataTemplates>
-                <TreeDataTemplate DataType="domain:DeviceViewModel" ItemsSource="{Binding ChildFileSystemItems}" >
-                    <TextBlock Foreground="Red" Text="{Binding Name}" />
+                <TreeDataTemplate DataType="domain:DeviceViewModel" ItemsSource="{Binding ChildFileSystemItems}">
+                    <StackPanel Orientation="Horizontal">
+                        <iconPacks:PackIconMaterial Kind="DesktopClassic"
+                                                  Height="{StaticResource Icon.Size.Small}"
+                                                  Width="{StaticResource Icon.Size.Small}"
+                                                  Margin="{StaticResource MarginHorizontal.Small}" />
+                        <TextBlock Text="{Binding Name}"
+                                   Margin="{StaticResource MarginHorizontal.Small}" />
+                    </StackPanel>
+
                 </TreeDataTemplate>
                 <TreeDataTemplate DataType="domain:FixedDriveViewModel" ItemsSource="{Binding ChildFileSystemItems}">
-                    <TextBlock Foreground="Green" Text="{Binding Name}" />
+                    <StackPanel Orientation="Horizontal">
+                        <iconPacks:PackIconMaterial Kind="Harddisk"
+                                                    Height="{StaticResource Icon.Size.Small}"
+                                                    Width="{StaticResource Icon.Size.Small}"
+                                                    Margin="{StaticResource MarginHorizontal.Small}" />
+                        <TextBlock Text="{Binding Name}"
+                                   Margin="{StaticResource MarginHorizontal.Small}" />
+                    </StackPanel>
                 </TreeDataTemplate>
                 <TreeDataTemplate DataType="domain:NetworkDriveViewModel" ItemsSource="{Binding ChildFileSystemItems}">
-                    <TextBlock Foreground="Blue" Text="{Binding Name}" />
+                    <StackPanel Orientation="Horizontal">
+                        <iconPacks:PackIconMaterial Kind="FolderNetworkOutline"
+                                                    Height="{StaticResource Icon.Size.Small}"
+                                                    Width="{StaticResource Icon.Size.Small}"
+                                                    Margin="{StaticResource MarginHorizontal.Small}" />
+                        <TextBlock Text="{Binding Name}"
+                                   Margin="{StaticResource MarginHorizontal.Small}" />
+                    </StackPanel>
                 </TreeDataTemplate>
-                <TreeDataTemplate DataType="domain:RemovableDriveViewModel" ItemsSource="{Binding ChildFileSystemItems}">
-                    <TextBlock Foreground="YellowGreen" Text="{Binding Name}" />
+                <TreeDataTemplate DataType="domain:RemovableDriveViewModel"
+                                  ItemsSource="{Binding ChildFileSystemItems}">
+                    <StackPanel Orientation="Horizontal">
+                        <iconPacks:PackIconMaterial Kind="Sd"
+                                                    Height="{StaticResource Icon.Size.Small}"
+                                                    Width="{StaticResource Icon.Size.Small}"
+                                                    Margin="{StaticResource MarginHorizontal.Small}" />
+                        <TextBlock Text="{Binding Name}"
+                                   Margin="{StaticResource MarginHorizontal.Small}" />
+                    </StackPanel>
                 </TreeDataTemplate>
                 <TreeDataTemplate DataType="domain:DirectoryViewModel" ItemsSource="{Binding ChildFileSystemItems}">
-                    <TextBlock Foreground="SaddleBrown" Text="{Binding Name}" />
+                    <StackPanel Orientation="Horizontal">
+                        <iconPacks:PackIconMaterial Kind="FolderOutline"
+                                                    Height="{StaticResource Icon.Size.Small}"
+                                                    Width="{StaticResource Icon.Size.Small}"
+                                                    Margin="{StaticResource MarginHorizontal.Small}"
+                                                    IsVisible="{Binding !IsExpanded}"/>
+
+                        <iconPacks:PackIconMaterial Kind="FolderOpenOutline"
+                                                    Height="{StaticResource Icon.Size.Small}"
+                                                    Width="{StaticResource Icon.Size.Small}"
+                                                    Margin="{StaticResource MarginHorizontal.Small}"
+                                                    IsVisible="{Binding IsExpanded}"/>
+
+                        <avaloniaProgressRing:ProgressRing Width="{StaticResource Icon.Size.Small}"
+                                               Height="{StaticResource Icon.Size.Small}"
+                                               IsActive="True"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"
+                                               Margin="{StaticResource MarginHorizontal.Small}"
+                                               IsVisible="{Binding IsLoaded}"/>
+
+                        <TextBlock Text="{Binding Name}"
+                                   Margin="{StaticResource MarginHorizontal.Small}" />
+                    </StackPanel>
                 </TreeDataTemplate>
             </TreeView.DataTemplates>
 
