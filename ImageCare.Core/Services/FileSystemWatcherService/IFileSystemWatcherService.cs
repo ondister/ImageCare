@@ -1,6 +1,6 @@
 ﻿using ImageCare.Core.Domain;
 
-namespace ImageCare.Core.Services;
+namespace ImageCare.Core.Services.FileSystemWatcherService;
 
 public interface IFileSystemWatcherService
 {
@@ -23,5 +23,5 @@ public interface IFileSystemWatcherService
 
     public void StopWatching();
 
-    public void SetWatchingDirectory(string directoryPath);
+    public void StartWatchingDirectory(string directoryPath);
 }

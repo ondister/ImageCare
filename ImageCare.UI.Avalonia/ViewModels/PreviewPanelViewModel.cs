@@ -8,8 +8,10 @@ using System.Threading.Tasks;
 using AutoMapper;
 
 using ImageCare.Core.Domain;
-using ImageCare.Core.Services;
 using ImageCare.Core.Services.FileOperationsService;
+using ImageCare.Core.Services.FileSystemImageService;
+using ImageCare.Core.Services.FileSystemWatcherService;
+using ImageCare.Core.Services.FolderService;
 using ImageCare.Mvvm;
 using ImageCare.Mvvm.Collections;
 using ImageCare.UI.Avalonia.Behaviors;
@@ -213,7 +215,7 @@ internal class PreviewPanelViewModel : ViewModelBase
             {
                 try
                 {
-                    _fileSystemWatcherService.SetWatchingDirectory(SelectedFolderPath);
+                    _fileSystemWatcherService.StartWatchingDirectory(SelectedFolderPath);
                 }
 
                 catch (Exception exception)

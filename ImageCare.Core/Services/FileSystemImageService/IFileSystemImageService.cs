@@ -1,6 +1,6 @@
 ﻿using ImageCare.Core.Domain;
 
-namespace ImageCare.Core.Services;
+namespace ImageCare.Core.Services.FileSystemImageService;
 
 public interface IFileSystemImageService
 {

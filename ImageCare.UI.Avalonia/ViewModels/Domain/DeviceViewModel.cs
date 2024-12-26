@@ -1,9 +1,7 @@
 ﻿using System.Collections.Generic;
 
 using AutoMapper;
-
-using ImageCare.Core.Services;
-
+using ImageCare.Core.Services.FolderService;
 using Serilog;
 
 namespace ImageCare.UI.Avalonia.ViewModels.Domain;

@@ -1,10 +1,14 @@
 ﻿using ImageCare.Core.Domain;
 
-namespace ImageCare.Core.Services;
+namespace ImageCare.Core.Services.FolderService;
 
 public interface IFolderService
 {
     public IObservable<SelectedDirectory> FileSystemItemSelected { get; }
+
+    public IObservable<SelectedDirectory> FolderVisited { get; }
+
+    public IObservable<SelectedDirectory> FolderLeft { get; }
 
     Task<DirectoryModel> GetDirectoryModelAsync(DirectoryModel? directoryModel = null);
 
@@ -17,4 +21,8 @@ public interface IFolderService
     Task<DirectoryModel> GetCustomDirectoriesLevelAsync(DirectoryModel directoryModel, bool preview = false);
 
     void SetSelectedDirectory(SelectedDirectory selecteddirectory);
+
+    void AddVisitingFolder(DirectoryModel directoryModel, FileManagerPanel fileManagerPanel);
+
+    void RemoveVisitingFolder(DirectoryModel directoryModel, FileManagerPanel fileManagerPanel);
 }

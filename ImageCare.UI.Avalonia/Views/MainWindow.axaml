@@ -28,11 +28,11 @@
 
         <Grid Grid.Row="0">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto" MinWidth="300" />
+                <ColumnDefinition Width="0.2*" MinWidth="300" />
                 <ColumnDefinition Width="Auto" /> <!--Splitter-->
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" /> <!--Splitter-->
-                <ColumnDefinition Width="Auto" MinWidth="300" />
+                <ColumnDefinition Width="0.2*" MinWidth="300" />
             </Grid.ColumnDefinitions>
 
             <ContentControl Grid.Column="0"

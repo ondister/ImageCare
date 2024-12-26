@@ -8,8 +8,9 @@ using System.Windows.Input;
 using Avalonia.Media.Imaging;
 
 using ImageCare.Core.Domain;
-using ImageCare.Core.Services;
 using ImageCare.Core.Services.FileOperationsService;
+using ImageCare.Core.Services.FileSystemImageService;
+using ImageCare.Core.Services.FolderService;
 using ImageCare.Mvvm;
 
 using Prism.Regions;
@@ -82,7 +83,7 @@ internal class MainImageViewModel : ViewModelBase
         _ = LoadImageAsync(imagePreview);
     }
 
-    private void OnFolderSelected(SelectedDirectory item)
+    private void OnFolderSelected(DirectoryModel item)
     {
         ClearPreview();
     }

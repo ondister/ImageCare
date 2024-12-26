@@ -10,8 +10,8 @@ using CommunityToolkit.Mvvm.Input;
 
 using ImageCare.Core.Domain;
 using ImageCare.Core.Domain.MediaFormats;
-using ImageCare.Core.Services;
 using ImageCare.Core.Services.FileOperationsService;
+using ImageCare.Core.Services.FileSystemImageService;
 using ImageCare.Mvvm;
 
 using Serilog;

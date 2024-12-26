@@ -3,6 +3,7 @@ using System.Reactive.Linq;
 using System.Reactive.Subjects;
 
 using ImageCare.Core.Domain;
+using ImageCare.Core.Services.FolderService;
 
 namespace ImageCare.Core.Services.DrivesWatcherService;
 

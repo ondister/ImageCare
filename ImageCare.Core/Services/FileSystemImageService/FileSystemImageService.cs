@@ -1,14 +1,13 @@
 ﻿using ImageCare.Core.Domain;
 using ImageCare.Core.Domain.MediaFormats;
 using ImageCare.Core.Exceptions;
-
 using LibRawDotNet;
 
 using Polly;
 using Polly.Fallback;
 using Polly.Retry;
 
-namespace ImageCare.Core.Services;
+namespace ImageCare.Core.Services.FileSystemImageService;
 
 public sealed class FileSystemImageService : IFileSystemImageService
 {

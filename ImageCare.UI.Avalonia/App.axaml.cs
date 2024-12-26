@@ -3,11 +3,12 @@ using System.Threading;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
-
-using ImageCare.Core.Services;
 using ImageCare.Core.Services.ConfigurationService;
 using ImageCare.Core.Services.DrivesWatcherService;
 using ImageCare.Core.Services.FileOperationsService;
+using ImageCare.Core.Services.FileSystemImageService;
+using ImageCare.Core.Services.FileSystemWatcherService;
+using ImageCare.Core.Services.FolderService;
 using ImageCare.Modules.Logging;
 using ImageCare.Mvvm.Views;
 using ImageCare.UI.Avalonia.Behaviors;
@@ -73,10 +74,12 @@ public class App : PrismApplication
         containerRegistry.RegisterSingleton<IDrivesWatcherService, WindowsDrivesWatcherService>();
         containerRegistry.RegisterSingleton<IConfigurationService, JsonConfigurationService>();
 
+
         containerRegistry.RegisterInstance(new ApplicationMapper(Container).GetMapper());
         containerRegistry.RegisterInstance(SynchronizationContext.Current);
 
         containerRegistry.Register<IFileSystemWatcherService, LocalFileSystemWatcherService>();
+        containerRegistry.Register<IMultiSourcesFileSystemWatcherService, MultiSourcesLocalFileSystemWatcherService>();
         containerRegistry.Register<ImagePreviewDropHandler, ImagePreviewDropHandler>();
 
         containerRegistry.RegisterDialogWindow<ChildWindow>("childWindow");
