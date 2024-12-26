@@ -35,6 +35,8 @@ internal class PreviewPanelViewModel : ViewModelBase
     private ImagePreviewViewModel? _selectedPreview;
     private CompositeDisposable _fileSystemWatcherCompositeDisposable;
 
+    private CancellationTokenSource _folderSelectedCancellationTokenSource;
+
     public PreviewPanelViewModel(IFileSystemImageService imageService,
                                  IFolderService folderService,
                                  IFileSystemWatcherService fileSystemWatcherService,
@@ -54,6 +56,8 @@ internal class PreviewPanelViewModel : ViewModelBase
 
         ImagePreviews = [];
         ImagePreviewDropHandler = imagePreviewDropHandler;
+
+        _folderSelectedCancellationTokenSource = new CancellationTokenSource();
     }
 
     public SortedObservableCollection<ImagePreviewViewModel> ImagePreviews { get; }
@@ -105,7 +109,7 @@ internal class PreviewPanelViewModel : ViewModelBase
         _fileSystemWatcherCompositeDisposable.Dispose();
     }
 
-    private async Task LoadImagePreviewsAsync(DirectoryModel directoryModel)
+    private async Task LoadImagePreviewsAsync(DirectoryModel directoryModel, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -118,8 +122,13 @@ internal class PreviewPanelViewModel : ViewModelBase
 
             var files = await _folderService.GetFileModelAsync(directoryModel, "*");
 
-            await foreach (var previewImage in _imageService.GetImagePreviewsAsync(files))
+            await foreach (var previewImage in _imageService.GetImagePreviewsAsync(files, cancellationToken))
             {
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    return;
+                }
+
                 ImagePreviews.Add(_mapper.Map<ImagePreviewViewModel>(previewImage));
             }
         }
@@ -207,7 +216,12 @@ internal class PreviewPanelViewModel : ViewModelBase
     {
         if (selectedFileSystemItem.FileManagerPanel == FileManagerPanel)
         {
-            _ = LoadImagePreviewsAsync(selectedFileSystemItem);
+            _folderSelectedCancellationTokenSource.Cancel();
+
+            _folderSelectedCancellationTokenSource.Dispose();
+            _folderSelectedCancellationTokenSource = new CancellationTokenSource();
+
+            _ = LoadImagePreviewsAsync(selectedFileSystemItem, _folderSelectedCancellationTokenSource.Token);
 
             SelectedFolderPath = selectedFileSystemItem.Path;
 

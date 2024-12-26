@@ -1,4 +1,6 @@
-﻿using ImageCare.Core.Domain;
+﻿using System.Runtime.CompilerServices;
+
+using ImageCare.Core.Domain;
 using ImageCare.Core.Domain.MediaFormats;
 using ImageCare.Core.Exceptions;
 using LibRawDotNet;
@@ -54,10 +56,15 @@ public sealed class FileSystemImageService : IFileSystemImageService
     }
 
     /// <inheritdoc />
-    public async IAsyncEnumerable<ImagePreview> GetImagePreviewsAsync(IEnumerable<FileModel> fileModels)
+    public async IAsyncEnumerable<ImagePreview> GetImagePreviewsAsync(IEnumerable<FileModel> fileModels, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         foreach (var fileModel in fileModels.Where(f => f.FullName.EndsWith("CR3")))
         {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                break;
+            }
+
             yield return await CreateImagePreviewAsync(fileModel);
         }
     }

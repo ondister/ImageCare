@@ -8,7 +8,7 @@ public interface IFileSystemImageService
                                          ImagePreviewSize imagePreviewSize,
                                          CancellationToken cancellationToken = default);
 
-    IAsyncEnumerable<ImagePreview> GetImagePreviewsAsync(IEnumerable<FileModel> fileModels);
+    IAsyncEnumerable<ImagePreview> GetImagePreviewsAsync(IEnumerable<FileModel> fileModels, CancellationToken cancellationToken = default);
 
     Task<ImagePreview?> GetImagePreviewAsync(string imagePath);
 }
