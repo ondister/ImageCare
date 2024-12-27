@@ -1,26 +1,26 @@
 ﻿using System.Runtime.CompilerServices;
 
 using ImageCare.Core.Domain;
+using ImageCare.Core.Domain.Media;
 using ImageCare.Core.Domain.MediaFormats;
 using ImageCare.Core.Exceptions;
-using LibRawDotNet;
 
 using Polly;
-using Polly.Fallback;
 using Polly.Retry;
 
 namespace ImageCare.Core.Services.FileSystemImageService;
 
 public sealed class FileSystemImageService : IFileSystemImageService
 {
-    private const string _exceptionMessage = "Unexpected exception in Json configuration service";
+    private const string _exceptionMessage = "Unexpected exception in Image service";
 
-    private static readonly int soiOffsetIndex = 0xe2;
-    private static readonly int lenOffsetIndex = 0x34;
     private readonly AsyncRetryPolicy _fileOperationsRetryPolicy;
+    private readonly MediaPreviewProvidersFactory _previewProvidersFactory;
 
     public FileSystemImageService()
     {
+        _previewProvidersFactory = new MediaPreviewProvidersFactory();
+
         _fileOperationsRetryPolicy = Policy
                                      .Handle<Exception>()
                                      .WaitAndRetryAsync(
@@ -36,18 +36,14 @@ public sealed class FileSystemImageService : IFileSystemImageService
     {
         try
         {
-            return await _fileOperationsRetryPolicy.ExecuteAsync(
-                       async () =>
+            return await Task.Run(
+                       () =>
                        {
-                           return await Task.Run(
-                                      () =>
-                                      {
-                                          using (var libRawData = LibRawData.OpenFile(imagePreview.Url))
-                                          {
-                                              return libRawData.GetPreviewJpegStream((int)imagePreviewSize);
-                                          }
-                                      });
-                       });
+                           var previewProvider = _previewProvidersFactory.GetMediaPreviewProvider(imagePreview.MediaFormat);
+
+                           return previewProvider.GetPreviewJpegStream(imagePreview.Url, imagePreviewSize);
+                       },
+                       cancellationToken);
         }
         catch (Exception exception)
         {
@@ -58,14 +54,14 @@ public sealed class FileSystemImageService : IFileSystemImageService
     /// <inheritdoc />
     public async IAsyncEnumerable<ImagePreview> GetImagePreviewsAsync(IEnumerable<FileModel> fileModels, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        foreach (var fileModel in fileModels.Where(f => f.FullName.EndsWith("CR3")))
+        foreach (var fileModel in fileModels.Where(FileIsSupported))
         {
             if (cancellationToken.IsCancellationRequested)
             {
                 break;
             }
 
-            yield return await CreateImagePreviewAsync(fileModel);
+            yield return await CreateImagePreviewAsync(fileModel).ConfigureAwait(false);
         }
     }
 
@@ -84,38 +80,15 @@ public sealed class FileSystemImageService : IFileSystemImageService
         }
     }
 
-    public static uint SwapBytes(uint x)
-    {
-        return ((x & 0x000000ff) << 24) + ((x & 0x0000ff00) << 8) + ((x & 0x00ff0000) >> 8) + ((x & 0xff000000) >> 24);
-    }
-
-    private async Task<Stream> GetImageStreamInternalAsync(ImagePreview imagePreview)
-    {
-        return await Task.Run(
-                   () =>
-                   {
-                       using (var fileStream = new FileStream(imagePreview.Url, FileMode.Open, FileAccess.Read, FileShare.Read))
-                       {
-                           var reader = new BinaryReader(fileStream);
-                           reader.BaseStream.Seek(0, SeekOrigin.Begin);
-                           reader.ReadBytes(soiOffsetIndex);
-
-                           var offset = SwapBytes(reader.ReadUInt32());
-                           reader.BaseStream.Seek(offset + lenOffsetIndex, SeekOrigin.Begin);
-                           var len = SwapBytes(reader.ReadUInt32());
-                           var data = reader.ReadBytes((int)len);
-
-                           var memoryStream = new MemoryStream(data);
-
-                           reader.Dispose();
-
-                           return memoryStream;
-                       }
-                   });
-    }
-
     private async Task<ImagePreview> CreateImagePreviewAsync(FileModel fileModel)
     {
-        return await Task.Run(() => new ImagePreview(fileModel.Name, fileModel.FullName, MediaFormat.MediaFormatCr3));
+        var mediaFormat = MediaFormat.Create(fileModel);
+        return await Task.Run(() => new ImagePreview(fileModel.Name, fileModel.FullName, mediaFormat));
+    }
+
+    private bool FileIsSupported(FileModel model)
+    {
+        var fileInfo = new FileInfo(model.FullName);
+        return MediaFormat.IsSupportedExtension(fileInfo.Extension);
     }
 }

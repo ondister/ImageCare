@@ -5,6 +5,7 @@
              xmlns:domain="clr-namespace:ImageCare.UI.Avalonia.ViewModels.Domain"
              xmlns:i="clr-namespace:Avalonia.Xaml.Interactivity;assembly=Avalonia.Xaml.Interactivity"
              xmlns:idd="clr-namespace:Avalonia.Xaml.Interactions.DragAndDrop;assembly=Avalonia.Xaml.Interactions.DragAndDrop"
+             xmlns:avaloniaProgressRing="clr-namespace:AvaloniaProgressRing;assembly=AvaloniaProgressRing"
              prism:ViewModelLocator.AutoWireViewModel="True"
              x:Class="ImageCare.UI.Avalonia.Views.PreviewPanelView"
              x:DataType="viewModels:PreviewPanelViewModel">
@@ -56,6 +57,7 @@
                                     Grid.Column="1"
                                     Content="X"
                                     Command="{Binding RemoveImagePreviewCommand}" />
+
                         </Grid>
                         <TextBlock Grid.Row="1"
                                    Text="{Binding Title}" />

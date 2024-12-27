@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using System.Windows.Input;
 
@@ -26,6 +27,7 @@ internal class ImagePreviewViewModel : ViewModelBase, IComparable<ImagePreviewVi
     private readonly ILogger _logger;
     private Bitmap? _previewBitmap;
     private bool _selected;
+    private bool _isLoading;
 
     public ImagePreviewViewModel(string? title,
                                  string url,
@@ -55,6 +57,12 @@ internal class ImagePreviewViewModel : ViewModelBase, IComparable<ImagePreviewVi
 
     public MediaFormat MediaFormat { get; }
 
+    public bool IsLoading
+    {
+        get => _isLoading;
+        set => SetProperty(ref _isLoading, value);
+    }
+
     public bool Selected
     {
         get => _selected;
@@ -81,16 +89,22 @@ internal class ImagePreviewViewModel : ViewModelBase, IComparable<ImagePreviewVi
 
     private async Task LoadPreviewAsync()
     {
+        IsLoading = true;
+
         try
         {
             await using (var imageStream = await _imageService.GetJpegImageStreamAsync(_mapper.Map<ImagePreview>(this), ImagePreviewSize.Medium))
             {
-                PreviewBitmap = Bitmap.DecodeToWidth(imageStream, 300);
+                PreviewBitmap = await Task.Run(() => Bitmap.DecodeToWidth(imageStream, 300, BitmapInterpolationMode.LowQuality));
             }
         }
         catch (Exception exception)
         {
             _logger.Error(exception, $"Unexpected exception during creating bitmap preview for file {Url}");
+        }
+        finally
+        {
+            IsLoading = false;
         }
     }
 

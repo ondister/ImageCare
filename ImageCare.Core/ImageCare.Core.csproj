@@ -21,4 +21,13 @@
     <ProjectReference Include="..\LibRawDotNet\LibRawDotNet.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="Domain\Media\Assets\unknown_media_preview.jpg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Domain\Media\Assets\unknown_media_preview.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>

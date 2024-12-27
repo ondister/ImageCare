@@ -140,6 +140,7 @@ internal sealed class ApplicationMapper
                    .ForMember(dst => dst.PreviewBitmap, opt => opt.Ignore())
                    .ForMember(dst => dst.RemoveImagePreviewCommand, opt => opt.Ignore())
                    .ForMember(dst => dst.Selected, opt => opt.Ignore())
+                   .ForMember(dst => dst.IsLoading, opt => opt.Ignore())
                    .ConstructUsing(src => new ImagePreviewViewModel(src.Title, src.Url, src.MediaFormat, serviceLocator.Resolve<FileSystemImageService>(), serviceLocator.Resolve<IFileOperationsService>(), _mapper, serviceLocator.Resolve<ILogger>()));
             });
 

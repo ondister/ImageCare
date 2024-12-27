@@ -99,7 +99,7 @@ internal class MainImageViewModel : ViewModelBase
         {
             await using (var imageStream = await _imageService.GetJpegImageStreamAsync(imagePreview, ImagePreviewSize.Large))
             {
-                MainBitmap = new Bitmap(imageStream);
+                MainBitmap = await Task.Run(()=>new Bitmap(imageStream));
             }
         }
         catch (Exception exception)

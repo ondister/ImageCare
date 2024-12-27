@@ -12,4 +12,5 @@
     <Thickness x:Key="MarginTop.Large"> 0,6,0,0</Thickness>
 
     <system:Double x:Key="Icon.Size.Small">16</system:Double>
+    <system:Double x:Key="Icon.Size.Giant">100</system:Double>
 </ResourceDictionary>
