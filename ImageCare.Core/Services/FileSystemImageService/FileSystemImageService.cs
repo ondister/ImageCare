@@ -14,7 +14,7 @@ public sealed class FileSystemImageService : IFileSystemImageService
 {
     private const string _exceptionMessage = "Unexpected exception in Image service";
 
-    private readonly AsyncRetryPolicy _fileOperationsRetryPolicy;
+    private readonly RetryPolicy _fileOperationsRetryPolicy;
     private readonly MediaPreviewProvidersFactory _previewProvidersFactory;
 
     public FileSystemImageService()
@@ -23,7 +23,7 @@ public sealed class FileSystemImageService : IFileSystemImageService
 
         _fileOperationsRetryPolicy = Policy
                                      .Handle<Exception>()
-                                     .WaitAndRetryAsync(
+                                     .WaitAndRetry(
                                          5,
                                          retryAttempt =>
                                          {
@@ -34,21 +34,25 @@ public sealed class FileSystemImageService : IFileSystemImageService
 
     public async Task<Stream> GetJpegImageStreamAsync(ImagePreview imagePreview, ImagePreviewSize imagePreviewSize, CancellationToken cancellationToken = default)
     {
-        try
-        {
-            return await Task.Run(
-                       () =>
+        return await Task.Run(
+                   () =>
+                   {
+                       try
                        {
-                           var previewProvider = _previewProvidersFactory.GetMediaPreviewProvider(imagePreview.MediaFormat);
+                           return _fileOperationsRetryPolicy.Execute(
+                               () =>
+                               {
+                                   var previewProvider = _previewProvidersFactory.GetMediaPreviewProvider(imagePreview.MediaFormat);
 
-                           return previewProvider.GetPreviewJpegStream(imagePreview.Url, imagePreviewSize);
-                       },
-                       cancellationToken);
-        }
-        catch (Exception exception)
-        {
-            throw new ServiceException(_exceptionMessage, exception);
-        }
+                                   return previewProvider.GetPreviewJpegStream(imagePreview.Url, imagePreviewSize);
+                               });
+                       }
+                       catch (Exception exception)
+                       {
+                           throw new ServiceException(_exceptionMessage, exception);
+                       }
+                   },
+                   cancellationToken);
     }
 
     /// <inheritdoc />
