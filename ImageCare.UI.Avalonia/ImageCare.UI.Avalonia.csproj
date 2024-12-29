@@ -27,9 +27,12 @@
     <PackageReference Include="Avalonia.Xaml.Interactions.DragAndDrop" Version="11.2.0.1" />
     <PackageReference Include="Avalonia.Xaml.Interactivity" Version="11.2.0.1" />
     <PackageReference Include="Deadpikle.AvaloniaProgressRing" Version="0.10.10" />
+    <PackageReference Include="HanumanInstitute.LibMpv" Version="0.9.1" />
+    <PackageReference Include="HanumanInstitute.LibMpv.Avalonia" Version="0.9.1" />
     <PackageReference Include="IconPacks.Avalonia.Material" Version="1.0.0" />
     <PackageReference Include="Irihi.Ursa" Version="1.6.2" />
     <PackageReference Include="Irihi.Ursa.Themes.Semi" Version="1.6.2" />
+    <PackageReference Include="LibMpv.Avalonia" Version="1.0.0" />
     <PackageReference Include="Prism.Avalonia" Version="8.1.97.11073" />
     <PackageReference Include="Prism.DryIoc.Avalonia" Version="8.1.97.11073" />
     <PackageReference Include="Semi.Avalonia" Version="11.2.1.2" />
@@ -40,6 +43,19 @@
     <ProjectReference Include="..\ImageCare.Core\ImageCare.Core.csproj" />
     <ProjectReference Include="..\ImageCare.Mvvm\ImageCare.Mvvm.csproj" />
     <ProjectReference Include="..\Modules\ImageCare.Modules.Logging\ImageCare.Modules.Logging.csproj" />
+  </ItemGroup>
+  
+    <ItemGroup Condition="'$(RuntimeIdentifier)'=='win-x64' or '$(RuntimeIdentifier)'==''">
+    <Content Include="win-x64\**">
+      <Link>%(Filename)%(Extension)</Link>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+  <ItemGroup Condition="'$(RuntimeIdentifier)'=='win-x86'">
+    <Content Include="win-x86\**">
+      <Link>%(Filename)%(Extension)</Link>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
   <ItemGroup>

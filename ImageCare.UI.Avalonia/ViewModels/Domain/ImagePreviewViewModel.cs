@@ -95,7 +95,7 @@ internal class ImagePreviewViewModel : ViewModelBase, IComparable<ImagePreviewVi
         {
             await using (var imageStream = await _imageService.GetJpegImageStreamAsync(_mapper.Map<ImagePreview>(this), ImagePreviewSize.Medium))
             {
-                PreviewBitmap = await Task.Run(() => Bitmap.DecodeToWidth(imageStream, 300, BitmapInterpolationMode.LowQuality));
+                PreviewBitmap = await Task.Run(() => Bitmap.DecodeToHeight(imageStream, 300, BitmapInterpolationMode.LowQuality));
             }
         }
         catch (Exception exception)

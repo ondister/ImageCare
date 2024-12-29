@@ -65,6 +65,7 @@ public class App : PrismApplication
 
         containerRegistry.RegisterForNavigation<FoldersView>();
         containerRegistry.RegisterForNavigation<MainImageView>();
+        containerRegistry.RegisterForNavigation<MainVideoView>();
         containerRegistry.RegisterForNavigation<PreviewPanelView>();
         containerRegistry.RegisterForNavigation<BottomBarView>();
 

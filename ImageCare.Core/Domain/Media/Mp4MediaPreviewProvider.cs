@@ -11,7 +11,8 @@ namespace ImageCare.Core.Domain.Media
         /// <inheritdoc />
         public Stream GetPreviewJpegStream(string url, ImagePreviewSize size)
         {
-            throw new NotImplementedException();
+            string _unsupportedMediaPreview = @"Domain\Media\Assets\unknown_media_preview.jpg";
+            return File.OpenRead(_unsupportedMediaPreview);
         }
     }
 }

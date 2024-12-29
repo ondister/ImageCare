@@ -82,6 +82,9 @@
         <EventTriggerBehavior EventName="Loaded">
             <InvokeCommandAction Command="{Binding OnViewLoadedCommand}" />
         </EventTriggerBehavior>
+        <EventTriggerBehavior EventName="Unloaded">
+            <InvokeCommandAction Command="{Binding OnViewUnloadedCommand}" />
+        </EventTriggerBehavior>
     </Interaction.Behaviors>
 
 </u:UrsaWindow>

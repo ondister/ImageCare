@@ -61,6 +61,11 @@ internal class MainImageViewModel : ViewModelBase
                                   .ObserveOn(_synchronizationContext)
                                   .Subscribe(OnImagePreviewSelected)
         };
+
+        if (navigationContext.Parameters["imagePreview"] is SelectedImagePreview imagePreview)
+        {
+            OnImagePreviewSelected(imagePreview);
+        }
     }
 
     /// <inheritdoc />

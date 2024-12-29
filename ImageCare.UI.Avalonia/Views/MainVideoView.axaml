@@ -1,0 +1,85 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:viewModels="clr-namespace:ImageCare.UI.Avalonia.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="ImageCare.UI.Avalonia.Views.MainVideoView"
+             xmlns:mpv="clr-namespace:HanumanInstitute.LibMpv.Avalonia;assembly=HanumanInstitute.LibMpv.Avalonia"
+             xmlns:iconPacks="https://github.com/MahApps/IconPacks.Avalonia"
+             x:DataType="viewModels:MainVideoViewModel">
+
+    <Grid RowDefinitions="*,Auto">
+        <mpv:MpvView MpvContext="{Binding Mpv}" Grid.Row="0" />
+
+        <Grid
+            Grid.Row="1"
+            Margin="5,0,5,0"
+            ColumnDefinitions="Auto,*,Auto"
+            RowDefinitions="Auto">
+
+            <StackPanel Grid.Column="0" Orientation="Horizontal">
+                <Button
+                    Background="Transparent"
+                    BorderBrush="Transparent"
+                    Command="{Binding PlayCommand}">
+                    <iconPacks:PackIconMaterial Kind="Play"
+                                                Height="{StaticResource Icon.Size.Small}"
+                                                Width="{StaticResource Icon.Size.Small}"
+                                                Margin="{StaticResource MarginHorizontal.Small}" />
+                </Button>
+
+                <Button
+                    Background="Transparent"
+                    BorderBrush="Transparent"
+                    Command="{Binding PauseCommand}">
+                    <iconPacks:PackIconMaterial Kind="Pause"
+                                                Height="{StaticResource Icon.Size.Small}"
+                                                Width="{StaticResource Icon.Size.Small}"
+                                                Margin="{StaticResource MarginHorizontal.Small}" />
+                </Button>
+                <Button
+                    Background="Transparent"
+                    BorderBrush="Transparent"
+                    Command="{Binding StopCommand}">
+                    <iconPacks:PackIconMaterial Kind="Stop"
+                                                Height="{StaticResource Icon.Size.Small}"
+                                                Width="{StaticResource Icon.Size.Small}"
+                                                Margin="{StaticResource MarginHorizontal.Small}" />
+                </Button>
+            </StackPanel>
+
+            <Grid Grid.Column="1" ColumnDefinitions="Auto,*,Auto">
+                <TextBlock
+                    VerticalAlignment="Center"
+                    Text="{Binding TimePosition, StringFormat={}{0:hh}:{0:mm}:{0:ss}}" />
+                <Slider
+                    Grid.Column="1"
+                    Margin="5,0,5,0"
+                    VerticalAlignment="Center"
+                    IsEnabled="{Binding IsSeekable}"
+                    Maximum="100"
+                    Minimum="0"
+                    Value="{Binding PercentPos, Mode=TwoWay}" />
+                <TextBlock
+                    Grid.Column="2"
+                    VerticalAlignment="Center"
+                    Text="{Binding TimeRemaining, StringFormat={}{0:hh}:{0:mm}:{0:ss}}" />
+            </Grid>
+
+            <Grid Grid.Column="2">
+
+                <Slider
+                    Width="100"
+                    Margin="0,0,5,0"
+                    Maximum="100"
+                    Minimum="0"
+                    VerticalAlignment="Center"
+                    Value="{Binding Volume, Mode=TwoWay}" />
+            </Grid>
+
+        </Grid>
+
+    </Grid>
+
+</UserControl>
