@@ -52,7 +52,7 @@
                                    Grid.Row="0"
                                    Grid.RowSpan="2"
                                    Grid.ColumnSpan="2"
-                                   Source="{Binding PreviewBitmap}" MaxWidth="300" />
+                                   Source="{Binding PreviewBitmap}" MaxHeight="{Binding MaxImageHeight}" />
                             <Button Grid.Row="0"
                                     Grid.Column="1"
                                     Content="X"

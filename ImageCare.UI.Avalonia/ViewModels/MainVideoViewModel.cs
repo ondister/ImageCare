@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
-using System.Reflection.Metadata;
 using System.Threading;
 using System.Windows.Input;
 
@@ -30,7 +29,6 @@ internal class MainVideoViewModel : ViewModelBase, IDisposable
 
     private string _mediaUrl;
     private CompositeDisposable? _compositeDisposable;
-    private double _volume;
     private MpvContext? _mpv = new();
 
     public MainVideoViewModel(IFileOperationsService fileOperationsService,
@@ -46,7 +44,6 @@ internal class MainVideoViewModel : ViewModelBase, IDisposable
         PlayCommand = new DelegateCommand(Play);
         PauseCommand = new DelegateCommand(Pause);
         StopCommand = new DelegateCommand(Stop);
-
     }
 
     public ICommand PauseCommand { get; set; }
@@ -55,86 +52,65 @@ internal class MainVideoViewModel : ViewModelBase, IDisposable
 
     public ICommand StopCommand { get; }
 
-    public MpvContext? Mpv  
+    public MpvContext? Mpv
     {
         get => _mpv;
         set
         {
             if (_mpv != null)
             {
-                Mpv.TimePos.Changed -= OnTimePosChanged;
-                Mpv.TimeRemaining.Changed -= OnTimeRemainingChanged;
-                Mpv.Seekable.Changed -= OnSeekableChanged;
-                Mpv.PercentPos.Changed -= OnPercentPosChanged;
+                try
+                {
+                    Mpv.TimePos.Changed -= OnTimePosChanged;
+                    Mpv.TimeRemaining.Changed -= OnTimeRemainingChanged;
+                    Mpv.Seekable.Changed -= OnSeekableChanged;
+                    Mpv.PercentPos.Changed -= OnPercentPosChanged;
+                    Mpv.Volume.Changed -= OnVolumeChanged;
+                }
+                catch (Exception exception)
+                {
+                    _logger.Error(exception, "Unexpected error during unsubscribing from mpv context events.");
+                }
             }
+
             if (SetProperty(ref _mpv, value))
             {
                 if (_mpv != null)
                 {
-                    Mpv.TimePos.Changed += OnTimePosChanged;
-                    Mpv.TimeRemaining.Changed += OnTimeRemainingChanged;
-                    Mpv.Seekable.Changed += OnSeekableChanged;
-                    Mpv.PercentPos.Changed += OnPercentPosChanged;
-                    Mpv.Volume.Changed += OnVolumeChanged;
+                    try
+                    {
+                        Mpv.TimePos.Changed += OnTimePosChanged;
+                        Mpv.TimeRemaining.Changed += OnTimeRemainingChanged;
+                        Mpv.Seekable.Changed += OnSeekableChanged;
+                        Mpv.PercentPos.Changed += OnPercentPosChanged;
+                        Mpv.Volume.Changed += OnVolumeChanged;
+                    }
+                    catch (Exception exception)
+                    {
+                        _logger.Error(exception, "Unexpected error during subscribing from mpv context events.");
+                    }
                 }
-               
             }
         }
-    }
-
-    private void OnVolumeChanged(object? sender, MpvValueChangedEventArgs<double, double> e)
-    {
-        OnPropertyChanged(nameof(Volume));
-    }
-
-    private void OnPercentPosChanged(object? sender, HanumanInstitute.LibMpv.MpvValueChangedEventArgs<double, double> e)
-    {
-        OnPropertyChanged(nameof(PercentPos));
-    }
-
-    private void OnSeekableChanged(object? sender, HanumanInstitute.LibMpv.MpvValueChangedEventArgs<bool, bool> e)
-    {
-        OnPropertyChanged(nameof(IsSeekable));
-    }
-
-    private void OnTimePosChanged(object? sender, HanumanInstitute.LibMpv.MpvValueChangedEventArgs<double, double> e)
-    {
-       OnPropertyChanged(nameof(TimePosition));
-    }
-
-    private void OnTimeRemainingChanged(object? sender, HanumanInstitute.LibMpv.MpvValueChangedEventArgs<double, double> e)
-    {
-        OnPropertyChanged(nameof(TimeRemaining));
     }
 
     public TimeSpan TimePosition
     {
-        get
+        get => Mpv == null ? TimeSpan.Zero : TimeSpan.FromSeconds(Mpv.TimePos.Get().Value);
+        set
         {
             if (Mpv == null)
             {
-                return TimeSpan.Zero;
+                return;
             }
 
-            return TimeSpan.FromSeconds(Mpv.TimePos.Get().Value);
-        }
-        set
-        {
             Mpv.TimePos.Set(value.TotalSeconds);
-        } 
+        }
     }
 
     public double? Volume
     {
-        get
-        {
-            if (Mpv == null)
-            {
-                return 0.0;
-            }
-
-            return  Mpv.Volume.Get();
-        }
+        get => Mpv == null ? 0.0 : Mpv.Volume.Get();
         set
         {
             if (Mpv == null)
@@ -142,59 +118,28 @@ internal class MainVideoViewModel : ViewModelBase, IDisposable
                 return;
             }
 
-            Mpv.Volume.Set(value.Value);
-
-            OnPropertyChanged(nameof(Volume));
-        } 
-    }
-
-    public TimeSpan TimeRemaining
-    {
-        get
-        {
-            if (Mpv == null)
+            if (value.HasValue)
             {
-                return TimeSpan.Zero;
+                Mpv.Volume.Set(value.Value);
             }
-
-            return TimeSpan.FromSeconds(Mpv.TimeRemaining.Get().Value);
         }
     }
+
+    public TimeSpan TimeRemaining => Mpv == null ? TimeSpan.Zero : TimeSpan.FromSeconds(Mpv.TimeRemaining.Get().Value);
 
     public double? PercentPos
     {
-        get
-        {
-            if (Mpv == null)
-            {
-                return 0.0;
-            }
-            return Mpv.PercentPos.Get();
-        }
+        get => Mpv == null ? 0.0 : Mpv.PercentPos.Get();
         set
         {
-            if (Mpv == null)
+            if (value.HasValue)
             {
-                return;
+                Mpv?.PercentPos.Set(value.Value);
             }
-
-            Mpv.PercentPos.Set(value.Value);
-            OnPropertyChanged(nameof(PercentPos));
         }
     }
 
-    public bool? IsSeekable
-    {
-        get
-        {
-            if (Mpv == null)
-            {
-                return false;
-            }
-
-            return Mpv.Seekable.Get();
-        }
-    }
+    public bool? IsSeekable => Mpv == null ? false : Mpv.Seekable.Get();
 
     public string MediaUrl
     {
@@ -265,5 +210,30 @@ internal class MainVideoViewModel : ViewModelBase, IDisposable
     {
         Stop();
         MediaUrl = preview.Url;
+    }
+
+    private void OnVolumeChanged(object? sender, MpvValueChangedEventArgs<double, double> e)
+    {
+        OnPropertyChanged(nameof(Volume));
+    }
+
+    private void OnPercentPosChanged(object? sender, MpvValueChangedEventArgs<double, double> e)
+    {
+        OnPropertyChanged(nameof(PercentPos));
+    }
+
+    private void OnSeekableChanged(object? sender, MpvValueChangedEventArgs<bool, bool> e)
+    {
+        OnPropertyChanged(nameof(IsSeekable));
+    }
+
+    private void OnTimePosChanged(object? sender, MpvValueChangedEventArgs<double, double> e)
+    {
+        OnPropertyChanged(nameof(TimePosition));
+    }
+
+    private void OnTimeRemainingChanged(object? sender, MpvValueChangedEventArgs<double, double> e)
+    {
+        OnPropertyChanged(nameof(TimeRemaining));
     }
 }

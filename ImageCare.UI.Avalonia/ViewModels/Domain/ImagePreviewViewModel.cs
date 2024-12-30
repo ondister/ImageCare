@@ -28,10 +28,12 @@ internal class ImagePreviewViewModel : ViewModelBase, IComparable<ImagePreviewVi
     private Bitmap? _previewBitmap;
     private bool _selected;
     private bool _isLoading;
+    private int _maxImageHeight = 200;
 
     public ImagePreviewViewModel(string? title,
                                  string url,
                                  MediaFormat mediaFormat,
+                                 int maxImageHeight,
                                  IFileSystemImageService imageService,
                                  IFileOperationsService fileOperationsService,
                                  IMapper mapper,
@@ -39,6 +41,7 @@ internal class ImagePreviewViewModel : ViewModelBase, IComparable<ImagePreviewVi
     {
         Title = title;
         Url = url;
+        MaxImageHeight=maxImageHeight;
         MediaFormat = mediaFormat;
 
         _imageService = imageService;
@@ -75,6 +78,12 @@ internal class ImagePreviewViewModel : ViewModelBase, IComparable<ImagePreviewVi
         set => SetProperty(ref _previewBitmap, value);
     }
 
+    public int MaxImageHeight
+    {
+        get => _maxImageHeight;
+        set => SetProperty(ref _maxImageHeight, value);
+    }
+
     public ICommand RemoveImagePreviewCommand { get; }
 
     public int CompareTo(ImagePreviewViewModel? other)
@@ -95,7 +104,7 @@ internal class ImagePreviewViewModel : ViewModelBase, IComparable<ImagePreviewVi
         {
             await using (var imageStream = await _imageService.GetJpegImageStreamAsync(_mapper.Map<ImagePreview>(this), ImagePreviewSize.Medium))
             {
-                PreviewBitmap = await Task.Run(() => Bitmap.DecodeToHeight(imageStream, 300, BitmapInterpolationMode.LowQuality));
+                PreviewBitmap = await Task.Run(() => Bitmap.DecodeToHeight(imageStream, MaxImageHeight, BitmapInterpolationMode.LowQuality));
             }
         }
         catch (Exception exception)

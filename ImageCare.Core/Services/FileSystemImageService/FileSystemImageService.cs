@@ -87,7 +87,7 @@ public sealed class FileSystemImageService : IFileSystemImageService
     private async Task<ImagePreview> CreateImagePreviewAsync(FileModel fileModel)
     {
         var mediaFormat = MediaFormat.Create(fileModel);
-        return await Task.Run(() => new ImagePreview(fileModel.Name, fileModel.FullName, mediaFormat));
+        return await Task.Run(() => new ImagePreview(fileModel.Name, fileModel.FullName, mediaFormat, 200));
     }
 
     private bool FileIsSupported(FileModel model)

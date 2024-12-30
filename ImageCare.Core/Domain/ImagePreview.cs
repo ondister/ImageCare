@@ -4,20 +4,23 @@ namespace ImageCare.Core.Domain;
 
 public class ImagePreview : IEquatable<ImagePreview>
 {
-    public ImagePreview(string? title, string url, MediaFormat mediaFormat)
+    public ImagePreview(string? title, string url, MediaFormat mediaFormat, int maxImageHeight)
     {
         Title = title;
         Url = url;
         MediaFormat = mediaFormat;
+        MaxImageHeight = maxImageHeight;
     }
 
-    public static ImagePreview Empty { get; } = new(string.Empty, string.Empty, MediaFormat.MediaFormatUnknown);
+    public static ImagePreview Empty { get; } = new(string.Empty, string.Empty, MediaFormat.MediaFormatUnknown, 0);
 
     public string? Title { get; }
 
     public string Url { get; }
 
     public MediaFormat MediaFormat { get; }
+
+    public int MaxImageHeight { get; }
 
     /// <inheritdoc />
     public bool Equals(ImagePreview? other)

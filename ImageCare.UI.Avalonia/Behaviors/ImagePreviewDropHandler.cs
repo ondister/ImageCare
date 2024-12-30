@@ -1,5 +1,7 @@
 ﻿using System;
 
+using AutoMapper;
+
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.VisualTree;
@@ -15,10 +17,12 @@ namespace ImageCare.UI.Avalonia.Behaviors;
 public class ImagePreviewDropHandler : DropHandlerBase
 {
     private readonly IFileOperationsService _fileOperationsService;
+    private readonly IMapper _mapper;
 
-    public ImagePreviewDropHandler(IFileOperationsService fileOperationsService)
+    public ImagePreviewDropHandler(IFileOperationsService fileOperationsService, IMapper mapper)
     {
         _fileOperationsService = fileOperationsService;
+        _mapper = mapper;
     }
 
     /// <inheritdoc />
@@ -65,7 +69,7 @@ public class ImagePreviewDropHandler : DropHandlerBase
                 {
                     var progress = new Progress<OperationInfo>();
                     _fileOperationsService.CopyImagePreviewToDirectoryAsync(
-                        new ImagePreview(sourceImagePreview.Title, sourceImagePreview.Url, sourceImagePreview.MediaFormat),
+                        _mapper.Map<ImagePreview>(sourceImagePreview),
                         previewImageViewModel.SelectedFolderPath,
                         progress);
                 }
@@ -78,7 +82,7 @@ public class ImagePreviewDropHandler : DropHandlerBase
                 {
                     var progress = new Progress<OperationInfo>();
                     _fileOperationsService.MoveImagePreviewToDirectoryAsync(
-                        new ImagePreview(sourceImagePreview.Title, sourceImagePreview.Url, sourceImagePreview.MediaFormat),
+                        _mapper.Map<ImagePreview>(sourceImagePreview),
                         previewImageViewModel.SelectedFolderPath,
                         progress);
                 }

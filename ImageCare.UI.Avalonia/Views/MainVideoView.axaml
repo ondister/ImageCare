@@ -14,7 +14,7 @@
 
         <Grid
             Grid.Row="1"
-            Margin="5,0,5,0"
+            Margin="{StaticResource MarginAll.Small}"
             ColumnDefinitions="Auto,*,Auto"
             RowDefinitions="Auto">
 
@@ -55,7 +55,7 @@
                     Text="{Binding TimePosition, StringFormat={}{0:hh}:{0:mm}:{0:ss}}" />
                 <Slider
                     Grid.Column="1"
-                    Margin="5,0,5,0"
+                    Margin="{StaticResource MarginHorizontal.Small}"
                     VerticalAlignment="Center"
                     IsEnabled="{Binding IsSeekable}"
                     Maximum="100"
@@ -71,7 +71,7 @@
 
                 <Slider
                     Width="100"
-                    Margin="0,0,5,0"
+                    Margin="{StaticResource MarginHorizontal.Small}"
                     Maximum="100"
                     Minimum="0"
                     VerticalAlignment="Center"
