@@ -13,25 +13,31 @@
 
     <Grid Margin="{StaticResource MarginAll.Small}"
           ColumnDefinitions="*,Auto">
-        <ZoomBorder x:Name="ZoomBorder"
-                    Grid.Column="0"
-                    Grid.ColumnSpan="2"
-                    Stretch="None"
-                    ZoomSpeed="1.1"
-                    EnableConstrains="True"
-                    EnablePan="True"
-                    PanButton="Left"
-                    ClipToBounds="True"
-                    Focusable="True"
-                    MinZoomX="1"
-                    MinZoomY="1"
-                    VerticalAlignment="Stretch">
+        <LayoutTransformControl   Grid.Column="0"
+                                  Grid.ColumnSpan="2">
+            <LayoutTransformControl.LayoutTransform>
+                <RotateTransform Angle="{Binding RotationAngle}" />
+            </LayoutTransformControl.LayoutTransform>
 
-            <Image x:Name="Image"
-                   Name="MainViewer"
-                   Source="{Binding MainBitmap}" />
+            <ZoomBorder x:Name="ZoomBorder"
+                  
+                        Stretch="Uniform"
+                        ZoomSpeed="1.1"
+                        EnableConstrains="True"
+                        EnablePan="True"
+                        PanButton="Left"
+                        ClipToBounds="True"
+                        Focusable="True"
+                        MinZoomX="1"
+                        MinZoomY="1"
+                        VerticalAlignment="Stretch">
 
-        </ZoomBorder>
+                <Image x:Name="Image"
+                       Name="MainViewer"
+                       Source="{Binding MainBitmap}" />
+            </ZoomBorder>
+
+        </LayoutTransformControl>
 
         <Grid Grid.Column="1"
               RowDefinitions="*,Auto, Auto"
@@ -48,6 +54,7 @@
                 </u:IconButton.Icon>
             </u:IconButton>
         </Grid>
+
     </Grid>
 
 </UserControl>

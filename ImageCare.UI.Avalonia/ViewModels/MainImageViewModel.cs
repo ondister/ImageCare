@@ -8,6 +8,7 @@ using System.Windows.Input;
 using Avalonia.Media.Imaging;
 
 using ImageCare.Core.Domain;
+using ImageCare.Core.Domain.Media;
 using ImageCare.Core.Services.FileOperationsService;
 using ImageCare.Core.Services.FileSystemImageService;
 using ImageCare.Core.Services.FolderService;
@@ -29,6 +30,7 @@ internal class MainImageViewModel : ViewModelBase
     private Bitmap? _mainBitmap;
 
     private CompositeDisposable? _compositeDisposable;
+    private double _rotationAngle;
 
     public MainImageViewModel(IFileSystemImageService imageService,
                               IFolderService folderService,
@@ -50,6 +52,12 @@ internal class MainImageViewModel : ViewModelBase
     }
 
     public ICommand? ResetMatrixCommand { get; set; }
+
+    public double RotationAngle
+    {
+        get => _rotationAngle;
+        set => SetProperty(ref _rotationAngle, value);
+    }
 
     /// <inheritdoc />
     public override void OnNavigatedTo(NavigationContext navigationContext)
@@ -104,7 +112,11 @@ internal class MainImageViewModel : ViewModelBase
         {
             await using (var imageStream = await _imageService.GetJpegImageStreamAsync(imagePreview, MediaPreviewSize.Large))
             {
-                MainBitmap = await Task.Run(()=>new Bitmap(imageStream));
+                var metadata = await _imageService.GetMediaMetadataAsync(imagePreview);
+
+                RotationAngle = metadata.Orientation.ToRotationAngle();
+
+                MainBitmap = await Task.Run(() => new Bitmap(imageStream));
             }
         }
         catch (Exception exception)

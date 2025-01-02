@@ -9,6 +9,7 @@ using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.Input;
 
 using ImageCare.Core.Domain;
+using ImageCare.Core.Domain.Media;
 using ImageCare.Core.Domain.Media.Metadata;
 using ImageCare.Core.Domain.MediaFormats;
 using ImageCare.Core.Services.FileOperationsService;
@@ -31,6 +32,7 @@ internal class MediaPreviewViewModel : ViewModelBase, IComparable<MediaPreviewVi
     private int _maxImageHeight = 200;
     private string _metadataString;
     private string _dateTimeString;
+    private double _rotateAngle;
 
     public MediaPreviewViewModel(string? title,
                                  string url,
@@ -100,6 +102,12 @@ internal class MediaPreviewViewModel : ViewModelBase, IComparable<MediaPreviewVi
         set => SetProperty(ref _dateTimeString, value);
     }
 
+    public double RotateAngle
+    {
+        get => _rotateAngle;
+        set => SetProperty(ref _rotateAngle, value);
+    }
+
     public IMediaMetadata Metadata { get; private set; }
 
     public int CompareTo(MediaPreviewViewModel? other)
@@ -121,11 +129,14 @@ internal class MediaPreviewViewModel : ViewModelBase, IComparable<MediaPreviewVi
             var mediaPreview = _mapper.Map<MediaPreview>(this);
             await using (var imageStream = await _imageService.GetJpegImageStreamAsync(_mapper.Map<MediaPreview>(this), MediaPreviewSize.Medium))
             {
-                PreviewBitmap = await Task.Run(() => Bitmap.DecodeToHeight(imageStream, MaxImageHeight, BitmapInterpolationMode.LowQuality));
                 var metadata = await _imageService.GetMediaMetadataAsync(mediaPreview);
                 MetadataString = metadata.GetString();
                 DateTimeString = metadata.CreationDateTime.ToString("dd.MM.yyyy HH:mm");
                 Metadata = metadata;
+
+                RotateAngle = Metadata.Orientation.ToRotationAngle();
+
+                PreviewBitmap = await Task.Run(() => Bitmap.DecodeToHeight(imageStream, MaxImageHeight, BitmapInterpolationMode.LowQuality));
             }
         }
         catch (Exception exception)

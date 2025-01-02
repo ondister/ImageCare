@@ -30,6 +30,14 @@ internal sealed class JpegMediaPreviewProvider : IMediaPreviewProvider
             jpegMediaMetadata.Aperture = exifDirectory.GetDescription(ExifDirectoryBase.TagAperture);
             jpegMediaMetadata.ShutterSpeed = exifDirectory.GetDescription(ExifDirectoryBase.TagShutterSpeed);
 
+            if (directories.FirstOrDefault(d => d.Name.Equals("Exif IFD0", StringComparison.OrdinalIgnoreCase)) is { } ifd0Directory)
+            {
+                if (ifd0Directory.TryGetInt32(ExifDirectoryBase.TagOrientation, out var orientationInt))
+                {
+                    jpegMediaMetadata.Orientation = (ExifOrientation)orientationInt;
+                }
+            }
+
             return jpegMediaMetadata;
         }
 

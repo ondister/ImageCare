@@ -32,6 +32,14 @@ internal sealed class RawMediaPreviewProvider : IMediaPreviewProvider
                 rawMediaMetadata.Aperture = exifDirectory.GetDescription(ExifDirectoryBase.TagAperture);
                 rawMediaMetadata.ShutterSpeed = exifDirectory.GetDescription(ExifDirectoryBase.TagShutterSpeed);
 
+                if (directories.FirstOrDefault(d => d.Name.Equals("Exif IFD0", StringComparison.OrdinalIgnoreCase)) is { } ifd0Directory)
+                {
+                    if (ifd0Directory.TryGetInt32(ExifDirectoryBase.TagOrientation,out var orientationInt))
+                    {
+                        rawMediaMetadata.Orientation = (ExifOrientation)orientationInt;
+                    }
+                }
+
                 return rawMediaMetadata;
             }
         }

@@ -19,6 +19,9 @@ public abstract class ImageMediaMetadata : IImageMetadata
     public DateTime CreationDateTime { get; }
 
     /// <inheritdoc />
+    public ExifOrientation Orientation { get; set; }
+
+    /// <inheritdoc />
     public string? Aperture { get; internal set; }
 
     /// <inheritdoc />

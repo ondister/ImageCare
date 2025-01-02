@@ -144,6 +144,7 @@ internal sealed class ApplicationMapper
                    .ForMember(dst => dst.Metadata, opt => opt.Ignore())
                    .ForMember(dst => dst.MetadataString, opt => opt.Ignore())
                    .ForMember(dst => dst.DateTimeString, opt => opt.Ignore())
+                   .ForMember(dst => dst.RotateAngle, opt => opt.Ignore())
                    .ConstructUsing(src => new MediaPreviewViewModel(src.Title, src.Url, src.MediaFormat,src.MaxImageHeight, serviceLocator.Resolve<FileSystemImageService>(), serviceLocator.Resolve<IFileOperationsService>(), _mapper, serviceLocator.Resolve<ILogger>()));
             });
 

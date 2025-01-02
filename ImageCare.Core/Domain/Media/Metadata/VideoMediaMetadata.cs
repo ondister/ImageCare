@@ -18,6 +18,8 @@ public class VideoMediaMetadata : IVideoMetadata
     /// <inheritdoc />
     public DateTime CreationDateTime { get; }
 
+    /// <inheritdoc />
+    public ExifOrientation Orientation { get; set; }
 
     /// <inheritdoc />
     public TimeSpan Duration { get; set; }

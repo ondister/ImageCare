@@ -12,6 +12,9 @@ public sealed class UnsupportedMediaMetadata : IMediaMetadata
     public DateTime CreationDateTime { get; } = DateTime.MinValue;
 
     /// <inheritdoc />
+    public ExifOrientation Orientation { get; set; }
+
+    /// <inheritdoc />
     public string GetString()
     {
         return "-";
