@@ -7,7 +7,8 @@
              xmlns:avaloniaProgressRing="clr-namespace:AvaloniaProgressRing;assembly=AvaloniaProgressRing"
              x:Class="ImageCare.UI.Avalonia.Views.FoldersView"
              prism:ViewModelLocator.AutoWireViewModel="True"
-             x:DataType="viewModels:FoldersViewModel">
+             x:DataType="viewModels:FoldersViewModel"
+             Background="{DynamicResource Brushes.Region.Background}">
 
     <Grid Margin="{StaticResource MarginAll.Small}">
 

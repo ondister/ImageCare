@@ -6,7 +6,8 @@
              xmlns:iconPacks="https://github.com/MahApps/IconPacks.Avalonia"
              x:Class="ImageCare.UI.Avalonia.Views.BottomBarView"
              mvvm:ViewModelLocator.AutoWireViewModel="True"
-             x:DataType="viewModels:BottomBarViewModel">
+             x:DataType="viewModels:BottomBarViewModel"
+             Background="{DynamicResource Brushes.Region.Background}">
 
     <UserControl.Styles>
 

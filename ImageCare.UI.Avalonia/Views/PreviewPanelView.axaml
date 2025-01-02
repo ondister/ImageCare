@@ -10,7 +10,8 @@
              xmlns:controls="clr-namespace:ImageCare.UI.Avalonia.Controls"
              prism:ViewModelLocator.AutoWireViewModel="True"
              x:Class="ImageCare.UI.Avalonia.Views.PreviewPanelView"
-             x:DataType="viewModels:PreviewPanelViewModel">
+             x:DataType="viewModels:PreviewPanelViewModel"
+             Background="{DynamicResource Brushes.Region.Background}">
 
     <Grid Margin="{StaticResource MarginAll.Small}">
 

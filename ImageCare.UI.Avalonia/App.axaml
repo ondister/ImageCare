@@ -27,6 +27,7 @@
 
             <ResourceDictionary.MergedDictionaries>
                 <MergeResourceInclude Source="/Styles/Sizes.axaml" />
+                <MergeResourceInclude Source="/Styles/Colors.axaml" />
                 <MergeResourceInclude Source="/Styles/PreviewsListBox.axaml" />
             </ResourceDictionary.MergedDictionaries>
 
