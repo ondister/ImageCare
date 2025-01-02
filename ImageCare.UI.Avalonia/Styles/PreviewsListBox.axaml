@@ -1,0 +1,21 @@
+<ResourceDictionary
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="clr-namespace:ImageCare.UI.Avalonia.Controls">
+    <!--  Add Resources Here  -->
+
+    <ControlTheme
+        x:Key="PreviewsListBox"
+        BasedOn="{StaticResource {x:Type ListBox}}"
+        TargetType="controls:PreviewsListBox">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+        <Style Selector="^:disabled">
+            <Setter Property="BorderBrush" Value="{DynamicResource ButtonOutlineBorderBrush}" />
+            <Setter Property="Background" Value="{DynamicResource ButtonOutlineBackground}" />
+            <Setter Property="Foreground" Value="{DynamicResource ButtonDefaultDisabledForeground}" />
+        </Style>
+
+    </ControlTheme>
+
+</ResourceDictionary>

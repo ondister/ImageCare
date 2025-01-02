@@ -2,9 +2,9 @@
 
 namespace ImageCare.Core.Domain;
 
-public class ImagePreview : IEquatable<ImagePreview>
+public class MediaPreview : IEquatable<MediaPreview>
 {
-    public ImagePreview(string? title, string url, MediaFormat mediaFormat, int maxImageHeight)
+    public MediaPreview(string? title, string url, MediaFormat mediaFormat, int maxImageHeight)
     {
         Title = title;
         Url = url;
@@ -12,7 +12,7 @@ public class ImagePreview : IEquatable<ImagePreview>
         MaxImageHeight = maxImageHeight;
     }
 
-    public static ImagePreview Empty { get; } = new(string.Empty, string.Empty, MediaFormat.MediaFormatUnknown, 0);
+    public static MediaPreview Empty { get; } = new(string.Empty, string.Empty, MediaFormat.MediaFormatUnknown, 0);
 
     public string? Title { get; }
 
@@ -23,7 +23,7 @@ public class ImagePreview : IEquatable<ImagePreview>
     public int MaxImageHeight { get; }
 
     /// <inheritdoc />
-    public bool Equals(ImagePreview? other)
+    public bool Equals(MediaPreview? other)
     {
         if (ReferenceEquals(null, other))
         {
@@ -56,7 +56,7 @@ public class ImagePreview : IEquatable<ImagePreview>
             return false;
         }
 
-        return Equals((ImagePreview)obj);
+        return Equals((MediaPreview)obj);
     }
 
     /// <inheritdoc />
@@ -65,12 +65,12 @@ public class ImagePreview : IEquatable<ImagePreview>
         return Url.GetHashCode();
     }
 
-    public static bool operator ==(ImagePreview? left, ImagePreview? right)
+    public static bool operator ==(MediaPreview? left, MediaPreview? right)
     {
         return Equals(left, right);
     }
 
-    public static bool operator !=(ImagePreview? left, ImagePreview? right)
+    public static bool operator !=(MediaPreview? left, MediaPreview? right)
     {
         return !Equals(left, right);
     }

@@ -133,15 +133,18 @@ internal sealed class ApplicationMapper
                            model.RootDirectory = new DirectoryModel(viewModel.Name, viewModel.Path);
                        });
 
-                cfg.CreateMap<ImagePreviewViewModel, ImagePreview>()
-                   .ConstructUsing(src => new ImagePreview(src.Title, src.Url, src.MediaFormat,src.MaxImageHeight));
+                cfg.CreateMap<MediaPreviewViewModel, MediaPreview>()
+                   .ConstructUsing(src => new MediaPreview(src.Title, src.Url, src.MediaFormat,src.MaxImageHeight));
 
-                cfg.CreateMap<ImagePreview, ImagePreviewViewModel>()
+                cfg.CreateMap<MediaPreview, MediaPreviewViewModel>()
                    .ForMember(dst => dst.PreviewBitmap, opt => opt.Ignore())
                    .ForMember(dst => dst.RemoveImagePreviewCommand, opt => opt.Ignore())
                    .ForMember(dst => dst.Selected, opt => opt.Ignore())
                    .ForMember(dst => dst.IsLoading, opt => opt.Ignore())
-                   .ConstructUsing(src => new ImagePreviewViewModel(src.Title, src.Url, src.MediaFormat,src.MaxImageHeight, serviceLocator.Resolve<FileSystemImageService>(), serviceLocator.Resolve<IFileOperationsService>(), _mapper, serviceLocator.Resolve<ILogger>()));
+                   .ForMember(dst => dst.Metadata, opt => opt.Ignore())
+                   .ForMember(dst => dst.MetadataString, opt => opt.Ignore())
+                   .ForMember(dst => dst.DateTimeString, opt => opt.Ignore())
+                   .ConstructUsing(src => new MediaPreviewViewModel(src.Title, src.Url, src.MediaFormat,src.MaxImageHeight, serviceLocator.Resolve<FileSystemImageService>(), serviceLocator.Resolve<IFileOperationsService>(), _mapper, serviceLocator.Resolve<ILogger>()));
             });
 
         config.AssertConfigurationIsValid();

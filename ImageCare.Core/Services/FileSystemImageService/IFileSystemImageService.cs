@@ -1,14 +1,17 @@
 ﻿using ImageCare.Core.Domain;
+using ImageCare.Core.Domain.Media.Metadata;
 
 namespace ImageCare.Core.Services.FileSystemImageService;
 
 public interface IFileSystemImageService
 {
-    Task<Stream> GetJpegImageStreamAsync(ImagePreview imagePreview,
-                                         ImagePreviewSize imagePreviewSize,
+    Task<Stream> GetJpegImageStreamAsync(MediaPreview imagePreview,
+                                         MediaPreviewSize imagePreviewSize,
                                          CancellationToken cancellationToken = default);
 
-    IAsyncEnumerable<ImagePreview> GetImagePreviewsAsync(IEnumerable<FileModel> fileModels, CancellationToken cancellationToken = default);
+    IAsyncEnumerable<MediaPreview> GetMediaPreviewsAsync(IEnumerable<FileModel> fileModels, CancellationToken cancellationToken = default);
 
-    Task<ImagePreview?> GetImagePreviewAsync(string imagePath);
+    Task<MediaPreview?> GetMediaPreviewAsync(string imagePath);
+
+    Task<IMediaMetadata> GetMediaMetadataAsync(MediaPreview mediaPreview);
 }

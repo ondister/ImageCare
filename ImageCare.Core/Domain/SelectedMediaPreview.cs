@@ -2,16 +2,16 @@
 
 namespace ImageCare.Core.Domain;
 
-public class SelectedImagePreview : ImagePreview
+public class SelectedMediaPreview : MediaPreview
 {
     /// <inheritdoc />
-    public SelectedImagePreview(string? title, string url, MediaFormat mediaFormat, int maxImageHeight, FileManagerPanel fileManagerPanel)
+    public SelectedMediaPreview(string? title, string url, MediaFormat mediaFormat, int maxImageHeight, FileManagerPanel fileManagerPanel)
         : base(title, url, mediaFormat, maxImageHeight)
     {
         FileManagerPanel = fileManagerPanel;
     }
 
-    public SelectedImagePreview(ImagePreview imagePreview, FileManagerPanel fileManagerPanel)
+    public SelectedMediaPreview(MediaPreview imagePreview, FileManagerPanel fileManagerPanel)
         : this(imagePreview.Title, imagePreview.Url, imagePreview.MediaFormat, imagePreview.MaxImageHeight, fileManagerPanel) { }
 
     public FileManagerPanel FileManagerPanel { get; }

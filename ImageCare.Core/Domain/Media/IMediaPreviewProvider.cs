@@ -1,6 +1,10 @@
-﻿namespace ImageCare.Core.Domain.Media;
+﻿using ImageCare.Core.Domain.Media.Metadata;
+
+namespace ImageCare.Core.Domain.Media;
 
 internal interface IMediaPreviewProvider
 {
-    Stream GetPreviewJpegStream(string url, ImagePreviewSize size);
+    IMediaMetadata GetMediaMetadata(string url);
+
+    Stream GetPreviewJpegStream(string url, MediaPreviewSize size);
 }

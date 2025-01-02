@@ -32,7 +32,7 @@ internal class PreviewPanelViewModel : ViewModelBase
     private readonly IMapper _mapper;
     private readonly ILogger _logger;
     private readonly SynchronizationContext _synchronizationContext;
-    private ImagePreviewViewModel? _selectedPreview;
+    private MediaPreviewViewModel? _selectedPreview;
     private CompositeDisposable _fileSystemWatcherCompositeDisposable;
 
     private CancellationTokenSource _folderSelectedCancellationTokenSource;
@@ -60,13 +60,13 @@ internal class PreviewPanelViewModel : ViewModelBase
         _folderSelectedCancellationTokenSource = new CancellationTokenSource();
     }
 
-    public SortedObservableCollection<ImagePreviewViewModel> ImagePreviews { get; }
+    public SortedObservableCollection<MediaPreviewViewModel> ImagePreviews { get; }
 
     public ImagePreviewDropHandler ImagePreviewDropHandler { get; }
 
     public FileManagerPanel FileManagerPanel { get; private set; }
 
-    public ImagePreviewViewModel? SelectedPreview
+    public MediaPreviewViewModel? SelectedPreview
     {
         get => _selectedPreview;
         set
@@ -81,7 +81,7 @@ internal class PreviewPanelViewModel : ViewModelBase
             {
                 _selectedPreview.Selected = true;
 
-                _fileOperationsService.SetSelectedPreview(new SelectedImagePreview(_mapper.Map<ImagePreview>(_selectedPreview), FileManagerPanel));
+                _fileOperationsService.SetSelectedPreview(new SelectedMediaPreview(_mapper.Map<MediaPreview>(_selectedPreview), FileManagerPanel));
             }
         }
     }
@@ -122,14 +122,14 @@ internal class PreviewPanelViewModel : ViewModelBase
 
             var files = await _folderService.GetFileModelAsync(directoryModel, "*");
 
-            await foreach (var previewImage in _imageService.GetImagePreviewsAsync(files, cancellationToken))
+            await foreach (var previewImage in _imageService.GetMediaPreviewsAsync(files, cancellationToken))
             {
                 if (cancellationToken.IsCancellationRequested)
                 {
                     return;
                 }
 
-                ImagePreviews.Add(_mapper.Map<ImagePreviewViewModel>(previewImage));
+                ImagePreviews.Add(_mapper.Map<MediaPreviewViewModel>(previewImage));
             }
         }
         catch (Exception exception)
@@ -178,7 +178,7 @@ internal class PreviewPanelViewModel : ViewModelBase
 
     private void CreateImagePreviewFromPath(string filePath)
     {
-        _imageService.GetImagePreviewAsync(filePath)
+        _imageService.GetMediaPreviewAsync(filePath)
                      .ContinueWith(
                          task =>
                          {
@@ -187,7 +187,12 @@ internal class PreviewPanelViewModel : ViewModelBase
                                  return;
                              }
 
-                             ImagePreviews.InsertItem(_mapper.Map<ImagePreviewViewModel>(task.Result));
+                             if (ImagePreviews.Any(p => p.Url.Equals(filePath, StringComparison.OrdinalIgnoreCase)))
+                             {
+                                 return;
+                             }
+
+                             ImagePreviews.InsertItem(_mapper.Map<MediaPreviewViewModel>(task.Result));
                          });
     }
 
@@ -207,7 +212,7 @@ internal class PreviewPanelViewModel : ViewModelBase
             if (ImagePreviews.Count == 0)
             {
                 _synchronizationContext.Post(d => { SelectedPreview = null; }, null);
-                _fileOperationsService.SetSelectedPreview(new SelectedImagePreview(ImagePreview.Empty, FileManagerPanel));
+                _fileOperationsService.SetSelectedPreview(new SelectedMediaPreview(MediaPreview.Empty, FileManagerPanel));
             }
         }
     }
@@ -246,7 +251,7 @@ internal class PreviewPanelViewModel : ViewModelBase
         SelectedPreview = null;
     }
 
-    private void OnImagePreviewSelected(SelectedImagePreview selectedImagePreview)
+    private void OnImagePreviewSelected(SelectedMediaPreview selectedImagePreview)
     {
         if (selectedImagePreview.FileManagerPanel != FileManagerPanel)
         {

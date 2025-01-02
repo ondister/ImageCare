@@ -30,7 +30,7 @@ public class ImagePreviewDropHandler : DropHandlerBase
     {
         if (e.Source is Control && sender is ListBox listBox)
         {
-            return Validate<ImagePreviewViewModel>(listBox, e, sourceContext, targetContext, true);
+            return Validate<MediaPreviewViewModel>(listBox, e, sourceContext, targetContext, true);
         }
 
         return false;
@@ -41,13 +41,13 @@ public class ImagePreviewDropHandler : DropHandlerBase
     {
         if (e.Source is Control && sender is ListBox listBox)
         {
-            return Validate<ImagePreviewViewModel>(listBox, e, sourceContext, targetContext, false);
+            return Validate<MediaPreviewViewModel>(listBox, e, sourceContext, targetContext, false);
         }
 
         return false;
     }
 
-    private bool Validate<T>(ListBox listBox, DragEventArgs e, object? sourceContext, object? targetContext, bool bExecute) where T : ImagePreviewViewModel
+    private bool Validate<T>(ListBox listBox, DragEventArgs e, object? sourceContext, object? targetContext, bool bExecute) where T : MediaPreviewViewModel
     {
         if (sourceContext is not T sourceImagePreview
          || targetContext is not PreviewPanelViewModel previewImageViewModel
@@ -69,7 +69,7 @@ public class ImagePreviewDropHandler : DropHandlerBase
                 {
                     var progress = new Progress<OperationInfo>();
                     _fileOperationsService.CopyImagePreviewToDirectoryAsync(
-                        _mapper.Map<ImagePreview>(sourceImagePreview),
+                        _mapper.Map<MediaPreview>(sourceImagePreview),
                         previewImageViewModel.SelectedFolderPath,
                         progress);
                 }
@@ -82,7 +82,7 @@ public class ImagePreviewDropHandler : DropHandlerBase
                 {
                     var progress = new Progress<OperationInfo>();
                     _fileOperationsService.MoveImagePreviewToDirectoryAsync(
-                        _mapper.Map<ImagePreview>(sourceImagePreview),
+                        _mapper.Map<MediaPreview>(sourceImagePreview),
                         previewImageViewModel.SelectedFolderPath,
                         progress);
                 }

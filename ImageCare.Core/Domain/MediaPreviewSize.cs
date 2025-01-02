@@ -1,6 +1,6 @@
 ﻿namespace ImageCare.Core.Domain;
 
-public enum ImagePreviewSize
+public enum MediaPreviewSize
 {
     Any = -1,
     Small = 0,

@@ -9,17 +9,17 @@ namespace ImageCare.Core.Services.FileOperationsService;
 
 public sealed class LocalFileSystemFileOperationsService : IFileOperationsService, IDisposable
 {
-    private readonly Subject<SelectedImagePreview> _selectedImagePreviewSubject;
+    private readonly Subject<SelectedMediaPreview> _selectedImagePreviewSubject;
 
-    private readonly ConcurrentDictionary<FileManagerPanel, ImagePreview> _selectedImagePreviews = new();
+    private readonly ConcurrentDictionary<FileManagerPanel, MediaPreview> _selectedImagePreviews = new();
 
     public LocalFileSystemFileOperationsService()
     {
-        _selectedImagePreviewSubject = new Subject<SelectedImagePreview>();
+        _selectedImagePreviewSubject = new Subject<SelectedMediaPreview>();
     }
 
     /// <inheritdoc />
-    public IObservable<SelectedImagePreview> ImagePreviewSelected => _selectedImagePreviewSubject.AsObservable();
+    public IObservable<SelectedMediaPreview> ImagePreviewSelected => _selectedImagePreviewSubject.AsObservable();
 
     /// <inheritdoc />
     public void Dispose()
@@ -61,7 +61,7 @@ public sealed class LocalFileSystemFileOperationsService : IFileOperationsServic
     }
 
     /// <inheritdoc />
-    public async Task<OperationResult> CopyImagePreviewToDirectoryAsync(ImagePreview imagePreview, string selectedFolderPath, Progress<OperationInfo> progress)
+    public async Task<OperationResult> CopyImagePreviewToDirectoryAsync(MediaPreview imagePreview, string selectedFolderPath, Progress<OperationInfo> progress)
     {
         if (!Directory.Exists(selectedFolderPath))
         {
@@ -75,7 +75,7 @@ public sealed class LocalFileSystemFileOperationsService : IFileOperationsServic
     }
 
     /// <inheritdoc />
-    public async Task<OperationResult> MoveImagePreviewToDirectoryAsync(ImagePreview imagePreview, string selectedFolderPath, Progress<OperationInfo> progress)
+    public async Task<OperationResult> MoveImagePreviewToDirectoryAsync(MediaPreview imagePreview, string selectedFolderPath, Progress<OperationInfo> progress)
     {
         if (!Directory.Exists(selectedFolderPath))
         {
@@ -89,7 +89,7 @@ public sealed class LocalFileSystemFileOperationsService : IFileOperationsServic
     }
 
     /// <inheritdoc />
-    public async Task<OperationResult> DeleteImagePreviewAsync(ImagePreview imagePreview)
+    public async Task<OperationResult> DeleteImagePreviewAsync(MediaPreview imagePreview)
     {
         if (!File.Exists(imagePreview.Url))
         {
@@ -109,7 +109,7 @@ public sealed class LocalFileSystemFileOperationsService : IFileOperationsServic
     }
 
     /// <inheritdoc />
-    public void SetSelectedPreview(SelectedImagePreview selectedImagePreview)
+    public void SetSelectedPreview(SelectedMediaPreview selectedImagePreview)
     {
         _selectedImagePreviews.AddOrUpdate(selectedImagePreview.FileManagerPanel, _ => selectedImagePreview, (_, _) => selectedImagePreview);
         _selectedImagePreviewSubject.OnNext(selectedImagePreview);

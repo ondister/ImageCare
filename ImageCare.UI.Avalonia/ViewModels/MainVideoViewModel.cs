@@ -164,7 +164,7 @@ internal class MainVideoViewModel : ViewModelBase, IDisposable
                                   .Subscribe(OnPreviewSelected)
         };
 
-        if (navigationContext.Parameters["imagePreview"] is SelectedImagePreview imagePreview)
+        if (navigationContext.Parameters["imagePreview"] is SelectedMediaPreview imagePreview)
         {
             OnPreviewSelected(imagePreview);
         }
@@ -206,7 +206,7 @@ internal class MainVideoViewModel : ViewModelBase, IDisposable
         Stop();
     }
 
-    private void OnPreviewSelected(SelectedImagePreview preview)
+    private void OnPreviewSelected(SelectedMediaPreview preview)
     {
         Stop();
         MediaUrl = preview.Url;

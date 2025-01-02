@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Threading.Tasks;
 using System.Windows.Input;
 
@@ -10,6 +9,7 @@ using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.Input;
 
 using ImageCare.Core.Domain;
+using ImageCare.Core.Domain.Media.Metadata;
 using ImageCare.Core.Domain.MediaFormats;
 using ImageCare.Core.Services.FileOperationsService;
 using ImageCare.Core.Services.FileSystemImageService;
@@ -19,7 +19,7 @@ using Serilog;
 
 namespace ImageCare.UI.Avalonia.ViewModels.Domain;
 
-internal class ImagePreviewViewModel : ViewModelBase, IComparable<ImagePreviewViewModel>
+internal class MediaPreviewViewModel : ViewModelBase, IComparable<MediaPreviewViewModel>
 {
     private readonly IFileSystemImageService _imageService;
     private readonly IFileOperationsService _fileOperationsService;
@@ -29,8 +29,10 @@ internal class ImagePreviewViewModel : ViewModelBase, IComparable<ImagePreviewVi
     private bool _selected;
     private bool _isLoading;
     private int _maxImageHeight = 200;
+    private string _metadataString;
+    private string _dateTimeString;
 
-    public ImagePreviewViewModel(string? title,
+    public MediaPreviewViewModel(string? title,
                                  string url,
                                  MediaFormat mediaFormat,
                                  int maxImageHeight,
@@ -41,7 +43,7 @@ internal class ImagePreviewViewModel : ViewModelBase, IComparable<ImagePreviewVi
     {
         Title = title;
         Url = url;
-        MaxImageHeight=maxImageHeight;
+        MaxImageHeight = maxImageHeight;
         MediaFormat = mediaFormat;
 
         _imageService = imageService;
@@ -86,7 +88,21 @@ internal class ImagePreviewViewModel : ViewModelBase, IComparable<ImagePreviewVi
 
     public ICommand RemoveImagePreviewCommand { get; }
 
-    public int CompareTo(ImagePreviewViewModel? other)
+    public string MetadataString
+    {
+        get => _metadataString;
+        set => SetProperty(ref _metadataString, value);
+    }
+
+    public string DateTimeString
+    {
+        get => _dateTimeString;
+        set => SetProperty(ref _dateTimeString, value);
+    }
+
+    public IMediaMetadata Metadata { get; private set; }
+
+    public int CompareTo(MediaPreviewViewModel? other)
     {
         if (other == null)
         {
@@ -102,9 +118,14 @@ internal class ImagePreviewViewModel : ViewModelBase, IComparable<ImagePreviewVi
 
         try
         {
-            await using (var imageStream = await _imageService.GetJpegImageStreamAsync(_mapper.Map<ImagePreview>(this), ImagePreviewSize.Medium))
+            var mediaPreview = _mapper.Map<MediaPreview>(this);
+            await using (var imageStream = await _imageService.GetJpegImageStreamAsync(_mapper.Map<MediaPreview>(this), MediaPreviewSize.Medium))
             {
                 PreviewBitmap = await Task.Run(() => Bitmap.DecodeToHeight(imageStream, MaxImageHeight, BitmapInterpolationMode.LowQuality));
+                var metadata = await _imageService.GetMediaMetadataAsync(mediaPreview);
+                MetadataString = metadata.GetString();
+                DateTimeString = metadata.CreationDateTime.ToString("dd.MM.yyyy HH:mm");
+                Metadata = metadata;
             }
         }
         catch (Exception exception)
@@ -121,7 +142,7 @@ internal class ImagePreviewViewModel : ViewModelBase, IComparable<ImagePreviewVi
     {
         try
         {
-            await _fileOperationsService.DeleteImagePreviewAsync(_mapper.Map<ImagePreview>(this));
+            await _fileOperationsService.DeleteImagePreviewAsync(_mapper.Map<MediaPreview>(this));
         }
         catch (Exception exception)
         {

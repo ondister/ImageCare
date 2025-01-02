@@ -62,7 +62,7 @@ internal class MainImageViewModel : ViewModelBase
                                   .Subscribe(OnImagePreviewSelected)
         };
 
-        if (navigationContext.Parameters["imagePreview"] is SelectedImagePreview imagePreview)
+        if (navigationContext.Parameters["imagePreview"] is SelectedMediaPreview imagePreview)
         {
             OnImagePreviewSelected(imagePreview);
         }
@@ -74,9 +74,9 @@ internal class MainImageViewModel : ViewModelBase
         _compositeDisposable?.Dispose();
     }
 
-    private void OnImagePreviewSelected(SelectedImagePreview imagePreview)
+    private void OnImagePreviewSelected(SelectedMediaPreview imagePreview)
     {
-        if (imagePreview == ImagePreview.Empty)
+        if (imagePreview == MediaPreview.Empty)
         {
             ClearPreview();
 
@@ -98,11 +98,11 @@ internal class MainImageViewModel : ViewModelBase
         MainBitmap = null;
     }
 
-    private async Task LoadImageAsync(ImagePreview imagePreview)
+    private async Task LoadImageAsync(MediaPreview imagePreview)
     {
         try
         {
-            await using (var imageStream = await _imageService.GetJpegImageStreamAsync(imagePreview, ImagePreviewSize.Large))
+            await using (var imageStream = await _imageService.GetJpegImageStreamAsync(imagePreview, MediaPreviewSize.Large))
             {
                 MainBitmap = await Task.Run(()=>new Bitmap(imageStream));
             }

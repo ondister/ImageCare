@@ -5,18 +5,21 @@
              xmlns:domain="clr-namespace:ImageCare.UI.Avalonia.ViewModels.Domain"
              xmlns:i="clr-namespace:Avalonia.Xaml.Interactivity;assembly=Avalonia.Xaml.Interactivity"
              xmlns:idd="clr-namespace:Avalonia.Xaml.Interactions.DragAndDrop;assembly=Avalonia.Xaml.Interactions.DragAndDrop"
-             xmlns:avaloniaProgressRing="clr-namespace:AvaloniaProgressRing;assembly=AvaloniaProgressRing"
+             xmlns:u="https://irihi.tech/ursa"
+             xmlns:iconPacks="https://github.com/MahApps/IconPacks.Avalonia"
+             xmlns:controls="clr-namespace:ImageCare.UI.Avalonia.Controls"
              prism:ViewModelLocator.AutoWireViewModel="True"
              x:Class="ImageCare.UI.Avalonia.Views.PreviewPanelView"
              x:DataType="viewModels:PreviewPanelViewModel">
 
     <Grid Margin="{StaticResource MarginAll.Small}">
 
-        <ListBox ItemsSource="{Binding ImagePreviews}"
-                 SelectedItem="{Binding SelectedPreview, Mode=TwoWay}"
-                 ScrollViewer.HorizontalScrollBarVisibility="Auto"
-                 SelectionMode="Single"
-                 DragDrop.AllowDrop="True">
+        <controls:PreviewsListBox ItemsSource="{Binding ImagePreviews}"
+                         SelectedItem="{Binding SelectedPreview, Mode=TwoWay}"
+                         ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                         SelectionMode="Single"
+                         DragDrop.AllowDrop="True"
+                         Theme="{StaticResource PreviewsListBox}">
 
             <!--Behavior for dropping image from preview list-->
             <i:Interaction.Behaviors>
@@ -25,27 +28,39 @@
                 </i:BehaviorCollection>
             </i:Interaction.Behaviors>
 
-            <ListBox.ItemsPanel>
+            <controls:PreviewsListBox.ItemsPanel>
                 <ItemsPanelTemplate>
                     <VirtualizingStackPanel Orientation="Horizontal" />
                 </ItemsPanelTemplate>
-            </ListBox.ItemsPanel>
+            </controls:PreviewsListBox.ItemsPanel>
 
-            <ListBox.Styles>
+            <controls:PreviewsListBox.Styles>
                 <Style Selector="Grid.class1">
-                    <Setter Property="Background" Value="#ff0073cf" />
+                    <Setter Property="Background" Value="{DynamicResource SemiBlue5}" />
                 </Style>
                 <Style Selector="Grid.class2">
                     <Setter Property="Background" Value="Transparent" />
                 </Style>
-            </ListBox.Styles>
+            </controls:PreviewsListBox.Styles>
 
-            <ListBox.ItemTemplate>
-                <DataTemplate DataType="domain:ImagePreviewViewModel">
-                    <Grid RowDefinitions="*,Auto"
+            <controls:PreviewsListBox.ItemTemplate>
+                <DataTemplate DataType="domain:MediaPreviewViewModel">
+                    <Grid RowDefinitions="Auto,*,Auto"
                           Classes.class1="{Binding Selected }"
                           Classes.class2="{Binding !Selected }">
+
                         <Grid Grid.Row="0"
+                              ColumnDefinitions="Auto,*,Auto">
+                            <TextBlock Grid.Column="0"
+                                       Margin="{StaticResource MarginHorizontal.Small}"
+                                       Text="{Binding Title}" />
+                            <TextBlock Grid.Column="1"
+                                       HorizontalAlignment="Right"
+                                       Margin="{StaticResource MarginHorizontal.Small}"
+                                       Text="{Binding DateTimeString}" />
+                        </Grid>
+
+                        <Grid Grid.Row="1"
                               ColumnDefinitions="*,Auto"
                               RowDefinitions="Auto,*">
                             <Image Grid.Column="0"
@@ -53,14 +68,25 @@
                                    Grid.RowSpan="2"
                                    Grid.ColumnSpan="2"
                                    Source="{Binding PreviewBitmap}" MaxHeight="{Binding MaxImageHeight}" />
-                            <Button Grid.Row="0"
-                                    Grid.Column="1"
-                                    Content="X"
-                                    Command="{Binding RemoveImagePreviewCommand}" />
+
+                            <u:IconButton Grid.Row="0"
+                                          Grid.Column="1"
+                                          Margin="{StaticResource MarginAll.Small}"
+                                          Command="{Binding RemoveImagePreviewCommand}"
+                                          Theme="{DynamicResource SolidIconButton}"
+                                          Classes="Danger">
+                                <u:IconButton.Icon>
+                                    <iconPacks:PackIconLucide Kind="Trash2"
+                                                              Height="{StaticResource Icon.Size.Small}"
+                                                              Width="{StaticResource Icon.Size.Small}" />
+                                </u:IconButton.Icon>
+                            </u:IconButton>
 
                         </Grid>
-                        <TextBlock Grid.Row="1"
-                                   Text="{Binding Title}" />
+                        <TextBlock Grid.Row="2"
+                                   Margin="{StaticResource MarginAll.Small}"
+                                   Text="{Binding MetadataString}" />
+
 
                         <!--Behavior for dragging image-->
                         <i:Interaction.Behaviors>
@@ -71,8 +97,8 @@
                     </Grid>
 
                 </DataTemplate>
-            </ListBox.ItemTemplate>
-        </ListBox>
+            </controls:PreviewsListBox.ItemTemplate>
+        </controls:PreviewsListBox>
 
     </Grid>
 

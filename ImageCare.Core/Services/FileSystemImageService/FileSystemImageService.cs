@@ -1,7 +1,9 @@
-﻿using System.Runtime.CompilerServices;
+﻿using System.Collections.Concurrent;
+using System.Runtime.CompilerServices;
 
 using ImageCare.Core.Domain;
 using ImageCare.Core.Domain.Media;
+using ImageCare.Core.Domain.Media.Metadata;
 using ImageCare.Core.Domain.MediaFormats;
 using ImageCare.Core.Exceptions;
 
@@ -17,22 +19,25 @@ public sealed class FileSystemImageService : IFileSystemImageService
     private readonly RetryPolicy _fileOperationsRetryPolicy;
     private readonly MediaPreviewProvidersFactory _previewProvidersFactory;
 
+    private readonly ConcurrentDictionary<string, IMediaMetadata> _cachedMetadata;
+
     public FileSystemImageService()
     {
         _previewProvidersFactory = new MediaPreviewProvidersFactory();
+        _cachedMetadata = new ConcurrentDictionary<string, IMediaMetadata>();
 
         _fileOperationsRetryPolicy = Policy
                                      .Handle<Exception>()
                                      .WaitAndRetry(
-                                         5,
+                                         10,
                                          retryAttempt =>
                                          {
-                                             var delay = TimeSpan.FromMilliseconds(Math.Pow(25, retryAttempt));
+                                             var delay = TimeSpan.FromMilliseconds(Math.Pow(10, retryAttempt));
                                              return delay;
                                          });
     }
 
-    public async Task<Stream> GetJpegImageStreamAsync(ImagePreview imagePreview, ImagePreviewSize imagePreviewSize, CancellationToken cancellationToken = default)
+    public async Task<Stream> GetJpegImageStreamAsync(MediaPreview imagePreview, MediaPreviewSize imagePreviewSize, CancellationToken cancellationToken = default)
     {
         return await Task.Run(
                    () =>
@@ -56,7 +61,7 @@ public sealed class FileSystemImageService : IFileSystemImageService
     }
 
     /// <inheritdoc />
-    public async IAsyncEnumerable<ImagePreview> GetImagePreviewsAsync(IEnumerable<FileModel> fileModels, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    public async IAsyncEnumerable<MediaPreview> GetMediaPreviewsAsync(IEnumerable<FileModel> fileModels, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         foreach (var fileModel in fileModels.Where(FileIsSupported))
         {
@@ -65,18 +70,18 @@ public sealed class FileSystemImageService : IFileSystemImageService
                 break;
             }
 
-            yield return await CreateImagePreviewAsync(fileModel).ConfigureAwait(false);
+            yield return await CreateMediaPreviewAsync(fileModel).ConfigureAwait(false);
         }
     }
 
     /// <inheritdoc />
-    public async Task<ImagePreview?> GetImagePreviewAsync(string imagePath)
+    public async Task<MediaPreview?> GetMediaPreviewAsync(string imagePath)
     {
         try
         {
             var fileInfo = new FileInfo(imagePath);
 
-            return await CreateImagePreviewAsync(new FileModel(fileInfo.Name, fileInfo.FullName));
+            return await CreateMediaPreviewAsync(new FileModel(fileInfo.Name, fileInfo.FullName));
         }
         catch (Exception exception)
         {
@@ -84,10 +89,31 @@ public sealed class FileSystemImageService : IFileSystemImageService
         }
     }
 
-    private async Task<ImagePreview> CreateImagePreviewAsync(FileModel fileModel)
+    /// <inheritdoc />
+    public async Task<IMediaMetadata> GetMediaMetadataAsync(MediaPreview mediaPreview)
+    {
+        return await Task.Run(
+                   () =>
+                   {
+                       if (_cachedMetadata.TryGetValue(mediaPreview.Url, out var metadata))
+                       {
+                           return metadata;
+                       }
+                       
+                       var previewProvider = _previewProvidersFactory.GetMediaPreviewProvider(mediaPreview.MediaFormat);
+
+                       var mediaMetadata= previewProvider.GetMediaMetadata(mediaPreview.Url);
+
+                       _cachedMetadata.TryAdd(mediaPreview.Url, mediaMetadata);
+
+                       return mediaMetadata;
+                   });
+    }
+
+    private async Task<MediaPreview> CreateMediaPreviewAsync(FileModel fileModel)
     {
         var mediaFormat = MediaFormat.Create(fileModel);
-        return await Task.Run(() => new ImagePreview(fileModel.Name, fileModel.FullName, mediaFormat, 200));
+        return await Task.Run(() => new MediaPreview(fileModel.Name, fileModel.FullName, mediaFormat, 200));
     }
 
     private bool FileIsSupported(FileModel model)

@@ -57,7 +57,7 @@ public class MainWindowViewModel : ViewModelBase
         };
     }
 
-    private void OnImagePreviewSelected(SelectedImagePreview preview)
+    private void OnImagePreviewSelected(SelectedMediaPreview preview)
     {
         if (preview.MediaFormat.MediaType == MediaType.Video &&
             !_regionManager.Regions[RegionNames.MainImageViewRegion].ActiveViews.Any(v=>v is MainVideoView))
