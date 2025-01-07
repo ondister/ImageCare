@@ -6,6 +6,7 @@ using ImageCare.Core.Domain;
 using ImageCare.Core.Services.FileOperationsService;
 using ImageCare.Core.Services.FileSystemImageService;
 using ImageCare.Core.Services.FolderService;
+using ImageCare.Core.Services.NotificationService;
 using ImageCare.Modules.Logging.Mapping;
 using ImageCare.UI.Avalonia.ViewModels.Domain;
 
@@ -134,7 +135,7 @@ internal sealed class ApplicationMapper
                        });
 
                 cfg.CreateMap<MediaPreviewViewModel, MediaPreview>()
-                   .ConstructUsing(src => new MediaPreview(src.Title, src.Url, src.MediaFormat,src.MaxImageHeight));
+                   .ConstructUsing(src => new MediaPreview(src.Title, src.Url, src.MediaFormat, src.MaxImageHeight));
 
                 cfg.CreateMap<MediaPreview, MediaPreviewViewModel>()
                    .ForMember(dst => dst.PreviewBitmap, opt => opt.Ignore())
@@ -145,7 +146,23 @@ internal sealed class ApplicationMapper
                    .ForMember(dst => dst.MetadataString, opt => opt.Ignore())
                    .ForMember(dst => dst.DateTimeString, opt => opt.Ignore())
                    .ForMember(dst => dst.RotateAngle, opt => opt.Ignore())
-                   .ConstructUsing(src => new MediaPreviewViewModel(src.Title, src.Url, src.MediaFormat,src.MaxImageHeight, serviceLocator.Resolve<FileSystemImageService>(), serviceLocator.Resolve<IFileOperationsService>(), _mapper, serviceLocator.Resolve<ILogger>()));
+                   .ConstructUsing(
+                       src => new MediaPreviewViewModel(
+                           src.Title,
+                           src.Url,
+                           src.MediaFormat,
+                           src.MaxImageHeight,
+                           serviceLocator.Resolve<FileSystemImageService>(),
+                           serviceLocator.Resolve<IFileOperationsService>(),
+                           serviceLocator.Resolve<INotificationService>(),
+                           _mapper,
+                           serviceLocator.Resolve<ILogger>()));
+
+                cfg.CreateMap<Notification, NotificationViewModel>();
+                cfg.CreateMap<SuccessNotification, SuccessNotificationViewModel>()
+                   .IncludeBase<Notification, NotificationViewModel>();
+                cfg.CreateMap<ErrorNotification, ErrorNotificationViewModel>()
+                   .IncludeBase<Notification, NotificationViewModel>();
             });
 
         config.AssertConfigurationIsValid();

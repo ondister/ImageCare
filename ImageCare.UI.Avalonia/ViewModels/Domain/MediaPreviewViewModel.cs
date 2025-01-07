@@ -14,6 +14,7 @@ using ImageCare.Core.Domain.Media.Metadata;
 using ImageCare.Core.Domain.MediaFormats;
 using ImageCare.Core.Services.FileOperationsService;
 using ImageCare.Core.Services.FileSystemImageService;
+using ImageCare.Core.Services.NotificationService;
 using ImageCare.Mvvm;
 
 using Serilog;
@@ -24,6 +25,7 @@ internal class MediaPreviewViewModel : ViewModelBase, IComparable<MediaPreviewVi
 {
     private readonly IFileSystemImageService _imageService;
     private readonly IFileOperationsService _fileOperationsService;
+    private readonly INotificationService _notificationService;
     private readonly IMapper _mapper;
     private readonly ILogger _logger;
     private Bitmap? _previewBitmap;
@@ -40,6 +42,7 @@ internal class MediaPreviewViewModel : ViewModelBase, IComparable<MediaPreviewVi
                                  int maxImageHeight,
                                  IFileSystemImageService imageService,
                                  IFileOperationsService fileOperationsService,
+                                 INotificationService notificationService,
                                  IMapper mapper,
                                  ILogger logger)
     {
@@ -50,6 +53,7 @@ internal class MediaPreviewViewModel : ViewModelBase, IComparable<MediaPreviewVi
 
         _imageService = imageService;
         _fileOperationsService = fileOperationsService;
+        _notificationService = notificationService;
         _mapper = mapper;
         _logger = logger;
 
@@ -153,7 +157,21 @@ internal class MediaPreviewViewModel : ViewModelBase, IComparable<MediaPreviewVi
     {
         try
         {
-            await _fileOperationsService.DeleteImagePreviewAsync(_mapper.Map<MediaPreview>(this));
+            var notificationTitle = $"Delete {Url}";
+            _notificationService.SendNotification(new Notification(notificationTitle, string.Empty));
+
+            var result = await _fileOperationsService.DeleteImagePreviewAsync(_mapper.Map<MediaPreview>(this));
+
+            switch (result)
+            {
+                case OperationResult.Success:
+                    _notificationService.SendNotification(new SuccessNotification(notificationTitle, ""));
+                    break;
+                case OperationResult.Failed:
+                    _notificationService.SendNotification(new ErrorNotification(notificationTitle, ""));
+                    break;
+            }
+
         }
         catch (Exception exception)
         {

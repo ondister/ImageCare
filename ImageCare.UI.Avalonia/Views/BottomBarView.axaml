@@ -4,6 +4,7 @@
              xmlns:viewModels="clr-namespace:ImageCare.UI.Avalonia.ViewModels"
              xmlns:u="https://irihi.tech/ursa"
              xmlns:iconPacks="https://github.com/MahApps/IconPacks.Avalonia"
+             xmlns:domain="clr-namespace:ImageCare.UI.Avalonia.ViewModels.Domain"
              x:Class="ImageCare.UI.Avalonia.Views.BottomBarView"
              mvvm:ViewModelLocator.AutoWireViewModel="True"
              x:DataType="viewModels:BottomBarViewModel"
@@ -25,9 +26,9 @@
 
         <Grid Grid.Row="1" ColumnDefinitions="Auto,Auto,*"
               Margin="{StaticResource MarginTop.Medium}">
-            <u:Badge  Margin="{StaticResource MarginTop.Large}"
-                      Header="{Binding MessagesCount}"
-                      OverflowCount="99">
+            <u:Badge Margin="{StaticResource MarginTop.Large}"
+                     Header="{Binding MessagesCount}"
+                     OverflowCount="99">
 
                 <u:IconButton Classes="Small"
                               Content="Messages List"
@@ -38,6 +39,53 @@
                     </u:IconButton.Icon>
                 </u:IconButton>
             </u:Badge>
+
+            <ContentControl Grid.Column="1"
+                            VerticalAlignment="Bottom"
+                            Content="{Binding NotificationViewModel}">
+                <ContentControl.DataTemplates>
+
+                    <DataTemplate DataType="domain:SuccessNotificationViewModel">
+                        <StackPanel Margin="{StaticResource MarginHorizontal.Small}"
+                                    Orientation="Horizontal">
+                            <iconPacks:PackIconMaterial Kind="CheckCircleOutline"
+                                                        Foreground="{DynamicResource SemiColorSuccess}"
+                                                        Height="{StaticResource Icon.Size.Small}"
+                                                        Width="{StaticResource Icon.Size.Small}"
+                                                        Margin="{StaticResource MarginHorizontal.Small}" />
+                            <TextBlock Margin="{StaticResource MarginHorizontal.Small}"
+                                       Text="{Binding Title}" />
+                            <TextBlock Margin="{StaticResource MarginHorizontal.Small}"
+                                       Text="{Binding Description}" />
+                        </StackPanel>
+                    </DataTemplate>
+
+                    <DataTemplate DataType="domain:ErrorNotificationViewModel">
+                        <StackPanel Margin="{StaticResource MarginHorizontal.Small}"
+                                    Orientation="Horizontal">
+                            <iconPacks:PackIconMaterial Kind="AlertCircleOutline"
+                                                        Foreground="{DynamicResource SemiColorDanger}"
+                                                        Height="{StaticResource Icon.Size.Small}"
+                                                        Width="{StaticResource Icon.Size.Small}"
+                                                        Margin="{StaticResource MarginHorizontal.Small}" />
+                            <TextBlock Margin="{StaticResource MarginHorizontal.Small}"
+                                       Text="{Binding Title}" />
+                            <TextBlock Margin="{StaticResource MarginHorizontal.Small}"
+                                       Text="{Binding Description}" />
+                        </StackPanel>
+                    </DataTemplate>
+
+                    <DataTemplate DataType="domain:NotificationViewModel">
+                        <StackPanel Margin="{StaticResource MarginHorizontal.Small}"
+                                    Orientation="Horizontal">
+                            <TextBlock Margin="{StaticResource MarginHorizontal.Small}"
+                                       Text="{Binding Title}" />
+                            <TextBlock Margin="{StaticResource MarginHorizontal.Small}"
+                                       Text="{Binding Description}" />
+                        </StackPanel>
+                    </DataTemplate>
+                </ContentControl.DataTemplates>
+            </ContentControl>
         </Grid>
     </Grid>
 </UserControl>
