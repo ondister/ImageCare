@@ -112,7 +112,7 @@ internal class MediaPreviewViewModel : ViewModelBase, IComparable<MediaPreviewVi
         set => SetProperty(ref _rotateAngle, value);
     }
 
-    public IMediaMetadata Metadata { get; private set; }
+    public IMediaMetadata Metadata { get; internal set; }
 
     public int CompareTo(MediaPreviewViewModel? other)
     {
@@ -130,16 +130,8 @@ internal class MediaPreviewViewModel : ViewModelBase, IComparable<MediaPreviewVi
 
         try
         {
-            var mediaPreview = _mapper.Map<MediaPreview>(this);
             await using (var imageStream = await _imageService.GetJpegImageStreamAsync(_mapper.Map<MediaPreview>(this), MediaPreviewSize.Medium))
             {
-                var metadata = await _imageService.GetMediaMetadataAsync(mediaPreview);
-                MetadataString = metadata.GetString();
-                DateTimeString = metadata.CreationDateTime.ToString("dd.MM.yyyy HH:mm");
-                Metadata = metadata;
-
-                RotateAngle = Metadata.Orientation.ToRotationAngle();
-
                 PreviewBitmap = await Task.Run(() => Bitmap.DecodeToHeight(imageStream, MaxImageHeight, BitmapInterpolationMode.LowQuality));
             }
         }
