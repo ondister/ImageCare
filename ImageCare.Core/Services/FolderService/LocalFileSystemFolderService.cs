@@ -104,6 +104,12 @@ public sealed class LocalFileSystemFolderService : IFolderService, IDisposable
     }
 
     /// <inheritdoc />
+    public DirectoryModel? GetSelectedDirectory(FileManagerPanel fileManagerPanel)
+    {
+        return _selectedDirectories.GetValueOrDefault(fileManagerPanel);
+    }
+
+    /// <inheritdoc />
     public void AddVisitingFolder(DirectoryModel directoryModel, FileManagerPanel fileManagerPanel)
     {
         var visitingDirectory = new SelectedDirectory(directoryModel, fileManagerPanel);

@@ -99,14 +99,25 @@ public sealed class FileSystemImageService : IFileSystemImageService
                        {
                            return metadata;
                        }
-                       
-                       var previewProvider = _previewProvidersFactory.GetMediaPreviewProvider(mediaPreview.MediaFormat);
 
-                       var mediaMetadata= previewProvider.GetMediaMetadata(mediaPreview.Url);
+                       try
+                       {
+                           return _fileOperationsRetryPolicy.Execute(
+                               () =>
+                               {
+                                   var previewProvider = _previewProvidersFactory.GetMediaPreviewProvider(mediaPreview.MediaFormat);
 
-                       _cachedMetadata.TryAdd(mediaPreview.Url, mediaMetadata);
+                                   var mediaMetadata = previewProvider.GetMediaMetadata(mediaPreview.Url);
 
-                       return mediaMetadata;
+                                   _cachedMetadata.TryAdd(mediaPreview.Url, mediaMetadata);
+
+                                   return mediaMetadata;
+                               });
+                       }
+                       catch (Exception exception)
+                       {
+                           throw new ServiceException(_exceptionMessage, exception);
+                       }
                    });
     }
 

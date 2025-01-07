@@ -145,7 +145,7 @@ internal class MediaPreviewViewModel : ViewModelBase, IComparable<MediaPreviewVi
         }
     }
 
-    private async Task RemoveImagePreviewAsync()
+    internal async Task RemoveImagePreviewAsync()
     {
         try
         {

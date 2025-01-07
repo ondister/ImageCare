@@ -22,6 +22,8 @@ public interface IFolderService
 
     void SetSelectedDirectory(SelectedDirectory selecteddirectory);
 
+    DirectoryModel? GetSelectedDirectory(FileManagerPanel fileManagerPanel);
+
     void AddVisitingFolder(DirectoryModel directoryModel, FileManagerPanel fileManagerPanel);
 
     void RemoveVisitingFolder(DirectoryModel directoryModel, FileManagerPanel fileManagerPanel);

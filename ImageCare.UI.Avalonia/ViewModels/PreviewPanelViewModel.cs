@@ -7,8 +7,11 @@ using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows.Input;
 
 using AutoMapper;
+
+using CommunityToolkit.Mvvm.Input;
 
 using DynamicData;
 
@@ -18,6 +21,7 @@ using ImageCare.Core.Services.FileOperationsService;
 using ImageCare.Core.Services.FileSystemImageService;
 using ImageCare.Core.Services.FileSystemWatcherService;
 using ImageCare.Core.Services.FolderService;
+using ImageCare.Core.Services.NotificationService;
 using ImageCare.Mvvm;
 using ImageCare.UI.Avalonia.Behaviors;
 using ImageCare.UI.Avalonia.ViewModels.Domain;
@@ -34,6 +38,7 @@ internal class PreviewPanelViewModel : ViewModelBase, IDisposable
     private readonly IFolderService _folderService;
     private readonly IFileSystemWatcherService _fileSystemWatcherService;
     private readonly IFileOperationsService _fileOperationsService;
+    private readonly INotificationService _notificationService;
     private readonly IMapper _mapper;
     private readonly ILogger _logger;
     private readonly SynchronizationContext _synchronizationContext;
@@ -51,6 +56,7 @@ internal class PreviewPanelViewModel : ViewModelBase, IDisposable
                                  IFolderService folderService,
                                  IFileSystemWatcherService fileSystemWatcherService,
                                  IFileOperationsService fileOperationsService,
+                                 INotificationService notificationService,
                                  IMapper mapper,
                                  ILogger logger,
                                  ImagePreviewDropHandler imagePreviewDropHandler,
@@ -60,11 +66,15 @@ internal class PreviewPanelViewModel : ViewModelBase, IDisposable
         _folderService = folderService;
         _fileSystemWatcherService = fileSystemWatcherService;
         _fileOperationsService = fileOperationsService;
+        _notificationService = notificationService;
         _mapper = mapper;
         _logger = logger;
         _synchronizationContext = synchronizationContext;
 
         ImagePreviewDropHandler = imagePreviewDropHandler;
+        CopyImagePreviewCommand = new AsyncRelayCommand(CopyImagePreviewAsync);
+        MoveImagePreviewCommand = new AsyncRelayCommand(MoveImagePreviewAsync);
+        DeleteImagePreviewCommand = new AsyncRelayCommand(DeleteImagePreview);
 
         SetPreviewsSorting();
 
@@ -118,6 +128,12 @@ internal class PreviewPanelViewModel : ViewModelBase, IDisposable
         }
     }
 
+    public ICommand CopyImagePreviewCommand { get; }
+
+    public ICommand MoveImagePreviewCommand { get; }
+
+    public ICommand DeleteImagePreviewCommand { get; }
+
     /// <inheritdoc />
     public void Dispose()
     {
@@ -146,6 +162,88 @@ internal class PreviewPanelViewModel : ViewModelBase, IDisposable
     public override void OnNavigatedFrom(NavigationContext navigationContext)
     {
         _fileSystemWatcherCompositeDisposable.Dispose();
+    }
+
+    private async Task CopyImagePreviewAsync()
+    {
+        if (SelectedPreview == null)
+        {
+            return;
+        }
+
+        var targetDirectory = _folderService.GetSelectedDirectory(FileManagerPanel == FileManagerPanel.Left ? FileManagerPanel.Right : FileManagerPanel.Left);
+
+        if (targetDirectory == null)
+        {
+            return;
+        }
+
+        var notificationTitle = $"{SelectedPreview.Url} => {targetDirectory.Path}";
+        _notificationService.SendNotification(new Notification(notificationTitle, string.Empty));
+        var progress = new Progress<OperationInfo>();
+
+        progress.ProgressChanged += (o, info) => { _notificationService.SendNotification(new Notification(notificationTitle, info.Percentage.ToString("F1"))); };
+
+        var result = await _fileOperationsService.CopyImagePreviewToDirectoryAsync(
+                         _mapper.Map<MediaPreview>(SelectedPreview),
+                         targetDirectory.Path,
+                         progress);
+
+        switch (result)
+        {
+            case OperationResult.Success:
+                _notificationService.SendNotification(new SuccessNotification(notificationTitle, ""));
+                break;
+            case OperationResult.Failed:
+                _notificationService.SendNotification(new ErrorNotification(notificationTitle, ""));
+                break;
+        }
+    }
+
+    private async Task MoveImagePreviewAsync()
+    {
+        if (SelectedPreview == null)
+        {
+            return;
+        }
+
+        var targetDirectory = _folderService.GetSelectedDirectory(FileManagerPanel == FileManagerPanel.Left ? FileManagerPanel.Right : FileManagerPanel.Left);
+
+        if (targetDirectory == null)
+        {
+            return;
+        }
+
+        var notificationTitle = $"{SelectedPreview.Url} => {targetDirectory.Path}";
+        _notificationService.SendNotification(new Notification(notificationTitle, string.Empty));
+        var progress = new Progress<OperationInfo>();
+
+        progress.ProgressChanged += (o, info) => { _notificationService.SendNotification(new Notification(notificationTitle, info.Percentage.ToString("F1"))); };
+
+        var result = await _fileOperationsService.MoveImagePreviewToDirectoryAsync(
+                         _mapper.Map<MediaPreview>(SelectedPreview),
+                         targetDirectory.Path,
+                         progress);
+
+        switch (result)
+        {
+            case OperationResult.Success:
+                _notificationService.SendNotification(new SuccessNotification(notificationTitle, ""));
+                break;
+            case OperationResult.Failed:
+                _notificationService.SendNotification(new ErrorNotification(notificationTitle, ""));
+                break;
+        }
+    }
+
+    private async Task DeleteImagePreview()
+    {
+        if (SelectedPreview == null)
+        {
+            return;
+        }
+
+        await SelectedPreview.RemoveImagePreviewAsync();
     }
 
     private void SetPreviewsSorting()
@@ -189,16 +287,7 @@ internal class PreviewPanelViewModel : ViewModelBase, IDisposable
                     return;
                 }
 
-                var mediaPreviewViewModel = _mapper.Map<MediaPreviewViewModel>(previewImage);
-
-                var metadata = await _imageService.GetMediaMetadataAsync(previewImage);
-                mediaPreviewViewModel.MetadataString = metadata.GetString();
-                mediaPreviewViewModel.DateTimeString = metadata.CreationDateTime.ToString("dd.MM.yyyy HH:mm");
-                mediaPreviewViewModel.Metadata = metadata;
-
-                mediaPreviewViewModel.RotateAngle = mediaPreviewViewModel.Metadata.Orientation.ToRotationAngle();
-
-                _sourceList.Add(mediaPreviewViewModel);
+                await AddImagePreviewAsync(previewImage);
             }
 
             SelectedSorting = SortingBy.DateTimeAscending;
@@ -213,11 +302,25 @@ internal class PreviewPanelViewModel : ViewModelBase, IDisposable
         }
     }
 
+    private async Task AddImagePreviewAsync(MediaPreview previewImage)
+    {
+        var mediaPreviewViewModel = _mapper.Map<MediaPreviewViewModel>(previewImage);
+
+        var metadata = await _imageService.GetMediaMetadataAsync(previewImage);
+        mediaPreviewViewModel.MetadataString = metadata.GetString();
+        mediaPreviewViewModel.DateTimeString = metadata.CreationDateTime.ToString("dd.MM.yyyy HH:mm");
+        mediaPreviewViewModel.Metadata = metadata;
+
+        mediaPreviewViewModel.RotateAngle = mediaPreviewViewModel.Metadata.Orientation.ToRotationAngle();
+
+        _sourceList.Add(mediaPreviewViewModel);
+    }
+
     private void OnFileCreated(FileModel fileModel)
     {
         try
         {
-            CreateImagePreviewFromPath(fileModel.FullName);
+            CreateImagePreviewFromPathAsync(fileModel.FullName);
         }
         catch (Exception exception)
         {
@@ -243,7 +346,7 @@ internal class PreviewPanelViewModel : ViewModelBase, IDisposable
         {
             RemoveImagePreviewByPath(model.OldFileModel.FullName);
 
-            CreateImagePreviewFromPath(model.NewFileModel.FullName);
+            CreateImagePreviewFromPathAsync(model.NewFileModel.FullName);
         }
         catch (Exception exception)
         {
@@ -251,24 +354,21 @@ internal class PreviewPanelViewModel : ViewModelBase, IDisposable
         }
     }
 
-    private void CreateImagePreviewFromPath(string filePath)
+    private async Task CreateImagePreviewFromPathAsync(string filePath)
     {
-        _imageService.GetMediaPreviewAsync(filePath)
-                     .ContinueWith(
-                         task =>
-                         {
-                             if (task.Result == null)
-                             {
-                                 return;
-                             }
+        var imagePreview = await _imageService.GetMediaPreviewAsync(filePath);
 
-                             if (ImagePreviews.Any(p => p.Url.Equals(filePath, StringComparison.OrdinalIgnoreCase)))
-                             {
-                                 return;
-                             }
+        if (imagePreview == null)
+        {
+            return;
+        }
 
-                             _sourceList.Add(_mapper.Map<MediaPreviewViewModel>(task.Result));
-                         });
+        if (ImagePreviews.Any(p => p.Url.Equals(filePath, StringComparison.OrdinalIgnoreCase)))
+        {
+            return;
+        }
+
+        await AddImagePreviewAsync(imagePreview);
     }
 
     private void RemoveImagePreviewByPath(string filePath)

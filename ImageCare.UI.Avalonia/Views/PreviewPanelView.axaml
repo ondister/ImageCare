@@ -18,6 +18,12 @@
         <converters:SortingByToIconKindConverter x:Key="SortingByToIconKindConverter"/>
     </UserControl.Resources>
 
+    <UserControl.KeyBindings>
+        <KeyBinding Command="{Binding CopyImagePreviewCommand}" Gesture="F5" />
+        <KeyBinding Command="{Binding MoveImagePreviewCommand}" Gesture="F6" />
+        <KeyBinding Command="{Binding DeleteImagePreviewCommand}" Gesture="Delete" />
+    </UserControl.KeyBindings>
+
     <Grid RowDefinitions="Auto,*"
           Margin="{StaticResource MarginAll.Small}" >
 

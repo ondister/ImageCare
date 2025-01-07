@@ -25,6 +25,8 @@ public class PreviewsListBox : ListBox
         {
             Scroll.Offset = new Vector(SelectedIndex * container.Bounds.Width, Scroll.Offset.Y);
         }
+
+        container?.Focus();
     }
 
     private void OnPointerWheelChanged(object? sender, PointerWheelEventArgs e)
