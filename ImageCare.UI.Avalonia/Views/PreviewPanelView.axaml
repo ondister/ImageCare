@@ -75,10 +75,10 @@
             </controls:PreviewsListBox.ItemsPanel>
 
             <controls:PreviewsListBox.Styles>
-                <Style Selector="Grid.class1">
+                <Style Selector="Grid.Selected">
                     <Setter Property="Background" Value="{DynamicResource SemiBlue5}" />
                 </Style>
-                <Style Selector="Grid.class2">
+                <Style Selector="Grid.NotSelected">
                     <Setter Property="Background" Value="Transparent" />
                 </Style>
             </controls:PreviewsListBox.Styles>
@@ -86,8 +86,8 @@
             <controls:PreviewsListBox.ItemTemplate>
                 <DataTemplate DataType="domain:MediaPreviewViewModel">
                     <Grid RowDefinitions="Auto,*,Auto"
-                          Classes.class1="{Binding Selected }"
-                          Classes.class2="{Binding !Selected }">
+                          Classes.Selected="{Binding Selected }"
+                          Classes.NotSelected="{Binding !Selected }">
 
                         <Grid Grid.Row="0"
                               ColumnDefinitions="Auto,*,Auto">
@@ -120,7 +120,7 @@
                             <u:IconButton Grid.Row="0"
                                           Grid.Column="1"
                                           Margin="{StaticResource MarginAll.Small}"
-                                          Command="{Binding RemoveImagePreviewCommand}"
+                                          Command="{CompiledBinding RemoveImagePreviewCommand}"
                                           Theme="{DynamicResource SolidIconButton}"
                                           Classes="Danger">
                                 <u:IconButton.Icon>

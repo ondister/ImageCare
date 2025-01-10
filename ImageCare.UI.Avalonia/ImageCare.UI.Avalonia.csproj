@@ -23,19 +23,19 @@
       <IncludeAssets Condition="'$(Configuration)' != 'Debug'">None</IncludeAssets>
       <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="Avalonia.Xaml.Interactions" Version="11.2.0.1" />
-    <PackageReference Include="Avalonia.Xaml.Interactions.DragAndDrop" Version="11.2.0.1" />
-    <PackageReference Include="Avalonia.Xaml.Interactivity" Version="11.2.0.1" />
+    <PackageReference Include="Avalonia.Xaml.Interactions" Version="11.2.0.7" />
+    <PackageReference Include="Avalonia.Xaml.Interactions.DragAndDrop" Version="11.2.0.7" />
+    <PackageReference Include="Avalonia.Xaml.Interactivity" Version="11.2.0.7" />
     <PackageReference Include="Deadpikle.AvaloniaProgressRing" Version="0.10.10" />
     <PackageReference Include="HanumanInstitute.LibMpv" Version="0.9.1" />
     <PackageReference Include="HanumanInstitute.LibMpv.Avalonia" Version="0.9.1" />
     <PackageReference Include="IconPacks.Avalonia.Material" Version="1.0.0" />
-    <PackageReference Include="Irihi.Ursa" Version="1.6.2" />
-    <PackageReference Include="Irihi.Ursa.Themes.Semi" Version="1.6.2" />
+    <PackageReference Include="Irihi.Ursa" Version="1.7.0" />
+    <PackageReference Include="Irihi.Ursa.Themes.Semi" Version="1.7.0" />
     <PackageReference Include="LibMpv.Avalonia" Version="1.0.0" />
     <PackageReference Include="Prism.Avalonia" Version="8.1.97.11073" />
     <PackageReference Include="Prism.DryIoc.Avalonia" Version="8.1.97.11073" />
-    <PackageReference Include="Semi.Avalonia" Version="11.2.1.2" />
+    <PackageReference Include="Semi.Avalonia" Version="11.2.1.3" />
     <PackageReference Include="System.Reactive" Version="6.0.1" />
   </ItemGroup>
 
