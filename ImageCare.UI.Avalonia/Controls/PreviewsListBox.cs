@@ -23,7 +23,7 @@ public class PreviewsListBox : ListBox
 
         if (container?.Bounds != null && Scroll is not null)
         {
-            Scroll.Offset = new Vector(SelectedIndex * container.Bounds.Width, Scroll.Offset.Y);
+            Scroll.Offset = new Vector(SelectedIndex * container.Bounds.Width - container.Bounds.Width, Scroll.Offset.Y);
         }
 
         container?.Focus();
