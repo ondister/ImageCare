@@ -8,11 +8,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Remove="Assets\avalonia-logo.ico" />
+    <None Remove="Assets\imagecare-logo.ico" />
   </ItemGroup>
 
   <ItemGroup>
-    <AvaloniaResource Include="Assets\avalonia-logo.ico" />
+    <AvaloniaResource Include="Assets\imagecare-logo.ico" />
   </ItemGroup>
 
   <ItemGroup>
