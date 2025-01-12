@@ -26,6 +26,7 @@ internal class DirectoryViewModel : ViewModelBase, IComparable<DirectoryViewMode
     private bool _isLoaded;
     private string? _name;
     private string _path;
+    private bool _hasSupportedMedia;
 
     public DirectoryViewModel(string? name,
                               string path,
@@ -47,7 +48,7 @@ internal class DirectoryViewModel : ViewModelBase, IComparable<DirectoryViewMode
     public string? Name
     {
         get => _name;
-       private set => SetProperty(ref _name, value);
+        private set => SetProperty(ref _name, value);
     }
 
     public string Path
@@ -93,6 +94,12 @@ internal class DirectoryViewModel : ViewModelBase, IComparable<DirectoryViewMode
         }
     }
 
+    public bool HasSupportedMedia
+    {
+        get => _hasSupportedMedia;
+        set => SetProperty(ref _hasSupportedMedia, value);
+    }
+
     /// <inheritdoc />
     public int CompareTo(DirectoryViewModel? other)
     {
@@ -122,6 +129,12 @@ internal class DirectoryViewModel : ViewModelBase, IComparable<DirectoryViewMode
         {
             child.FileManagerPanel = FileManagerPanel;
         }
+    }
+
+    public void UpdateDirectory(DirectoryModel newDirectoryModel)
+    {
+        Name = newDirectoryModel.Name;
+        Path = newDirectoryModel.Path;
     }
 
     private DirectoryViewModel? FindPathRecursive(SortedObservableCollection<DirectoryViewModel> directories, string pathToFind)
@@ -182,11 +195,5 @@ internal class DirectoryViewModel : ViewModelBase, IComparable<DirectoryViewMode
         {
             IsLoaded = false;
         }
-    }
-
-    public void UpdateDirectory(DirectoryModel newDirectoryModel)
-    {
-        Name = newDirectoryModel.Name;
-        Path = newDirectoryModel.Path;
     }
 }

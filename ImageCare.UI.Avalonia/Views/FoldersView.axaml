@@ -7,8 +7,7 @@
              xmlns:avaloniaProgressRing="clr-namespace:AvaloniaProgressRing;assembly=AvaloniaProgressRing"
              x:Class="ImageCare.UI.Avalonia.Views.FoldersView"
              prism:ViewModelLocator.AutoWireViewModel="True"
-             x:DataType="viewModels:FoldersViewModel"
-             Background="{DynamicResource Brushes.Region.Background}">
+             x:DataType="viewModels:FoldersViewModel">
 
     <Grid Margin="{StaticResource MarginAll.Small}">
 
@@ -26,9 +25,9 @@
                 <TreeDataTemplate DataType="domain:DeviceViewModel" ItemsSource="{Binding ChildFileSystemItems}">
                     <StackPanel Orientation="Horizontal">
                         <iconPacks:PackIconMaterial Kind="DesktopClassic"
-                                                  Height="{StaticResource Icon.Size.Small}"
-                                                  Width="{StaticResource Icon.Size.Small}"
-                                                  Margin="{StaticResource MarginHorizontal.Small}" />
+                                                    Height="{StaticResource Icon.Size.Small}"
+                                                    Width="{StaticResource Icon.Size.Small}"
+                                                    Margin="{StaticResource MarginHorizontal.Small}" />
                         <TextBlock Text="{Binding Name}"
                                    Margin="{StaticResource MarginHorizontal.Small}" />
                     </StackPanel>
@@ -70,22 +69,42 @@
                         <iconPacks:PackIconMaterial Kind="FolderOutline"
                                                     Height="{StaticResource Icon.Size.Small}"
                                                     Width="{StaticResource Icon.Size.Small}"
-                                                    Margin="{StaticResource MarginHorizontal.Small}"
-                                                    IsVisible="{Binding !IsExpanded}"/>
+                                                    Margin="{StaticResource MarginHorizontal.Small}">
+                            <iconPacks:PackIconMaterial.IsVisible>
+                                <MultiBinding Converter="{x:Static BoolConverters.And}">
+                                    <Binding Path="!IsExpanded" />
+                                    <Binding Path="!HasSupportedMedia" />
+
+                                </MultiBinding>
+                            </iconPacks:PackIconMaterial.IsVisible>
+                        </iconPacks:PackIconMaterial>
 
                         <iconPacks:PackIconMaterial Kind="FolderOpenOutline"
                                                     Height="{StaticResource Icon.Size.Small}"
                                                     Width="{StaticResource Icon.Size.Small}"
                                                     Margin="{StaticResource MarginHorizontal.Small}"
-                                                    IsVisible="{Binding IsExpanded}"/>
+                                                    IsVisible="{Binding IsExpanded}" />
+
+                        <iconPacks:PackIconMaterial Kind="FolderImage"
+                                                    Height="{StaticResource Icon.Size.Small}"
+                                                    Width="{StaticResource Icon.Size.Small}"
+                                                    Margin="{StaticResource MarginHorizontal.Small}">
+                            <iconPacks:PackIconMaterial.IsVisible>
+                                <MultiBinding Converter="{x:Static BoolConverters.And}">
+                                    <Binding Path="!IsExpanded" />
+                                    <Binding Path="HasSupportedMedia" />
+
+                                </MultiBinding>
+                            </iconPacks:PackIconMaterial.IsVisible>
+                        </iconPacks:PackIconMaterial>
 
                         <avaloniaProgressRing:ProgressRing Width="{StaticResource Icon.Size.Small}"
-                                               Height="{StaticResource Icon.Size.Small}"
-                                               IsActive="True"
-                                               HorizontalAlignment="Center"
-                                               VerticalAlignment="Center"
-                                               Margin="{StaticResource MarginHorizontal.Small}"
-                                               IsVisible="{Binding IsLoaded}"/>
+                                                           Height="{StaticResource Icon.Size.Small}"
+                                                           IsActive="True"
+                                                           HorizontalAlignment="Center"
+                                                           VerticalAlignment="Center"
+                                                           Margin="{StaticResource MarginHorizontal.Small}"
+                                                           IsVisible="{Binding IsLoaded}" />
 
                         <TextBlock Text="{Binding Name}"
                                    Margin="{StaticResource MarginHorizontal.Small}" />

@@ -7,8 +7,7 @@
              xmlns:domain="clr-namespace:ImageCare.UI.Avalonia.ViewModels.Domain"
              x:Class="ImageCare.UI.Avalonia.Views.BottomBarView"
              mvvm:ViewModelLocator.AutoWireViewModel="True"
-             x:DataType="viewModels:BottomBarViewModel"
-             Background="{DynamicResource Brushes.Region.Background}">
+             x:DataType="viewModels:BottomBarViewModel">
 
     <UserControl.Styles>
 

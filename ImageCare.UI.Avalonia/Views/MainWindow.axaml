@@ -55,7 +55,7 @@
         </Grid>
 
         <u:Divider Grid.Row="1"
-                      HorizontalAlignment="Stretch"/>
+                   HorizontalAlignment="Stretch" />
 
         <Grid Grid.Row="2" ColumnDefinitions="*,Auto,*">
             <ContentControl Grid.Column="0"
@@ -64,13 +64,24 @@
 
             <GridSplitter Grid.Column="1"
                           VerticalAlignment="Stretch"
-                          ShowsPreview="True"/>
+                          ShowsPreview="True">
+                <GridSplitter.Template>
+                    <ControlTemplate >
+                        <Border BorderBrush="{DynamicResource SemiGrey1}"
+                                BorderThickness="2,0,2,0">
+                            <StackPanel Width="30">
+
+                            </StackPanel>
+                        </Border>
+                        
+                    </ControlTemplate>
+                </GridSplitter.Template>
+            </GridSplitter>
 
             <ContentControl Grid.Column="2"
                             Margin="{StaticResource MarginLeft.Medium}"
                             prism:RegionManager.RegionName="{x:Static ui:RegionNames.TargetPreviewImageRegion}" />
         </Grid>
-
 
         <ContentControl Grid.Row="3"
                         prism:RegionManager.RegionName="{x:Static ui:RegionNames.BottomBarRegion}" />

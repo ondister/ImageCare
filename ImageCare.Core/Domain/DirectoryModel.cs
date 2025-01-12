@@ -22,6 +22,8 @@ public class DirectoryModel
 
     public IReadOnlyCollection<DirectoryModel> DirectoryModels { get; }
 
+    public bool HasSupportedMedia { get; set; }
+
     public void AddDirectory(DirectoryModel directoryModel)
     {
         _directories.Add(directoryModel);

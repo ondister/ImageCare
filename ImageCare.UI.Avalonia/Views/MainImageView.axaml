@@ -8,8 +8,7 @@
              prism:ViewModelLocator.AutoWireViewModel="True"
              x:DataType="viewModels:MainImageViewModel"
              x:Name="This"
-             ResetMatrixCommand="{Binding ResetMatrixCommand, Mode=OneWayToSource}"
-             Background="{DynamicResource Brushes.Region.Background}">
+             ResetMatrixCommand="{Binding ResetMatrixCommand, Mode=OneWayToSource}">
 
     <Grid Margin="{StaticResource MarginAll.Small}"
           ColumnDefinitions="*,Auto">

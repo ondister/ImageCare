@@ -7,8 +7,7 @@
              x:Class="ImageCare.UI.Avalonia.Views.MainVideoView"
              xmlns:mpv="clr-namespace:HanumanInstitute.LibMpv.Avalonia;assembly=HanumanInstitute.LibMpv.Avalonia"
              xmlns:iconPacks="https://github.com/MahApps/IconPacks.Avalonia"
-             x:DataType="viewModels:MainVideoViewModel"
-             Background="{DynamicResource Brushes.Region.Background}">
+             x:DataType="viewModels:MainVideoViewModel">
 
     <Grid RowDefinitions="*,Auto">
         <mpv:MpvView MpvContext="{Binding Mpv}" Grid.Row="0" />

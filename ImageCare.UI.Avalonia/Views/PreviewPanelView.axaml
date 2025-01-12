@@ -11,8 +11,7 @@
              xmlns:converters="clr-namespace:ImageCare.UI.Avalonia.Converters"
              prism:ViewModelLocator.AutoWireViewModel="True"
              x:Class="ImageCare.UI.Avalonia.Views.PreviewPanelView"
-             x:DataType="viewModels:PreviewPanelViewModel"
-             Background="{DynamicResource Brushes.Region.Background}">
+             x:DataType="viewModels:PreviewPanelViewModel">
 
     <UserControl.Resources>
         <converters:SortingByToIconKindConverter x:Key="SortingByToIconKindConverter"/>

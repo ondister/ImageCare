@@ -1,5 +1,4 @@
-﻿using Avalonia;
-using Avalonia.Controls;
+﻿using Avalonia.Controls;
 using Avalonia.Input;
 
 namespace ImageCare.UI.Avalonia.Controls;
@@ -20,11 +19,6 @@ public class PreviewsListBox : ListBox
         }
 
         var container = ContainerFromItem(SelectedItem);
-
-        if (container?.Bounds != null && Scroll is not null)
-        {
-            Scroll.Offset = new Vector(SelectedIndex * container.Bounds.Width - container.Bounds.Width, Scroll.Offset.Y);
-        }
 
         container?.Focus();
     }

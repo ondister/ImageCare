@@ -3,6 +3,7 @@ using System.Collections.Immutable;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using ImageCare.Core.Domain;
+using ImageCare.Core.Domain.MediaFormats;
 
 namespace ImageCare.Core.Services.FolderService;
 
@@ -151,6 +152,15 @@ public sealed class LocalFileSystemFolderService : IFolderService, IDisposable
                                if (directoryModelInfo.EnumerateDirectories().FirstOrDefault() is { } subDirectoryInfo)
                                {
                                    directory.AddDirectory(new DirectoryModel(subDirectoryInfo.Name, subDirectoryInfo.FullName));
+                               }
+
+                               foreach (var extension in MediaFormat.GetSupportedExtensions())
+                               {
+                                   if (directoryModelInfo.EnumerateFiles($"*{extension}", SearchOption.TopDirectoryOnly).Any())
+                                   {
+                                       directory.HasSupportedMedia = true;
+                                       break;
+                                   }
                                }
 
                                directoryModel.AddDirectory(directory);
