@@ -22,13 +22,13 @@ internal sealed class JpegMediaPreviewProvider : IMediaPreviewProvider
         {
             var jpegMediaMetadata = new JpegMediaMetadata(dateTime, width, height);
 
-            if (exifDirectory.TryGetInt32(ExifDirectoryBase.TagIsoEquivalent, out var iso))
+            if (exifDirectory.TryGetInt32(ExifSubIfdDirectory.TagIsoEquivalent, out var iso))
             {
                 jpegMediaMetadata.Iso = iso;
             }
 
-            jpegMediaMetadata.Aperture = exifDirectory.GetDescription(ExifDirectoryBase.TagAperture);
-            jpegMediaMetadata.ShutterSpeed = exifDirectory.GetDescription(ExifDirectoryBase.TagShutterSpeed);
+            jpegMediaMetadata.Aperture = exifDirectory.GetDescription(ExifDirectoryBase.TagFNumber);
+            jpegMediaMetadata.ShutterSpeed = exifDirectory.GetDescription(ExifDirectoryBase.TagExposureTime);
 
             if (directories.FirstOrDefault(d => d.Name.Equals("Exif IFD0", StringComparison.OrdinalIgnoreCase)) is { } ifd0Directory)
             {

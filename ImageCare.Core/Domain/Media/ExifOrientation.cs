@@ -33,7 +33,7 @@ public static class ExifOrientationExtensions
             case ExifOrientation.LeftTop:
                 break;
             case ExifOrientation.RightTop:
-                break;
+                return 90;
             case ExifOrientation.RightBottom:
                 break;
             case ExifOrientation.LeftBottom:
