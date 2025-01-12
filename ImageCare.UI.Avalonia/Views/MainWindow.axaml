@@ -5,6 +5,7 @@
               xmlns:ui="clr-namespace:ImageCare.UI.Avalonia"
               xmlns:u="https://irihi.tech/ursa"
               xmlns:views="clr-namespace:ImageCare.UI.Avalonia.Views"
+              xmlns:iconPacks="https://github.com/MahApps/IconPacks.Avalonia"
               x:Class="ImageCare.UI.Avalonia.Views.MainWindow"
               x:DataType="vm:MainWindowViewModel"
               Icon="/Assets/imagecare-logo.ico"
@@ -66,14 +67,35 @@
                           VerticalAlignment="Stretch"
                           ShowsPreview="True">
                 <GridSplitter.Template>
-                    <ControlTemplate >
+                    <ControlTemplate>
                         <Border BorderBrush="{DynamicResource SemiGrey1}"
                                 BorderThickness="2,0,2,0">
-                            <StackPanel Width="30">
+                            <StackPanel Orientation="Vertical"
+                                        VerticalAlignment="Center">
+
+                                <u:IconButton Margin="{StaticResource MarginAll.Small}"
+                                              Command="{CompiledBinding CopySelectedPreviewCommand}"
+                                              Theme="{DynamicResource SolidIconButton}">
+                                    <u:IconButton.Icon>
+                                        <iconPacks:PackIconMaterial Kind="ContentCopy"
+                                                                    Height="{StaticResource Icon.Size.Small}"
+                                                                    Width="{StaticResource Icon.Size.Small}" />
+                                    </u:IconButton.Icon>
+                                </u:IconButton>
+
+                                <u:IconButton Margin="{StaticResource MarginAll.Small}"
+                                              Command="{CompiledBinding MoveSelectedPreviewCommand}"
+                                              Theme="{DynamicResource SolidIconButton}">
+                                    <u:IconButton.Icon>
+                                        <iconPacks:PackIconMaterial Kind="FileReplaceOutline"
+                                                                    Height="{StaticResource Icon.Size.Small}"
+                                                                    Width="{StaticResource Icon.Size.Small}" />
+                                    </u:IconButton.Icon>
+                                </u:IconButton>
 
                             </StackPanel>
                         </Border>
-                        
+
                     </ControlTemplate>
                 </GridSplitter.Template>
             </GridSplitter>
