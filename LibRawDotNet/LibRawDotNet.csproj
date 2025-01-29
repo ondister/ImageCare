@@ -7,6 +7,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Quamotion.TurboJpegWrapper" Version="2.0.32" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None Update="x64\libraw.dll">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

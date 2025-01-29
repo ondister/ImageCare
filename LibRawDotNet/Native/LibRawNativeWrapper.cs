@@ -192,7 +192,7 @@ internal class LibRawNativeWrapper
 
     // Writing processing results to memory buffer
     [DllImport(LibraryName, CharSet = CharSet.Ansi)]
-    public static extern nint libraw_dcraw_make_mem_image(nint handler, ref int errc);
+    public static extern nint libraw_dcraw_make_mem_image(nint handler, ref LibRawErrors errc);
 
     [DllImport(LibraryName, CharSet = CharSet.Ansi)]
     public static extern nint libraw_dcraw_make_mem_thumb(nint handler, ref LibRawErrors errc);

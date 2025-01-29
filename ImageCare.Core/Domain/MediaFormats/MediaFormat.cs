@@ -35,6 +35,8 @@ public sealed class MediaFormat:IEquatable<MediaFormat>
         MediaType = mediaType;
     }
 
+    public static MediaFormat MediaFormatArw { get; } = new([".ARW"], MediaType.Image);
+
     public static MediaFormat MediaFormatCr3 { get; } = new([".CR3"], MediaType.Image);
 
     public static MediaFormat MediaFormatJpg { get; } = new([".jpg", ".jpeg"], MediaType.Image);

@@ -7,7 +7,8 @@ internal sealed class MediaPreviewProvidersFactory
     private static readonly IMediaPreviewProvider _unsupportedMediaPreviewProvider = new UnsupportedMediaPreviewProvider();
     private static readonly Dictionary<MediaFormat, IMediaPreviewProvider> _mediaProviders = new()
     {
-        { MediaFormat.MediaFormatCr3, new RawMediaPreviewProvider() },
+        { MediaFormat.MediaFormatCr3, new Cr3MediaPreviewProvider() },
+        { MediaFormat.MediaFormatArw, new ArwMediaPreviewProvider() },
         { MediaFormat.MediaFormatJpg, new JpegMediaPreviewProvider() },
         { MediaFormat.MediaFormatMp4, new Mp4MediaPreviewProvider() }
     };

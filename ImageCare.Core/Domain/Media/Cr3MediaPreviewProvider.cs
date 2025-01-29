@@ -4,23 +4,21 @@ using LibRawDotNet;
 
 using MetadataExtractor;
 using MetadataExtractor.Formats.Exif;
-using MetadataExtractor.Formats.QuickTime;
 
 namespace ImageCare.Core.Domain.Media;
 
-internal sealed class RawMediaPreviewProvider : IMediaPreviewProvider
+internal sealed class Cr3MediaPreviewProvider : IMediaPreviewProvider
 {
     /// <inheritdoc />
     public IMediaMetadata GetMediaMetadata(string url)
     {
-        using (var stream = new FileStream(url,FileMode.Open,FileAccess.Read,FileShare.Read))
+        using (var stream = new FileStream(url, FileMode.Open, FileAccess.Read, FileShare.Read))
         {
-            var directories = QuickTimeMetadataReader.ReadMetadata(stream);
+            var directories = ImageMetadataReader.ReadMetadata(stream);
 
-            if (directories.FirstOrDefault(d => d.Name.Equals("Exif SubIFD", StringComparison.OrdinalIgnoreCase)) is { } exifDirectory &&
-                exifDirectory.TryGetDateTime(ExifDirectoryBase.TagDateTimeOriginal, out var dateTime) &&
-                exifDirectory.TryGetInt32(ExifDirectoryBase.TagExifImageWidth, out var width) &&
-                exifDirectory.TryGetInt32(ExifDirectoryBase.TagExifImageHeight, out var height))
+            var mainMetadataDirectory = directories.FirstOrDefault(d => d.ContainsTag(ExifDirectoryBase.TagDateTimeOriginal) && d.ContainsTag(ExifDirectoryBase.TagExifImageWidth) && d.ContainsTag(ExifDirectoryBase.TagExifImageHeight));
+
+            if (mainMetadataDirectory is { } exifDirectory && exifDirectory.TryGetDateTime(ExifDirectoryBase.TagDateTimeOriginal, out var dateTime) && exifDirectory.TryGetInt32(ExifDirectoryBase.TagExifImageWidth, out var width) && exifDirectory.TryGetInt32(ExifDirectoryBase.TagExifImageHeight, out var height))
             {
                 var rawMediaMetadata = new RawMediaMetadata(dateTime, width, height);
 
@@ -29,12 +27,12 @@ internal sealed class RawMediaPreviewProvider : IMediaPreviewProvider
                     rawMediaMetadata.Iso = iso;
                 }
 
-                rawMediaMetadata.Aperture = exifDirectory.GetDescription(ExifDirectoryBase.TagAperture);
-                rawMediaMetadata.ShutterSpeed = exifDirectory.GetDescription(ExifDirectoryBase.TagShutterSpeed);
+                rawMediaMetadata.Aperture = exifDirectory.GetDescription(ExifDirectoryBase.TagFNumber);
+                rawMediaMetadata.ShutterSpeed = exifDirectory.GetDescription(ExifDirectoryBase.TagExposureTime);
 
                 if (directories.FirstOrDefault(d => d.Name.Equals("Exif IFD0", StringComparison.OrdinalIgnoreCase)) is { } ifd0Directory)
                 {
-                    if (ifd0Directory.TryGetInt32(ExifDirectoryBase.TagOrientation,out var orientationInt))
+                    if (ifd0Directory.TryGetInt32(ExifDirectoryBase.TagOrientation, out var orientationInt))
                     {
                         rawMediaMetadata.Orientation = (ExifOrientation)orientationInt;
                     }
@@ -43,7 +41,6 @@ internal sealed class RawMediaPreviewProvider : IMediaPreviewProvider
                 return rawMediaMetadata;
             }
         }
-        
 
         return new UnsupportedMediaMetadata();
     }
