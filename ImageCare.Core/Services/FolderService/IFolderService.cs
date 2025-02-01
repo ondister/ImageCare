@@ -27,4 +27,10 @@ public interface IFolderService
     void AddVisitingFolder(DirectoryModel directoryModel, FileManagerPanel fileManagerPanel);
 
     void RemoveVisitingFolder(DirectoryModel directoryModel, FileManagerPanel fileManagerPanel);
+
+    void RemoveFolder(DirectoryModel directoryModel);
+
+    DirectoryModel? CreateSubFolder(DirectoryModel directoryModel);
+
+    string? RenameFolder(string? newName, string path);
 }

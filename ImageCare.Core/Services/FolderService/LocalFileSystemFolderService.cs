@@ -1,9 +1,13 @@
 ﻿using System.Collections.Concurrent;
-using System.Collections.Immutable;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
+
 using ImageCare.Core.Domain;
 using ImageCare.Core.Domain.MediaFormats;
+
+using Microsoft.VisualBasic.FileIO;
+
+using SearchOption = System.IO.SearchOption;
 
 namespace ImageCare.Core.Services.FolderService;
 
@@ -129,6 +133,62 @@ public sealed class LocalFileSystemFolderService : IFolderService, IDisposable
         }
     }
 
+    /// <inheritdoc />
+    public void RemoveFolder(DirectoryModel directoryModel)
+    {
+        if (directoryModel is DriveModel || directoryModel is DeviceModel)
+        {
+            return;
+        }
+
+        if (Directory.EnumerateFiles(directoryModel.Path).Any())
+        {
+            return;
+        }
+
+        FileSystem.DeleteDirectory(directoryModel.Path, UIOption.AllDialogs, RecycleOption.SendToRecycleBin);
+    }
+
+    /// <inheritdoc />
+    public DirectoryModel? CreateSubFolder(DirectoryModel directoryModel)
+    {
+        if (directoryModel is DeviceModel)
+        {
+            return null;
+        }
+
+        var fullName = CreateNewDirectoryFullName(directoryModel.Path);
+        FileSystem.CreateDirectory(fullName);
+        var directoryInfo = new DirectoryInfo(fullName);
+
+        return new DirectoryModel(directoryInfo.Name, fullName);
+    }
+
+    /// <inheritdoc />
+    public string? RenameFolder(string? newName, string path)
+    {
+        var directoryInfo = new DirectoryInfo(path);
+
+        if (string.IsNullOrWhiteSpace(newName))
+        {
+            return directoryInfo.Name;
+        }
+
+        if (!directoryInfo.Exists)
+        {
+            return directoryInfo.Name;
+        }
+
+        if (Directory.Exists(Path.Combine(directoryInfo.Parent.FullName, newName)))
+        {
+            return directoryInfo.Name;
+        }
+
+        FileSystem.RenameDirectory(path, newName);
+
+        return newName;
+    }
+
     public async Task<DirectoryModel> GetCustomDirectoriesLevelAsync(DirectoryModel directoryModel, bool preview = false)
     {
         return await Task.Run(
@@ -178,6 +238,21 @@ public sealed class LocalFileSystemFolderService : IFolderService, IDisposable
 
                        return directoryModel;
                    });
+    }
+
+    private string CreateNewDirectoryFullName(string directoryModelPath)
+    {
+        const string initialName = "New Folder";
+        var counter = 0;
+        var finalName = initialName;
+
+        while (Directory.EnumerateDirectories(directoryModelPath, finalName, SearchOption.TopDirectoryOnly).Any())
+        {
+            finalName = $"{initialName}({counter})";
+            counter++;
+        }
+
+        return Path.Combine(directoryModelPath, finalName);
     }
 
     private async Task<DirectoryModel> GetRootDirectoriesLevelAsync()

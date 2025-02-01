@@ -4,6 +4,7 @@ using System.Collections.Specialized;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Windows.Input;
 
 using AutoMapper;
 
@@ -11,6 +12,8 @@ using ImageCare.Core.Domain;
 using ImageCare.Core.Services.FolderService;
 using ImageCare.Mvvm;
 using ImageCare.Mvvm.Collections;
+
+using Prism.Commands;
 
 using Serilog;
 
@@ -27,6 +30,8 @@ internal class DirectoryViewModel : ViewModelBase, IComparable<DirectoryViewMode
     private string? _name;
     private string _path;
     private bool _hasSupportedMedia;
+    private bool _isEditing;
+    private string? _editableName;
 
     public DirectoryViewModel(string? name,
                               string path,
@@ -43,18 +48,41 @@ internal class DirectoryViewModel : ViewModelBase, IComparable<DirectoryViewMode
 
         ChildFileSystemItems = new SortedObservableCollection<DirectoryViewModel>(children);
         ChildFileSystemItems.CollectionChanged += OnChildFileSystemItemsCollectionChanged;
+
+        RenameFolderCommand = new DelegateCommand(RenameFolder);
+        NameTextBoxLostFocusCommand = new DelegateCommand(NameTextBoxLostFocus);
     }
+
+    public ICommand RenameFolderCommand { get; }
+
+    public ICommand NameTextBoxLostFocusCommand { get; }
 
     public string? Name
     {
         get => _name;
-        private set => SetProperty(ref _name, value);
+        private set
+        {
+            SetProperty(ref _name, value);
+            EditableName = value;
+        } 
+    }
+
+    public string? EditableName
+    {
+        get => _editableName;
+        set => SetProperty(ref _editableName, value);
     }
 
     public string Path
     {
         get => _path;
         private set => SetProperty(ref _path, value);
+    }
+
+    public bool IsEditing
+    {
+        get => _isEditing;
+        set => SetProperty(ref _isEditing, value);
     }
 
     public FileManagerPanel FileManagerPanel { get; private set; }
@@ -135,6 +163,17 @@ internal class DirectoryViewModel : ViewModelBase, IComparable<DirectoryViewMode
     {
         Name = newDirectoryModel.Name;
         Path = newDirectoryModel.Path;
+    }
+
+    private void RenameFolder()
+    {
+        EditableName = _folderService.RenameFolder(EditableName, Path);
+        IsEditing = false;
+    }
+
+    private void NameTextBoxLostFocus()
+    {
+        RenameFolder();
     }
 
     private DirectoryViewModel? FindPathRecursive(SortedObservableCollection<DirectoryViewModel> directories, string pathToFind)

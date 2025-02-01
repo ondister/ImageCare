@@ -1,5 +1,4 @@
 ﻿using System;
-using System.IO;
 using System.Linq;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
@@ -19,6 +18,7 @@ using ImageCare.Mvvm;
 using ImageCare.Mvvm.Collections;
 using ImageCare.UI.Avalonia.ViewModels.Domain;
 
+using Prism.Commands;
 using Prism.Regions;
 
 using Serilog;
@@ -35,6 +35,7 @@ internal class FoldersViewModel : ViewModelBase
     private readonly SynchronizationContext _synchronizationContext;
     private DirectoryViewModel? _selectedFileSystemItem;
     private CompositeDisposable _compositeDisposable;
+    private DirectoryModel? _createdSubFolder;
 
     public FoldersViewModel(IFolderService folderService,
                             IMultiSourcesFileSystemWatcherService multiSourcesFileSystemWatcherService,
@@ -51,6 +52,8 @@ internal class FoldersViewModel : ViewModelBase
         _synchronizationContext = synchronizationContext;
 
         OnViewLoadedCommand = new AsyncRelayCommand(OnViewLoaded);
+        DeleteFolderCommand = new DelegateCommand(DeleteFolder);
+        CreateFolderCommand = new DelegateCommand(CreateFolder);
 
         FileSystemItemViewModels = new SortedObservableCollection<DirectoryViewModel>();
     }
@@ -58,6 +61,10 @@ internal class FoldersViewModel : ViewModelBase
     public SortedObservableCollection<DirectoryViewModel> FileSystemItemViewModels { get; }
 
     public ICommand OnViewLoadedCommand { get; }
+
+    public ICommand CreateFolderCommand { get; }
+
+    public ICommand DeleteFolderCommand { get; }
 
     public DirectoryViewModel? SelectedFileSystemItem
     {
@@ -84,9 +91,9 @@ internal class FoldersViewModel : ViewModelBase
             _drivesWatcherService.DriveUnmounted.Subscribe(OnDriveUnmounted),
             _folderService.FolderVisited.Where(folder => folder.FileManagerPanel == FileManagerPanel).Subscribe(OnFolderVisited),
             _folderService.FolderLeft.Where(folder => folder.FileManagerPanel == FileManagerPanel).Subscribe(OnFolderLeft),
-            _multiSourcesFileSystemWatcherService.DirectoryCreated.DistinctUntilChanged(folder=>folder.Path).ObserveOn(_synchronizationContext).Subscribe(OnDirectoryCreated),
-            _multiSourcesFileSystemWatcherService.DirectoryDeleted.DistinctUntilChanged(folder=>folder.Path).ObserveOn(_synchronizationContext).Subscribe(OnDirectoryRemoved),
-            _multiSourcesFileSystemWatcherService.DirectoryRenamed.DistinctUntilChanged(folder=>folder.NewDirectoryModel.Path).ObserveOn(_synchronizationContext).Subscribe(OnDirectoryRenamed)
+            _multiSourcesFileSystemWatcherService.DirectoryCreated.DistinctUntilChanged(folder => folder.Path).ObserveOn(_synchronizationContext).Subscribe(OnDirectoryCreated),
+            _multiSourcesFileSystemWatcherService.DirectoryDeleted.DistinctUntilChanged(folder => folder.Path).ObserveOn(_synchronizationContext).Subscribe(OnDirectoryRemoved),
+            _multiSourcesFileSystemWatcherService.DirectoryRenamed.DistinctUntilChanged(folder => folder.NewDirectoryModel.Path).ObserveOn(_synchronizationContext).Subscribe(OnDirectoryRenamed)
         };
 
         _drivesWatcherService.StartWatching();
@@ -117,7 +124,14 @@ internal class FoldersViewModel : ViewModelBase
             {
                 if (!parentVieModel.ChildFileSystemItems.Any(d => d.Path.Equals(directoryModel.Path, StringComparison.OrdinalIgnoreCase)))
                 {
-                    parentVieModel.ChildFileSystemItems.InsertItem(_mapper.Map<DirectoryViewModel>(directoryModel));
+                    var createdViewModel = _mapper.Map<DirectoryViewModel>(directoryModel);
+                    parentVieModel.ChildFileSystemItems.InsertItem(createdViewModel);
+
+                    if (createdViewModel.Path.Equals(_createdSubFolder?.Path, StringComparison.OrdinalIgnoreCase))
+                    {
+                        createdViewModel.IsEditing = true;
+                    }
+
                 }
 
                 return;
@@ -233,5 +247,23 @@ internal class FoldersViewModel : ViewModelBase
     private void OnFolderLeft(DirectoryModel directoryModel)
     {
         _multiSourcesFileSystemWatcherService.StopWatchingDirectory(directoryModel.Path);
+    }
+
+    private void CreateFolder()
+    {
+        if (SelectedFileSystemItem == null)
+        {
+            return;
+        }
+
+        _createdSubFolder = _folderService.CreateSubFolder(_mapper.Map<DirectoryModel>(SelectedFileSystemItem));
+    }
+
+    private void DeleteFolder()
+    {
+        if (SelectedFileSystemItem != null && !SelectedFileSystemItem.HasSupportedMedia)
+        {
+            _folderService.RemoveFolder(_mapper.Map<DirectoryModel>(SelectedFileSystemItem));
+        }
     }
 }

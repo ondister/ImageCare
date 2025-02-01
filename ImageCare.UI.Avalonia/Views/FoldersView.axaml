@@ -9,6 +9,11 @@
              prism:ViewModelLocator.AutoWireViewModel="True"
              x:DataType="viewModels:FoldersViewModel">
 
+    <UserControl.KeyBindings>
+        <KeyBinding Command="{Binding CreateFolderCommand}" Gesture="F7" />
+        <KeyBinding Command="{Binding DeleteFolderCommand}" Gesture="Delete" />
+    </UserControl.KeyBindings>
+
     <Grid Margin="{StaticResource MarginAll.Small}">
 
         <TreeView ItemsSource="{Binding FileSystemItemViewModels}"
@@ -64,7 +69,7 @@
                                    Margin="{StaticResource MarginHorizontal.Small}" />
                     </StackPanel>
                 </TreeDataTemplate>
-                <TreeDataTemplate DataType="domain:DirectoryViewModel" ItemsSource="{Binding ChildFileSystemItems}">
+                <TreeDataTemplate x:DataType="domain:DirectoryViewModel" ItemsSource="{Binding ChildFileSystemItems}">
                     <StackPanel Orientation="Horizontal">
                         <iconPacks:PackIconMaterial Kind="FolderOutline"
                                                     Height="{StaticResource Icon.Size.Small}"
@@ -105,9 +110,46 @@
                                                            VerticalAlignment="Center"
                                                            Margin="{StaticResource MarginHorizontal.Small}"
                                                            IsVisible="{Binding IsLoaded}" />
+                        <ContentPresenter Content="{Binding}"
+                                          Classes.IsEditing="{Binding IsEditing}" 
+                                          Classes.IsNotEditing="{Binding !IsEditing}"
+                                          Margin="{StaticResource MarginHorizontal.Small}">
 
-                        <TextBlock Text="{Binding Name}"
-                                   Margin="{StaticResource MarginHorizontal.Small}" />
+                            <ContentPresenter.KeyBindings>
+                                <KeyBinding Command="{Binding RenameFolderCommand}" Gesture="Enter" />
+                            </ContentPresenter.KeyBindings>
+
+                            <ContentPresenter.Resources>
+                                <!-- Display Template -->
+                                <DataTemplate x:Key="DisplayTemplate"
+                                              x:DataType="domain:DirectoryViewModel">
+                                    <TextBlock Text="{Binding Name}"/>
+                                </DataTemplate>
+
+                                <!-- Edit Template -->
+                                <DataTemplate x:Key="EditTemplate"
+                                              x:DataType="domain:DirectoryViewModel">
+                                    <TextBox Text="{Binding EditableName, UpdateSourceTrigger=PropertyChanged}"
+                                             >
+                                        <Interaction.Behaviors>
+                                            <EventTriggerBehavior EventName="LostFocus">
+                                                <InvokeCommandAction Command="{Binding NameTextBoxLostFocusCommand}" />
+                                            </EventTriggerBehavior>
+                                        </Interaction.Behaviors>
+                                    </TextBox>
+                                </DataTemplate>
+                            </ContentPresenter.Resources>
+
+                            <ContentPresenter.Styles>
+                                <Style Selector="ContentPresenter.IsNotEditing">
+                                    <Setter Property="ContentTemplate" Value="{StaticResource DisplayTemplate}" />
+                                </Style>
+                                <Style Selector="ContentPresenter.IsEditing">
+                                    <Setter Property="ContentTemplate" Value="{StaticResource EditTemplate}" />
+                                </Style>
+                            </ContentPresenter.Styles>
+                            </ContentPresenter>
+
                     </StackPanel>
                 </TreeDataTemplate>
             </TreeView.DataTemplates>
