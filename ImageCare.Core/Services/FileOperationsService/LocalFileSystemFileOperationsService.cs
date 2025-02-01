@@ -69,8 +69,15 @@ public sealed class LocalFileSystemFileOperationsService : IFileOperationsServic
         }
 
         var imagePreViewFileInfo = new FileInfo(imagePreview.Url);
-        var destinationFilePath = Path.Combine(selectedFolderPath, imagePreViewFileInfo.Name);
+        var fileName = imagePreViewFileInfo.Name;
 
+        if (Directory.EnumerateFiles(selectedFolderPath, $"{imagePreViewFileInfo.Name}", SearchOption.TopDirectoryOnly).Any())
+        {
+            fileName = $"{imagePreViewFileInfo.CreationTime.GetHashCode()}_{fileName}";
+        }
+
+        var destinationFilePath = Path.Combine(selectedFolderPath, fileName);
+        
         return await CopyWithProgressAsync(imagePreViewFileInfo.FullName, destinationFilePath, progress);
     }
 
@@ -83,7 +90,15 @@ public sealed class LocalFileSystemFileOperationsService : IFileOperationsServic
         }
 
         var imagePreViewFileInfo = new FileInfo(imagePreview.Url);
-        var destinationFilePath = Path.Combine(selectedFolderPath, imagePreViewFileInfo.Name);
+
+        var fileName = imagePreViewFileInfo.Name;
+
+        if (Directory.EnumerateFiles(selectedFolderPath, $"{imagePreViewFileInfo.Name}", SearchOption.TopDirectoryOnly).Any())
+        {
+            fileName = $"{imagePreViewFileInfo.CreationTime.GetHashCode()}_{fileName}";
+        }
+
+        var destinationFilePath = Path.Combine(selectedFolderPath, fileName);
 
         return await MoveWithProgressAsync(imagePreViewFileInfo.FullName, destinationFilePath, progress);
     }
