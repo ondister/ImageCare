@@ -36,6 +36,9 @@ jobs:
   deploy:
     needs: build
     runs-on: windows-latest
+    permissions:
+      contents: write
+      releases: write
 
     steps:
     - name: Download artifacts
