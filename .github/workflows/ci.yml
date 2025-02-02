@@ -2,8 +2,8 @@ name: ImageCare Bild
 
 on:
   push:
-    tags:
-      - 'v*'
+    branches:
+      - 'master'
 
 jobs:
   build:
@@ -18,19 +18,9 @@ jobs:
       with:
         dotnet-version: '8.x'
 
-    - name: Extract version from tag
-      id: version
-      run: |
-        VERSION=${GITHUB_REF#refs/tags/v}
-        echo "Extracted version: $VERSION"
-        echo "version=$VERSION" >> $GITHUB_OUTPUT
-
-    - name: Update .csproj version
-      run: |
-        dotnet build-server shutdown
-        dotnet restore
-        dotnet build /p:Version=${{ steps.version.outputs.version }} /p:FileVersion=${{ steps.version.outputs.version }} /p:AssemblyVersion=${{ steps.version.outputs.version }}
-
+    - name: Restore the project
+      run: dotnet restore
+      
     - name: Build the project
       run: dotnet build --configuration Release
 
@@ -56,12 +46,12 @@ jobs:
 
     - name: Deploy to GitHub Releases
       id: create_release
-      uses: actions/create-release@v1
+      uses: actions/create-release@v4
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        tag_name: v1.0.0
-        release_name: Release v1.0.0
+        tag_name: v0.1.5
+        release_name: Release v0.1.5
         draft: false
         prerelease: false
 
