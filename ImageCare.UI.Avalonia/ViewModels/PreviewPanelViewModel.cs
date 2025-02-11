@@ -22,7 +22,6 @@ using ImageCare.Core.Services.FileSystemImageService;
 using ImageCare.Core.Services.FileSystemWatcherService;
 using ImageCare.Core.Services.FolderService;
 using ImageCare.Core.Services.NotificationService;
-using ImageCare.Mvvm;
 using ImageCare.UI.Avalonia.Behaviors;
 using ImageCare.UI.Avalonia.ViewModels.Domain;
 
@@ -32,7 +31,7 @@ using Serilog;
 
 namespace ImageCare.UI.Avalonia.ViewModels;
 
-internal class PreviewPanelViewModel : ViewModelBase, IDisposable
+internal class PreviewPanelViewModel : NavigatedViewModelBase, IDisposable
 {
     private readonly IFileSystemImageService _imageService;
     private readonly IFolderService _folderService;

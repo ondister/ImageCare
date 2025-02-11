@@ -12,7 +12,6 @@ using ImageCare.Core.Domain.Media;
 using ImageCare.Core.Services.FileOperationsService;
 using ImageCare.Core.Services.FileSystemImageService;
 using ImageCare.Core.Services.FolderService;
-using ImageCare.Mvvm;
 
 using Prism.Regions;
 
@@ -20,7 +19,7 @@ using Serilog;
 
 namespace ImageCare.UI.Avalonia.ViewModels;
 
-internal class MainImageViewModel : ViewModelBase
+internal class MainImageViewModel : NavigatedViewModelBase
 {
     private readonly IFileSystemImageService _imageService;
     private readonly IFolderService _folderService;

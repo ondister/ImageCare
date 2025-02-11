@@ -8,7 +8,6 @@ using AutoMapper;
 
 using ImageCare.Core.Services.NotificationService;
 using ImageCare.Modules.Logging.Services;
-using ImageCare.Mvvm;
 using ImageCare.UI.Avalonia.ViewModels.Domain;
 
 using Prism.Commands;
@@ -17,7 +16,7 @@ using Prism.Services.Dialogs;
 
 namespace ImageCare.UI.Avalonia.ViewModels;
 
-internal class BottomBarViewModel : ViewModelBase
+internal class BottomBarViewModel : NavigatedViewModelBase
 {
     private readonly IDialogService _dialogService;
     private readonly INotificationService _notificationService;

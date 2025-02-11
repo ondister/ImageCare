@@ -12,6 +12,7 @@ using CommunityToolkit.Mvvm.Input;
 
 using ImageCare.Core.Domain;
 using ImageCare.Core.Domain.MediaFormats;
+using ImageCare.Core.Services;
 using ImageCare.Core.Services.FileOperationsService;
 using ImageCare.Core.Services.FolderService;
 using ImageCare.Core.Services.NotificationService;
@@ -22,6 +23,8 @@ using Prism.Regions;
 
 using ReactiveUI;
 
+using Serilog;
+
 namespace ImageCare.UI.Avalonia.ViewModels;
 
 public class MainWindowViewModel : ViewModelBase
@@ -30,6 +33,7 @@ public class MainWindowViewModel : ViewModelBase
     private readonly IFileOperationsService _fileOperationsService;
     private readonly IFolderService _folderService;
     private readonly INotificationService _notificationService;
+    private readonly IVisorService _visorService;
     private readonly IMapper _mapper;
     private readonly SynchronizationContext _synchronizationContext;
     private CompositeDisposable _subscriptions;
@@ -39,6 +43,7 @@ public class MainWindowViewModel : ViewModelBase
                                IFileOperationsService fileOperationsService,
                                IFolderService folderService,
                                INotificationService notificationService,
+                               IVisorService visorService,
                                IMapper mapper,
                                SynchronizationContext synchronizationContext)
     {
@@ -46,6 +51,7 @@ public class MainWindowViewModel : ViewModelBase
         _fileOperationsService = fileOperationsService;
         _folderService = folderService;
         _notificationService = notificationService;
+        _visorService = visorService;
         _mapper = mapper;
         _synchronizationContext = synchronizationContext;
 
@@ -151,6 +157,35 @@ public class MainWindowViewModel : ViewModelBase
         return false;
     }
 
+    private void OnImagePreviewSelected(SelectedMediaPreview preview)
+    {
+        if (preview.MediaFormat.MediaType == MediaType.Video && !_regionManager.Regions[RegionNames.MainImageViewRegion].ActiveViews.Any(v => v is MainVideoView))
+        {
+            _regionManager.RequestNavigate(RegionNames.MainImageViewRegion, "MainVideoView", new NavigationParameters { { "imagePreview", preview } });
+        }
+
+        if (preview.MediaFormat.MediaType == MediaType.Image && !_regionManager.Regions[RegionNames.MainImageViewRegion].ActiveViews.Any(v => v is MainImageView))
+        {
+            _regionManager.RequestNavigate(RegionNames.MainImageViewRegion, "MainImageView", new NavigationParameters { { "imagePreview", preview } });
+        }
+
+        _currentSelectedPreview = preview;
+        NotifyFileOperationCommandsCanExecuteChanged();
+
+        _visorService.SendMediaPreviewAsync(preview);
+    }
+
+    private void OnFolderSelected(SelectedDirectory directory)
+    {
+        NotifyFileOperationCommandsCanExecuteChanged();
+    }
+
+    private void NotifyFileOperationCommandsCanExecuteChanged()
+    {
+        (CopySelectedPreviewCommand as AsyncRelayCommand)?.NotifyCanExecuteChanged();
+        (MoveSelectedPreviewCommand as AsyncRelayCommand)?.NotifyCanExecuteChanged();
+    }
+
     private void OnViewLoaded()
     {
         _regionManager.RequestNavigate(RegionNames.SourceFoldersRegion, "FoldersView", OnNavigationResult, new NavigationParameters { { "panel", FileManagerPanel.Left } });
@@ -169,37 +204,16 @@ public class MainWindowViewModel : ViewModelBase
                           .ObserveOn(_synchronizationContext)
                           .Subscribe(OnFolderSelected)
         };
-    }
 
-    private void OnImagePreviewSelected(SelectedMediaPreview preview)
-    {
-        if (preview.MediaFormat.MediaType == MediaType.Video && !_regionManager.Regions[RegionNames.MainImageViewRegion].ActiveViews.Any(v => v is MainVideoView))
+        if (!_visorService.Start())
         {
-            _regionManager.RequestNavigate(RegionNames.MainImageViewRegion, "MainVideoView", new NavigationParameters { { "imagePreview", preview } });
+           // _logger.Error("Visor service starting has been failed.");
         }
-
-        if (preview.MediaFormat.MediaType == MediaType.Image && !_regionManager.Regions[RegionNames.MainImageViewRegion].ActiveViews.Any(v => v is MainImageView))
-        {
-            _regionManager.RequestNavigate(RegionNames.MainImageViewRegion, "MainImageView", new NavigationParameters { { "imagePreview", preview } });
-        }
-
-        _currentSelectedPreview = preview;
-        NotifyFileOperationCommandsCanExecuteChanged();
-    }
-
-    private void OnFolderSelected(SelectedDirectory directory)
-    {
-        NotifyFileOperationCommandsCanExecuteChanged();
-    }
-
-    private void NotifyFileOperationCommandsCanExecuteChanged()
-    {
-        (CopySelectedPreviewCommand as AsyncRelayCommand)?.NotifyCanExecuteChanged();
-        (MoveSelectedPreviewCommand as AsyncRelayCommand)?.NotifyCanExecuteChanged();
     }
 
     private void OnViewUnloaded()
     {
+        _visorService.Stop();
         _subscriptions?.Dispose();
     }
 

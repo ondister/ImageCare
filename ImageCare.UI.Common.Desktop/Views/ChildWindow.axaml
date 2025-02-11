@@ -1,7 +1,7 @@
 <u:UrsaWindow xmlns="https://github.com/avaloniaui"
               xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
               xmlns:u="https://irihi.tech/ursa"
-              x:Class="ImageCare.Mvvm.Views.ChildWindow"
+              x:Class="ImageCare.UI.Common.Desktop.Views.ChildWindow"
               Title="{Binding Title}"
               Width="800"
               Height="600"

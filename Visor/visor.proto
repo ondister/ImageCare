@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+import "google/protobuf/empty.proto";
+
+service Visor {
+  rpc StreamImage(ImageData) returns (google.protobuf.Empty);
+}
+
+message ImageData {
+  bytes image_bytes = 1;
+
+  ImageMetadata metadata = 2;
+}
+
+message ImageMetadata {
+  string timestamp = 1;
+
+  string name = 3;
+
+  map<string, string> metadata = 4;
+}

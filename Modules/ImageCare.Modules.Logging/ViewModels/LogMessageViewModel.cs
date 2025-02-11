@@ -1,4 +1,5 @@
-﻿using ImageCare.Mvvm;
+﻿
+using ImageCare.Mvvm;
 
 namespace ImageCare.Modules.Logging.ViewModels;
 

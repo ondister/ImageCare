@@ -28,6 +28,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\ImageCare.Mvvm\ImageCare.Mvvm.csproj" />
+    <ProjectReference Include="..\..\ImageCare.UI.Common.Desktop\ImageCare.UI.Common.Desktop.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -2,7 +2,7 @@ using Prism.Services.Dialogs;
 
 using Ursa.Controls;
 
-namespace ImageCare.Mvvm.Views;
+namespace ImageCare.UI.Common.Desktop.Views;
 
 public partial class ChildWindow : UrsaWindow, IDialogWindow
 {

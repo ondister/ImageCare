@@ -265,6 +265,11 @@ public sealed class LocalFileSystemFolderService : IFolderService, IDisposable
 
                        foreach (var driveInfo in drives)
                        {
+                           if (driveInfo is { DriveType: DriveType.Network, IsReady: false })
+                           {
+                               continue;
+                           }
+
                            if (_driveModelsFactory.CreateDriveModel(driveInfo) is { } drive)
                            {
                                rootModel.AddDirectory(drive);

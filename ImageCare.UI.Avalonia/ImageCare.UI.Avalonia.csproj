@@ -8,7 +8,7 @@
         <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
         <ApplicationManifest>app.manifest</ApplicationManifest>
         <AvaloniaUseCompiledBindingsByDefault>false</AvaloniaUseCompiledBindingsByDefault>
-        <Platforms>AnyCPU;x64</Platforms>
+        <Platforms>AnyCPU</Platforms>
     </PropertyGroup>
 
   <ItemGroup>
@@ -44,7 +44,9 @@
   <ItemGroup>
     <ProjectReference Include="..\ImageCare.Core\ImageCare.Core.csproj" />
     <ProjectReference Include="..\ImageCare.Mvvm\ImageCare.Mvvm.csproj" />
+    <ProjectReference Include="..\ImageCare.UI.Common.Desktop\ImageCare.UI.Common.Desktop.csproj" />
     <ProjectReference Include="..\Modules\ImageCare.Modules.Logging\ImageCare.Modules.Logging.csproj" />
+    <ProjectReference Include="..\Visor\VisorServer\VisorServer.csproj" />
   </ItemGroup>
   
     <ItemGroup Condition="'$(RuntimeIdentifier)'=='win-x64' or '$(RuntimeIdentifier)'==''">

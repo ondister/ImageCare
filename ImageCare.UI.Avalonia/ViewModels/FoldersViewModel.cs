@@ -14,7 +14,6 @@ using ImageCare.Core.Domain;
 using ImageCare.Core.Services.DrivesWatcherService;
 using ImageCare.Core.Services.FileSystemWatcherService;
 using ImageCare.Core.Services.FolderService;
-using ImageCare.Mvvm;
 using ImageCare.Mvvm.Collections;
 using ImageCare.UI.Avalonia.ViewModels.Domain;
 
@@ -25,7 +24,7 @@ using Serilog;
 
 namespace ImageCare.UI.Avalonia.ViewModels;
 
-internal class FoldersViewModel : ViewModelBase
+internal class FoldersViewModel : NavigatedViewModelBase
 {
     private readonly IFolderService _folderService;
     private readonly IMultiSourcesFileSystemWatcherService _multiSourcesFileSystemWatcherService;

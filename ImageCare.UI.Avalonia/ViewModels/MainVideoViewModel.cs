@@ -9,7 +9,6 @@ using HanumanInstitute.LibMpv;
 using ImageCare.Core.Domain;
 using ImageCare.Core.Services.FileOperationsService;
 using ImageCare.Core.Services.FolderService;
-using ImageCare.Mvvm;
 
 using Prism.Commands;
 using Prism.Regions;
@@ -20,7 +19,7 @@ using MpvContext = HanumanInstitute.LibMpv.MpvContext;
 
 namespace ImageCare.UI.Avalonia.ViewModels;
 
-internal class MainVideoViewModel : ViewModelBase, IDisposable
+internal class MainVideoViewModel : NavigatedViewModelBase, IDisposable
 {
     private readonly IFileOperationsService _fileOperationsService;
     private readonly IFolderService _folderService;
