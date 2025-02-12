@@ -1,5 +1,4 @@
-﻿
-namespace ImageCare.Core.Domain;
+﻿namespace ImageCare.Core.Domain.Folders;
 
 public class DriveModel(string name, string path) : DirectoryModel(name, path)
 {

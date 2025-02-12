@@ -6,9 +6,9 @@ using System.Threading.Tasks;
 using System.Windows.Input;
 
 using Avalonia.Media.Imaging;
-
-using ImageCare.Core.Domain;
+using ImageCare.Core.Domain.Folders;
 using ImageCare.Core.Domain.Media;
+using ImageCare.Core.Domain.Preview;
 using ImageCare.Core.Services.FileOperationsService;
 using ImageCare.Core.Services.FileSystemImageService;
 using ImageCare.Core.Services.FolderService;

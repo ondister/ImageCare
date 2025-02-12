@@ -5,8 +5,8 @@ using System.Threading;
 using System.Windows.Input;
 
 using HanumanInstitute.LibMpv;
-
-using ImageCare.Core.Domain;
+using ImageCare.Core.Domain.Folders;
+using ImageCare.Core.Domain.Preview;
 using ImageCare.Core.Services.FileOperationsService;
 using ImageCare.Core.Services.FolderService;
 

@@ -6,8 +6,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.VisualTree;
 using Avalonia.Xaml.Interactions.DragAndDrop;
-
-using ImageCare.Core.Domain;
+using ImageCare.Core.Domain.Preview;
 using ImageCare.Core.Services.FileOperationsService;
 using ImageCare.Core.Services.NotificationService;
 using ImageCare.UI.Avalonia.ViewModels;

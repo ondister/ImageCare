@@ -1,4 +1,5 @@
 ﻿using System.Reflection;
+using ImageCare.Core.Domain.Folders;
 
 namespace ImageCare.Core.Domain.MediaFormats;
 

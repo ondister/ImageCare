@@ -14,7 +14,7 @@
              x:DataType="viewModels:PreviewPanelViewModel">
 
     <UserControl.Resources>
-        <converters:SortingByToIconKindConverter x:Key="SortingByToIconKindConverter"/>
+        <converters:SortingByToIconKindConverter x:Key="SortingByToIconKindConverter" />
     </UserControl.Resources>
 
     <UserControl.KeyBindings>
@@ -24,7 +24,7 @@
     </UserControl.KeyBindings>
 
     <Grid RowDefinitions="Auto,*"
-          Margin="{StaticResource MarginAll.Small}" >
+          Margin="{StaticResource MarginAll.Small}">
 
         <Grid Grid.Row="0"
               ColumnDefinitions="Auto,*"
@@ -39,9 +39,10 @@
                 <ComboBox.ItemTemplate>
                     <DataTemplate DataType="domain:SortingBy">
                         <Grid ColumnDefinitions="Auto,*">
-                            <iconPacks:PackIconLucide Kind="{Binding Converter={StaticResource SortingByToIconKindConverter}}"
-                                                      Height="{StaticResource Icon.Size.Small}"
-                                                      Width="{StaticResource Icon.Size.Small}" />
+                            <iconPacks:PackIconLucide
+                                Kind="{Binding Converter={StaticResource SortingByToIconKindConverter}}"
+                                Height="{StaticResource Icon.Size.Small}"
+                                Width="{StaticResource Icon.Size.Small}" />
                         </Grid>
                     </DataTemplate>
                 </ComboBox.ItemTemplate>
@@ -50,7 +51,7 @@
             <ProgressBar Grid.Column="1"
                          Margin="{StaticResource MarginHorizontal.Small}"
                          IsIndeterminate="{Binding PreviewsLoading}"
-                         IsVisible="{Binding PreviewsLoading}"/>
+                         IsVisible="{Binding PreviewsLoading}" />
         </Grid>
 
         <controls:PreviewsListBox Grid.Row="1" ItemsSource="{Binding ImagePreviews}"
@@ -101,11 +102,11 @@
 
                         <Grid Grid.Row="1"
                               ColumnDefinitions="*,Auto"
-                              RowDefinitions="Auto,*">
+                              RowDefinitions="Auto,*,Auto">
 
                             <LayoutTransformControl Grid.Column="0"
                                                     Grid.Row="0"
-                                                    Grid.RowSpan="2"
+                                                    Grid.RowSpan="3"
                                                     Grid.ColumnSpan="2"
                                                     VerticalAlignment="Center"
                                                     HorizontalAlignment="Center"
@@ -128,6 +129,30 @@
                                                               Width="{StaticResource Icon.Size.Small}" />
                                 </u:IconButton.Icon>
                             </u:IconButton>
+
+                            <Menu Grid.Row="2"
+                                  Grid.Column="1"
+                                  Margin="{StaticResource MarginAll.Medium}"
+                                  Background="{DynamicResource SemiBlue5}"
+                                  IsVisible="{Binding UseOpenWith, Mode=OneTime}">
+                                <MenuItem ItemsSource="{Binding OpenWithViewModels, Mode=OneTime}">
+                                    <MenuItem.Header>
+                                        <iconPacks:PackIconMaterial Kind="ApplicationExport"
+                                                                    Height="{StaticResource Icon.Size.Small}"
+                                                                    Width="{StaticResource Icon.Size.Small}" />
+                                    </MenuItem.Header>
+
+                                    <MenuItem.ItemContainerTheme>
+                                        <ControlTheme TargetType="MenuItem"
+                                                      BasedOn="{StaticResource {x:Type MenuItem}}"
+                                                      x:DataType="domain:FileApplicationPairViewModel">
+                                            <Setter Property="Header" Value="{Binding Name}" />
+                                            <Setter Property="Command" Value="{Binding OpenWithCommand}" />
+                                        </ControlTheme>
+                                    </MenuItem.ItemContainerTheme>
+
+                                </MenuItem>
+                            </Menu>
 
                         </Grid>
 

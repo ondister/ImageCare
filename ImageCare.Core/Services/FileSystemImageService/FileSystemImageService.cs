@@ -1,10 +1,10 @@
 ﻿using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
-
-using ImageCare.Core.Domain;
+using ImageCare.Core.Domain.Folders;
 using ImageCare.Core.Domain.Media;
 using ImageCare.Core.Domain.Media.Metadata;
 using ImageCare.Core.Domain.MediaFormats;
+using ImageCare.Core.Domain.Preview;
 using ImageCare.Core.Exceptions;
 
 using Polly;

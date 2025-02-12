@@ -1,5 +1,5 @@
 ﻿using ImageCare.Core.Domain.Media.Metadata;
-
+using ImageCare.Core.Domain.Preview;
 using LibRawDotNet;
 
 using MetadataExtractor;

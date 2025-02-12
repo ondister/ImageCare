@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Threading;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Windows.Input;
 
@@ -9,10 +9,10 @@ using Avalonia.Media.Imaging;
 
 using CommunityToolkit.Mvvm.Input;
 
-using ImageCare.Core.Domain;
-using ImageCare.Core.Domain.Media;
 using ImageCare.Core.Domain.Media.Metadata;
 using ImageCare.Core.Domain.MediaFormats;
+using ImageCare.Core.Domain.Preview;
+using ImageCare.Core.Services.FileAssociationsService;
 using ImageCare.Core.Services.FileOperationsService;
 using ImageCare.Core.Services.FileSystemImageService;
 using ImageCare.Core.Services.NotificationService;
@@ -27,6 +27,7 @@ internal class MediaPreviewViewModel : ViewModelBase, IComparable<MediaPreviewVi
     private readonly IFileSystemImageService _imageService;
     private readonly IFileOperationsService _fileOperationsService;
     private readonly INotificationService _notificationService;
+    private readonly IFileAssociationsService _fileAssociationsService;
     private readonly IMapper _mapper;
     private readonly ILogger _logger;
     private Bitmap? _previewBitmap;
@@ -36,6 +37,7 @@ internal class MediaPreviewViewModel : ViewModelBase, IComparable<MediaPreviewVi
     private string _metadataString;
     private string _dateTimeString;
     private double _rotateAngle;
+    private bool _useOpenWith;
 
     public MediaPreviewViewModel(string? title,
                                  string url,
@@ -44,6 +46,7 @@ internal class MediaPreviewViewModel : ViewModelBase, IComparable<MediaPreviewVi
                                  IFileSystemImageService imageService,
                                  IFileOperationsService fileOperationsService,
                                  INotificationService notificationService,
+                                 IFileAssociationsService fileAssociationsService,
                                  IMapper mapper,
                                  ILogger logger)
     {
@@ -55,12 +58,14 @@ internal class MediaPreviewViewModel : ViewModelBase, IComparable<MediaPreviewVi
         _imageService = imageService;
         _fileOperationsService = fileOperationsService;
         _notificationService = notificationService;
+        _fileAssociationsService = fileAssociationsService;
         _mapper = mapper;
         _logger = logger;
 
         RemoveImagePreviewCommand = new AsyncRelayCommand(RemoveImagePreviewAsync);
 
         _ = LoadPreviewAsync();
+        OpenWithViewModels = CreateOpenWithItems();
     }
 
     public string? Title { get; }
@@ -113,6 +118,14 @@ internal class MediaPreviewViewModel : ViewModelBase, IComparable<MediaPreviewVi
         set => SetProperty(ref _rotateAngle, value);
     }
 
+    public IEnumerable<FileApplicationPairViewModel> OpenWithViewModels { get; }
+
+    public bool UseOpenWith
+    {
+        get => _useOpenWith;
+        set => SetProperty(ref _useOpenWith, value);
+    }
+
     public IMediaMetadata Metadata { get; internal set; }
 
     public int CompareTo(MediaPreviewViewModel? other)
@@ -123,6 +136,31 @@ internal class MediaPreviewViewModel : ViewModelBase, IComparable<MediaPreviewVi
         }
 
         return string.CompareOrdinal(Url, other.Url);
+    }
+
+    internal async Task RemoveImagePreviewAsync()
+    {
+        try
+        {
+            var notificationTitle = $"Delete {Url}";
+            _notificationService.SendNotification(new Notification(notificationTitle, string.Empty));
+
+            var result = await _fileOperationsService.DeleteImagePreviewAsync(_mapper.Map<MediaPreview>(this));
+
+            switch (result)
+            {
+                case OperationResult.Success:
+                    _notificationService.SendNotification(new SuccessNotification(notificationTitle, ""));
+                    break;
+                case OperationResult.Failed:
+                    _notificationService.SendNotification(new ErrorNotification(notificationTitle, ""));
+                    break;
+            }
+        }
+        catch (Exception exception)
+        {
+            _logger.Error(exception, $"Unexpected exception during preview deletion for file {Url}");
+        }
     }
 
     private async Task LoadPreviewAsync()
@@ -146,29 +184,31 @@ internal class MediaPreviewViewModel : ViewModelBase, IComparable<MediaPreviewVi
         }
     }
 
-    internal async Task RemoveImagePreviewAsync()
+    private IEnumerable<FileApplicationPairViewModel> CreateOpenWithItems()
     {
+        var openWithItems = new List<FileApplicationPairViewModel>();
+
         try
         {
-            var notificationTitle = $"Delete {Url}";
-            _notificationService.SendNotification(new Notification(notificationTitle, string.Empty));
-
-            var result = await _fileOperationsService.DeleteImagePreviewAsync(_mapper.Map<MediaPreview>(this));
-
-            switch (result)
+            var associations = _fileAssociationsService.GetAssociations(MediaFormat);
+            foreach (var association in associations)
             {
-                case OperationResult.Success:
-                    _notificationService.SendNotification(new SuccessNotification(notificationTitle, ""));
-                    break;
-                case OperationResult.Failed:
-                    _notificationService.SendNotification(new ErrorNotification(notificationTitle, ""));
-                    break;
+                openWithItems.Add(
+                    new FileApplicationPairViewModel(
+                        association.Name,
+                        association.ApplicationPath,
+                        _mapper.Map<MediaPreview>(this),
+                        _fileOperationsService,
+                        _logger));
             }
-
         }
         catch (Exception exception)
         {
-            _logger.Error(exception, $"Unexpected exception during preview deletion for file {Url}");
+            _logger.Error(exception, $"Error of creation open with menu for {Url}");
         }
+
+        UseOpenWith = openWithItems.Count != 0;
+
+        return openWithItems;
     }
 }

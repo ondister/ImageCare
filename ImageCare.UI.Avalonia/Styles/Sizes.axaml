@@ -6,6 +6,7 @@
     <Thickness x:Key="MarginBottom.Small">0,0,0,2</Thickness>
     <Thickness x:Key="MarginHorizontal.Small">2,0,2,0</Thickness>
 
+    <Thickness x:Key="MarginAll.Medium">4</Thickness>
     <Thickness x:Key="MarginTop.Medium">0,4,0,0</Thickness>
     <Thickness x:Key="MarginLeft.Medium">4,0,0,0</Thickness>
     <Thickness x:Key="MarginRight.Medium">0,0,4,0</Thickness>

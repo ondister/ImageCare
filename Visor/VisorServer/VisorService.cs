@@ -1,6 +1,4 @@
-﻿
-
-using ImageCare.Core.Domain;
+﻿using ImageCare.Core.Domain.Preview;
 using ImageCare.Core.Services;
 
 namespace VisorServer;

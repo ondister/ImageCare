@@ -9,9 +9,9 @@ using System.Windows.Input;
 using AutoMapper;
 
 using CommunityToolkit.Mvvm.Input;
-
-using ImageCare.Core.Domain;
+using ImageCare.Core.Domain.Folders;
 using ImageCare.Core.Domain.MediaFormats;
+using ImageCare.Core.Domain.Preview;
 using ImageCare.Core.Services;
 using ImageCare.Core.Services.FileOperationsService;
 using ImageCare.Core.Services.FolderService;

@@ -1,4 +1,4 @@
-﻿using ImageCare.Core.Domain;
+﻿using ImageCare.Core.Domain.Folders;
 
 namespace ImageCare.Core.Services.FolderService;
 

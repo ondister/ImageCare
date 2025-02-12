@@ -7,8 +7,7 @@ using System.Threading.Tasks;
 using System.Windows.Input;
 
 using AutoMapper;
-
-using ImageCare.Core.Domain;
+using ImageCare.Core.Domain.Folders;
 using ImageCare.Core.Services.FolderService;
 using ImageCare.Mvvm;
 using ImageCare.Mvvm.Collections;

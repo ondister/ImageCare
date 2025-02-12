@@ -1,6 +1,6 @@
 ﻿using System.Collections.ObjectModel;
 
-namespace ImageCare.Core.Domain;
+namespace ImageCare.Core.Domain.Folders;
 
 public class DirectoryModel
 {

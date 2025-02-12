@@ -3,8 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-
-using ImageCare.Core.Domain;
+using ImageCare.Core.Domain.Preview;
 using ImageCare.Core.Services;
 
 namespace VisorClient

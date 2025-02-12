@@ -9,4 +9,7 @@ public sealed class Configuration
 
     [JsonInclude]
     public string LastTargetDirectoryPath { get; set; } = string.Empty;
+
+    [JsonInclude]
+    public List<FileApplicationAssociation> ApplicationAssociationPairs { get; set; } = new();
 }

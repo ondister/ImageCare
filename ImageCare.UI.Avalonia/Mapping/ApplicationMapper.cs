@@ -1,8 +1,9 @@
 ﻿using System.Linq;
 
 using AutoMapper;
-
-using ImageCare.Core.Domain;
+using ImageCare.Core.Domain.Folders;
+using ImageCare.Core.Domain.Preview;
+using ImageCare.Core.Services.FileAssociationsService;
 using ImageCare.Core.Services.FileOperationsService;
 using ImageCare.Core.Services.FileSystemImageService;
 using ImageCare.Core.Services.FolderService;
@@ -132,6 +133,8 @@ internal sealed class ApplicationMapper
                    .ForMember(dst => dst.MetadataString, opt => opt.Ignore())
                    .ForMember(dst => dst.DateTimeString, opt => opt.Ignore())
                    .ForMember(dst => dst.RotateAngle, opt => opt.Ignore())
+                   .ForMember(dst => dst.OpenWithViewModels, opt => opt.Ignore())
+                   .ForMember(dst => dst.UseOpenWith, opt => opt.Ignore())
                    .ConstructUsing(
                        src => new MediaPreviewViewModel(
                            src.Title,
@@ -141,6 +144,7 @@ internal sealed class ApplicationMapper
                            serviceLocator.Resolve<FileSystemImageService>(),
                            serviceLocator.Resolve<IFileOperationsService>(),
                            serviceLocator.Resolve<INotificationService>(),
+                           serviceLocator.Resolve<IFileAssociationsService>(),
                            _mapper,
                            serviceLocator.Resolve<ILogger>()));
 

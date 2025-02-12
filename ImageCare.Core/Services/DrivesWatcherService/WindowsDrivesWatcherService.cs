@@ -1,8 +1,7 @@
 ﻿using System.Management;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
-
-using ImageCare.Core.Domain;
+using ImageCare.Core.Domain.Folders;
 using ImageCare.Core.Services.FolderService;
 
 namespace ImageCare.Core.Services.DrivesWatcherService;

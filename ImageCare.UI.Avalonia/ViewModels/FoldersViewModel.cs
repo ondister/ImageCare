@@ -11,6 +11,7 @@ using AutoMapper;
 using CommunityToolkit.Mvvm.Input;
 
 using ImageCare.Core.Domain;
+using ImageCare.Core.Domain.Folders;
 using ImageCare.Core.Services.DrivesWatcherService;
 using ImageCare.Core.Services.FileSystemWatcherService;
 using ImageCare.Core.Services.FolderService;

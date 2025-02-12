@@ -1,5 +1,6 @@
-﻿using ImageCare.Core.Domain;
+﻿using ImageCare.Core.Domain.Folders;
 using ImageCare.Core.Domain.Media.Metadata;
+using ImageCare.Core.Domain.Preview;
 
 namespace ImageCare.Core.Services.FileSystemImageService;
 

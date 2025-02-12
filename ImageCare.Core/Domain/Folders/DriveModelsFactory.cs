@@ -1,4 +1,4 @@
-﻿namespace ImageCare.Core.Domain;
+﻿namespace ImageCare.Core.Domain.Folders;
 
 internal sealed class DriveModelsFactory
 {

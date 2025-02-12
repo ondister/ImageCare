@@ -1,4 +1,5 @@
 ﻿using ImageCare.Core.Domain.Media.Metadata;
+using ImageCare.Core.Domain.Preview;
 
 namespace ImageCare.Core.Domain.Media;
 

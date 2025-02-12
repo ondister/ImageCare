@@ -1,4 +1,4 @@
-﻿using ImageCare.Core.Domain;
+﻿using ImageCare.Core.Domain.Preview;
 
 namespace ImageCare.Core.Services.FileOperationsService;
 
@@ -17,4 +17,7 @@ public interface IFileOperationsService
     Task<OperationResult> DeleteImagePreviewAsync(MediaPreview imagePreview);
 
     void SetSelectedPreview(SelectedMediaPreview selectedImagePreview);
+
+    void OpenInExternalProcess(MediaPreview mediaPreview, string pathToExecutable);
+
 }

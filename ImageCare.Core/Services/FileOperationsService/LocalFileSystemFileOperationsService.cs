@@ -1,8 +1,9 @@
 ﻿using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
-
-using ImageCare.Core.Domain;
+using ImageCare.Core.Domain.Folders;
+using ImageCare.Core.Domain.Preview;
 using ImageCare.Core.Services.FileOperationsService.Native;
 
 namespace ImageCare.Core.Services.FileOperationsService;
@@ -77,7 +78,7 @@ public sealed class LocalFileSystemFileOperationsService : IFileOperationsServic
         }
 
         var destinationFilePath = Path.Combine(selectedFolderPath, fileName);
-        
+
         return await CopyWithProgressAsync(imagePreViewFileInfo.FullName, destinationFilePath, progress);
     }
 
@@ -128,6 +129,29 @@ public sealed class LocalFileSystemFileOperationsService : IFileOperationsServic
     {
         _selectedImagePreviews.AddOrUpdate(selectedImagePreview.FileManagerPanel, _ => selectedImagePreview, (_, _) => selectedImagePreview);
         _selectedImagePreviewSubject.OnNext(selectedImagePreview);
+    }
+
+    /// <inheritdoc />
+    public void OpenInExternalProcess(MediaPreview mediaPreview, string pathToExecutable)
+    {
+        if (!File.Exists(pathToExecutable))
+        {
+            throw new FileNotFoundException(pathToExecutable);
+        }
+
+        if (!File.Exists(mediaPreview.Url))
+        {
+            throw new FileNotFoundException(mediaPreview.Url);
+        }
+
+        var processInfo = new ProcessStartInfo
+        {
+            UseShellExecute = true,
+            FileName = pathToExecutable,
+            Arguments = mediaPreview.Url
+        };
+
+        Process.Start(processInfo);
     }
 
     private OperationResult MoveWithProgress(string source, string destination, IProgress<OperationInfo> progress, CancellationToken cancellationToken = default)

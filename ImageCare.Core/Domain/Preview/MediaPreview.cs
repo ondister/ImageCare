@@ -1,6 +1,6 @@
 ﻿using ImageCare.Core.Domain.MediaFormats;
 
-namespace ImageCare.Core.Domain;
+namespace ImageCare.Core.Domain.Preview;
 
 public class MediaPreview : IEquatable<MediaPreview>
 {
