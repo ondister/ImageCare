@@ -1,5 +1,7 @@
-﻿using Avalonia.Controls;
+﻿using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.VisualTree;
 
 namespace ImageCare.UI.Avalonia.Controls;
 
@@ -20,7 +22,30 @@ public class PreviewsListBox : ListBox
 
         var container = ContainerFromItem(SelectedItem);
 
-        container?.Focus();
+        if (container == null)
+        {
+            return;
+        }
+
+        container.Focus();
+
+        var scrollViewer = this.FindDescendantOfType<ScrollViewer>();
+        if (scrollViewer == null)
+        {
+            return;
+        }
+
+        var containerPosition = container.TransformToVisual(this)?.Transform(new Point(0, 0));
+        if (!containerPosition.HasValue)
+        {
+            return;
+        }
+
+        var containerCenter = containerPosition.Value.X + container.Bounds.Width / 2;
+        var scrollViewerCenter = scrollViewer.Bounds.Width / 2;
+        var offset = containerCenter - scrollViewerCenter;
+
+        scrollViewer.Offset = new Vector(scrollViewer.Offset.X + offset, scrollViewer.Offset.Y);
     }
 
     private void OnPointerWheelChanged(object? sender, PointerWheelEventArgs e)
