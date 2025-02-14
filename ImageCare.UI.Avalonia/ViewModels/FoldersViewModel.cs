@@ -10,7 +10,6 @@ using AutoMapper;
 
 using CommunityToolkit.Mvvm.Input;
 
-using ImageCare.Core.Domain;
 using ImageCare.Core.Domain.Folders;
 using ImageCare.Core.Services.DrivesWatcherService;
 using ImageCare.Core.Services.FileSystemWatcherService;
@@ -89,6 +88,7 @@ internal class FoldersViewModel : NavigatedViewModelBase
         {
             _drivesWatcherService.DriveMounted.Subscribe(OnDriveMounted),
             _drivesWatcherService.DriveUnmounted.Subscribe(OnDriveUnmounted),
+            _drivesWatcherService.DriveAvailableFreeSpaceChanged.DistinctUntilChanged().Subscribe(OnFreeSpaceChanged),
             _folderService.FolderVisited.Where(folder => folder.FileManagerPanel == FileManagerPanel).Subscribe(OnFolderVisited),
             _folderService.FolderLeft.Where(folder => folder.FileManagerPanel == FileManagerPanel).Subscribe(OnFolderLeft),
             _multiSourcesFileSystemWatcherService.DirectoryCreated.DistinctUntilChanged(folder => folder.Path).ObserveOn(_synchronizationContext).Subscribe(OnDirectoryCreated),
@@ -131,7 +131,6 @@ internal class FoldersViewModel : NavigatedViewModelBase
                     {
                         createdViewModel.IsEditing = true;
                     }
-
                 }
 
                 return;
@@ -237,6 +236,17 @@ internal class FoldersViewModel : NavigatedViewModelBase
     {
         var root = FileSystemItemViewModels.FirstOrDefault(d => d is DeviceViewModel);
         root?.ChildFileSystemItems.InsertItem(_mapper.Map<DriveViewModel>(model));
+    }
+
+    private void OnFreeSpaceChanged(AvailableFreeSpaceInfo freeSpaceInfo)
+    {
+        var root = FileSystemItemViewModels.FirstOrDefault(d => d is DeviceViewModel);
+
+        var driveForUpdate = root?.ChildFileSystemItems.OfType<RemovableDriveViewModel>().FirstOrDefault(d => d.Path.Equals(freeSpaceInfo.DrivePath, StringComparison.OrdinalIgnoreCase));
+        if (driveForUpdate is not null)
+        {
+            driveForUpdate.AvailableFreeSpace = freeSpaceInfo.FreeSpace;
+        }
     }
 
     private void OnFolderVisited(DirectoryModel directoryModel)

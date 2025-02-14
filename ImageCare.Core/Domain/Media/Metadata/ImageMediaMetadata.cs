@@ -1,6 +1,6 @@
 ﻿namespace ImageCare.Core.Domain.Media.Metadata;
 
-public abstract class ImageMediaMetadata : IImageMetadata
+public abstract class ImageMediaMetadata : AllMetadataWrapper, IImageMetadata
 {
     protected ImageMediaMetadata(DateTime creationDateTime, int width, int height)
     {

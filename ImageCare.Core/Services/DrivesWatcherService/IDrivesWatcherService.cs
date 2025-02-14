@@ -8,6 +8,8 @@ public interface IDrivesWatcherService
 
     IObservable<string> DriveUnmounted { get; }
 
+    IObservable<AvailableFreeSpaceInfo> DriveAvailableFreeSpaceChanged { get; }
+
     void StartWatching();
 
     void StopWatching();

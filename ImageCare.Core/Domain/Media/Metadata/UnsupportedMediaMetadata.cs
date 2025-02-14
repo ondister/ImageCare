@@ -1,6 +1,6 @@
 ﻿namespace ImageCare.Core.Domain.Media.Metadata;
 
-public sealed class UnsupportedMediaMetadata : IMediaMetadata
+public sealed class UnsupportedMediaMetadata :AllMetadataWrapper, IMediaMetadata
 {
     /// <inheritdoc />
     public int Width { get; } = 0;

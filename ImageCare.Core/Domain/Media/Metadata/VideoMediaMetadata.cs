@@ -1,6 +1,6 @@
 ﻿namespace ImageCare.Core.Domain.Media.Metadata;
 
-public class VideoMediaMetadata : IVideoMetadata
+public class VideoMediaMetadata : AllMetadataWrapper, IVideoMetadata
 {
     public VideoMediaMetadata(DateTime creationDateTime, int width, int height)
     {

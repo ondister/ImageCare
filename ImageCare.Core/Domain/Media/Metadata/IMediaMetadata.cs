@@ -8,7 +8,9 @@ public interface IMediaMetadata
 
     DateTime CreationDateTime { get; }
 
-    public ExifOrientation Orientation { get; internal set; }
+    ExifOrientation Orientation { get; internal set; }
+
+    IReadOnlyDictionary<string, string> AllMetadata { get;}
 
     string GetString();
 }

@@ -5,6 +5,7 @@
     <Thickness x:Key="MarginAll.Small">2</Thickness>
     <Thickness x:Key="MarginBottom.Small">0,0,0,2</Thickness>
     <Thickness x:Key="MarginHorizontal.Small">2,0,2,0</Thickness>
+    <Thickness x:Key="MarginVertical.Small">0,2,0,2</Thickness>
 
     <Thickness x:Key="MarginAll.Medium">4</Thickness>
     <Thickness x:Key="MarginTop.Medium">0,4,0,0</Thickness>
@@ -14,4 +15,6 @@
 
     <system:Double x:Key="Icon.Size.Small">16</system:Double>
     <system:Double x:Key="Icon.Size.Giant">100</system:Double>
+
+    <system:Double x:Key="Font.Size.Small">12</system:Double>
 </ResourceDictionary>

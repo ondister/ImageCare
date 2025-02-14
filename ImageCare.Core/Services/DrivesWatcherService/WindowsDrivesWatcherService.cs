@@ -1,6 +1,7 @@
 ﻿using System.Management;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
+
 using ImageCare.Core.Domain.Folders;
 using ImageCare.Core.Services.FolderService;
 
@@ -14,6 +15,9 @@ public sealed class WindowsDrivesWatcherService : IDrivesWatcherService, IDispos
 
     private readonly Subject<DriveModel> _driveMountedSubject;
     private readonly Subject<string> _driveUnmountedSubject;
+    private readonly Subject<AvailableFreeSpaceInfo> _driveFreeSpaceSubject;
+
+    private CancellationTokenSource _cancellationTokenSource;
 
     public WindowsDrivesWatcherService(IFolderService folderService)
     {
@@ -22,11 +26,14 @@ public sealed class WindowsDrivesWatcherService : IDrivesWatcherService, IDispos
 
         _driveMountedSubject = new Subject<DriveModel>();
         _driveUnmountedSubject = new Subject<string>();
+        _driveFreeSpaceSubject = new Subject<AvailableFreeSpaceInfo>();
 
         _watcher = new ManagementEventWatcher();
         var query = new WqlEventQuery("SELECT * FROM Win32_VolumeChangeEvent WHERE EventType = 2 OR EventType = 3");
         _watcher.EventArrived += OnEventArrived;
         _watcher.Query = query;
+
+        _cancellationTokenSource = new CancellationTokenSource();
     }
 
     /// <inheritdoc />
@@ -36,6 +43,9 @@ public sealed class WindowsDrivesWatcherService : IDrivesWatcherService, IDispos
     public IObservable<string> DriveUnmounted => _driveUnmountedSubject.AsObservable();
 
     /// <inheritdoc />
+    public IObservable<AvailableFreeSpaceInfo> DriveAvailableFreeSpaceChanged => _driveFreeSpaceSubject.AsObservable();
+
+    /// <inheritdoc />
     public void Dispose()
     {
         _watcher.Stop();
@@ -43,18 +53,23 @@ public sealed class WindowsDrivesWatcherService : IDrivesWatcherService, IDispos
 
         _driveMountedSubject.Dispose();
         _driveUnmountedSubject.Dispose();
+        _driveFreeSpaceSubject.Dispose();
     }
 
     /// <inheritdoc />
     public void StartWatching()
     {
         _watcher.Start();
+        _cancellationTokenSource ??= new CancellationTokenSource();
+        StartWatchingFreeSpaceAsync(_cancellationTokenSource.Token);
     }
 
     /// <inheritdoc />
     public void StopWatching()
     {
         _watcher.Stop();
+
+        _cancellationTokenSource?.Cancel();
     }
 
     private void OnEventArrived(object sender, EventArrivedEventArgs eventArgs)
@@ -107,6 +122,20 @@ public sealed class WindowsDrivesWatcherService : IDrivesWatcherService, IDispos
         if (affectedDriveInfo == null)
         {
             _driveUnmountedSubject.OnNext($"{driveName}\\");
+        }
+    }
+
+    private async Task StartWatchingFreeSpaceAsync(CancellationToken token)
+    {
+        while (!token.IsCancellationRequested)
+        {
+            var drives = DriveInfo.GetDrives().Where(d => d is { DriveType: DriveType.Removable, IsReady: true });
+            foreach (var drive in drives)
+            {
+                _driveFreeSpaceSubject.OnNext(new AvailableFreeSpaceInfo(drive.RootDirectory.FullName, drive.AvailableFreeSpace));
+            }
+
+            await Task.Delay(TimeSpan.FromSeconds(5), token);
         }
     }
 }

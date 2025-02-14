@@ -59,7 +59,11 @@ internal sealed class ApplicationMapper
 
                 cfg.CreateMap<RemovableDriveModel, RemovableDriveViewModel>()
                    .IncludeBase<DriveModel, DriveViewModel>()
-                   .ConstructUsing(src => new RemovableDriveViewModel(src.Name, src.Path, src.DirectoryModels.Select(m => _mapper.Map(m, m.GetType(), typeof(DirectoryViewModel)) as DirectoryViewModel), serviceLocator.Resolve<IFolderService>(), _mapper, serviceLocator.Resolve<ILogger>()));
+                   .ForMember(dst => dst.AvailableFreeSpace, opt => opt.Ignore())
+                   .ForMember(dst => dst.TotalSize, opt => opt.Ignore())
+                   .ForMember(dst => dst.SpaceInfo, opt => opt.Ignore())
+                   .ForMember(dst => dst.SpacePercentage, opt => opt.Ignore())
+                   .ConstructUsing(src => new RemovableDriveViewModel(src.Name, src.Path,src.TotalSize,src.AvailableFreeSpace, src.DirectoryModels.Select(m => _mapper.Map(m, m.GetType(), typeof(DirectoryViewModel)) as DirectoryViewModel), serviceLocator.Resolve<IFolderService>(), _mapper, serviceLocator.Resolve<ILogger>()));
 
                 cfg.CreateMap<DirectoryViewModel, DirectoryModel>()
                    .ForMember(dst => dst.DirectoryModels, opt => opt.Ignore())

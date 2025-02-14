@@ -67,6 +67,18 @@
                                                     Margin="{StaticResource MarginHorizontal.Small}" />
                         <TextBlock Text="{Binding Name}"
                                    Margin="{StaticResource MarginHorizontal.Small}" />
+                        <StackPanel Orientation="Vertical">
+                            <ProgressBar
+                                Width="40"
+                                Maximum="100"
+                                Minimum="0"
+                                HorizontalAlignment="Left"
+                                Value="{Binding SpacePercentage}" />
+                            <TextBlock Text="{Binding SpaceInfo}"
+                                       HorizontalAlignment="Right"
+                                       FontSize="{StaticResource Font.Size.Small}"
+                                       Margin="{StaticResource MarginVertical.Small}" />
+                        </StackPanel>
                     </StackPanel>
                 </TreeDataTemplate>
                 <TreeDataTemplate x:DataType="domain:DirectoryViewModel" ItemsSource="{Binding ChildFileSystemItems}">
@@ -111,7 +123,7 @@
                                                            Margin="{StaticResource MarginHorizontal.Small}"
                                                            IsVisible="{Binding IsLoaded}" />
                         <ContentPresenter Content="{Binding}"
-                                          Classes.IsEditing="{Binding IsEditing}" 
+                                          Classes.IsEditing="{Binding IsEditing}"
                                           Classes.IsNotEditing="{Binding !IsEditing}"
                                           Margin="{StaticResource MarginHorizontal.Small}">
 
@@ -123,14 +135,13 @@
                                 <!-- Display Template -->
                                 <DataTemplate x:Key="DisplayTemplate"
                                               x:DataType="domain:DirectoryViewModel">
-                                    <TextBlock Text="{Binding Name}"/>
+                                    <TextBlock Text="{Binding Name}" />
                                 </DataTemplate>
 
                                 <!-- Edit Template -->
                                 <DataTemplate x:Key="EditTemplate"
                                               x:DataType="domain:DirectoryViewModel">
-                                    <TextBox Text="{Binding EditableName, UpdateSourceTrigger=PropertyChanged}"
-                                             >
+                                    <TextBox Text="{Binding EditableName, UpdateSourceTrigger=PropertyChanged}">
                                         <Interaction.Behaviors>
                                             <EventTriggerBehavior EventName="LostFocus">
                                                 <InvokeCommandAction Command="{Binding NameTextBoxLostFocusCommand}" />
@@ -148,7 +159,7 @@
                                     <Setter Property="ContentTemplate" Value="{StaticResource EditTemplate}" />
                                 </Style>
                             </ContentPresenter.Styles>
-                            </ContentPresenter>
+                        </ContentPresenter>
 
                     </StackPanel>
                 </TreeDataTemplate>

@@ -4,6 +4,8 @@ using MetadataExtractor;
 using MetadataExtractor.Formats.Exif;
 using MetadataExtractor.Formats.Jpeg;
 
+using Directory = MetadataExtractor.Directory;
+
 namespace ImageCare.Core.Domain.Media;
 
 internal sealed class JpegMediaPreviewProvider : IMediaPreviewProvider
@@ -30,12 +32,16 @@ internal sealed class JpegMediaPreviewProvider : IMediaPreviewProvider
             jpegMediaMetadata.Aperture = exifDirectory.GetDescription(ExifDirectoryBase.TagFNumber);
             jpegMediaMetadata.ShutterSpeed = exifDirectory.GetDescription(ExifDirectoryBase.TagExposureTime);
 
+            FillAllMetaData(exifDirectory,jpegMediaMetadata);
+
             if (directories.FirstOrDefault(d => d.Name.Equals("Exif IFD0", StringComparison.OrdinalIgnoreCase)) is { } ifd0Directory)
             {
                 if (ifd0Directory.TryGetInt32(ExifDirectoryBase.TagOrientation, out var orientationInt))
                 {
                     jpegMediaMetadata.Orientation = (ExifOrientation)orientationInt;
                 }
+
+                FillAllMetaData(ifd0Directory, jpegMediaMetadata);
             }
 
             return jpegMediaMetadata;
@@ -48,5 +54,13 @@ internal sealed class JpegMediaPreviewProvider : IMediaPreviewProvider
     public Stream GetPreviewJpegStream(string url, MediaPreviewSize size)
     {
         return File.OpenRead(url);
+    }
+
+    private void FillAllMetaData(Directory metadataDirectory, AllMetadataWrapper mediaMetadata)
+    {
+        foreach (var metadata in metadataDirectory.Tags.Where(t => !string.IsNullOrEmpty(t.Description)))
+        {
+            mediaMetadata.AddOrUpdateMetadata(metadata.Name, metadata.Description);
+        }
     }
 }
