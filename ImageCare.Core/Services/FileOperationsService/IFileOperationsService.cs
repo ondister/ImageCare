@@ -20,4 +20,6 @@ public interface IFileOperationsService
 
     void OpenInExternalProcess(MediaPreview mediaPreview, string pathToExecutable);
 
+    MediaPreview? GetLastSelectedMediaPreview();
+
 }

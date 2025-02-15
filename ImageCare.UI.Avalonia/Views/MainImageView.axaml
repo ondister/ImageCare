@@ -4,6 +4,7 @@
              xmlns:viewModels="clr-namespace:ImageCare.UI.Avalonia.ViewModels"
              xmlns:u="https://irihi.tech/ursa"
              xmlns:iconPacks="https://github.com/MahApps/IconPacks.Avalonia"
+             xmlns:views="clr-namespace:ImageCare.UI.Avalonia.Views"
              x:Class="ImageCare.UI.Avalonia.Views.MainImageView"
              prism:ViewModelLocator.AutoWireViewModel="True"
              x:DataType="viewModels:MainImageViewModel"
@@ -11,15 +12,16 @@
              ResetMatrixCommand="{Binding ResetMatrixCommand, Mode=OneWayToSource}">
 
     <Grid Margin="{StaticResource MarginAll.Small}"
-          ColumnDefinitions="*,Auto">
-        <LayoutTransformControl   Grid.Column="0"
-                                  Grid.ColumnSpan="2">
+          RowDefinitions="*,Auto">
+
+        <LayoutTransformControl Grid.Row="0"
+                                Grid.RowSpan="2">
             <LayoutTransformControl.LayoutTransform>
                 <RotateTransform Angle="{Binding RotationAngle}" />
             </LayoutTransformControl.LayoutTransform>
 
             <ZoomBorder x:Name="ZoomBorder"
-                  
+
                         Stretch="Uniform"
                         ZoomSpeed="1.1"
                         EnableConstrains="True"
@@ -38,10 +40,32 @@
 
         </LayoutTransformControl>
 
-        <Grid Grid.Column="1"
-              RowDefinitions="*,Auto, Auto"
+
+        <Grid Grid.Row="1"
+              ColumnDefinitions="Auto,*, Auto"
               Margin="{StaticResource MarginAll.Small}">
-            <u:IconButton Grid.Row="1"
+
+            <u:IconButton Grid.Column="0"
+                          Margin="{StaticResource MarginAll.Small}"
+                          Theme="{DynamicResource SolidIconButton}"
+                          IsEnabled="{Binding !!MainBitmap}">
+                <u:IconButton.Icon>
+                    <iconPacks:PackIconLucide Kind="List"
+                                              Height="{StaticResource Icon.Size.Small}"
+                                              Width="{StaticResource Icon.Size.Small}" />
+                </u:IconButton.Icon>
+
+                <Button.Flyout>
+                    <Flyout Placement="TopEdgeAlignedLeft">
+                        <Flyout.Content>
+                            <views:MetadataView />
+                        </Flyout.Content>
+                    </Flyout>
+                </Button.Flyout>
+
+            </u:IconButton>
+
+            <u:IconButton Grid.Column="2"
                           Margin="{StaticResource MarginAll.Small}"
                           Theme="{DynamicResource SolidIconButton}"
                           IsEnabled="{Binding !!MainBitmap}"

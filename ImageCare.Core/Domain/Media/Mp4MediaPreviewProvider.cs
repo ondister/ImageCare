@@ -3,6 +3,8 @@ using ImageCare.Core.Domain.Preview;
 using MetadataExtractor;
 using MetadataExtractor.Formats.QuickTime;
 
+using Directory = MetadataExtractor.Directory;
+
 namespace ImageCare.Core.Domain.Media;
 
 internal sealed class Mp4MediaPreviewProvider : IMediaPreviewProvider
@@ -22,6 +24,7 @@ internal sealed class Mp4MediaPreviewProvider : IMediaPreviewProvider
              && trackMetadataDirectory.TryGetInt32(QuickTimeTrackHeaderDirectory.TagHeight, out var height))
             {
                 var videoMediaMetadata = new VideoMediaMetadata(dateTime, width, height);
+                FillAllMetaData(trackMetadataDirectory,videoMediaMetadata);
 
                 if (directories.FirstOrDefault(d => d.Name.Equals("QuickTime Movie Header", StringComparison.OrdinalIgnoreCase)) is { } trackMovieDirectory)
                 {
@@ -29,6 +32,8 @@ internal sealed class Mp4MediaPreviewProvider : IMediaPreviewProvider
                     {
                         videoMediaMetadata.Duration = duration;
                     }
+
+                    FillAllMetaData(trackMovieDirectory, videoMediaMetadata);
 
                     return videoMediaMetadata;
                 }
@@ -44,5 +49,13 @@ internal sealed class Mp4MediaPreviewProvider : IMediaPreviewProvider
     public Stream GetPreviewJpegStream(string url, MediaPreviewSize size)
     {
         return File.OpenRead(_unsupportedMediaPreview);
+    }
+
+    private void FillAllMetaData(Directory metadataDirectory, AllMetadataWrapper mediaMetadata)
+    {
+        foreach (var metadata in metadataDirectory.Tags.Where(t => !string.IsNullOrEmpty(t.Description)))
+        {
+            mediaMetadata.AddOrUpdateMetadata(metadata.Name, metadata.Description);
+        }
     }
 }

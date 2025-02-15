@@ -68,6 +68,7 @@ public class App : PrismApplication
     {
         containerRegistry.Register<MainWindow>();
         containerRegistry.Register<MainWindowTitleRightView>();
+        containerRegistry.Register<MetadataView>();
 
         containerRegistry.RegisterForNavigation<FoldersView>();
         containerRegistry.RegisterForNavigation<MainImageView>();

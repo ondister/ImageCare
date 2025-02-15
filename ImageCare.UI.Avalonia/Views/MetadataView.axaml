@@ -1,0 +1,75 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:mvvm="http://prismlibrary.com/"
+             xmlns:domain="clr-namespace:ImageCare.UI.Avalonia.ViewModels.Domain"
+             mc:Ignorable="d"
+             mvvm:ViewModelLocator.AutoWireViewModel="True"
+             x:Class="ImageCare.UI.Avalonia.Views.MetadataView">
+
+        <ListBox ItemsSource="{Binding MetadataList}"
+                 Grid.IsSharedSizeScope="True">
+            <ListBox.Styles>
+                <Style Selector="ListBoxItem">
+                    <Setter Property="Padding" Value="0" />
+                </Style>
+            </ListBox.Styles>
+            <ListBox.Template>
+                <ControlTemplate>
+
+                    <Grid RowDefinitions="Auto,*">
+                        <Grid Grid.Row="0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition SharedSizeGroup="title" />
+                                <ColumnDefinition SharedSizeGroup="description" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0"
+                                       Text="Title" />
+                            <TextBlock Grid.Column="1"
+                                       Text="Description" />
+
+                        </Grid>
+
+                        <ScrollViewer Grid.Row="1">
+                            <ItemsPresenter />
+                        </ScrollViewer>
+
+                    </Grid>
+
+                </ControlTemplate>
+            </ListBox.Template>
+
+            <ListBox.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <VirtualizingStackPanel />
+                </ItemsPanelTemplate>
+            </ListBox.ItemsPanel>
+
+            <ListBox.DataTemplates>
+                <DataTemplate DataType="domain:TagDescriptionViewModel">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition SharedSizeGroup="title" />
+                            <ColumnDefinition SharedSizeGroup="description" />
+                            <ColumnDefinition />
+                        </Grid.ColumnDefinitions>
+                      
+                        <TextBlock Grid.Column="0"
+                                   Text="{Binding Title}" />
+                        <TextBlock Grid.Column="1"
+                                   MaxWidth="400" Text="{Binding Description}" TextWrapping="Wrap" />
+                    </Grid>
+                </DataTemplate>
+            </ListBox.DataTemplates>
+        </ListBox>
+
+
+        <!--Triggers for view loading and unloading. They use for subscribe to the production state changing-->
+    <Interaction.Behaviors>
+        <EventTriggerBehavior EventName="Loaded">
+            <InvokeCommandAction Command="{Binding OnViewLoadedCommand}" />
+        </EventTriggerBehavior>
+    </Interaction.Behaviors>
+
+</UserControl>

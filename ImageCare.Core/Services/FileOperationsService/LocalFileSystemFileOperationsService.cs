@@ -11,6 +11,7 @@ namespace ImageCare.Core.Services.FileOperationsService;
 public sealed class LocalFileSystemFileOperationsService : IFileOperationsService, IDisposable
 {
     private readonly Subject<SelectedMediaPreview> _selectedImagePreviewSubject;
+    private SelectedMediaPreview _lastSelectedMediaPreview;
 
     private readonly ConcurrentDictionary<FileManagerPanel, MediaPreview> _selectedImagePreviews = new();
 
@@ -128,6 +129,8 @@ public sealed class LocalFileSystemFileOperationsService : IFileOperationsServic
     public void SetSelectedPreview(SelectedMediaPreview selectedImagePreview)
     {
         _selectedImagePreviews.AddOrUpdate(selectedImagePreview.FileManagerPanel, _ => selectedImagePreview, (_, _) => selectedImagePreview);
+        _lastSelectedMediaPreview = selectedImagePreview;
+
         _selectedImagePreviewSubject.OnNext(selectedImagePreview);
     }
 
@@ -152,6 +155,12 @@ public sealed class LocalFileSystemFileOperationsService : IFileOperationsServic
         };
 
         Process.Start(processInfo);
+    }
+
+    /// <inheritdoc />
+    public MediaPreview? GetLastSelectedMediaPreview()
+    {
+        return _lastSelectedMediaPreview;
     }
 
     private OperationResult MoveWithProgress(string source, string destination, IProgress<OperationInfo> progress, CancellationToken cancellationToken = default)
