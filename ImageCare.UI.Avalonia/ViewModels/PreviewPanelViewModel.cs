@@ -272,6 +272,8 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase, IDisposable
         {
             ClearPreviewPanel();
 
+            SelectedSorting = SortingBy.DateTimeDescending;
+
             if (directoryModel.Path == string.Empty)
             {
                 return;
@@ -288,8 +290,6 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase, IDisposable
 
                 await AddImagePreviewAsync(previewImage);
             }
-
-            SelectedSorting = SortingBy.DateTimeAscending;
         }
         catch (Exception exception)
         {

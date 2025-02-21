@@ -1,34 +1,28 @@
-using System.Net;
-using System.Runtime.CompilerServices;
+using BlazorPanzoom;
 
 using ImageCare.Visor.Server;
-
-using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Web;
+using System.Net;
 
 var builder = WebApplication.CreateBuilder(args);
 
-if (IpHelper.TryGetLocalIp(out var ipAddress))
+if (IpHelper.TryGetLocalIp(out var addresses))
 {
-    builder.WebHost.ConfigureKestrel(serverOptions =>
-    {
-        serverOptions.Listen(ipAddress, 55150);
-    });
+	foreach (var ipAddress in addresses)
+	{
+		builder.WebHost.ConfigureKestrel(serverOptions =>
+		{
+			serverOptions.Listen(ipAddress, 55150);
+		});
+	}
 }
 
 
 builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
+builder.Services.AddBlazorPanzoomServices();
+builder.WebHost.UseStaticWebAssets();
 
 var app = builder.Build();
-
-if (!app.Environment.IsDevelopment())
-{
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
-    app.UseHsts();
-}
-
-app.UseHttpsRedirection();
 
 app.UseStaticFiles();
 

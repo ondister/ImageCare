@@ -5,24 +5,16 @@ namespace ImageCare.Visor.Server;
 
 public static class IpHelper
 {
-    public static bool TryGetLocalIp(out IPAddress address)
+    public static bool TryGetLocalIp(out IEnumerable<IPAddress> addresses)
     {
-        address = IPAddress.None;
+        addresses = new List<IPAddress>();
 
         var hostName = Dns.GetHostName();
 
         var ipAddresses = Dns.GetHostEntry(hostName).AddressList;
 
-        foreach (var ip in ipAddresses)
-        {
-            if (ip.AddressFamily == AddressFamily.InterNetwork)
-            {
-                address = ip;
+        addresses = ipAddresses.Where(a => a.AddressFamily == AddressFamily.InterNetwork);
 
-                return true;
-            }
-        }
-
-        return false;
+        return addresses.Any();
     }
 }

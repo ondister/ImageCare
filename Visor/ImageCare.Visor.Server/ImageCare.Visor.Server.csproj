@@ -8,4 +8,7 @@
         <OutputPath>..\..\ImageCare.UI.Avalonia\bin\$(Configuration)\net8.0\Visor</OutputPath>
     </PropertyGroup>
 
+    <ItemGroup>
+      <ProjectReference Include="..\BlazorPanzoom\BlazorPanzoom.csproj" />
+    </ItemGroup>
 </Project>

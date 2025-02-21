@@ -3,6 +3,11 @@
   "LastTargetDirectoryPath": "",
   "ApplicationAssociationPairs": [
     {
+      "Name": "LightRoom",
+      "FileExtension": ".cr3",
+      "ApplicationPath": "C:\\Program Files\\Adobe\\Adobe Lightroom Classic\\Lightroom.exe"
+    },
+    {
       "Name": "DPP4",
       "FileExtension": ".cr3",
       "ApplicationPath": "C:\\Program Files\\Canon\\Digital Photo Professional 4\\Dpp4.exe"
@@ -27,12 +32,12 @@
       "FileExtension": ".jpeg",
       "ApplicationPath": "C:\\Program Files\\IrfanView\\i_view64.exe"
     },
-	{
+    {
       "Name": "Total Commander",
       "FileExtension": ".jpg",
       "ApplicationPath": "C:\\Total Commander Extended\\Totalcmd64.exe"
     },
-	{
+    {
       "Name": "Total Commander",
       "FileExtension": ".jpeg",
       "ApplicationPath": "C:\\Total Commander Extended\\Totalcmd64.exe"
@@ -42,7 +47,7 @@
       "FileExtension": ".mp4",
       "ApplicationPath": "C:\\Total Commander Extended\\Soft\\PotPlayer\\PotPlayerMini.exe"
     },
-	{
+    {
       "Name": "Total Commander",
       "FileExtension": ".mp4",
       "ApplicationPath": "C:\\Total Commander Extended\\Totalcmd64.exe"
