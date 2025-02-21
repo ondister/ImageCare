@@ -60,6 +60,11 @@ public sealed class MediaFormat:IEquatable<MediaFormat>
         return _supportedMediaFormats.Keys;
     }
 
+    internal static MediaFormat? GetMediaFormatByExtension(string extension)
+    {
+	    return _supportedMediaFormats.Values.FirstOrDefault(f => f.FileExtensions.Contains(extension));
+    }
+
     internal static MediaFormat Create(FileModel fileModel)
     {
         var fileInfo = new FileInfo(fileModel.FullName);

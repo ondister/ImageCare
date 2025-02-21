@@ -27,10 +27,18 @@
           Margin="{StaticResource MarginAll.Small}">
 
         <Grid Grid.Row="0"
-              ColumnDefinitions="Auto,*"
+              ColumnDefinitions="Auto,Auto,Auto,*"
               Margin="{StaticResource MarginAll.Small}">
 
-            <ComboBox Grid.Column="0"
+            <ToggleButton Grid.Column="0"
+                          Margin="{StaticResource MarginHorizontal.Small}"
+                          IsChecked="{Binding ShowAllPreviews}">
+                <iconPacks:PackIconLucide Kind="Image"
+                                          Height="{StaticResource Icon.Size.Small}"
+                                          Width="{StaticResource Icon.Size.Small}"/>
+            </ToggleButton>
+
+            <ComboBox Grid.Column="1"
                       Margin="{StaticResource MarginHorizontal.Small}"
                       IsVisible="{Binding ImagePreviews.Count}"
                       ItemsSource="{Binding SortingByList}"
@@ -48,6 +56,10 @@
                 </ComboBox.ItemTemplate>
             </ComboBox>
 
+            <TextBlock Grid.Column="2"
+                       Margin="{StaticResource MarginHorizontal.Small}"
+                       VerticalAlignment="Center"
+                       Text="{Binding Statistics}" />
             <ProgressBar Grid.Column="1"
                          Margin="{StaticResource MarginHorizontal.Small}"
                          IsIndeterminate="{Binding PreviewsLoading}"
