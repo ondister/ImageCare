@@ -5,6 +5,7 @@
              xmlns:u="https://irihi.tech/ursa"
              xmlns:iconPacks="https://github.com/MahApps/IconPacks.Avalonia"
              xmlns:views="clr-namespace:ImageCare.UI.Avalonia.Views"
+             xmlns:avalonia="clr-namespace:Mapsui.UI.Avalonia;assembly=Mapsui.UI.Avalonia"
              x:Class="ImageCare.UI.Avalonia.Views.MainImageView"
              prism:ViewModelLocator.AutoWireViewModel="True"
              x:DataType="viewModels:MainImageViewModel"
@@ -15,7 +16,8 @@
           RowDefinitions="*,Auto">
 
         <LayoutTransformControl Grid.Row="0"
-                                Grid.RowSpan="2">
+                                Grid.RowSpan="2"
+                                IsVisible="{Binding !MapIsEnabled}">
             <LayoutTransformControl.LayoutTransform>
                 <RotateTransform Angle="{Binding RotationAngle}" />
             </LayoutTransformControl.LayoutTransform>
@@ -40,42 +42,89 @@
 
         </LayoutTransformControl>
 
+        <Grid Grid.Row="0"
+              Grid.RowSpan="2"
+              IsVisible="{Binding MapIsEnabled}">
+
+            <avalonia:MapControl x:Name="OsmMapControl" />
+            <StackPanel Margin="{StaticResource MarginAll.ExtraLarge}"
+                        Orientation="Horizontal"
+                        VerticalAlignment="Bottom"
+                        HorizontalAlignment="Right">
+
+                <TextBlock Margin="{StaticResource MarginHorizontal.Small}"
+                           Foreground="{DynamicResource SemiBlue5}"
+                           FontWeight="Bold"
+                           VerticalAlignment="Center"
+                           Text="{Binding Location}" />
+
+                <u:IconButton Margin="{StaticResource MarginHorizontal.Small}"
+                              Theme="{DynamicResource SolidIconButton}"
+                              Command="{Binding CopyLocationToClipboardCommand}">
+                    <u:IconButton.Icon>
+                        <iconPacks:PackIconLucide Kind="ClipboardCopy"
+                                                  Height="{StaticResource Icon.Size.Small}"
+                                                  Width="{StaticResource Icon.Size.Small}" />
+                    </u:IconButton.Icon>
+                    </u:IconButton>
+            </StackPanel>
+
+        </Grid>
+
 
         <Grid Grid.Row="1"
-              ColumnDefinitions="Auto,*, Auto"
               Margin="{StaticResource MarginAll.Small}">
 
-            <u:IconButton Grid.Column="0"
-                          Margin="{StaticResource MarginAll.Small}"
-                          Theme="{DynamicResource SolidIconButton}"
-                          IsEnabled="{Binding !!MainBitmap}">
-                <u:IconButton.Icon>
-                    <iconPacks:PackIconLucide Kind="List"
+            <Grid RowDefinitions="Auto,Auto"
+                  ColumnDefinitions="Auto,*,Auto">
+
+                <ToggleButton Grid.Row="0"
+                              Grid.Column="0"
+                              Margin="{StaticResource MarginHorizontal.Small}"
+                              IsChecked="{Binding MapIsEnabled}"
+                              IsVisible="{Binding HasLocation}">
+                    <iconPacks:PackIconLucide Kind="MapPinned"
                                               Height="{StaticResource Icon.Size.Small}"
                                               Width="{StaticResource Icon.Size.Small}" />
-                </u:IconButton.Icon>
+                </ToggleButton>
 
-                <Button.Flyout>
-                    <Flyout Placement="TopEdgeAlignedLeft">
-                        <Flyout.Content>
-                            <views:MetadataView />
-                        </Flyout.Content>
-                    </Flyout>
-                </Button.Flyout>
+                <u:IconButton Grid.Row="1"
+                              Grid.Column="0"
+                              Margin="{StaticResource MarginAll.Small}"
+                              Theme="{DynamicResource SolidIconButton}"
+                              IsEnabled="{Binding !!MainBitmap}">
+                    <u:IconButton.Icon>
+                        <iconPacks:PackIconLucide Kind="List"
+                                                  Height="{StaticResource Icon.Size.Small}"
+                                                  Width="{StaticResource Icon.Size.Small}" />
+                    </u:IconButton.Icon>
 
-            </u:IconButton>
+                    <Button.Flyout>
+                        <Flyout Placement="TopEdgeAlignedLeft">
+                            <Flyout.Content>
+                                <views:MetadataView />
+                            </Flyout.Content>
+                        </Flyout>
+                    </Button.Flyout>
 
-            <u:IconButton Grid.Column="2"
-                          Margin="{StaticResource MarginAll.Small}"
-                          Theme="{DynamicResource SolidIconButton}"
-                          IsEnabled="{Binding !!MainBitmap}"
-                          Command="{Binding ElementName=This, Path=ResetMatrixCommand}">
-                <u:IconButton.Icon>
-                    <iconPacks:PackIconLucide Kind="Scaling"
-                                              Height="{StaticResource Icon.Size.Small}"
-                                              Width="{StaticResource Icon.Size.Small}" />
-                </u:IconButton.Icon>
-            </u:IconButton>
+                </u:IconButton>
+
+                <u:IconButton Grid.Row="1"
+                              Grid.Column="2"
+                              Margin="{StaticResource MarginAll.Small}"
+                              Theme="{DynamicResource SolidIconButton}"
+                              IsEnabled="{Binding !!MainBitmap}"
+                              IsVisible="{Binding !MapIsEnabled}"
+                              Command="{Binding ElementName=This, Path=ResetMatrixCommand}">
+                    <u:IconButton.Icon>
+                        <iconPacks:PackIconLucide Kind="Scaling"
+                                                  Height="{StaticResource Icon.Size.Small}"
+                                                  Width="{StaticResource Icon.Size.Small}" />
+                    </u:IconButton.Icon>
+                </u:IconButton>
+
+            </Grid>
+
         </Grid>
 
     </Grid>

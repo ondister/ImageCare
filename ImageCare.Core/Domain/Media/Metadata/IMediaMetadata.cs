@@ -1,4 +1,6 @@
-﻿namespace ImageCare.Core.Domain.Media.Metadata;
+﻿using System.Data.Common;
+
+namespace ImageCare.Core.Domain.Media.Metadata;
 
 public interface IMediaMetadata
 {
@@ -13,4 +15,6 @@ public interface IMediaMetadata
     IReadOnlyDictionary<string, string> AllMetadata { get;}
 
     string GetString();
+
+    Location Location { get;}
 }

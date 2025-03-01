@@ -139,6 +139,7 @@ internal sealed class ApplicationMapper
                    .ForMember(dst => dst.RotateAngle, opt => opt.Ignore())
                    .ForMember(dst => dst.OpenWithViewModels, opt => opt.Ignore())
                    .ForMember(dst => dst.UseOpenWith, opt => opt.Ignore())
+                   .ForMember(dst=>dst.HasLocation,opt=>opt.Ignore())
                    .ConstructUsing(
                        src => new MediaPreviewViewModel(
                            src.Title,

@@ -27,7 +27,7 @@
           Margin="{StaticResource MarginAll.Small}">
 
         <Grid Grid.Row="0"
-              ColumnDefinitions="Auto,Auto,Auto,*"
+              ColumnDefinitions="Auto,Auto,Auto,*,Auto"
               Margin="{StaticResource MarginAll.Small}">
 
             <ToggleButton Grid.Column="0"
@@ -60,9 +60,14 @@
                        Margin="{StaticResource MarginHorizontal.Small}"
                        VerticalAlignment="Center"
                        Text="{Binding Statistics}" />
-            <ProgressBar Grid.Column="1"
+            <ProgressBar Grid.Column="4"
+                         HorizontalAlignment="Right"
                          Margin="{StaticResource MarginHorizontal.Small}"
-                         IsIndeterminate="{Binding PreviewsLoading}"
+                         IsIndeterminate="false"
+                         MinWidth="200"
+                         Minimum="0"
+                         Maximum="100"
+                         Value="{Binding LoadingProgressValue}"
                          IsVisible="{Binding PreviewsLoading}" />
         </Grid>
 
@@ -165,7 +170,13 @@
 
                                 </MenuItem>
                             </Menu>
-
+                            <iconPacks:PackIconMaterial Grid.Row="0"
+                                                        Grid.Column="0"
+                                                        IsVisible="{Binding HasLocation}"
+                                                        Margin="{StaticResource MarginAll.Large}"
+                                                        Kind="SatelliteVariant"
+                                                        Height="{StaticResource Icon.Size.Small}"
+                                                        Width="{StaticResource Icon.Size.Small}" />
                         </Grid>
 
                         <TextBlock Grid.Row="2"

@@ -31,4 +31,7 @@ public abstract class ImageMediaMetadata : AllMetadataWrapper, IImageMetadata
     public int? Iso { get; internal set; }
 
     public abstract string GetString();
+
+    /// <inheritdoc />
+    public Location Location { get; internal set; } = Location.Empty;
 }

@@ -3,7 +3,10 @@ using System.Windows.Input;
 using Avalonia;
 using Avalonia.Controls;
 
+using ImageCare.UI.Avalonia.Controls;
+
 using Prism.Commands;
+using Prism.Ioc;
 
 namespace ImageCare.UI.Avalonia.Views;
 
@@ -11,11 +14,16 @@ public partial class MainImageView : UserControl
 {
     public static readonly StyledProperty<ICommand> ResetMatrixCommandProperty = AvaloniaProperty.Register<MainImageView, ICommand>(nameof(ResetMatrixCommand));
 
-    public MainImageView()
+    public MainImageView(IContainerProvider containerProvider)
     {
         InitializeComponent();
 
         ResetMatrixCommand = new DelegateCommand(ResetMatrix);
+
+        var mapMediator = containerProvider.Resolve<MapControlMediator>();
+        mapMediator.SetMapControl(OsmMapControl);
+
+
     }
 
     public ICommand ResetMatrixCommand

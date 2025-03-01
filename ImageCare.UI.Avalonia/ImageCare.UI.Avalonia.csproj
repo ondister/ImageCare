@@ -17,7 +17,15 @@
   </ItemGroup>
 
   <ItemGroup>
+    <AvaloniaResource Remove="Assets\birdPoint.png" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Content Include="Assets\imagecare-logo.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Assets\birdPoint.png" />
   </ItemGroup>
 
   <ItemGroup>
@@ -41,6 +49,7 @@
     <PackageReference Include="Irihi.Ursa" Version="1.7.0" />
     <PackageReference Include="Irihi.Ursa.Themes.Semi" Version="1.7.0" />
     <PackageReference Include="LibMpv.Avalonia" Version="1.0.0" />
+    <PackageReference Include="Mapsui.Avalonia" Version="4.1.8" />
     <PackageReference Include="Prism.Avalonia" Version="8.1.97.11073" />
     <PackageReference Include="Prism.DryIoc.Avalonia" Version="8.1.97.11073" />
     <PackageReference Include="Semi.Avalonia" Version="11.2.1.3" />

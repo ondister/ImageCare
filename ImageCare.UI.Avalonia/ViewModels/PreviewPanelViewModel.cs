@@ -53,6 +53,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase, IDisposable
 	private SortingBy _selectedSorting;
 	private bool _showAllPreviews = true;
 	private string? _statistics;
+	private double _loadingProgressValue;
 
 	public PreviewPanelViewModel(IFileSystemImageService imageService,
 	                             IFolderService folderService,
@@ -140,6 +141,12 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase, IDisposable
 	{
 		get => _showAllPreviews;
 		set => SetProperty(ref _showAllPreviews, value);
+	}
+
+	public double LoadingProgressValue
+	{
+		get => _loadingProgressValue;
+		set => SetProperty(ref _loadingProgressValue, value);
 	}
 
 	public ICommand CopyImagePreviewCommand { get; }
@@ -281,7 +288,9 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase, IDisposable
 
 	private async Task LoadImagePreviewsAsync(DirectoryModel directoryModel, CancellationToken cancellationToken = default)
 	{
+		LoadingProgressValue = 0;
 		PreviewsLoading = true;
+		var processedPreviews = 0.0;
 
 		try
 		{
@@ -297,8 +306,10 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase, IDisposable
 			if (ShowAllPreviews)
 			{
 				var files = await _folderService.GetFileModelAsync(directoryModel, "*");
+				var fileModels = files.ToList();
+				var filesCount = fileModels.Count();
 
-				await foreach (var previewImage in _imageService.GetMediaPreviewsAsync(files, cancellationToken))
+				await foreach (var previewImage in _imageService.GetMediaPreviewsAsync(fileModels, cancellationToken))
 				{
 					if (cancellationToken.IsCancellationRequested)
 					{
@@ -306,6 +317,9 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase, IDisposable
 					}
 
 					await AddImagePreviewAsync(previewImage);
+					processedPreviews++;
+
+					LoadingProgressValue = Math.Round(processedPreviews / filesCount * 100,0);
 				}
 			}
 		}

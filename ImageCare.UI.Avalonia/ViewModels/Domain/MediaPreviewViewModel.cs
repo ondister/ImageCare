@@ -38,6 +38,8 @@ internal class MediaPreviewViewModel : ViewModelBase, IComparable<MediaPreviewVi
     private string _dateTimeString;
     private double _rotateAngle;
     private bool _useOpenWith;
+    private bool _hasLocation;
+    private IMediaMetadata? _metadata;
 
     public MediaPreviewViewModel(string? title,
                                  string url,
@@ -126,7 +128,21 @@ internal class MediaPreviewViewModel : ViewModelBase, IComparable<MediaPreviewVi
         set => SetProperty(ref _useOpenWith, value);
     }
 
-    public IMediaMetadata Metadata { get; internal set; }
+    public bool HasLocation
+    {
+	    get => _hasLocation;
+	    set => SetProperty(ref _hasLocation, value);
+    }
+
+    public IMediaMetadata? Metadata
+    {
+	    get => _metadata;
+	    internal set
+	    {
+		    SetProperty(ref _metadata, value);
+		    HasLocation = _metadata != null && _metadata.Location != Location.Empty;
+	    } 
+    }
 
     public int CompareTo(MediaPreviewViewModel? other)
     {

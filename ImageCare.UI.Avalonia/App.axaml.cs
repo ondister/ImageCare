@@ -1,6 +1,7 @@
 using System.Threading;
 
 using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 
@@ -15,7 +16,9 @@ using ImageCare.Core.Services.FolderService;
 using ImageCare.Core.Services.NotificationService;
 using ImageCare.Modules.Logging;
 using ImageCare.UI.Avalonia.Behaviors;
+using ImageCare.UI.Avalonia.Controls;
 using ImageCare.UI.Avalonia.Mapping;
+using ImageCare.UI.Avalonia.Services;
 using ImageCare.UI.Avalonia.Views;
 using ImageCare.UI.Common.Desktop.Views;
 
@@ -84,10 +87,15 @@ public class App : PrismApplication
         containerRegistry.RegisterSingleton<INotificationService, LocalNotificationService>();
         containerRegistry.RegisterSingleton<IVisorService, VisorService>();
         containerRegistry.RegisterSingleton<IFileAssociationsService, ConfigurationFileAssociationsService>();
-
+        containerRegistry.RegisterSingleton<IClipboardService>(provider =>
+        {
+	        var topLevel = TopLevel.GetTopLevel(provider.Resolve<MainWindow>());
+	        return new ClipboardService(topLevel);
+        });
 
         containerRegistry.RegisterInstance(new ApplicationMapper(Container).GetMapper());
         containerRegistry.RegisterInstance(SynchronizationContext.Current);
+        containerRegistry.RegisterSingleton<MapControlMediator>();
 
         containerRegistry.Register<IFileSystemWatcherService, LocalFileSystemWatcherService>();
         containerRegistry.Register<IMultiSourcesFileSystemWatcherService, MultiSourcesLocalFileSystemWatcherService>();
