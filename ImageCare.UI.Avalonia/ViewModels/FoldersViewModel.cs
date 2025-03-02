@@ -91,7 +91,7 @@ internal class FoldersViewModel : NavigatedViewModelBase
             _drivesWatcherService.DriveAvailableFreeSpaceChanged.DistinctUntilChanged().Subscribe(OnFreeSpaceChanged),
             _folderService.FolderVisited.Where(folder => folder.FileManagerPanel == FileManagerPanel).Subscribe(OnFolderVisited),
             _folderService.FolderLeft.Where(folder => folder.FileManagerPanel == FileManagerPanel).Subscribe(OnFolderLeft),
-            _multiSourcesFileSystemWatcherService.DirectoryCreated.DistinctUntilChanged(folder => folder.Path).ObserveOn(_synchronizationContext).Subscribe(OnDirectoryCreated),
+            _multiSourcesFileSystemWatcherService.DirectoryCreated.ObserveOn(_synchronizationContext).Subscribe(OnDirectoryCreated),
             _multiSourcesFileSystemWatcherService.DirectoryDeleted.DistinctUntilChanged(folder => folder.Path).ObserveOn(_synchronizationContext).Subscribe(OnDirectoryRemoved),
             _multiSourcesFileSystemWatcherService.DirectoryRenamed.DistinctUntilChanged(folder => folder.NewDirectoryModel.Path).ObserveOn(_synchronizationContext).Subscribe(OnDirectoryRenamed)
         };

@@ -7,7 +7,8 @@
              xmlns:avaloniaProgressRing="clr-namespace:AvaloniaProgressRing;assembly=AvaloniaProgressRing"
              x:Class="ImageCare.UI.Avalonia.Views.FoldersView"
              prism:ViewModelLocator.AutoWireViewModel="True"
-             x:DataType="viewModels:FoldersViewModel">
+             x:DataType="viewModels:FoldersViewModel"
+             x:Name="This">
 
     <UserControl.KeyBindings>
         <KeyBinding Command="{Binding CreateFolderCommand}" Gesture="F7" />
@@ -27,6 +28,7 @@
             </TreeView.Styles>
 
             <TreeView.DataTemplates>
+
                 <TreeDataTemplate DataType="domain:DeviceViewModel" ItemsSource="{Binding ChildFileSystemItems}">
                     <StackPanel Orientation="Horizontal">
                         <iconPacks:PackIconMaterial Kind="DesktopClassic"
@@ -38,6 +40,7 @@
                     </StackPanel>
 
                 </TreeDataTemplate>
+
                 <TreeDataTemplate DataType="domain:FixedDriveViewModel" ItemsSource="{Binding ChildFileSystemItems}">
                     <StackPanel Orientation="Horizontal">
                         <iconPacks:PackIconMaterial Kind="Harddisk"
@@ -48,6 +51,7 @@
                                    Margin="{StaticResource MarginHorizontal.Small}" />
                     </StackPanel>
                 </TreeDataTemplate>
+
                 <TreeDataTemplate DataType="domain:NetworkDriveViewModel" ItemsSource="{Binding ChildFileSystemItems}">
                     <StackPanel Orientation="Horizontal">
                         <iconPacks:PackIconMaterial Kind="FolderNetworkOutline"
@@ -58,6 +62,7 @@
                                    Margin="{StaticResource MarginHorizontal.Small}" />
                     </StackPanel>
                 </TreeDataTemplate>
+
                 <TreeDataTemplate DataType="domain:RemovableDriveViewModel"
                                   ItemsSource="{Binding ChildFileSystemItems}">
                     <StackPanel Orientation="Horizontal">
@@ -81,6 +86,7 @@
                         </StackPanel>
                     </StackPanel>
                 </TreeDataTemplate>
+
                 <TreeDataTemplate x:DataType="domain:DirectoryViewModel" ItemsSource="{Binding ChildFileSystemItems}">
                     <StackPanel Orientation="Horizontal">
                         <iconPacks:PackIconMaterial Kind="FolderOutline"
@@ -135,7 +141,18 @@
                                 <!-- Display Template -->
                                 <DataTemplate x:Key="DisplayTemplate"
                                               x:DataType="domain:DirectoryViewModel">
-                                    <TextBlock Text="{Binding Name}" />
+                                    <TextBlock Text="{Binding Name}">
+                                        <TextBlock.ContextMenu>
+                                            <ContextMenu>
+                                                <MenuItem Header="Create"
+                                                          Command="{Binding DataContext.CreateFolderCommand, ElementName=This}"/>
+                                                <MenuItem Header="Rename"
+                                                          Command="{Binding StartRenameFolderCommand}"/>
+                                                <MenuItem Header="Delete"
+                                                          Command="{Binding DataContext.DeleteFolderCommand, ElementName=This}"/>
+                                            </ContextMenu>
+                                        </TextBlock.ContextMenu>
+                                    </TextBlock>
                                 </DataTemplate>
 
                                 <!-- Edit Template -->
@@ -163,6 +180,7 @@
 
                     </StackPanel>
                 </TreeDataTemplate>
+
             </TreeView.DataTemplates>
 
         </TreeView>

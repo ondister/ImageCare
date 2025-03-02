@@ -17,6 +17,7 @@
     <Thickness x:Key="MarginAll.ExtraLarge">16</Thickness>
 
     <system:Double x:Key="Icon.Size.Small">16</system:Double>
+    <system:Double x:Key="Icon.Size.Medium">24</system:Double>
     <system:Double x:Key="Icon.Size.Giant">100</system:Double>
 
     <system:Double x:Key="Font.Size.Small">12</system:Double>

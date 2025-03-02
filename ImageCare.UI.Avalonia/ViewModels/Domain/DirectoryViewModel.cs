@@ -49,8 +49,11 @@ internal class DirectoryViewModel : ViewModelBase, IComparable<DirectoryViewMode
         ChildFileSystemItems.CollectionChanged += OnChildFileSystemItemsCollectionChanged;
 
         RenameFolderCommand = new DelegateCommand(RenameFolder);
-        NameTextBoxLostFocusCommand = new DelegateCommand(NameTextBoxLostFocus);
+        StartRenameFolderCommand = new DelegateCommand(StartRenameFolder);
+		NameTextBoxLostFocusCommand = new DelegateCommand(NameTextBoxLostFocus);
     }
+
+    public ICommand StartRenameFolderCommand { get;}
 
     public ICommand RenameFolderCommand { get; }
 
@@ -169,8 +172,12 @@ internal class DirectoryViewModel : ViewModelBase, IComparable<DirectoryViewMode
         EditableName = _folderService.RenameFolder(EditableName, Path);
         IsEditing = false;
     }
+    private void StartRenameFolder()
+    {
+	    IsEditing = true;
+    }
 
-    private void NameTextBoxLostFocus()
+	private void NameTextBoxLostFocus()
     {
         RenameFolder();
     }

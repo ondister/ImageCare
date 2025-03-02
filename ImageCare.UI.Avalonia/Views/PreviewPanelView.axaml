@@ -175,8 +175,9 @@
                                                         IsVisible="{Binding HasLocation}"
                                                         Margin="{StaticResource MarginAll.Large}"
                                                         Kind="SatelliteVariant"
-                                                        Height="{StaticResource Icon.Size.Small}"
-                                                        Width="{StaticResource Icon.Size.Small}" />
+                                                        Height="{StaticResource Icon.Size.Medium}"
+                                                        Width="{StaticResource Icon.Size.Medium}"
+                                                        Foreground="{DynamicResource SemiRed2}"/>
                         </Grid>
 
                         <TextBlock Grid.Row="2"
