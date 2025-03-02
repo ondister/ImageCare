@@ -19,11 +19,17 @@ public sealed class LocalFileSystemWatcherService : IFileSystemWatcherService, I
 
     public LocalFileSystemWatcherService()
     {
-        _filesWatcher = new FileSystemWatcher { NotifyFilter = NotifyFilters.FileName };
+        _filesWatcher = new FileSystemWatcher
+        {
+	        NotifyFilter = NotifyFilters.FileName,
+            InternalBufferSize = 65536 // 64 КБ
+		};
+
         _directoriesWatcher = new FileSystemWatcher
         {
             NotifyFilter = NotifyFilters.DirectoryName,
-            IncludeSubdirectories = true
+            InternalBufferSize = 65536, // 64 КБ
+			IncludeSubdirectories = true
         };
 
         _fileCreatedSubject = new Subject<FileModel>();

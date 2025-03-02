@@ -412,7 +412,8 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase, IDisposable
 			var indexToRemove = ImagePreviews.IndexOf(imagePreviewViewModel);
 			_sourceList.Remove(imagePreviewViewModel);
 
-			if (ImagePreviews.Count > indexToRemove)
+			if (ImagePreviews.Count!=0 &&
+			    ImagePreviews.Count > indexToRemove)
 			{
 				_synchronizationContext.Post(d => { SelectedPreview = ImagePreviews[indexToRemove]; }, null);
 			}
