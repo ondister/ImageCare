@@ -11,7 +11,8 @@
              xmlns:converters="clr-namespace:ImageCare.UI.Avalonia.Converters"
              prism:ViewModelLocator.AutoWireViewModel="True"
              x:Class="ImageCare.UI.Avalonia.Views.PreviewPanelView"
-             x:DataType="viewModels:PreviewPanelViewModel">
+             x:DataType="viewModels:PreviewPanelViewModel"
+             FontSize="{StaticResource Font.Size.Small}">
 
     <UserControl.Resources>
         <converters:SortingByToIconKindConverter x:Key="SortingByToIconKindConverter" />
@@ -31,14 +32,16 @@
               Margin="{StaticResource MarginAll.Small}">
 
             <ToggleButton Grid.Column="0"
+                          Classes="Small"
                           Margin="{StaticResource MarginHorizontal.Small}"
                           IsChecked="{Binding ShowAllPreviews}">
                 <iconPacks:PackIconLucide Kind="Image"
-                                          Height="{StaticResource Icon.Size.Small}"
-                                          Width="{StaticResource Icon.Size.Small}"/>
+                                          Height="{StaticResource Icon.Size.Micro}"
+                                          Width="{StaticResource Icon.Size.Micro}"/>
             </ToggleButton>
 
             <ComboBox Grid.Column="1"
+                      Classes="Small"
                       Margin="{StaticResource MarginHorizontal.Small}"
                       IsVisible="{Binding ImagePreviews.Count}"
                       ItemsSource="{Binding SortingByList}"
@@ -49,8 +52,8 @@
                         <Grid ColumnDefinitions="Auto,*">
                             <iconPacks:PackIconLucide
                                 Kind="{Binding Converter={StaticResource SortingByToIconKindConverter}}"
-                                Height="{StaticResource Icon.Size.Small}"
-                                Width="{StaticResource Icon.Size.Small}" />
+                                Height="{StaticResource Icon.Size.Micro}"
+                                Width="{StaticResource Icon.Size.Micro}" />
                         </Grid>
                     </DataTemplate>
                 </ComboBox.ItemTemplate>
@@ -142,8 +145,8 @@
                                           Classes="Danger">
                                 <u:IconButton.Icon>
                                     <iconPacks:PackIconLucide Kind="Trash2"
-                                                              Height="{StaticResource Icon.Size.Small}"
-                                                              Width="{StaticResource Icon.Size.Small}" />
+                                                              Height="{StaticResource Icon.Size.Micro}"
+                                                              Width="{StaticResource Icon.Size.Micro}" />
                                 </u:IconButton.Icon>
                             </u:IconButton>
 
@@ -155,8 +158,8 @@
                                 <MenuItem ItemsSource="{Binding OpenWithViewModels, Mode=OneTime}">
                                     <MenuItem.Header>
                                         <iconPacks:PackIconMaterial Kind="ApplicationExport"
-                                                                    Height="{StaticResource Icon.Size.Small}"
-                                                                    Width="{StaticResource Icon.Size.Small}" />
+                                                                    Height="{StaticResource Icon.Size.Micro}"
+                                                                    Width="{StaticResource Icon.Size.Micro}" />
                                     </MenuItem.Header>
 
                                     <MenuItem.ItemContainerTheme>
