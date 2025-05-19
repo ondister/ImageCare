@@ -13,7 +13,7 @@ public class PreviewsListBox : ListBox
         SelectionChanged += OnSelectionChanged;
     }
 
-    private void OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    private  void OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
         if (SelectedItem == null)
         {
@@ -29,13 +29,13 @@ public class PreviewsListBox : ListBox
 
         container.Focus();
 
-        var scrollViewer = this.FindDescendantOfType<ScrollViewer>();
+        var scrollViewer = this.Parent as ScrollViewer;
         if (scrollViewer == null)
         {
             return;
         }
 
-        var containerPosition = container.TransformToVisual(this)?.Transform(new Point(0, 0));
+        var containerPosition = container.TransformToVisual(scrollViewer)?.Transform(new Point(0, 0));
         if (!containerPosition.HasValue)
         {
             return;

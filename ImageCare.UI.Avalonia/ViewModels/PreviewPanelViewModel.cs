@@ -4,7 +4,6 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
-using System.Reactive.Subjects;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
@@ -12,8 +11,6 @@ using System.Windows.Input;
 using AutoMapper;
 
 using CommunityToolkit.Mvvm.Input;
-
-using DynamicData;
 
 using ImageCare.Core.Domain.Folders;
 using ImageCare.Core.Domain.Media;
@@ -34,6 +31,8 @@ namespace ImageCare.UI.Avalonia.ViewModels;
 
 internal class PreviewPanelViewModel : NavigatedViewModelBase, IDisposable
 {
+	private const int maxItemWidth = 300;
+
 	private readonly IFileSystemImageService _imageService;
 	private readonly IFolderService _folderService;
 	private readonly IFileSystemWatcherService _fileSystemWatcherService;
@@ -42,18 +41,17 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase, IDisposable
 	private readonly IMapper _mapper;
 	private readonly ILogger _logger;
 	private readonly SynchronizationContext _synchronizationContext;
-	private readonly SourceList<MediaPreviewViewModel> _sourceList = new();
-	private Subject<IComparer<MediaPreviewViewModel>> _sortChanged;
-	private ReadOnlyObservableCollection<MediaPreviewViewModel> _imagePreviews;
+	private readonly int _preloadCount = 20;
+	private readonly SemaphoreSlim _loadSemaphore = new(1, 1);
+
+	private readonly object _imagePathsLock = new();
 	private MediaPreviewViewModel? _selectedPreview;
 	private CompositeDisposable _fileSystemWatcherCompositeDisposable;
 
 	private CancellationTokenSource _folderSelectedCancellationTokenSource;
-	private bool _previewsLoading;
-	private SortingBy _selectedSorting;
-	private bool _showAllPreviews = true;
 	private string? _statistics;
-	private double _loadingProgressValue;
+	private List<FileModel> _imagePaths;
+	private CancellationTokenSource _currentScrollCancellation = new();
 
 	public PreviewPanelViewModel(IFileSystemImageService imageService,
 	                             IFolderService folderService,
@@ -79,12 +77,12 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase, IDisposable
 		MoveImagePreviewCommand = new AsyncRelayCommand(MoveImagePreviewAsync);
 		DeleteImagePreviewCommand = new AsyncRelayCommand(DeleteImagePreview);
 
-		SetPreviewsSorting();
+		ImagePreviews = new ObservableCollection<MediaPreviewViewModel>();
 
 		_folderSelectedCancellationTokenSource = new CancellationTokenSource();
 	}
 
-	public ReadOnlyObservableCollection<MediaPreviewViewModel> ImagePreviews => _imagePreviews;
+	public ObservableCollection<MediaPreviewViewModel> ImagePreviews { get; }
 
 	public ImagePreviewDropHandler ImagePreviewDropHandler { get; }
 
@@ -112,41 +110,10 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase, IDisposable
 
 	public string SelectedFolderPath { get; set; }
 
-	public bool PreviewsLoading
-	{
-		get => _previewsLoading;
-		set => SetProperty(ref _previewsLoading, value);
-	}
-
 	public string? Statistics
 	{
 		get => _statistics;
 		set => SetProperty(ref _statistics, value);
-	}
-
-	public IEnumerable<SortingBy> SortingByList { get; private set; }
-
-	public SortingBy SelectedSorting
-	{
-		get => _selectedSorting;
-		set
-		{
-			SetProperty(ref _selectedSorting, value);
-
-			_sortChanged.OnNext(_selectedSorting.GetComparer());
-		}
-	}
-
-	public bool ShowAllPreviews
-	{
-		get => _showAllPreviews;
-		set => SetProperty(ref _showAllPreviews, value);
-	}
-
-	public double LoadingProgressValue
-	{
-		get => _loadingProgressValue;
-		set => SetProperty(ref _loadingProgressValue, value);
 	}
 
 	public ICommand CopyImagePreviewCommand { get; }
@@ -159,8 +126,6 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase, IDisposable
 	public void Dispose()
 	{
 		_fileSystemWatcherCompositeDisposable.Dispose();
-		_sourceList.Dispose();
-		_sortChanged.Dispose();
 		_folderSelectedCancellationTokenSource.Dispose();
 	}
 
@@ -183,6 +148,46 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase, IDisposable
 	public override void OnNavigatedFrom(NavigationContext navigationContext)
 	{
 		_fileSystemWatcherCompositeDisposable.Dispose();
+	}
+
+	internal async Task HandleScroll(double horizontalOffset, double viewportWidth)
+	{
+		_currentScrollCancellation.Cancel();
+		_currentScrollCancellation.Dispose();
+		_currentScrollCancellation = new CancellationTokenSource();
+
+		var token = _currentScrollCancellation.Token;
+
+		try
+		{
+			List<FileModel> currentImagePaths;
+			lock (_imagePathsLock)
+			{
+				currentImagePaths = new List<FileModel>(_imagePaths);
+			}
+
+			var firstVisibleIndex = (int)(horizontalOffset / maxItemWidth);
+			var lastVisibleIndex = (int)((horizontalOffset + viewportWidth) / maxItemWidth);
+
+			for (var i = Math.Max(0, firstVisibleIndex - _preloadCount);
+			     i <= Math.Min(currentImagePaths.Count - 1, lastVisibleIndex + _preloadCount);
+			     i++)
+			{
+				if (token.IsCancellationRequested)
+				{
+					return;
+				}
+
+				if (ImagePreviews.Count <= i || ImagePreviews[i].PreviewBitmap == null)
+				{
+					await LoadImageAsync(i, token);
+				}
+			}
+		}
+		catch (OperationCanceledException)
+		{
+			// Ignored
+		}
 	}
 
 	private async Task CopyImagePreviewAsync()
@@ -267,72 +272,6 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase, IDisposable
 		await SelectedPreview.RemoveImagePreviewAsync();
 	}
 
-	private void SetPreviewsSorting()
-	{
-		SortingByList =
-		[
-			SortingBy.NameDescending,
-			SortingBy.NameAscending,
-			SortingBy.DateTimeDescending,
-			SortingBy.DateTimeAscending
-		];
-
-		_sortChanged = new Subject<IComparer<MediaPreviewViewModel>>();
-		var sort = _sortChanged.AsObservable();
-
-		_sourceList.Connect()
-		           .Sort(sort)
-		           .Bind(out _imagePreviews)
-		           .Subscribe();
-	}
-
-	private async Task LoadImagePreviewsAsync(DirectoryModel directoryModel, CancellationToken cancellationToken = default)
-	{
-		LoadingProgressValue = 0;
-		PreviewsLoading = true;
-		var processedPreviews = 0.0;
-
-		try
-		{
-			ClearPreviewPanel();
-
-			SelectedSorting = SortingBy.DateTimeDescending;
-
-			if (directoryModel.Path == string.Empty)
-			{
-				return;
-			}
-
-			if (ShowAllPreviews)
-			{
-				var files = await _folderService.GetFileModelAsync(directoryModel, "*");
-				var fileModels = files.ToList();
-				var filesCount = fileModels.Count();
-
-				await foreach (var previewImage in _imageService.GetMediaPreviewsAsync(fileModels, cancellationToken))
-				{
-					if (cancellationToken.IsCancellationRequested)
-					{
-						return;
-					}
-
-					await AddImagePreviewAsync(previewImage);
-					processedPreviews++;
-
-					LoadingProgressValue = Math.Round(processedPreviews / filesCount * 100,0);
-				}
-			}
-		}
-		catch (Exception exception)
-		{
-			_logger.Error(exception, $"Unexpected exception during loading image previews from folder: {directoryModel.Path}");
-		}
-		finally
-		{
-			PreviewsLoading = false;
-		}
-	}
-
 	private async Task AddImagePreviewAsync(MediaPreview previewImage)
 	{
 		var mediaPreviewViewModel = _mapper.Map<MediaPreviewViewModel>(previewImage);
@@ -344,13 +283,19 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase, IDisposable
 
 		mediaPreviewViewModel.RotateAngle = mediaPreviewViewModel.Metadata.Orientation.ToRotationAngle();
 
-		_sourceList.Add(mediaPreviewViewModel);
+		_synchronizationContext.Send(d => { ImagePreviews.Add(mediaPreviewViewModel); }, null);
 	}
 
 	private void OnFileCreated(FileModel fileModel)
 	{
 		try
 		{
+			lock (_imagePathsLock)
+			{
+				_imagePaths.Add(fileModel);
+				_imagePaths = _imagePaths.OrderByDescending(f => f.CreatedDateTime).ToList();
+			}
+
 			LoadFolderStatisticsAsync(SelectedFolderPath);
 			CreateImagePreviewFromPathAsync(fileModel.FullName);
 		}
@@ -364,6 +309,11 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase, IDisposable
 	{
 		try
 		{
+			lock (_imagePathsLock)
+			{
+				_imagePaths.Remove(fileModel);
+			}
+
 			LoadFolderStatisticsAsync(SelectedFolderPath);
 			RemoveImagePreviewByPath(fileModel.FullName);
 		}
@@ -377,7 +327,18 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase, IDisposable
 	{
 		try
 		{
+			lock (_imagePathsLock)
+			{
+				_imagePaths.Remove(model.OldFileModel);
+			}
+
 			RemoveImagePreviewByPath(model.OldFileModel.FullName);
+
+			lock (_imagePathsLock)
+			{
+				_imagePaths.Add((FileModel)model.NewFileModel);
+				_imagePaths = _imagePaths.OrderByDescending(f => f.CreatedDateTime).ToList();
+			}
 
 			CreateImagePreviewFromPathAsync(model.NewFileModel.FullName);
 		}
@@ -410,10 +371,9 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase, IDisposable
 		if (imagePreviewViewModel != null)
 		{
 			var indexToRemove = ImagePreviews.IndexOf(imagePreviewViewModel);
-			_sourceList.Remove(imagePreviewViewModel);
+			ImagePreviews.Remove(imagePreviewViewModel);
 
-			if (ImagePreviews.Count!=0 &&
-			    ImagePreviews.Count > indexToRemove)
+			if (ImagePreviews.Count != 0 && ImagePreviews.Count > indexToRemove)
 			{
 				_synchronizationContext.Post(d => { SelectedPreview = ImagePreviews[indexToRemove]; }, null);
 			}
@@ -431,11 +391,29 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase, IDisposable
 		if (selectedFileSystemItem.FileManagerPanel == FileManagerPanel)
 		{
 			_folderSelectedCancellationTokenSource.Cancel();
-
 			_folderSelectedCancellationTokenSource.Dispose();
 			_folderSelectedCancellationTokenSource = new CancellationTokenSource();
 
-			_ = LoadImagePreviewsAsync(selectedFileSystemItem, _folderSelectedCancellationTokenSource.Token);
+			ClearPreviewPanel();
+
+			if (selectedFileSystemItem.Path == string.Empty)
+			{
+				return;
+			}
+
+			_folderService.GetFileModelAsync(selectedFileSystemItem, "*")
+			              .ContinueWith(
+				              task =>
+				              {
+					              lock (_imagePathsLock)
+					              {
+						              _imagePaths = task.Result.ToList();
+					              }
+
+					              LoadInitialImages();
+				              },
+				              TaskScheduler.FromCurrentSynchronizationContext());
+
 			_ = LoadFolderStatisticsAsync(selectedFileSystemItem.Path);
 			SelectedFolderPath = selectedFileSystemItem.Path;
 
@@ -445,7 +423,6 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase, IDisposable
 				{
 					_fileSystemWatcherService.StartWatchingDirectory(SelectedFolderPath);
 				}
-
 				catch (Exception exception)
 				{
 					_logger.Error(exception, $"Unexpected exception during set watching directory {SelectedFolderPath}");
@@ -470,7 +447,8 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase, IDisposable
 
 	private void ClearPreviewPanel()
 	{
-		_sourceList.Clear();
+		_imagePaths?.Clear();
+		ImagePreviews.Clear();
 		SelectedPreview = null;
 		Statistics = string.Empty;
 	}
@@ -480,6 +458,61 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase, IDisposable
 		if (selectedImagePreview.FileManagerPanel != FileManagerPanel)
 		{
 			SelectedPreview = null;
+		}
+	}
+
+	private async void LoadInitialImages()
+	{
+		var initialCount = Math.Min(_preloadCount * 2, _imagePaths.Count);
+
+		for (var i = 0; i < initialCount; i++)
+		{
+			await LoadImageAsync(i);
+		}
+	}
+
+	private async Task LoadImageAsync(int index, CancellationToken token = default)
+	{
+		FileModel imagePath;
+		lock (_imagePathsLock)
+		{
+			if (index >= _imagePaths.Count || index < 0)
+			{
+				return;
+			}
+
+			imagePath = _imagePaths[index];
+		}
+
+		if (ImagePreviews.Count > index && ImagePreviews[index].PreviewBitmap != null)
+		{
+			return;
+		}
+
+		await _loadSemaphore.WaitAsync(token);
+
+		try
+		{
+			token.ThrowIfCancellationRequested();
+
+			var mediaPreview = await _imageService.GetMediaPreviewAsync(imagePath.FullName);
+
+			if (mediaPreview != null)
+			{
+				await AddImagePreviewAsync(mediaPreview);
+			}
+		}
+		catch (OperationCanceledException)
+		{
+			// Ignored
+		}
+		catch (Exception ex)
+		{
+			_logger.Warning($"File {imagePath} is not supported");
+		}
+		finally
+		{
+			_loadSemaphore.Release();
 		}
 	}
 }

@@ -81,7 +81,7 @@ public sealed class FileSystemImageService : IFileSystemImageService
         {
             var fileInfo = new FileInfo(imagePath);
 
-            return await CreateMediaPreviewAsync(new FileModel(fileInfo.Name, fileInfo.FullName));
+            return await CreateMediaPreviewAsync(new FileModel(fileInfo.Name, fileInfo.FullName, fileInfo.LastWriteTime));
         }
         catch (Exception exception)
         {

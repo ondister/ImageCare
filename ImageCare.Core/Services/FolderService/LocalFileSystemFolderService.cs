@@ -79,7 +79,7 @@ public sealed class LocalFileSystemFolderService : IFolderService, IDisposable
 	/// <inheritdoc />
 	public async Task<IEnumerable<FileModel>> GetFileModelAsync(DirectoryModel directoryModel, string searchPattern)
 	{
-		return await Task.Run(async () => await GetFileModelAsync(directoryModel.Path, searchPattern));
+		return await GetFileModelAsync(directoryModel.Path, searchPattern);
 	}
 
 	public async Task<IEnumerable<FileModel>> GetFileModelAsync(string directoryPath, string searchPattern)
@@ -95,7 +95,12 @@ public sealed class LocalFileSystemFolderService : IFolderService, IDisposable
 					       return files;
 				       }
 
-				       files.AddRange(directoryInfo.EnumerateFiles(searchPattern).Select(fileInfo => new FileModel(fileInfo.Name, fileInfo.FullName)));
+				       files.AddRange(
+					       directoryInfo
+						       .EnumerateFiles(searchPattern)
+						       .Select(fileInfo => new FileModel(fileInfo.Name, fileInfo.FullName, fileInfo.LastWriteTime))
+						       .Where(f=>f.CreatedDateTime.HasValue)
+						       .OrderByDescending(f => f.CreatedDateTime.Value));
 
 				       return files;
 			       });

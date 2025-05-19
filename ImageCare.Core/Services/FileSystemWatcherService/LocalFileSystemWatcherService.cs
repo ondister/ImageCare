@@ -118,19 +118,19 @@ public sealed class LocalFileSystemWatcherService : IFileSystemWatcherService, I
         Observable.FromEventPattern<FileSystemEventHandler, FileSystemEventArgs>(
                       h => _filesWatcher.Created += h,
                       h => _filesWatcher.Created -= h)
-                  .Select(e => new FileModel(e.EventArgs.Name, e.EventArgs.FullPath))
+                  .Select(e => new FileModel(e.EventArgs.Name, e.EventArgs.FullPath, null))
                   .Subscribe(_fileCreatedSubject);
 
         Observable.FromEventPattern<FileSystemEventHandler, FileSystemEventArgs>(
                       h => _filesWatcher.Deleted += h,
                       h => _filesWatcher.Deleted -= h)
-                  .Select(e => new FileModel(e.EventArgs.Name, e.EventArgs.FullPath))
+                  .Select(e => new FileModel(e.EventArgs.Name, e.EventArgs.FullPath, null))
                   .Subscribe(_fileDeletedSubject);
 
         Observable.FromEventPattern<RenamedEventHandler, RenamedEventArgs>(
                       h => _filesWatcher.Renamed += h,
                       h => _filesWatcher.Renamed -= h)
-                  .Select(e => new FileRenamedModel(new FileModel(e.EventArgs.OldName, e.EventArgs.OldFullPath), new FileModel(e.EventArgs.Name, e.EventArgs.FullPath)))
+                  .Select(e => new FileRenamedModel(new FileModel(e.EventArgs.OldName, e.EventArgs.OldFullPath, null), new FileModel(e.EventArgs.Name, e.EventArgs.FullPath, null)))
                   .Subscribe(_fileRenamedSubject);
 
         Observable.FromEventPattern<FileSystemEventHandler, FileSystemEventArgs>(

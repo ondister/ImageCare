@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
 
@@ -144,7 +145,7 @@ internal class MediaPreviewViewModel : ViewModelBase, IComparable<MediaPreviewVi
 	    } 
     }
 
-    public int CompareTo(MediaPreviewViewModel? other)
+	public int CompareTo(MediaPreviewViewModel? other)
     {
         if (other == null)
         {

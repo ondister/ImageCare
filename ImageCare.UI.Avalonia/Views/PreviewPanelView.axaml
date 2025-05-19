@@ -8,15 +8,11 @@
              xmlns:u="https://irihi.tech/ursa"
              xmlns:iconPacks="https://github.com/MahApps/IconPacks.Avalonia"
              xmlns:controls="clr-namespace:ImageCare.UI.Avalonia.Controls"
-             xmlns:converters="clr-namespace:ImageCare.UI.Avalonia.Converters"
+             xmlns:behaviors="clr-namespace:ImageCare.UI.Avalonia.Behaviors"
              prism:ViewModelLocator.AutoWireViewModel="True"
              x:Class="ImageCare.UI.Avalonia.Views.PreviewPanelView"
              x:DataType="viewModels:PreviewPanelViewModel"
              FontSize="{StaticResource Font.Size.Small}">
-
-    <UserControl.Resources>
-        <converters:SortingByToIconKindConverter x:Key="SortingByToIconKindConverter" />
-    </UserControl.Resources>
 
     <UserControl.KeyBindings>
         <KeyBinding Command="{Binding CopyImagePreviewCommand}" Gesture="F5" />
@@ -27,56 +23,26 @@
     <Grid RowDefinitions="Auto,*"
           Margin="{StaticResource MarginAll.Small}">
 
+        <!--Статистика сколько отображено из-->
         <Grid Grid.Row="0"
-              ColumnDefinitions="Auto,Auto,Auto,*,Auto"
+              ColumnDefinitions="Auto,Auto,*"
               Margin="{StaticResource MarginAll.Small}">
 
-            <ToggleButton Grid.Column="0"
-                          Classes="Small"
-                          Margin="{StaticResource MarginHorizontal.Small}"
-                          IsChecked="{Binding ShowAllPreviews}">
-                <iconPacks:PackIconLucide Kind="Image"
-                                          Height="{StaticResource Icon.Size.Micro}"
-                                          Width="{StaticResource Icon.Size.Micro}"/>
-            </ToggleButton>
-
-            <ComboBox Grid.Column="1"
-                      Classes="Small"
-                      Margin="{StaticResource MarginHorizontal.Small}"
-                      IsVisible="{Binding ImagePreviews.Count}"
-                      ItemsSource="{Binding SortingByList}"
-                      SelectedItem="{Binding SelectedSorting, Mode=TwoWay}">
-
-                <ComboBox.ItemTemplate>
-                    <DataTemplate DataType="domain:SortingBy">
-                        <Grid ColumnDefinitions="Auto,*">
-                            <iconPacks:PackIconLucide
-                                Kind="{Binding Converter={StaticResource SortingByToIconKindConverter}}"
-                                Height="{StaticResource Icon.Size.Micro}"
-                                Width="{StaticResource Icon.Size.Micro}" />
-                        </Grid>
-                    </DataTemplate>
-                </ComboBox.ItemTemplate>
-            </ComboBox>
-
-            <TextBlock Grid.Column="2"
+            <TextBlock Grid.Column="0"
                        Margin="{StaticResource MarginHorizontal.Small}"
                        VerticalAlignment="Center"
                        Text="{Binding Statistics}" />
-            <ProgressBar Grid.Column="4"
-                         HorizontalAlignment="Right"
-                         Margin="{StaticResource MarginHorizontal.Small}"
-                         IsIndeterminate="false"
-                         MinWidth="200"
-                         Minimum="0"
-                         Maximum="100"
-                         Value="{Binding LoadingProgressValue}"
-                         IsVisible="{Binding PreviewsLoading}" />
+        
         </Grid>
 
-        <controls:PreviewsListBox Grid.Row="1" ItemsSource="{Binding ImagePreviews}"
+        <ScrollViewer Grid.Row="1" 
+                      HorizontalScrollBarVisibility="Auto"
+                      VerticalScrollBarVisibility="Disabled">
+            <Interaction.Behaviors>
+                <behaviors:HorizontalScrollBehavior />
+            </Interaction.Behaviors>
+        <controls:PreviewsListBox  ItemsSource="{Binding ImagePreviews}"
                                   SelectedItem="{Binding SelectedPreview, Mode=TwoWay}"
-                                  ScrollViewer.HorizontalScrollBarVisibility="Auto"
                                   SelectionMode="Single"
                                   DragDrop.AllowDrop="True"
                                   Theme="{StaticResource PreviewsListBox}">
@@ -131,7 +97,7 @@
                                                     VerticalAlignment="Center"
                                                     HorizontalAlignment="Center"
                                                     MaxHeight="{Binding MaxImageHeight}">
-                                <Image Source="{Binding PreviewBitmap}" />
+                                <Image Source="{Binding PreviewBitmap}"/>
                                 <LayoutTransformControl.LayoutTransform>
                                     <RotateTransform Angle="{Binding RotateAngle}" />
                                 </LayoutTransformControl.LayoutTransform>
@@ -199,6 +165,7 @@
                 </DataTemplate>
             </controls:PreviewsListBox.ItemTemplate>
         </controls:PreviewsListBox>
+</ScrollViewer>
 
     </Grid>
 
