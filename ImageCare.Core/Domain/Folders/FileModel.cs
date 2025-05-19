@@ -2,13 +2,40 @@
 
 public sealed class FileModel
 {
-    public FileModel(string? name, string fullName)
-    {
-        Name = name;
-        FullName = fullName;
-    }
+	private DateTime? _createdDateTime;
 
-    public string? Name { get; }
+	public FileModel(string? name, string fullName, DateTime? createdDateTime)
+	{
+		Name = name;
+		FullName = fullName;
+		CreatedDateTime = createdDateTime;
+	}
 
-    public string FullName { get; }
+	public string? Name { get; }
+
+	public string FullName { get; }
+
+	public DateTime? CreatedDateTime
+	{
+		get => _createdDateTime;
+		private set
+		{
+			if (value == null)
+			{
+				try
+				{
+					var fileInfo = new FileInfo(FullName);
+					_createdDateTime = fileInfo.LastWriteTime;
+				}
+				catch (Exception e)
+				{
+					// Ignored
+				}
+			}
+			else
+			{
+				_createdDateTime = value;
+			}
+		}
+	}
 }
