@@ -45,7 +45,7 @@ internal class DirectoryViewModel : ViewModelBase, IComparable<DirectoryViewMode
         Name = name;
         Path = path;
 
-        ChildFileSystemItems = new SortedObservableCollection<DirectoryViewModel>(children);
+        ChildFileSystemItems = new SortedObservableCollection<DirectoryViewModel>(children,null);
         ChildFileSystemItems.CollectionChanged += OnChildFileSystemItemsCollectionChanged;
 
         RenameFolderCommand = new DelegateCommand(RenameFolder);

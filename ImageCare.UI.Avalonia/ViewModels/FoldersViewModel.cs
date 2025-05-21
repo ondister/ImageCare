@@ -54,7 +54,7 @@ internal class FoldersViewModel : NavigatedViewModelBase
         DeleteFolderCommand = new DelegateCommand(DeleteFolder);
         CreateFolderCommand = new DelegateCommand(CreateFolder);
 
-        FileSystemItemViewModels = new SortedObservableCollection<DirectoryViewModel>();
+        FileSystemItemViewModels = new SortedObservableCollection<DirectoryViewModel>(null);
     }
 
     public SortedObservableCollection<DirectoryViewModel> FileSystemItemViewModels { get; }

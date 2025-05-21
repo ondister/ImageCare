@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Linq;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
@@ -20,6 +19,7 @@ using ImageCare.Core.Services.FileSystemImageService;
 using ImageCare.Core.Services.FileSystemWatcherService;
 using ImageCare.Core.Services.FolderService;
 using ImageCare.Core.Services.NotificationService;
+using ImageCare.Mvvm.Collections;
 using ImageCare.UI.Avalonia.Behaviors;
 using ImageCare.UI.Avalonia.ViewModels.Domain;
 
@@ -50,7 +50,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase, IDisposable
 
 	private CancellationTokenSource _folderSelectedCancellationTokenSource;
 	private string? _statistics;
-	private List<FileModel> _imagePaths;
+	private SortedObservableCollection<FileModel> _imagePaths;
 	private CancellationTokenSource _currentScrollCancellation = new();
 
 	public PreviewPanelViewModel(IFileSystemImageService imageService,
@@ -77,12 +77,12 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase, IDisposable
 		MoveImagePreviewCommand = new AsyncRelayCommand(MoveImagePreviewAsync);
 		DeleteImagePreviewCommand = new AsyncRelayCommand(DeleteImagePreview);
 
-		ImagePreviews = new ObservableCollection<MediaPreviewViewModel>();
+		ImagePreviews = new SortedObservableCollection<MediaPreviewViewModel>(new CreationDateTimeDescendingComparer());
 
 		_folderSelectedCancellationTokenSource = new CancellationTokenSource();
 	}
 
-	public ObservableCollection<MediaPreviewViewModel> ImagePreviews { get; }
+	public SortedObservableCollection<MediaPreviewViewModel> ImagePreviews { get; }
 
 	public ImagePreviewDropHandler ImagePreviewDropHandler { get; }
 
@@ -283,7 +283,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase, IDisposable
 
 		mediaPreviewViewModel.RotateAngle = mediaPreviewViewModel.Metadata.Orientation.ToRotationAngle();
 
-		_synchronizationContext.Send(d => { ImagePreviews.Add(mediaPreviewViewModel); }, null);
+		_synchronizationContext.Send(d => { ImagePreviews.InsertItem(mediaPreviewViewModel); }, null);
 	}
 
 	private void OnFileCreated(FileModel fileModel)
@@ -292,8 +292,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase, IDisposable
 		{
 			lock (_imagePathsLock)
 			{
-				_imagePaths.Add(fileModel);
-				_imagePaths = _imagePaths.OrderByDescending(f => f.CreatedDateTime).ToList();
+				_imagePaths.InsertItem(fileModel);
 			}
 
 			LoadFolderStatisticsAsync(SelectedFolderPath);
@@ -336,8 +335,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase, IDisposable
 
 			lock (_imagePathsLock)
 			{
-				_imagePaths.Add((FileModel)model.NewFileModel);
-				_imagePaths = _imagePaths.OrderByDescending(f => f.CreatedDateTime).ToList();
+				_imagePaths.InsertItem(model.NewFileModel);
 			}
 
 			CreateImagePreviewFromPathAsync(model.NewFileModel.FullName);
@@ -407,7 +405,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase, IDisposable
 				              {
 					              lock (_imagePathsLock)
 					              {
-						              _imagePaths = task.Result.ToList();
+						              _imagePaths = new SortedObservableCollection<FileModel>(task.Result, new FileModelCreationDateTimeDescendingComparer());
 					              }
 
 					              LoadInitialImages();

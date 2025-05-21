@@ -4,38 +4,44 @@ namespace ImageCare.Mvvm.Collections;
 
 public class SortedObservableCollection<T> : ObservableCollection<T>
 {
-    public SortedObservableCollection() { }
+	private readonly IComparer<T>? _comparer;
 
-    public SortedObservableCollection(IEnumerable<T> collection)
-    {
-        foreach (var item in collection)
-        {
-            InsertItem(item);
-        }
-    }
+	public SortedObservableCollection(IEnumerable<T> collection, IComparer<T>? comparer)
+	{
+		_comparer = comparer;
+		foreach (var item in collection)
+		{
+			InsertItem(item);
+		}
+	}
 
-    public void InsertItem(T item, IComparer<T>? comparer = null)
-    {
-        var indexToInsert = BinarySearch(Items, 0, Count, item, comparer);
+	public SortedObservableCollection(IComparer<T>? comparer)
+	{
+		_comparer = comparer;
+	}
 
-        if (indexToInsert < 0)
-        {
-            indexToInsert = ~indexToInsert;
-        }
+	public void InsertItem(T item)
+	{
+		var indexToInsert = BinarySearch(Items, 0, Count, item, _comparer);
 
-        Insert(indexToInsert, item);
-    }
+		if (indexToInsert < 0)
+		{
+			indexToInsert = ~indexToInsert;
+		}
 
-    private int BinarySearch<T>(IList<T> items, int index, int count, T item, IComparer<T>? comparer)
-    {
-        try
-        {
-            return Array.BinarySearch(items.ToArray(), index, count, item, comparer);
-        }
-        catch (
-            Exception ex)
-        {
-            return 0;
-        }
-    }
+		Insert(indexToInsert, item);
+	}
+
+	private int BinarySearch<T>(IList<T> items, int index, int count, T item, IComparer<T>? comparer)
+	{
+		try
+		{
+			return Array.BinarySearch(items.ToArray(), index, count, item, comparer);
+		}
+		catch (
+			Exception ex)
+		{
+			return 0;
+		}
+	}
 }
