@@ -1,0 +1,57 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="ImageCare.UI.Avalonia.Views.TimelineView">
+
+
+    <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                  VerticalScrollBarVisibility="Disabled">
+        <ItemsControl ItemsSource="{Binding DateStatViewModels}">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <StackPanel Orientation="Horizontal" Spacing="2"/>
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <Button Command="{Binding $parent[UserControl].DataContext.ColumnClickCommand}"
+                            CommandParameter="{Binding}"
+                            MinHeight="10"
+                            Margin="0,0,0,1"
+                            Width="38"
+                            Padding="0"
+                            Background="Transparent"
+                            Cursor="Hand">
+                        <Button.Styles>
+                            <Style Selector="Button /template/ ContentPresenter">
+                                <Setter Property="Background" Value="Transparent"/>
+                            </Style>
+                            <Style Selector="Button:pointerover /template/ ContentPresenter">
+                                <Setter Property="Background" Value="{DynamicResource SemiBlue0}"/>
+                            </Style>
+                        </Button.Styles>
+                        <Grid Height="40">
+                            <!-- Column -->
+                            <Rectangle Fill="{DynamicResource SemiBlue5}"
+                                       VerticalAlignment="Bottom"
+                                       Height="{Binding NormalizedHeight}"
+                                       Width="36"/>
+                            <!-- Date text -->
+                            <TextBlock Text="{Binding DisplayText}"
+                                       VerticalAlignment="Bottom"
+                                       HorizontalAlignment="Center"
+                                       Margin="0,-10,0,0"
+                                       FontSize="{StaticResource Font.Size.Small}"
+                                       Foreground="{DynamicResource SemiColorText0}"/>
+                        </Grid>
+                        <ToolTip.Tip>
+                            <StackPanel>
+                                <TextBlock Text="{Binding Date, StringFormat='{}{0:dd MMMM yyyy}'}"/>
+                                <TextBlock Text="{Binding Count}"/>
+                            </StackPanel>
+                        </ToolTip.Tip>
+                    </Button>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+    </ScrollViewer>
+</UserControl>

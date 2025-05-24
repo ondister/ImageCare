@@ -80,6 +80,8 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase, IDisposable
 		ImagePreviews = new SortedObservableCollection<MediaPreviewViewModel>(new CreationDateTimeDescendingComparer());
 
 		_folderSelectedCancellationTokenSource = new CancellationTokenSource();
+
+		TimelineVm = new TimelineViewModel(_synchronizationContext);
 	}
 
 	public SortedObservableCollection<MediaPreviewViewModel> ImagePreviews { get; }
@@ -109,6 +111,8 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase, IDisposable
 	}
 
 	public string SelectedFolderPath { get; set; }
+
+	public TimelineViewModel TimelineVm { get; }
 
 	public string? Statistics
 	{
@@ -140,7 +144,8 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase, IDisposable
 			_fileSystemWatcherService.FileDeleted.DistinctUntilChanged(model => model.FullName).Subscribe(OnFileDeleted),
 			_fileSystemWatcherService.FileRenamed.DistinctUntilChanged(model => model.NewFileModel.FullName).Subscribe(OnFileRenamed),
 			_folderService.FileSystemItemSelected.Subscribe(OnFolderSelected),
-			_fileOperationsService.ImagePreviewSelected.Subscribe(OnImagePreviewSelected)
+			_fileOperationsService.ImagePreviewSelected.Subscribe(OnImagePreviewSelected),
+			TimelineVm.DateSelected.Subscribe(OnTimelineDateSelected)
 		};
 	}
 
@@ -283,6 +288,8 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase, IDisposable
 
 		mediaPreviewViewModel.RotateAngle = mediaPreviewViewModel.Metadata.Orientation.ToRotationAngle();
 
+		TimelineVm.AddFile(new FileModel(previewImage.Title, previewImage.Url, metadata.CreationDateTime));
+
 		_synchronizationContext.Send(d => { ImagePreviews.InsertItem(mediaPreviewViewModel); }, null);
 	}
 
@@ -371,6 +378,8 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase, IDisposable
 			var indexToRemove = ImagePreviews.IndexOf(imagePreviewViewModel);
 			ImagePreviews.Remove(imagePreviewViewModel);
 
+			TimelineVm.RemoveFile(new FileModel(imagePreviewViewModel.Title, imagePreviewViewModel.Url, imagePreviewViewModel.Metadata.CreationDateTime));
+
 			if (ImagePreviews.Count != 0 && ImagePreviews.Count > indexToRemove)
 			{
 				_synchronizationContext.Post(d => { SelectedPreview = ImagePreviews[indexToRemove]; }, null);
@@ -409,10 +418,12 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase, IDisposable
 					              }
 
 					              LoadInitialImages();
+					              TimelineVm.AddFiles(task.Result);
 				              },
 				              TaskScheduler.FromCurrentSynchronizationContext());
 
 			_ = LoadFolderStatisticsAsync(selectedFileSystemItem.Path);
+
 			SelectedFolderPath = selectedFileSystemItem.Path;
 
 			if (!string.IsNullOrWhiteSpace(SelectedFolderPath))
@@ -449,6 +460,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase, IDisposable
 		ImagePreviews.Clear();
 		SelectedPreview = null;
 		Statistics = string.Empty;
+		TimelineVm.Clear();
 	}
 
 	private void OnImagePreviewSelected(SelectedMediaPreview selectedImagePreview)
@@ -511,6 +523,35 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase, IDisposable
 		finally
 		{
 			_loadSemaphore.Release();
+		}
+	}
+
+	private async void OnTimelineDateSelected(DateTime dateTime)
+	{
+		try
+		{
+			var imagePathIndexWithDate = _imagePaths.FirstOrDefault(p => p.CreatedDateTime.Value.Date == dateTime.Date);
+
+			if (imagePathIndexWithDate != null)
+			{
+				var index = _imagePaths.IndexOf(imagePathIndexWithDate);
+
+				_currentScrollCancellation.Cancel();
+				_currentScrollCancellation.Dispose();
+				_currentScrollCancellation = new CancellationTokenSource();
+
+				var token = _currentScrollCancellation.Token;
+				await LoadImageAsync(index, token);
+				var imageToSelect = ImagePreviews.FirstOrDefault(p => p.Metadata.CreationDateTime.Date == dateTime.Date);
+				if (imageToSelect != null)
+				{
+					SelectedPreview = imageToSelect;
+				}
+			}
+		}
+		catch (Exception exception)
+		{
+			_logger.Error(exception, "Error on timeline date selected changed");
 		}
 	}
 }

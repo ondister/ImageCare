@@ -9,6 +9,7 @@
              xmlns:iconPacks="https://github.com/MahApps/IconPacks.Avalonia"
              xmlns:controls="clr-namespace:ImageCare.UI.Avalonia.Controls"
              xmlns:behaviors="clr-namespace:ImageCare.UI.Avalonia.Behaviors"
+             xmlns:views="clr-namespace:ImageCare.UI.Avalonia.Views"
              prism:ViewModelLocator.AutoWireViewModel="True"
              x:Class="ImageCare.UI.Avalonia.Views.PreviewPanelView"
              x:DataType="viewModels:PreviewPanelViewModel"
@@ -25,14 +26,17 @@
 
         <!--Статистика сколько отображено из-->
         <Grid Grid.Row="0"
-              ColumnDefinitions="Auto,Auto,*"
+              ColumnDefinitions="Auto,*"
               Margin="{StaticResource MarginAll.Small}">
 
             <TextBlock Grid.Column="0"
                        Margin="{StaticResource MarginHorizontal.Small}"
-                       VerticalAlignment="Center"
-                       Text="{Binding Statistics}" />
-        
+                       VerticalAlignment="Bottom"
+                       Text="{Binding Statistics}"
+                       FontWeight="Bold"/>
+
+            <views:TimelineView Grid.Column="1" 
+                                DataContext="{Binding TimelineVm}"/>
         </Grid>
 
         <ScrollViewer Grid.Row="1" 

@@ -26,8 +26,6 @@ using Prism.DryIoc;
 using Prism.Ioc;
 using Prism.Modularity;
 
-using VisorServer;
-
 namespace ImageCare.UI.Avalonia;
 
 public class App : PrismApplication
@@ -85,7 +83,6 @@ public class App : PrismApplication
         containerRegistry.RegisterSingleton<IDrivesWatcherService, WindowsDrivesWatcherService>();
         containerRegistry.RegisterSingleton<IConfigurationService, JsonConfigurationService>();
         containerRegistry.RegisterSingleton<INotificationService, LocalNotificationService>();
-        containerRegistry.RegisterSingleton<IVisorService, VisorService>();
         containerRegistry.RegisterSingleton<IFileAssociationsService, ConfigurationFileAssociationsService>();
         containerRegistry.RegisterSingleton<IClipboardService>(provider =>
         {
