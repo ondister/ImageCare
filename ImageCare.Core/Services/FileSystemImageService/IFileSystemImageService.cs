@@ -15,4 +15,6 @@ public interface IFileSystemImageService
     Task<MediaPreview?> GetMediaPreviewAsync(string imagePath);
 
     Task<IMediaMetadata> GetMediaMetadataAsync(MediaPreview mediaPreview);
+
+    Task<DateTime> GetCreationDateTime(MediaPreview mediaPreview);
 }

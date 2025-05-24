@@ -1,8 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Reactive.Disposables;
-using System.Reactive.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
@@ -185,7 +186,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase, IDisposable
 
 				if (ImagePreviews.Count <= i || ImagePreviews[i].PreviewBitmap == null)
 				{
-					await LoadImageAsync(i, token);
+					await LoadImageAsync(i, false, token);
 				}
 			}
 		}
@@ -277,7 +278,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase, IDisposable
 		await SelectedPreview.RemoveImagePreviewAsync();
 	}
 
-	private async Task AddImagePreviewAsync(MediaPreview previewImage)
+	private async Task AddImagePreviewAsync(MediaPreview previewImage, bool loadToTimeline)
 	{
 		var mediaPreviewViewModel = _mapper.Map<MediaPreviewViewModel>(previewImage);
 
@@ -288,7 +289,10 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase, IDisposable
 
 		mediaPreviewViewModel.RotateAngle = mediaPreviewViewModel.Metadata.Orientation.ToRotationAngle();
 
-		TimelineVm.AddFile(new FileModel(previewImage.Title, previewImage.Url, metadata.CreationDateTime));
+		if (loadToTimeline)
+		{
+			TimelineVm.AddFile(new FileModel(previewImage.Title, previewImage.Url, metadata.CreationDateTime));
+		}
 
 		_synchronizationContext.Send(d => { ImagePreviews.InsertItem(mediaPreviewViewModel); }, null);
 	}
@@ -303,7 +307,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase, IDisposable
 			}
 
 			LoadFolderStatisticsAsync(SelectedFolderPath);
-			CreateImagePreviewFromPathAsync(fileModel.FullName);
+			CreateImagePreviewFromPathAsync(fileModel.FullName, true);
 		}
 		catch (Exception exception)
 		{
@@ -345,7 +349,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase, IDisposable
 				_imagePaths.InsertItem(model.NewFileModel);
 			}
 
-			CreateImagePreviewFromPathAsync(model.NewFileModel.FullName);
+			CreateImagePreviewFromPathAsync(model.NewFileModel.FullName, true);
 		}
 		catch (Exception exception)
 		{
@@ -353,7 +357,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase, IDisposable
 		}
 	}
 
-	private async Task CreateImagePreviewFromPathAsync(string filePath)
+	private async Task CreateImagePreviewFromPathAsync(string filePath, bool loadToTimeline)
 	{
 		var imagePreview = await _imageService.GetMediaPreviewAsync(filePath);
 
@@ -367,7 +371,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase, IDisposable
 			return;
 		}
 
-		await AddImagePreviewAsync(imagePreview);
+		await AddImagePreviewAsync(imagePreview, loadToTimeline);
 	}
 
 	private void RemoveImagePreviewByPath(string filePath)
@@ -417,8 +421,8 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase, IDisposable
 						              _imagePaths = new SortedObservableCollection<FileModel>(task.Result, new FileModelCreationDateTimeDescendingComparer());
 					              }
 
-					              LoadInitialImages();
-					              TimelineVm.AddFiles(task.Result);
+					              LoadInitialImagesAsync(_folderSelectedCancellationTokenSource.Token);
+					              LoadTimelineDataAsync(_folderSelectedCancellationTokenSource.Token);
 				              },
 				              TaskScheduler.FromCurrentSynchronizationContext());
 
@@ -471,17 +475,22 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase, IDisposable
 		}
 	}
 
-	private async void LoadInitialImages()
+	private async void LoadInitialImagesAsync(CancellationToken token)
 	{
 		var initialCount = Math.Min(_preloadCount * 2, _imagePaths.Count);
 
 		for (var i = 0; i < initialCount; i++)
 		{
-			await LoadImageAsync(i);
+			if (token.IsCancellationRequested)
+			{
+				return;
+			}
+
+			await LoadImageAsync(i, token: token);
 		}
 	}
 
-	private async Task LoadImageAsync(int index, CancellationToken token = default)
+	private async Task LoadImageAsync(int index, bool loadToTimeLine = false, CancellationToken token = default)
 	{
 		FileModel imagePath;
 		lock (_imagePathsLock)
@@ -509,7 +518,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase, IDisposable
 
 			if (mediaPreview != null)
 			{
-				await AddImagePreviewAsync(mediaPreview);
+				await AddImagePreviewAsync(mediaPreview, loadToTimeLine);
 			}
 		}
 		catch (OperationCanceledException)
@@ -541,7 +550,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase, IDisposable
 				_currentScrollCancellation = new CancellationTokenSource();
 
 				var token = _currentScrollCancellation.Token;
-				await LoadImageAsync(index, token);
+				await LoadImageAsync(index, false, token);
 				var imageToSelect = ImagePreviews.FirstOrDefault(p => p.Metadata.CreationDateTime.Date == dateTime.Date);
 				if (imageToSelect != null)
 				{
@@ -552,6 +561,46 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase, IDisposable
 		catch (Exception exception)
 		{
 			_logger.Error(exception, "Error on timeline date selected changed");
+		}
+	}
+
+	private async Task LoadTimelineDataAsync(CancellationToken token)
+	{
+		// Создаём потокобезопасную копию коллекции
+		List<FileModel> imagePathsCopy;
+		lock (_imagePathsLock)
+		{
+			imagePathsCopy = _imagePaths.Select(x => new FileModel(x.Name, x.FullName,x.CreatedDateTime)).ToList();
+		}
+
+		foreach (var imagePath in imagePathsCopy)
+		{
+			if (token.IsCancellationRequested)
+				return;
+
+			try
+			{
+				var preview = await _imageService.GetMediaPreviewAsync(imagePath.FullName);
+				if (preview == null)
+				{
+					continue;
+				}
+				
+
+				var creationDate = await _imageService.GetCreationDateTime(preview);
+				var fileModel = new FileModel(imagePath.Name, imagePath.FullName, creationDate);
+
+					TimelineVm.AddFile(fileModel);
+			}
+			catch (OperationCanceledException)
+			{
+				return; 
+			}
+			catch (Exception exception)
+			{
+				// Логирование ошибки
+				_logger.Error(exception, $"Failed to load {imagePath.FullName}: {exception.Message}");
+			}
 		}
 	}
 }

@@ -7,5 +7,7 @@ internal interface IMediaPreviewProvider
 {
     IMediaMetadata GetMediaMetadata(string url);
 
+    DateTime? GetCreationDateTime(string url);
+
     Stream GetPreviewJpegStream(string url, MediaPreviewSize size);
 }

@@ -57,6 +57,7 @@ internal sealed class Cr3MediaPreviewProvider : IMediaPreviewProvider
 		return new UnsupportedMediaMetadata();
 	}
 
+
 	/// <inheritdoc />
 	public Stream GetPreviewJpegStream(string url, MediaPreviewSize size)
 	{
@@ -64,6 +65,12 @@ internal sealed class Cr3MediaPreviewProvider : IMediaPreviewProvider
 		{
 			return libRawData.GetPreviewJpegStream((int)size);
 		}
+	}
+
+	/// <inheritdoc />
+	public DateTime? GetCreationDateTime(string url)
+	{
+		return GetMediaMetadata(url).CreationDateTime;
 	}
 
 	private Location GetLocation(IReadOnlyList<Directory> directories)

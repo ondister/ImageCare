@@ -51,7 +51,13 @@ internal sealed class Mp4MediaPreviewProvider : IMediaPreviewProvider
         return File.OpenRead(_unsupportedMediaPreview);
     }
 
-    private void FillAllMetaData(Directory metadataDirectory, AllMetadataWrapper mediaMetadata)
+    /// <inheritdoc />
+    public DateTime? GetCreationDateTime(string url)
+    {
+	    return GetMediaMetadata(url).CreationDateTime;
+    }
+
+	private void FillAllMetaData(Directory metadataDirectory, AllMetadataWrapper mediaMetadata)
     {
         foreach (var metadata in metadataDirectory.Tags.Where(t => !string.IsNullOrEmpty(t.Description)))
         {
