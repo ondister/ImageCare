@@ -22,13 +22,13 @@ public sealed class LocalFileSystemWatcherService : IFileSystemWatcherService, I
         _filesWatcher = new FileSystemWatcher
         {
 	        NotifyFilter = NotifyFilters.FileName,
-            InternalBufferSize = 65536 // 64 КБ
+            InternalBufferSize = 65536 * 4 // 256 КБ
 		};
 
         _directoriesWatcher = new FileSystemWatcher
         {
             NotifyFilter = NotifyFilters.DirectoryName,
-            InternalBufferSize = 65536, // 64 КБ
+            InternalBufferSize = 65536 * 4, // 256 КБ
 			IncludeSubdirectories = true
         };
 
@@ -119,13 +119,15 @@ public sealed class LocalFileSystemWatcherService : IFileSystemWatcherService, I
                       h => _filesWatcher.Created += h,
                       h => _filesWatcher.Created -= h)
                   .Select(e => new FileModel(e.EventArgs.Name, e.EventArgs.FullPath, null))
-                  .Subscribe(_fileCreatedSubject);
+                  .Throttle(TimeSpan.FromMilliseconds(100))
+				  .Subscribe(_fileCreatedSubject);
 
         Observable.FromEventPattern<FileSystemEventHandler, FileSystemEventArgs>(
                       h => _filesWatcher.Deleted += h,
                       h => _filesWatcher.Deleted -= h)
                   .Select(e => new FileModel(e.EventArgs.Name, e.EventArgs.FullPath, null))
-                  .Subscribe(_fileDeletedSubject);
+                  .Throttle(TimeSpan.FromMilliseconds(100))
+				  .Subscribe(_fileDeletedSubject);
 
         Observable.FromEventPattern<RenamedEventHandler, RenamedEventArgs>(
                       h => _filesWatcher.Renamed += h,
@@ -137,13 +139,15 @@ public sealed class LocalFileSystemWatcherService : IFileSystemWatcherService, I
                       h => _directoriesWatcher.Created += h,
                       h => _directoriesWatcher.Created -= h)
                   .Select(e => new DirectoryModel(new DirectoryInfo(e.EventArgs.FullPath).Name, e.EventArgs.FullPath))
-                  .Subscribe(_directoryCreatedSubject);
+                  .Throttle(TimeSpan.FromMilliseconds(100))
+				  .Subscribe(_directoryCreatedSubject);
 
         Observable.FromEventPattern<FileSystemEventHandler, FileSystemEventArgs>(
                       h => _directoriesWatcher.Deleted += h,
                       h => _directoriesWatcher.Deleted -= h)
                   .Select(e => new DirectoryModel(new DirectoryInfo(e.EventArgs.FullPath).Name, e.EventArgs.FullPath))
-                  .Subscribe(_directoryDeletedSubject);
+                  .Throttle(TimeSpan.FromMilliseconds(100))
+				  .Subscribe(_directoryDeletedSubject);
 
         Observable.FromEventPattern<RenamedEventHandler, RenamedEventArgs>(
                       h => _directoriesWatcher.Renamed += h,

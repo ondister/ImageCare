@@ -140,9 +140,9 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase, IDisposable
 
 		_fileSystemWatcherCompositeDisposable = new CompositeDisposable
 		{
-			_fileSystemWatcherService.FileCreated.DistinctUntilChanged(model => model.FullName).Subscribe(OnFileCreated),
-			_fileSystemWatcherService.FileDeleted.DistinctUntilChanged(model => model.FullName).Subscribe(OnFileDeleted),
-			_fileSystemWatcherService.FileRenamed.DistinctUntilChanged(model => model.NewFileModel.FullName).Subscribe(OnFileRenamed),
+			_fileSystemWatcherService.FileCreated.Subscribe(OnFileCreated),
+			_fileSystemWatcherService.FileDeleted.Subscribe(OnFileDeleted),
+			_fileSystemWatcherService.FileRenamed.Subscribe(OnFileRenamed),
 			_folderService.FileSystemItemSelected.Subscribe(OnFolderSelected),
 			_fileOperationsService.ImagePreviewSelected.Subscribe(OnImagePreviewSelected),
 			TimelineVm.DateSelected.Subscribe(OnTimelineDateSelected)

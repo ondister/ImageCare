@@ -119,8 +119,8 @@ public sealed class MultiSourcesLocalFileSystemWatcherService : IMultiSourcesFil
                 service.FileRenamed.Subscribe(_fileRenamedSubject),
 
                 service.DirectoryCreated.Subscribe(_directoryCreatedSubject),
-                service.DirectoryDeleted.DistinctUntilChanged(d=>d.Path).Subscribe(_directoryDeletedSubject),
-                service.DirectoryRenamed.DistinctUntilChanged(d=>d.NewDirectoryModel).Subscribe(_directoryRenamedSubject)
+                service.DirectoryDeleted.Subscribe(_directoryDeletedSubject),
+                service.DirectoryRenamed.Subscribe(_directoryRenamedSubject)
             };
 
             _subscriptions.TryAdd(directoryPath, compositeDisposable);
