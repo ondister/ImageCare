@@ -77,13 +77,15 @@
                 <DataTemplate DataType="domain:MediaPreviewViewModel">
                     <Grid RowDefinitions="Auto,*,Auto"
                           Classes.Selected="{Binding Selected }"
-                          Classes.NotSelected="{Binding !Selected }">
+                          Classes.NotSelected="{Binding !Selected }"
+                          Width="300">
 
                         <Grid Grid.Row="0"
-                              ColumnDefinitions="Auto,*,Auto">
+                              ColumnDefinitions="*,Auto">
                             <TextBlock Grid.Column="0"
                                        Margin="{StaticResource MarginHorizontal.Small}"
-                                       Text="{Binding Title}" />
+                                       Text="{Binding Title}"
+                                       TextTrimming="CharacterEllipsis"/>
                             <TextBlock Grid.Column="1"
                                        HorizontalAlignment="Right"
                                        Margin="{StaticResource MarginHorizontal.Small}"
