@@ -11,12 +11,19 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
+    - name: Extract version from tag
+      id: extract_version
+      run: |
+        $version = "${{ github.ref_name}}".Replace('v','')
+        echo "VERSION=$version" >> $env:GITHUB_ENV
+        echo "::set-output name=version::$version"
+    
     - name: Setup .NET 8
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: 8.0.x
     
-    - name: Build and Publish (AnyCPU)
+    - name: Build and Publish
       run: |
         dotnet publish ImageCare.UI.Avalonia/ImageCare.UI.Avalonia.csproj `
           -c Release `
@@ -26,20 +33,19 @@ jobs:
           --self-contained=true `
           -p:IncludeAllContentForSelfExtract=true `
           -p:DebugType=embedded `
-          --output ./publish
+          --output ./publish-output
     
     - name: Create Zip Archive
       run: |
-        $tag = "${{ github.ref_name}}".Replace('v','')
-        cd publish
-        7z a -tzip "../ImageCare-$tag-Windows.zip" *
-        mv "../ImageCare-$tag-Windows.zip" .
+        $zipName = "ImageCare-${{ env.VERSION }}-Windows.zip"
+        Compress-Archive -Path "./publish-output/*" -DestinationPath $zipName
+        echo "ZIP_PATH=$zipName" >> $env:GITHUB_ENV
     
     - name: Upload Release
       uses: softprops/action-gh-release@v1
       with:
         tag_name: ${{ github.ref }}
-        name: ImageCare ${{ github.ref_name }}
-        files: ImageCare-$tag-Windows.zip
+        name: ImageCare ${{ env.VERSION }}
+        files: ${{ env.ZIP_PATH }}
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
