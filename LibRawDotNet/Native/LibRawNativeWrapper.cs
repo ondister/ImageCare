@@ -4,7 +4,7 @@ namespace LibRawDotNet.Native;
 
 internal class LibRawNativeWrapper
 {
-    private const string LibraryName = @"x64\libraw";
+    private const string LibraryName = @"libraw";
 
     // callback functions
     [UnmanagedFunctionPointer(CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
