@@ -23,17 +23,19 @@ jobs:
       with:
         dotnet-version: 8.0.x
     
-    - name: Build and Publish
+    - name: Publish Application
       run: |
         dotnet publish ImageCare.UI.Avalonia/ImageCare.UI.Avalonia.csproj `
           -c Release `
           -p:Platform=AnyCPU `
-          -p:PublishSingleFile=true `
+          --self-contained true `
           -p:PublishReadyToRun=true `
-          --self-contained=true `
-          -p:IncludeAllContentForSelfExtract=true `
-          -p:DebugType=embedded `
+          -p:DebugType=None `
           --output ./publish-output
+    
+    - name: Remove PDB files
+      run: |
+        Get-ChildItem -Path ./publish-output -Filter *.pdb -Recurse | Remove-Item -Force
     
     - name: Create Zip Archive
       run: |
