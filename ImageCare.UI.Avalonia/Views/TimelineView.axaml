@@ -1,10 +1,28 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:behaviors="clr-namespace:ImageCare.UI.Avalonia.Behaviors"
              x:Class="ImageCare.UI.Avalonia.Views.TimelineView">
 
 
-    <ScrollViewer HorizontalScrollBarVisibility="Auto"
-                  VerticalScrollBarVisibility="Disabled">
+    <ScrollViewer HorizontalScrollBarVisibility="Visible"
+                  VerticalScrollBarVisibility="Disabled"
+                  AllowAutoHide="False"
+                  Background="Transparent">
+        <ScrollViewer.Styles>
+            <Style Selector="ScrollViewer">
+                <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Visible"/>
+                <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Disabled"/>
+            </Style>
+            <Style Selector="ScrollViewer > ScrollBar:horizontal">
+                <Setter Property="Height" Value="10"/>
+                <Setter Property="Background" Value="Transparent"/>
+                <Setter Property="Margin" Value="0,0,0,-10"/>
+            </Style>
+        </ScrollViewer.Styles>
+        <Interaction.Behaviors>
+            <behaviors:WheelScrollBehaviour/>
+        </Interaction.Behaviors>
+
         <ItemsControl ItemsSource="{Binding DateStatViewModels}">
             <ItemsControl.ItemsPanel>
                 <ItemsPanelTemplate>
