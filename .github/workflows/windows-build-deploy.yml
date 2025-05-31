@@ -31,15 +31,7 @@ jobs:
           --self-contained true `
           -p:PublishReadyToRun=true `
           -p:DebugType=None `
-          -p:IncludeNativeLibrariesForSelfExtract=true `
           --output ./publish-output
-    
-    - name: Verify Runtime Folders
-      run: |
-        echo "Checking publish folder structure:"
-        ls -R ./publish-output
-        echo "Checking for runtimes folder:"
-        ls ./publish-output/runtimes
     
     - name: Remove PDB files
       run: |
@@ -48,9 +40,8 @@ jobs:
     - name: Create Zip Archive
       run: |
         $zipName = "ImageCare-${{ env.VERSION }}-Windows.zip"
-        cd publish-output
-        7z a -tzip "../$zipName" * -r
-        echo "ZIP_PATH=../$zipName" >> $env:GITHUB_ENV
+        Compress-Archive -Path "./publish-output/*" -DestinationPath $zipName
+        echo "ZIP_PATH=$zipName" >> $env:GITHUB_ENV
     
     - name: Upload Release
       uses: softprops/action-gh-release@v1
