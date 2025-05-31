@@ -25,19 +25,21 @@ jobs:
           -p:PublishReadyToRun=true `
           --self-contained=true `
           -p:IncludeAllContentForSelfExtract=true `
-          -p:DebugType=embedded
+          -p:DebugType=embedded `
+          --output ./publish
     
     - name: Create Zip Archive
       run: |
         $tag = "${{ github.ref_name}}".Replace('v','')
-        cd ImageCare.UI.Avalonia/bin/Release/net8.0/publish
-        7z a -tzip "ImageCare-$tag-Windows.zip" *
+        cd publish
+        7z a -tzip "../ImageCare-$tag-Windows.zip" *
+        mv "../ImageCare-$tag-Windows.zip" .
     
     - name: Upload Release
       uses: softprops/action-gh-release@v1
       with:
         tag_name: ${{ github.ref }}
         name: ImageCare ${{ github.ref_name }}
-        files: ImageCare.UI.Avalonia/bin/Release/net8.0/publish/ImageCare-*-Windows.zip
+        files: ImageCare-$tag-Windows.zip
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
