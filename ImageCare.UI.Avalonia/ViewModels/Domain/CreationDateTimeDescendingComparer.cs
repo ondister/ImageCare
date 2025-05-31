@@ -6,21 +6,21 @@ internal class CreationDateTimeDescendingComparer : IComparer<MediaPreviewViewMo
 {
 	public int Compare(MediaPreviewViewModel? x, MediaPreviewViewModel? y)
 	{
-		if (x?.Metadata == null && y?.Metadata == null)
+		if (x == null && y == null)
 		{
 			return 0;
 		}
 
-		if (x?.Metadata == null)
+		if (x == null)
 		{
 			return 1;
 		}
 
-		if (y?.Metadata == null)
+		if (y == null)
 		{
 			return -1;
 		}
 
-		return y.Metadata.CreationDateTime.CompareTo(x.Metadata.CreationDateTime);
+		return y.FileDate.CompareTo(x.FileDate);
 	}
 }
