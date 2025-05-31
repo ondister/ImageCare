@@ -33,145 +33,146 @@
                        Margin="{StaticResource MarginHorizontal.Small}"
                        VerticalAlignment="Bottom"
                        Text="{Binding Statistics}"
-                       FontWeight="Bold"/>
+                       FontWeight="Bold" />
 
-            <views:TimelineView Grid.Column="1" 
-                                DataContext="{Binding TimelineVm}"/>
+            <views:TimelineView Grid.Column="1"
+                                DataContext="{Binding TimelineVm}" />
         </Grid>
 
-        <ScrollViewer Grid.Row="1" 
+        <ScrollViewer Grid.Row="1"
                       HorizontalScrollBarVisibility="Auto"
                       VerticalScrollBarVisibility="Disabled">
             <Interaction.Behaviors>
-                <behaviors:HorizontalScrollBehavior />
+                <behaviors:HorizontalScrollBehavior IsScrollResetRequested="{Binding IsScrollResetRequested, Mode=TwoWay}"/>
             </Interaction.Behaviors>
-        <controls:PreviewsListBox  ItemsSource="{Binding ImagePreviews}"
-                                  SelectedItem="{Binding SelectedPreview, Mode=TwoWay}"
-                                  SelectionMode="Single"
-                                  DragDrop.AllowDrop="True"
-                                  Theme="{StaticResource PreviewsListBox}">
+            <controls:PreviewsListBox ItemsSource="{Binding ImagePreviews}"
+                                      SelectedItem="{Binding SelectedPreview, Mode=TwoWay}"
+                                      SelectionMode="Single"
+                                      DragDrop.AllowDrop="True"
+                                      Theme="{StaticResource PreviewsListBox}">
 
-            <!--Behavior for dropping image from preview list-->
-            <i:Interaction.Behaviors>
-                <i:BehaviorCollection>
-                    <idd:ContextDropBehavior Handler="{Binding ImagePreviewDropHandler}" />
-                </i:BehaviorCollection>
-            </i:Interaction.Behaviors>
+                <!--Behavior for dropping image from preview list-->
+                <i:Interaction.Behaviors>
+                    <i:BehaviorCollection>
+                        <idd:ContextDropBehavior Handler="{Binding ImagePreviewDropHandler}" />
+                    </i:BehaviorCollection>
+                </i:Interaction.Behaviors>
 
-            <controls:PreviewsListBox.ItemsPanel>
-                <ItemsPanelTemplate>
-                    <VirtualizingStackPanel Orientation="Horizontal" />
-                </ItemsPanelTemplate>
-            </controls:PreviewsListBox.ItemsPanel>
+                <controls:PreviewsListBox.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <VirtualizingStackPanel Orientation="Horizontal" />
+                    </ItemsPanelTemplate>
+                </controls:PreviewsListBox.ItemsPanel>
 
-            <controls:PreviewsListBox.Styles>
-                <Style Selector="Grid.Selected">
-                    <Setter Property="Background" Value="{DynamicResource SemiBlue5}" />
-                </Style>
-                <Style Selector="Grid.NotSelected">
-                    <Setter Property="Background" Value="Transparent" />
-                </Style>
-            </controls:PreviewsListBox.Styles>
+                <controls:PreviewsListBox.Styles>
+                    <Style Selector="Grid.Selected">
+                        <Setter Property="Background" Value="{DynamicResource SemiBlue5}" />
+                    </Style>
+                    <Style Selector="Grid.NotSelected">
+                        <Setter Property="Background" Value="Transparent" />
+                    </Style>
+                </controls:PreviewsListBox.Styles>
 
-            <controls:PreviewsListBox.ItemTemplate>
-                <DataTemplate DataType="domain:MediaPreviewViewModel">
-                    <Grid RowDefinitions="Auto,*,Auto"
-                          Classes.Selected="{Binding Selected }"
-                          Classes.NotSelected="{Binding !Selected }"
-                          Width="300">
+                <controls:PreviewsListBox.ItemTemplate>
+                    <DataTemplate DataType="domain:MediaPreviewViewModel">
+                        <Grid RowDefinitions="Auto,*,Auto"
+                              Classes.Selected="{Binding Selected }"
+                              Classes.NotSelected="{Binding !Selected }"
+                              Width="300"
+                              Height="250">
 
-                        <Grid Grid.Row="0"
-                              ColumnDefinitions="*,Auto">
-                            <TextBlock Grid.Column="0"
-                                       Margin="{StaticResource MarginHorizontal.Small}"
-                                       Text="{Binding Title}"
-                                       TextTrimming="CharacterEllipsis"/>
-                            <TextBlock Grid.Column="1"
-                                       HorizontalAlignment="Right"
-                                       Margin="{StaticResource MarginHorizontal.Small}"
-                                       Text="{Binding DateTimeString}" />
+                            <Grid Grid.Row="0"
+                                  ColumnDefinitions="*,Auto">
+                                <TextBlock Grid.Column="0"
+                                           Margin="{StaticResource MarginHorizontal.Small}"
+                                           Text="{Binding Title}"
+                                           TextTrimming="CharacterEllipsis" />
+                                <TextBlock Grid.Column="1"
+                                           HorizontalAlignment="Right"
+                                           Margin="{StaticResource MarginHorizontal.Small}"
+                                           Text="{Binding DateTimeString}" />
+                            </Grid>
+
+                            <Grid Grid.Row="1"
+                                  ColumnDefinitions="*,Auto"
+                                  RowDefinitions="Auto,*,Auto">
+
+                                <LayoutTransformControl Grid.Column="0"
+                                                        Grid.Row="0"
+                                                        Grid.RowSpan="3"
+                                                        Grid.ColumnSpan="2"
+                                                        VerticalAlignment="Center"
+                                                        HorizontalAlignment="Center"
+                                                        MaxHeight="{Binding MaxImageHeight}">
+                                    <Image Source="{Binding PreviewBitmap}" />
+                                    <LayoutTransformControl.LayoutTransform>
+                                        <RotateTransform Angle="{Binding RotateAngle}" />
+                                    </LayoutTransformControl.LayoutTransform>
+                                </LayoutTransformControl>
+
+                                <u:IconButton Grid.Row="0"
+                                              Grid.Column="1"
+                                              Margin="{StaticResource MarginAll.Small}"
+                                              Command="{CompiledBinding RemoveImagePreviewCommand}"
+                                              Theme="{DynamicResource SolidIconButton}"
+                                              Classes="Danger">
+                                    <u:IconButton.Icon>
+                                        <iconPacks:PackIconLucide Kind="Trash2"
+                                                                  Height="{StaticResource Icon.Size.Micro}"
+                                                                  Width="{StaticResource Icon.Size.Micro}" />
+                                    </u:IconButton.Icon>
+                                </u:IconButton>
+
+                                <Menu Grid.Row="2"
+                                      Grid.Column="1"
+                                      Margin="{StaticResource MarginAll.Medium}"
+                                      Background="{DynamicResource SemiBlue5}"
+                                      IsVisible="{Binding UseOpenWith, Mode=OneTime}">
+                                    <MenuItem ItemsSource="{Binding OpenWithViewModels, Mode=OneTime}">
+                                        <MenuItem.Header>
+                                            <iconPacks:PackIconMaterial Kind="ApplicationExport"
+                                                                        Height="{StaticResource Icon.Size.Micro}"
+                                                                        Width="{StaticResource Icon.Size.Micro}" />
+                                        </MenuItem.Header>
+
+                                        <MenuItem.ItemContainerTheme>
+                                            <ControlTheme TargetType="MenuItem"
+                                                          BasedOn="{StaticResource {x:Type MenuItem}}"
+                                                          x:DataType="domain:FileApplicationPairViewModel">
+                                                <Setter Property="Header" Value="{Binding Name}" />
+                                                <Setter Property="Command" Value="{Binding OpenWithCommand}" />
+                                            </ControlTheme>
+                                        </MenuItem.ItemContainerTheme>
+
+                                    </MenuItem>
+                                </Menu>
+                                <iconPacks:PackIconMaterial Grid.Row="0"
+                                                            Grid.Column="0"
+                                                            IsVisible="{Binding HasLocation}"
+                                                            Margin="{StaticResource MarginAll.Large}"
+                                                            Kind="SatelliteVariant"
+                                                            Height="{StaticResource Icon.Size.Medium}"
+                                                            Width="{StaticResource Icon.Size.Medium}"
+                                                            Foreground="{DynamicResource SemiRed2}" />
+                            </Grid>
+
+                            <TextBlock Grid.Row="2"
+                                       Margin="{StaticResource MarginAll.Small}"
+                                       Text="{Binding MetadataString}" />
+
+
+                            <!--Behavior for dragging image-->
+                            <i:Interaction.Behaviors>
+                                <i:BehaviorCollection>
+                                    <idd:ContextDragBehavior />
+                                </i:BehaviorCollection>
+                            </i:Interaction.Behaviors>
                         </Grid>
 
-                        <Grid Grid.Row="1"
-                              ColumnDefinitions="*,Auto"
-                              RowDefinitions="Auto,*,Auto">
-
-                            <LayoutTransformControl Grid.Column="0"
-                                                    Grid.Row="0"
-                                                    Grid.RowSpan="3"
-                                                    Grid.ColumnSpan="2"
-                                                    VerticalAlignment="Center"
-                                                    HorizontalAlignment="Center"
-                                                    MaxHeight="{Binding MaxImageHeight}">
-                                <Image Source="{Binding PreviewBitmap}"/>
-                                <LayoutTransformControl.LayoutTransform>
-                                    <RotateTransform Angle="{Binding RotateAngle}" />
-                                </LayoutTransformControl.LayoutTransform>
-                            </LayoutTransformControl>
-
-                            <u:IconButton Grid.Row="0"
-                                          Grid.Column="1"
-                                          Margin="{StaticResource MarginAll.Small}"
-                                          Command="{CompiledBinding RemoveImagePreviewCommand}"
-                                          Theme="{DynamicResource SolidIconButton}"
-                                          Classes="Danger">
-                                <u:IconButton.Icon>
-                                    <iconPacks:PackIconLucide Kind="Trash2"
-                                                              Height="{StaticResource Icon.Size.Micro}"
-                                                              Width="{StaticResource Icon.Size.Micro}" />
-                                </u:IconButton.Icon>
-                            </u:IconButton>
-
-                            <Menu Grid.Row="2"
-                                  Grid.Column="1"
-                                  Margin="{StaticResource MarginAll.Medium}"
-                                  Background="{DynamicResource SemiBlue5}"
-                                  IsVisible="{Binding UseOpenWith, Mode=OneTime}">
-                                <MenuItem ItemsSource="{Binding OpenWithViewModels, Mode=OneTime}">
-                                    <MenuItem.Header>
-                                        <iconPacks:PackIconMaterial Kind="ApplicationExport"
-                                                                    Height="{StaticResource Icon.Size.Micro}"
-                                                                    Width="{StaticResource Icon.Size.Micro}" />
-                                    </MenuItem.Header>
-
-                                    <MenuItem.ItemContainerTheme>
-                                        <ControlTheme TargetType="MenuItem"
-                                                      BasedOn="{StaticResource {x:Type MenuItem}}"
-                                                      x:DataType="domain:FileApplicationPairViewModel">
-                                            <Setter Property="Header" Value="{Binding Name}" />
-                                            <Setter Property="Command" Value="{Binding OpenWithCommand}" />
-                                        </ControlTheme>
-                                    </MenuItem.ItemContainerTheme>
-
-                                </MenuItem>
-                            </Menu>
-                            <iconPacks:PackIconMaterial Grid.Row="0"
-                                                        Grid.Column="0"
-                                                        IsVisible="{Binding HasLocation}"
-                                                        Margin="{StaticResource MarginAll.Large}"
-                                                        Kind="SatelliteVariant"
-                                                        Height="{StaticResource Icon.Size.Medium}"
-                                                        Width="{StaticResource Icon.Size.Medium}"
-                                                        Foreground="{DynamicResource SemiRed2}"/>
-                        </Grid>
-
-                        <TextBlock Grid.Row="2"
-                                   Margin="{StaticResource MarginAll.Small}"
-                                   Text="{Binding MetadataString}" />
-
-
-                        <!--Behavior for dragging image-->
-                        <i:Interaction.Behaviors>
-                            <i:BehaviorCollection>
-                                <idd:ContextDragBehavior />
-                            </i:BehaviorCollection>
-                        </i:Interaction.Behaviors>
-                    </Grid>
-
-                </DataTemplate>
-            </controls:PreviewsListBox.ItemTemplate>
-        </controls:PreviewsListBox>
-</ScrollViewer>
+                    </DataTemplate>
+                </controls:PreviewsListBox.ItemTemplate>
+            </controls:PreviewsListBox>
+        </ScrollViewer>
 
     </Grid>
 

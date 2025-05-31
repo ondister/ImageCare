@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using System.Reactive.Disposables;
 using System.Threading;
@@ -32,7 +31,8 @@ namespace ImageCare.UI.Avalonia.ViewModels;
 
 internal class PreviewPanelViewModel : NavigatedViewModelBase, IDisposable
 {
-	private const int maxItemWidth = 300;
+	// Desired size of item
+	private const int maxItemWidth = 324;
 
 	private readonly IFileSystemImageService _imageService;
 	private readonly IFolderService _folderService;
@@ -83,6 +83,13 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase, IDisposable
 		_folderSelectedCancellationTokenSource = new CancellationTokenSource();
 
 		TimelineVm = new TimelineViewModel(_synchronizationContext);
+	}
+
+	private bool _isScrollResetRequested;
+	public bool IsScrollResetRequested
+	{
+		get => _isScrollResetRequested;
+		set => SetProperty(ref _isScrollResetRequested, value);
 	}
 
 	public SortedObservableCollection<MediaPreviewViewModel> ImagePreviews { get; }
@@ -161,38 +168,46 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase, IDisposable
 		_currentScrollCancellation.Cancel();
 		_currentScrollCancellation.Dispose();
 		_currentScrollCancellation = new CancellationTokenSource();
-
 		var token = _currentScrollCancellation.Token;
 
 		try
 		{
-			List<FileModel> currentImagePaths;
-			lock (_imagePathsLock)
-			{
-				currentImagePaths = new List<FileModel>(_imagePaths);
-			}
-
+			// Рассчитываем видимый диапазон на основе ImagePreviews, а не _imagePaths
 			var firstVisibleIndex = (int)(horizontalOffset / maxItemWidth);
 			var lastVisibleIndex = (int)((horizontalOffset + viewportWidth) / maxItemWidth);
 
+			// Корректируем индексы с учетом фактического количества элементов
+			firstVisibleIndex = Math.Max(0, firstVisibleIndex);
+			lastVisibleIndex = Math.Min(ImagePreviews.Count - 1, lastVisibleIndex);
+
+			var loadTasks = new List<Task>();
 			for (var i = Math.Max(0, firstVisibleIndex - _preloadCount);
-			     i <= Math.Min(currentImagePaths.Count - 1, lastVisibleIndex + _preloadCount);
+			     i <= Math.Min(ImagePreviews.Count - 1, lastVisibleIndex + _preloadCount);
 			     i++)
 			{
-				if (token.IsCancellationRequested)
+				if (token.IsCancellationRequested) return;
+
+				if (ImagePreviews[i].PreviewBitmap != null)
 				{
-					return;
+					_logger.Warning(ImagePreviews[i].Url);
 				}
 
-				if (ImagePreviews.Count <= i || ImagePreviews[i].PreviewBitmap == null)
+				// Загружаем только если изображение еще не загружено
+				if (ImagePreviews[i].PreviewBitmap == null)
 				{
-					await LoadImageAsync(i, false, token);
+					loadTasks.Add(LoadImageAsync(i, token: token));
 				}
 			}
+
+			await Task.WhenAll(loadTasks);
 		}
 		catch (OperationCanceledException)
 		{
-			// Ignored
+			// Ожидаемое поведение при отмене
+		}
+		catch (Exception ex)
+		{
+			_logger.Error(ex, "Scroll handling error");
 		}
 	}
 
@@ -288,7 +303,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase, IDisposable
 		mediaPreviewViewModel.Metadata = metadata;
 
 		mediaPreviewViewModel.RotateAngle = mediaPreviewViewModel.Metadata.Orientation.ToRotationAngle();
-
+		_= mediaPreviewViewModel.LoadPreviewAsync();
 		if (loadToTimeline)
 		{
 			TimelineVm.AddFile(new FileModel(previewImage.Title, previewImage.Url, metadata.CreationDateTime));
@@ -479,6 +494,19 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase, IDisposable
 	{
 		var initialCount = Math.Min(_preloadCount * 2, _imagePaths.Count);
 
+		for (var index = 0; index < _imagePaths.Count; index++)
+		{
+			if (token.IsCancellationRequested)
+			{
+				return;
+			}
+
+			var previewImage = await _imageService.GetMediaPreviewAsync(_imagePaths[index].FullName);
+			var mediaPreviewViewModel = _mapper.Map<MediaPreviewViewModel>(previewImage);
+			mediaPreviewViewModel.FileDate = _imagePaths[index].CreatedDateTime.Value;
+			_synchronizationContext.Send(d => { ImagePreviews.InsertItem(mediaPreviewViewModel); }, null);
+		}
+
 		for (var i = 0; i < initialCount; i++)
 		{
 			if (token.IsCancellationRequested)
@@ -490,44 +518,36 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase, IDisposable
 		}
 	}
 
-	private async Task LoadImageAsync(int index, bool loadToTimeLine = false, CancellationToken token = default)
+	private async Task LoadImageAsync(int indexInPreviews, CancellationToken token = default)
 	{
-		FileModel imagePath;
-		lock (_imagePathsLock)
-		{
-			if (index >= _imagePaths.Count || index < 0)
-			{
-				return;
-			}
+		if (indexInPreviews < 0 || indexInPreviews >= ImagePreviews.Count)
+			return;
 
-			imagePath = _imagePaths[index];
-		}
-
-		if (ImagePreviews.Count > index && ImagePreviews[index].PreviewBitmap != null)
+		var previewVm = ImagePreviews[indexInPreviews];
+		if (previewVm.PreviewBitmap != null)
 		{
 			return;
 		}
+		
 
 		await _loadSemaphore.WaitAsync(token);
-
 		try
 		{
 			token.ThrowIfCancellationRequested();
 
-			var mediaPreview = await _imageService.GetMediaPreviewAsync(imagePath.FullName);
+			// Получаем актуальный путь из ViewModel
+			var imagePath = previewVm.Url;
+			var mediaPreview = await _imageService.GetMediaPreviewAsync(imagePath);
 
-			if (mediaPreview != null)
-			{
-				await AddImagePreviewAsync(mediaPreview, loadToTimeLine);
-			}
-		}
-		catch (OperationCanceledException)
-		{
-			// Ignored
-		}
-		catch (Exception ex)
-		{
-			_logger.Warning($"File {imagePath} is not supported");
+			if (mediaPreview == null) return;
+
+			var metadata = await _imageService.GetMediaMetadataAsync(mediaPreview);
+			previewVm.MetadataString = metadata.GetString();
+			previewVm.DateTimeString = metadata.CreationDateTime.ToString("dd.MM.yyyy HH:mm");
+			previewVm.Metadata = metadata;
+			previewVm.RotateAngle = metadata.Orientation.ToRotationAngle();
+
+			await previewVm.LoadPreviewAsync();
 		}
 		finally
 		{
@@ -539,28 +559,36 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase, IDisposable
 	{
 		try
 		{
-			var imagePathIndexWithDate = _imagePaths.FirstOrDefault(p => p.CreatedDateTime.Value.Date == dateTime.Date);
+			// Ищем в актуальной коллекции ViewModels
+			var targetPreview = ImagePreviews.FirstOrDefault(p =>
+				p.FileDate.Date == dateTime.Date);
 
-			if (imagePathIndexWithDate != null)
+			if (targetPreview == null) return;
+
+			var index = ImagePreviews.IndexOf(targetPreview);
+
+			_currentScrollCancellation.Cancel();
+			_currentScrollCancellation.Dispose();
+			_currentScrollCancellation = new CancellationTokenSource();
+			var token = _currentScrollCancellation.Token;
+
+			// Загружаем диапазон вокруг выбранного элемента
+			int start = Math.Max(0, index - _preloadCount);
+			int end = Math.Min(ImagePreviews.Count - 1, index + _preloadCount);
+
+			var loadTasks = new List<Task>();
+			for (int i = start; i <= end; i++)
 			{
-				var index = _imagePaths.IndexOf(imagePathIndexWithDate);
-
-				_currentScrollCancellation.Cancel();
-				_currentScrollCancellation.Dispose();
-				_currentScrollCancellation = new CancellationTokenSource();
-
-				var token = _currentScrollCancellation.Token;
-				await LoadImageAsync(index, false, token);
-				var imageToSelect = ImagePreviews.FirstOrDefault(p => p.Metadata.CreationDateTime.Date == dateTime.Date);
-				if (imageToSelect != null)
-				{
-					SelectedPreview = imageToSelect;
-				}
+				if (token.IsCancellationRequested) return;
+				loadTasks.Add(LoadImageAsync(i, token));
 			}
+
+			await Task.WhenAll(loadTasks);
+			SelectedPreview = targetPreview;
 		}
-		catch (Exception exception)
+		catch (Exception ex)
 		{
-			_logger.Error(exception, "Error on timeline date selected changed");
+			_logger.Error(ex, "Date selection failed");
 		}
 	}
 
@@ -570,13 +598,15 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase, IDisposable
 		List<FileModel> imagePathsCopy;
 		lock (_imagePathsLock)
 		{
-			imagePathsCopy = _imagePaths.Select(x => new FileModel(x.Name, x.FullName,x.CreatedDateTime)).ToList();
+			imagePathsCopy = _imagePaths.Select(x => new FileModel(x.Name, x.FullName, x.CreatedDateTime)).ToList();
 		}
 
 		foreach (var imagePath in imagePathsCopy)
 		{
 			if (token.IsCancellationRequested)
+			{
 				return;
+			}
 
 			try
 			{
@@ -585,16 +615,15 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase, IDisposable
 				{
 					continue;
 				}
-				
 
 				var creationDate = await _imageService.GetCreationDateTime(preview);
 				var fileModel = new FileModel(imagePath.Name, imagePath.FullName, creationDate);
 
-					TimelineVm.AddFile(fileModel);
+				TimelineVm.AddFile(fileModel);
 			}
 			catch (OperationCanceledException)
 			{
-				return; 
+				return;
 			}
 			catch (Exception exception)
 			{

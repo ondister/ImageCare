@@ -67,11 +67,18 @@ internal class MediaPreviewViewModel : ViewModelBase, IComparable<MediaPreviewVi
 
         RemoveImagePreviewCommand = new AsyncRelayCommand(RemoveImagePreviewAsync);
 
-        _ = LoadPreviewAsync();
+      //  _ = LoadPreviewAsync();
         OpenWithViewModels = CreateOpenWithItems();
     }
 
-    public string? Title { get; }
+    private DateTime _fileDate;
+    public DateTime FileDate
+    {
+	    get => _fileDate;
+	    set => SetProperty(ref _fileDate, value.Date); // Храним только дату без времени
+    }
+
+	public string? Title { get; }
 
     public string Url { get; }
 
@@ -142,8 +149,11 @@ internal class MediaPreviewViewModel : ViewModelBase, IComparable<MediaPreviewVi
 	    {
 		    SetProperty(ref _metadata, value);
 		    HasLocation = _metadata != null && _metadata.Location != Location.Empty;
+		    FileDate = _metadata.CreationDateTime.Date;
 	    } 
     }
+
+    public bool IsLoaded => PreviewBitmap != null;
 
 	public int CompareTo(MediaPreviewViewModel? other)
     {
@@ -180,7 +190,7 @@ internal class MediaPreviewViewModel : ViewModelBase, IComparable<MediaPreviewVi
         }
     }
 
-    private async Task LoadPreviewAsync()
+    public async Task LoadPreviewAsync()
     {
         IsLoading = true;
 
@@ -188,7 +198,7 @@ internal class MediaPreviewViewModel : ViewModelBase, IComparable<MediaPreviewVi
         {
             await using (var imageStream = await _imageService.GetJpegImageStreamAsync(_mapper.Map<MediaPreview>(this), MediaPreviewSize.Medium))
             {
-                PreviewBitmap = await Task.Run(() => Bitmap.DecodeToHeight(imageStream, MaxImageHeight, BitmapInterpolationMode.LowQuality));
+				PreviewBitmap = await Task.Run(() => Bitmap.DecodeToHeight(imageStream, MaxImageHeight, BitmapInterpolationMode.LowQuality));
             }
         }
         catch (Exception exception)

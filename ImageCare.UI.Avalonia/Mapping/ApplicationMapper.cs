@@ -1,4 +1,5 @@
 ﻿using System.Linq;
+using System.Threading;
 
 using AutoMapper;
 using ImageCare.Core.Domain.Folders;
@@ -140,7 +141,8 @@ internal sealed class ApplicationMapper
                    .ForMember(dst => dst.OpenWithViewModels, opt => opt.Ignore())
                    .ForMember(dst => dst.UseOpenWith, opt => opt.Ignore())
                    .ForMember(dst=>dst.HasLocation,opt=>opt.Ignore())
-                   .ConstructUsing(
+                   .ForMember(dst => dst.FileDate, opt => opt.Ignore())
+				   .ConstructUsing(
                        src => new MediaPreviewViewModel(
                            src.Title,
                            src.Url,
