@@ -190,11 +190,6 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase, IDisposable
 					return;
 				}
 
-				if (ImagePreviews[i].PreviewBitmap != null)
-				{
-					_logger.Warning(ImagePreviews[i].Url);
-				}
-
 				// Загружаем только если изображение еще не загружено
 				if (ImagePreviews[i].PreviewBitmap == null)
 				{
