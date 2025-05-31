@@ -7,12 +7,10 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
 
-using Avalonia.Controls;
 using Avalonia.Media.Imaging;
 
 using CommunityToolkit.Mvvm.Input;
 
-using ImageCare.Core.Domain.Folders;
 using ImageCare.Core.Domain.Media;
 using ImageCare.Core.Domain.Preview;
 using ImageCare.Core.Services.FileOperationsService;
@@ -28,12 +26,10 @@ using Mapsui.Projections;
 using Mapsui.Styles;
 using Mapsui.Tiling;
 
-using Prism.Commands;
 using Prism.Ioc;
 using Prism.Regions;
 
 using Serilog;
-using static System.Net.Mime.MediaTypeNames;
 
 using Location = ImageCare.Core.Domain.Media.Metadata.Location;
 
@@ -63,7 +59,7 @@ internal class MainImageViewModel : NavigatedViewModelBase
 	                          IFolderService folderService,
 	                          IFileOperationsService fileOperationsService,
 	                          IClipboardService clipboardService,
-							  ILogger logger,
+	                          ILogger logger,
 	                          IContainerProvider containerProvider,
 	                          SynchronizationContext synchronizationContext)
 	{
@@ -139,7 +135,6 @@ internal class MainImageViewModel : NavigatedViewModelBase
 
 		_compositeDisposable = new CompositeDisposable
 		{
-			_folderService.FileSystemItemSelected.Subscribe(OnFolderSelected),
 			_fileOperationsService.ImagePreviewSelected.Throttle(TimeSpan.FromMilliseconds(150))
 			                      .ObserveOn(_synchronizationContext)
 			                      .Subscribe(OnImagePreviewSelected)
@@ -169,11 +164,6 @@ internal class MainImageViewModel : NavigatedViewModelBase
 		ResetMatrixCommand?.Execute(null);
 
 		_ = LoadImageAsync(imagePreview);
-	}
-
-	private void OnFolderSelected(DirectoryModel item)
-	{
-		ClearPreview();
 	}
 
 	private void ClearPreview()
@@ -207,12 +197,26 @@ internal class MainImageViewModel : NavigatedViewModelBase
 	{
 		if (MapIsEnabled && location != Location.Empty)
 		{
+
+			if (Map.Navigator.Viewport.Width==0)
+			{
+				Map.ViewportInitialized += (s, e) => LocateMap(location);
+				return;
+
+			}
+			
+
 			var sphericalMercatorCoordinate = SphericalMercator.FromLonLat(location.Longitude, location.Latitude).ToMPoint();
 			Map.Navigator.CenterOnAndZoomTo(sphericalMercatorCoordinate, Map.Navigator.Viewport.Resolution);
 
 			Map.Layers.Remove(l => l.Name == pointLayerName);
 
 			Map.Layers.Add(CreatePointLayer());
+
+			var extent = new MRect(sphericalMercatorCoordinate.X - 1000, sphericalMercatorCoordinate.Y - 1000, sphericalMercatorCoordinate.X + 1000, sphericalMercatorCoordinate.Y + 1000);
+			Map.Navigator.ZoomToBox(extent);
+
+			Map.Refresh();
 		}
 	}
 
@@ -260,7 +264,6 @@ internal class MainImageViewModel : NavigatedViewModelBase
 
 		bitmapId = BitmapRegistry.Instance.Register(stream, fullName);
 		return bitmapId;
-
 	}
 
 	private IEnumerable<IFeature> GetPhotoPointFromEmbeddedResource()
