@@ -1,0 +1,43 @@
+name: Deploy Windows Build
+
+on:
+  push:
+    tags:
+    - 'v*'
+
+jobs:
+  deploy:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup .NET 8
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 8.0.x
+    
+    - name: Build and Publish (AnyCPU)
+      run: |
+        dotnet publish ImageCare.UI.Avalonia/ImageCare.UI.Avalonia.csproj `
+          -c Release `
+          -p:Platform=AnyCPU `
+          -p:PublishSingleFile=true `
+          -p:PublishReadyToRun=true `
+          --self-contained=true `
+          -p:IncludeAllContentForSelfExtract=true `
+          -p:DebugType=embedded
+    
+    - name: Create Zip Archive
+      run: |
+        $tag = "${{ github.ref_name}}".Replace('v','')
+        cd ImageCare.UI.Avalonia/bin/Release/net8.0/publish
+        7z a -tzip "ImageCare-$tag-Windows.zip" *
+    
+    - name: Upload Release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: ${{ github.ref }}
+        name: ImageCare ${{ github.ref_name }}
+        files: ImageCare.UI.Avalonia/bin/Release/net8.0/publish/ImageCare-*-Windows.zip
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

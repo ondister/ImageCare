@@ -10,6 +10,7 @@
         <AvaloniaUseCompiledBindingsByDefault>false</AvaloniaUseCompiledBindingsByDefault>
         <Platforms>AnyCPU</Platforms>
         <ApplicationIcon>Assets\imagecare-logo.ico</ApplicationIcon>
+        <Version>0.1</Version>
     </PropertyGroup>
 
   <ItemGroup>
