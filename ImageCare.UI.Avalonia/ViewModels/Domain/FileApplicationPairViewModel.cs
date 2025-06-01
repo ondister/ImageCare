@@ -29,7 +29,7 @@ internal sealed class FileApplicationPairViewModel
         _fileOperationsService = fileOperationsService;
         _logger = logger;
 
-        OpenWithCommand = new DelegateCommand(OpenWith);
+        OpenWithCommand = new DelegateCommand(OpenWith,()=>true);
     }
 
     public ICommand OpenWithCommand { get; }

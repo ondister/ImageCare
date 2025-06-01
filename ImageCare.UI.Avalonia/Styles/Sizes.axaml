@@ -13,6 +13,8 @@
     <Thickness x:Key="MarginRight.Medium">0,0,4,0</Thickness>
     <Thickness x:Key="MarginAll.Large">6</Thickness>
     <Thickness x:Key="MarginTop.Large"> 0,6,0,0</Thickness>
+    <Thickness x:Key="MarginTop.XLarge"> 0,10,0,0</Thickness>
+    <Thickness x:Key="MarginBottom.XLarge"> 0,0,0,10</Thickness>
 
     <Thickness x:Key="MarginAll.ExtraLarge">16</Thickness>
 

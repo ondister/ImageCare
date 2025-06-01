@@ -12,6 +12,7 @@
         <StyleInclude Source="avares://IconPacks.Avalonia.Lucide/Lucide.axaml" />
         <StyleInclude Source="avares://IconPacks.Avalonia.Material/Material.axaml" />
         <StyleInclude Source="avares://AvaloniaProgressRing/Styles/ProgressRing.xaml"/>
+        <StyleInclude Source="avares://ImageCare/Styles/MenuStyles.axaml"/>
 
     </prism:PrismApplication.Styles>
 

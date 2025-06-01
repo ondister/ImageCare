@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:s="https://github.com/avaloniaui"
              xmlns:prism="http://prismlibrary.com/"
              xmlns:viewModels="clr-namespace:ImageCare.UI.Avalonia.ViewModels"
              xmlns:domain="clr-namespace:ImageCare.UI.Avalonia.ViewModels.Domain"
@@ -112,7 +113,9 @@
 
                                 <u:IconButton Grid.Row="0"
                                               Grid.Column="1"
-                                              Margin="{StaticResource MarginAll.Small}"
+                                              Width="60"
+                                              Height="30"
+                                              Margin="{StaticResource MarginTop.XLarge}"
                                               Command="{CompiledBinding RemoveImagePreviewCommand}"
                                               Theme="{DynamicResource SolidIconButton}"
                                               Classes="Danger">
@@ -123,29 +126,44 @@
                                     </u:IconButton.Icon>
                                 </u:IconButton>
 
-                                <Menu Grid.Row="2"
-                                      Grid.Column="1"
-                                      Margin="{StaticResource MarginAll.Medium}"
-                                      Background="{DynamicResource SemiBlue5}"
-                                      IsVisible="{Binding UseOpenWith, Mode=OneTime}">
-                                    <MenuItem ItemsSource="{Binding OpenWithViewModels, Mode=OneTime}">
-                                        <MenuItem.Header>
-                                            <iconPacks:PackIconMaterial Kind="ApplicationExport"
-                                                                        Height="{StaticResource Icon.Size.Micro}"
-                                                                        Width="{StaticResource Icon.Size.Micro}" />
-                                        </MenuItem.Header>
+                                <DropDownButton Grid.Row="2"
+                                                Grid.Column="1"
+                                                Width="60"
+                                                Height="30"
+                                                Margin="{StaticResource MarginBottom.XLarge}"
+                                                IsVisible="{Binding UseOpenWith, Mode=OneTime}"
+                                                Theme="{DynamicResource SolidDropDownButton}">
 
-                                        <MenuItem.ItemContainerTheme>
-                                            <ControlTheme TargetType="MenuItem"
-                                                          BasedOn="{StaticResource {x:Type MenuItem}}"
-                                                          x:DataType="domain:FileApplicationPairViewModel">
-                                                <Setter Property="Header" Value="{Binding Name}" />
-                                                <Setter Property="Command" Value="{Binding OpenWithCommand}" />
-                                            </ControlTheme>
-                                        </MenuItem.ItemContainerTheme>
+                                    <DropDownButton.Content>
+                                        <iconPacks:PackIconMaterial Kind="ApplicationExport"
+                                                                    Height="{StaticResource Icon.Size.Micro}"
+                                                                    Width="{StaticResource Icon.Size.Micro}"/>
+                                    </DropDownButton.Content>
 
-                                    </MenuItem>
-                                </Menu>
+                                    <DropDownButton.Flyout>
+                                        <MenuFlyout ItemsSource="{Binding OpenWithViewModels}">
+                                            <MenuFlyout.ItemContainerTheme>
+                                                <ControlTheme TargetType="MenuItem">
+                                                    <Setter Property="Command" Value="{Binding OpenWithCommand}"/>
+                                                    <Setter Property="Header" Value="{Binding Name}"/>
+                                                    <Setter Property="Template">
+                                                        <ControlTemplate>
+                                                            <Border Name="border"
+                                                                    Background="{TemplateBinding Background}"
+                                                                    CornerRadius="{TemplateBinding CornerRadius}">
+                                                                <ContentPresenter Content="{TemplateBinding Header}"
+                                                                    TextBlock.Foreground="{TemplateBinding Foreground}"
+                                                                    Margin="{TemplateBinding Padding}"
+                                                                    VerticalAlignment="Center"/>
+                                                            </Border>
+                                                        </ControlTemplate>
+                                                    </Setter>
+                                                </ControlTheme>
+                                            </MenuFlyout.ItemContainerTheme>
+                                        </MenuFlyout>
+                                    </DropDownButton.Flyout>
+                                </DropDownButton>
+
                                 <iconPacks:PackIconMaterial Grid.Row="0"
                                                             Grid.Column="0"
                                                             IsVisible="{Binding HasLocation}"
