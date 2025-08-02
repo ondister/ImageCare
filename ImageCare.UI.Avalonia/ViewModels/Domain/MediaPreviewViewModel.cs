@@ -75,7 +75,7 @@ internal class MediaPreviewViewModel : ViewModelBase, IComparable<MediaPreviewVi
     public DateTime FileDate
     {
 	    get => _fileDate;
-	    set => SetProperty(ref _fileDate, value.Date); // Храним только дату без времени
+	    set => SetProperty(ref _fileDate, value);
     }
 
 	public string? Title { get; }
@@ -149,7 +149,7 @@ internal class MediaPreviewViewModel : ViewModelBase, IComparable<MediaPreviewVi
 	    {
 		    SetProperty(ref _metadata, value);
 		    HasLocation = _metadata != null && _metadata.Location != Location.Empty;
-		    FileDate = _metadata.CreationDateTime.Date;
+		    FileDate = _metadata.CreationDateTime;
 	    } 
     }
 
