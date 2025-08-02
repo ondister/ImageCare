@@ -32,16 +32,31 @@ public class SortedObservableCollection<T> : ObservableCollection<T>
 		Insert(indexToInsert, item);
 	}
 
-	private int BinarySearch<T>(IList<T> items, int index, int count, T item, IComparer<T>? comparer)
+	private int BinarySearch<T>(IList<T> items, int index, int length, T value, IComparer<T>? comparer)
 	{
-		try
+		comparer ??= Comparer<T>.Default;
+
+		var low = index;
+		var high = index + length - 1;
+
+		while (low <= high)
 		{
-			return Array.BinarySearch(items.ToArray(), index, count, item, comparer);
+			var mid = low + ((high - low) >> 1);
+			var comparison = comparer.Compare(items[mid], value);
+
+			switch (comparison)
+			{
+				case 0:
+					return mid;
+				case < 0:
+					low = mid + 1;
+					break;
+				default:
+					high = mid - 1;
+					break;
+			}
 		}
-		catch (
-			Exception ex)
-		{
-			return 0;
-		}
+
+		return ~low;
 	}
 }
