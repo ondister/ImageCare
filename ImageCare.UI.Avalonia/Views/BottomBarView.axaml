@@ -23,8 +23,9 @@
         <u:Divider Grid.Row="0"
                    HorizontalContentAlignment="Center" />
 
-        <Grid Grid.Row="1" ColumnDefinitions="Auto,Auto,*"
+        <Grid Grid.Row="1" ColumnDefinitions="Auto,Auto,*,Auto"
               Margin="{StaticResource MarginTop.Medium}">
+            <!--Logs-->
             <u:Badge Margin="{StaticResource MarginTop.Large}"
                      Header="{Binding MessagesCount}"
                      OverflowCount="99">
@@ -39,6 +40,7 @@
                 </u:IconButton>
             </u:Badge>
 
+            <!--Notification-->
             <ContentControl Grid.Column="1"
                             VerticalAlignment="Bottom"
                             Content="{Binding NotificationViewModel}">
@@ -85,6 +87,17 @@
                     </DataTemplate>
                 </ContentControl.DataTemplates>
             </ContentControl>
+
+            <!--Settings-->
+            <u:IconButton Grid.Column="3" 
+                          Classes="Small"
+                          Content="Settings"
+                          IconPlacement="Left"
+                          Command="{Binding  OpenSettingsWindowCommand}">
+                <u:IconButton.Icon>
+                    <iconPacks:PackIconLucide Kind="Settings" />
+                </u:IconButton.Icon>
+            </u:IconButton>
         </Grid>
     </Grid>
 </UserControl>

@@ -43,6 +43,7 @@ internal class BottomBarViewModel : NavigatedViewModelBase
         _synchronizationContext = synchronizationContext;
 
         OpenLogWindowCommand = new DelegateCommand(OpenLogWindow);
+        OpenSettingsWindowCommand = new DelegateCommand(OpenSettingsWindow);
     }
 
     public int? MessagesCount
@@ -58,9 +59,10 @@ internal class BottomBarViewModel : NavigatedViewModelBase
     }
 
     public ICommand OpenLogWindowCommand { get; }
+    public ICommand OpenSettingsWindowCommand { get; }
 
-    /// <inheritdoc />
-    public override void OnNavigatedTo(NavigationContext navigationContext)
+	/// <inheritdoc />
+	public override void OnNavigatedTo(NavigationContext navigationContext)
     {
         base.OnNavigatedTo(navigationContext);
 
@@ -90,7 +92,13 @@ internal class BottomBarViewModel : NavigatedViewModelBase
         _dialogService.Show("logViewer", param, _ => { }, "childWindow");
     }
 
-    private void UpdateMessagesCount()
+    private void OpenSettingsWindow()
+    {
+	    IDialogParameters param = new DialogParameters();
+	    _dialogService.ShowDialog("settingsViewer", param, _ => { }, "childWindow");
+    }
+
+	private void UpdateMessagesCount()
     {
         MessagesCount = _errorsCount + _warningsCount;
         if (MessagesCount == 0)

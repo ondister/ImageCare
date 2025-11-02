@@ -1,0 +1,150 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:mvvm="http://prismlibrary.com/"
+             xmlns:viewModels="clr-namespace:ImageCare.UI.Avalonia.ViewModels"
+             mc:Ignorable="d"
+             mvvm:ViewModelLocator.AutoWireViewModel="True"
+             x:DataType="viewModels:SettingsViewModel"
+             x:Class="ImageCare.UI.Avalonia.Views.SettingsView">
+
+    <TabControl Margin="{DynamicResource MarginAll.Medium}">
+        <TabItem Header="File Associations">
+            <Grid RowDefinitions="Auto,Auto,*,Auto" Margin="0" VerticalAlignment="Top">
+
+                <!-- Add new association section -->
+                <Border Grid.Row="0"
+                        Background="{DynamicResource ThemeBackgroundBrush}"
+                        CornerRadius="{DynamicResource BorderRadius.Small}"
+                        Padding="{DynamicResource Padding.Medium}"
+                        Margin="{DynamicResource MarginBottom.Medium}">
+                    <StackPanel>
+                        <TextBlock Text="Add New File Association"
+                                   FontWeight="Bold"
+                                   FontSize="{DynamicResource Font.Size.SectionHeader}"
+                                   Margin="{DynamicResource MarginBottom.Medium}"/>
+
+                        <Grid ColumnDefinitions="*,*,Auto"
+                              Margin="{DynamicResource MarginVertical.Small}">
+                            <TextBox Grid.Column="0"
+                                     Margin="{DynamicResource Form.HorizontalMargin}"
+                                     Text="{Binding NewExtension}"
+                                     Watermark="Extension (e.g., .cr2, .jpg)"
+                                     UseFloatingWatermark="True"/>
+                            <TextBox Grid.Column="1"
+                                     Margin="{DynamicResource Form.HorizontalMargin}"
+                                     Text="{Binding NewName}"
+                                     Watermark="Display name"
+                                     UseFloatingWatermark="True"/>
+                            <Button Grid.Column="2"
+                                    Content="Add"
+                                    Command="{Binding AddAssociationCommand}"
+                                    MinWidth="{DynamicResource Control.MinWidth.Medium}"
+                                    Background="{DynamicResource ThemeAccentBrush}"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- Edit selected association section -->
+                <Border Grid.Row="1"
+                        Background="{DynamicResource ThemeBackgroundBrush}"
+                        CornerRadius="{DynamicResource BorderRadius.Small}"
+                        Padding="{DynamicResource Padding.Medium}"
+                        Margin="{DynamicResource MarginBottom.Medium}">
+                    <StackPanel>
+                        <TextBlock Text="Edit Selected Association"
+                                   FontWeight="Bold"
+                                   FontSize="{DynamicResource Font.Size.SectionHeader}"
+                                   Margin="{DynamicResource MarginBottom.Medium}"/>
+
+                        <Grid ColumnDefinitions="*,Auto"
+                              Margin="{DynamicResource MarginVertical.Small}">
+                            <TextBox Grid.Column="0"
+                                     Margin="{DynamicResource Form.HorizontalMargin}"
+                                     Text="{Binding SelectedAssociation.ApplicationPath, Mode=TwoWay}"
+                                     IsEnabled="{Binding SelectedAssociation}"
+                                     Watermark="Path to executable"
+                                     UseFloatingWatermark="True"/>
+                            <Button Grid.Column="1"
+                                    Content="Browse..."
+                                    Command="{Binding EditApplicationPathCommand}"
+                                    IsEnabled="{Binding SelectedAssociation}"
+                                    MinWidth="{DynamicResource Control.MinWidth.Medium}"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- Associations list -->
+                <Border Grid.Row="2"
+                        Background="{DynamicResource ThemeBackgroundBrush}"
+                        CornerRadius="{DynamicResource BorderRadius.Small}"
+                        Padding="{DynamicResource Padding.Medium}"
+                        Margin="{DynamicResource MarginBottom.Medium}">
+                    <Grid RowDefinitions="Auto,*,Auto">
+                        <TextBlock Grid.Row="0"
+                                   Text="Current Associations"
+                                   FontWeight="Bold"
+                                   FontSize="{DynamicResource Font.Size.SectionHeader}"
+                                   Margin="{DynamicResource MarginBottom.Medium}"/>
+
+                        <ListBox Grid.Row="1"
+                                 ItemsSource="{Binding Associations}"
+                                 SelectedItem="{Binding SelectedAssociation}"
+                                 ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                 Margin="{DynamicResource MarginVertical.Small}">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid ColumnDefinitions="100,*,*"
+                                          Margin="{DynamicResource MarginAll.Small}">
+                                        <TextBlock Grid.Column="0"
+                                                   Text="{Binding FileExtension}"
+                                                   FontWeight="Bold"
+                                                   Margin="{DynamicResource MarginAll.Small}"
+                                                   VerticalAlignment="Center"/>
+                                        <TextBlock Grid.Column="1"
+                                                   Text="{Binding Name}"
+                                                   Margin="{DynamicResource MarginAll.Small}"
+                                                   VerticalAlignment="Center"/>
+                                        <TextBlock Grid.Column="2"
+                                                   Text="{Binding ApplicationPath}"
+                                                   Margin="{DynamicResource MarginAll.Small}"
+                                                   VerticalAlignment="Center"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+
+                            <ListBox.Styles>
+                                <Style Selector="ListBoxItem">
+                                    <Setter Property="Padding" Value="{DynamicResource Padding.Small}"/>
+                                    <Setter Property="Cursor" Value="Hand"/>
+                                </Style>
+                            </ListBox.Styles>
+                        </ListBox>
+
+                        <Button Grid.Row="2"
+                                Content="Remove Selected"
+                                Command="{Binding RemoveAssociationCommand}"
+                                HorizontalAlignment="Right"
+                                Margin="{DynamicResource MarginTop.Medium}"
+                                MinWidth="{DynamicResource Control.MinWidth.Large}"
+                                IsEnabled="{Binding SelectedAssociation}"
+                                Background="{DynamicResource ThemeDangerBrush}"/>
+                    </Grid>
+                </Border>
+
+                <!-- Status/info section -->
+                <TextBlock Grid.Row="3"
+                           Text="File associations allow opening specific file types with this application"
+                           FontStyle="Italic"
+                           FontSize="{DynamicResource Font.Size.Small}"
+                           Foreground="{DynamicResource ThemeForegroundBrush}"
+                           Opacity="0.7"
+                           TextWrapping="Wrap"
+                           Margin="{DynamicResource MarginAll.Small}"/>
+            </Grid>
+        </TabItem>
+    </TabControl>
+
+</UserControl>

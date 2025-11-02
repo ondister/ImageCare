@@ -4,6 +4,7 @@ using System.Threading;
 using AutoMapper;
 using ImageCare.Core.Domain.Folders;
 using ImageCare.Core.Domain.Preview;
+using ImageCare.Core.Services.ConfigurationService;
 using ImageCare.Core.Services.FileAssociationsService;
 using ImageCare.Core.Services.FileOperationsService;
 using ImageCare.Core.Services.FileSystemImageService;
@@ -160,7 +161,9 @@ internal sealed class ApplicationMapper
                    .IncludeBase<Notification, NotificationViewModel>();
                 cfg.CreateMap<ErrorNotification, ErrorNotificationViewModel>()
                    .IncludeBase<Notification, NotificationViewModel>();
-            });
+
+                cfg.CreateMap<FileApplicationAssociation, FileApplicationAssociationViewModel>();
+			});
 
         config.AssertConfigurationIsValid();
 

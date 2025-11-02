@@ -1,78 +1,94 @@
-﻿using System.Text.Json;
+﻿using System.Reactive.Linq;
+using System.Reactive.Subjects;
+using System.Text.Json;
 
 using ImageCare.Core.Exceptions;
 
 namespace ImageCare.Core.Services.ConfigurationService;
 
-public sealed class JsonConfigurationService : IConfigurationService
+public sealed class JsonConfigurationService : IConfigurationService, IDisposable
 {
-    private const string _configurationFilename = "configuration.json";
-    private const string _exceptionMessage = "Unexpected exception in Json configuration service";
+	private const string _configurationFilename = "configuration.json";
+	private const string _exceptionMessage = "Unexpected exception in Json configuration service";
 
-    public JsonConfigurationService()
-    {
-        CreateConfigurationFileIfNeeded();
-    }
+	private readonly Subject<Configuration> _configurationSavedSubject;
 
-    public Lazy<Configuration> Configuration { get; } = new(LoadConfiguration);
+	public JsonConfigurationService()
+	{
+		_configurationSavedSubject = new Subject<Configuration>();
 
-    public void SaveConfiguration()
-    {
-        try
-        {
-            var configuration = Configuration.Value;
-            var configurationPath = Path.Combine(GetConfigurationDirectoryPath(), _configurationFilename);
+		CreateConfigurationFileIfNeeded();
+	}
 
-            using (var fileStream = new FileStream(configurationPath, FileMode.Create, FileAccess.Write, FileShare.Read))
-            {
-                JsonSerializer.Serialize(fileStream, configuration, new JsonSerializerOptions { WriteIndented = true });
-            }
-        }
-        catch (Exception exception)
-        {
-            throw new ServiceException(_exceptionMessage, exception);
-        }
-    }
+	/// <inheritdoc />
+	public IObservable<Configuration> ConfigurationSaved => _configurationSavedSubject.AsObservable();
 
-    private static Configuration LoadConfiguration()
-    {
-        try
-        {
-            var configurationPath = Path.Combine(GetConfigurationDirectoryPath(), _configurationFilename);
-            using (var fileStream = new FileStream(configurationPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
-            {
-                return JsonSerializer.Deserialize<Configuration>(fileStream) ?? new Configuration();
-            }
-        }
-        catch (Exception exception)
-        {
-            throw new ServiceException(_exceptionMessage, exception);
-        }
-    }
+	public Lazy<Configuration> Configuration { get; } = new(LoadConfiguration);
 
-    private static void CreateConfigurationFileIfNeeded()
-    {
-        var configurationFolderPath = GetConfigurationDirectoryPath();
-        if (!Directory.Exists(configurationFolderPath))
-        {
-            Directory.CreateDirectory(configurationFolderPath);
-        }
+	public void SaveConfiguration()
+	{
+		try
+		{
+			var configuration = Configuration.Value;
+			var configurationPath = Path.Combine(GetConfigurationDirectoryPath(), _configurationFilename);
 
-        var configurationPath = Path.Combine(configurationFolderPath, _configurationFilename);
+			using (var fileStream = new FileStream(configurationPath, FileMode.Create, FileAccess.Write, FileShare.Read))
+			{
+				JsonSerializer.Serialize(fileStream, configuration, new JsonSerializerOptions { WriteIndented = true });
+			}
 
-        if (File.Exists(configurationPath))
-        {
-            return;
-        }
+			_configurationSavedSubject.OnNext(configuration);
+		}
+		catch (Exception exception)
+		{
+			throw new ServiceException(_exceptionMessage, exception);
+		}
+	}
 
-        using (var fileStream = new FileStream(configurationPath, FileMode.Create, FileAccess.ReadWrite))
-        {
-            JsonSerializer.Serialize(fileStream, new Configuration());
-        }
-    }
+	public void Dispose()
+	{
+		_configurationSavedSubject.Dispose();
+	}
 
-    private static string GetConfigurationDirectoryPath()
-    {
-        return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ImageCare");
-    }
+	private static Configuration LoadConfiguration()
+	{
+		try
+		{
+			var configurationPath = Path.Combine(GetConfigurationDirectoryPath(), _configurationFilename);
+			using (var fileStream = new FileStream(configurationPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+			{
+				return JsonSerializer.Deserialize<Configuration>(fileStream) ?? new Configuration();
+			}
+		}
+		catch (Exception exception)
+		{
+			throw new ServiceException(_exceptionMessage, exception);
+		}
+	}
+
+	private static void CreateConfigurationFileIfNeeded()
+	{
+		var configurationFolderPath = GetConfigurationDirectoryPath();
+		if (!Directory.Exists(configurationFolderPath))
+		{
+			Directory.CreateDirectory(configurationFolderPath);
+		}
+
+		var configurationPath = Path.Combine(configurationFolderPath, _configurationFilename);
+
+		if (File.Exists(configurationPath))
+		{
+			return;
+		}
+
+		using (var fileStream = new FileStream(configurationPath, FileMode.Create, FileAccess.ReadWrite))
+		{
+			JsonSerializer.Serialize(fileStream, new Configuration());
+		}
+	}
+
+	private static string GetConfigurationDirectoryPath()
+	{
+		return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ImageCare");
+	}
 }

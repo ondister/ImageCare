@@ -18,10 +18,23 @@
 
     <Thickness x:Key="MarginAll.ExtraLarge">16</Thickness>
 
+    <Thickness x:Key="Form.HorizontalMargin">0,0,8,0</Thickness>
+
     <system:Double x:Key="Icon.Size.Micro">12</system:Double>
     <system:Double x:Key="Icon.Size.Small">16</system:Double>
     <system:Double x:Key="Icon.Size.Medium">24</system:Double>
     <system:Double x:Key="Icon.Size.Giant">100</system:Double>
 
     <system:Double x:Key="Font.Size.Small">12</system:Double>
+
+    <CornerRadius x:Key="BorderRadius.Small">4</CornerRadius>
+    <CornerRadius x:Key="BorderRadius.Medium">6</CornerRadius>
+
+    <Thickness x:Key="Padding.Medium">12</Thickness>
+    <Thickness x:Key="Padding.Small">8</Thickness>
+    <Thickness x:Key="Padding.Inner">6</Thickness>
+
+    <x:Double x:Key="Font.Size.SectionHeader">14</x:Double>
+    <x:Double x:Key="Control.MinWidth.Medium">100</x:Double>
+    <x:Double x:Key="Control.MinWidth.Large">120</x:Double>
 </ResourceDictionary>

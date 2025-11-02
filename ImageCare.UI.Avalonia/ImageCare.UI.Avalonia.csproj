@@ -10,7 +10,7 @@
         <AvaloniaUseCompiledBindingsByDefault>false</AvaloniaUseCompiledBindingsByDefault>
         <Platforms>AnyCPU</Platforms>
         <ApplicationIcon>Assets\imagecare-logo.ico</ApplicationIcon>
-        <Version>0.1</Version>
+        <Version>0.1.2</Version>
     </PropertyGroup>
 
   <ItemGroup>
@@ -52,6 +52,7 @@
     <PackageReference Include="LibMpv.Avalonia" Version="1.0.0" />
     <PackageReference Include="Mapsui.Avalonia" Version="4.1.8" />
     <PackageReference Include="Prism.Avalonia" Version="8.1.97.11073" />
+    <PackageReference Include="Prism.Commands.Ex" Version="0.1.9" />
     <PackageReference Include="Prism.DryIoc.Avalonia" Version="8.1.97.11073" />
     <PackageReference Include="Semi.Avalonia" Version="11.2.1.3" />
     <PackageReference Include="System.Reactive" Version="6.0.1" />

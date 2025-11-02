@@ -2,7 +2,9 @@
 
 public interface IConfigurationService
 {
-    Lazy<Configuration> Configuration { get; }
+	IObservable<Configuration> ConfigurationSaved { get; }
+
+	Lazy<Configuration> Configuration { get; }
 
     void SaveConfiguration();
 }

@@ -89,8 +89,9 @@ public class App : PrismApplication
 	        var topLevel = TopLevel.GetTopLevel(provider.Resolve<MainWindow>());
 	        return new ClipboardService(topLevel);
         });
+        containerRegistry.RegisterSingleton<IFileDialogService, AvaloniaFileDialogService>();
 
-        containerRegistry.RegisterInstance(new ApplicationMapper(Container).GetMapper());
+		containerRegistry.RegisterInstance(new ApplicationMapper(Container).GetMapper());
         containerRegistry.RegisterInstance(SynchronizationContext.Current);
         containerRegistry.RegisterSingleton<MapControlMediator>();
 
@@ -99,5 +100,6 @@ public class App : PrismApplication
         containerRegistry.Register<ImagePreviewDropHandler, ImagePreviewDropHandler>();
 
         containerRegistry.RegisterDialogWindow<ChildWindow>("childWindow");
-    }
+        containerRegistry.RegisterDialog<SettingsView>("settingsViewer");
+	}
 }
