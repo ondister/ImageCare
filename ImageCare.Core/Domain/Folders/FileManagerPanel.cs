@@ -2,7 +2,7 @@
 
 public enum FileManagerPanel
 {
-    Undefined = 0,
-    Right = 1,
-    Left = 2
+	Undefined = 0,
+	Right = 1,
+	Left = 2
 }

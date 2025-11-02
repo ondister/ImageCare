@@ -17,14 +17,14 @@ public sealed class FolderStatistics
 
 	public IReadOnlyDictionary<MediaFormat, long> MediaCount { get; }
 
-	internal void AddMediaFormatStatistics(MediaFormat mediaFormat, long filesCount)
-	{
-		_mediaCount.AddOrUpdate(mediaFormat, filesCount, (key, value) => value);
-	}
-
 	/// <inheritdoc />
 	public override string ToString()
 	{
 		return MediaCount.Where(kvp => !kvp.Key.Equals(MediaFormat.MediaFormatUnknown)).Sum(v => v.Value).ToString();
+	}
+
+	internal void AddMediaFormatStatistics(MediaFormat mediaFormat, long filesCount)
+	{
+		_mediaCount.AddOrUpdate(mediaFormat, filesCount, (key, value) => value);
 	}
 }
