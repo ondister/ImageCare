@@ -1,5 +1,6 @@
 ﻿using ImageCare.Core.Domain.Media.Metadata;
 using ImageCare.Core.Domain.Preview;
+using ImageCare.Core.Exceptions;
 
 using MetadataExtractor;
 using MetadataExtractor.Formats.QuickTime;
@@ -10,59 +11,111 @@ namespace ImageCare.Core.Domain.Media;
 
 internal sealed class Mp4MediaPreviewProvider : IMediaPreviewProvider
 {
-	private const string _unsupportedMediaPreview = @"Domain\Media\Assets\mp4_media_preview.jpg";
+	private const string _mp4MediaPreview = @"Domain\Media\Assets\mp4_media_preview.jpg";
 
-	/// <inheritdoc />
 	public IMediaMetadata GetMediaMetadata(string url)
 	{
-		using (var stream = new FileStream(url, FileMode.Open, FileAccess.Read, FileShare.Read))
+		try
 		{
+			using var stream = new FileStream(url, FileMode.Open, FileAccess.Read, FileShare.Read);
 			var directories = QuickTimeMetadataReader.ReadMetadata(stream);
 
-			if (directories.FirstOrDefault(d => d.Name.Equals("QuickTime Track Header", StringComparison.OrdinalIgnoreCase)) is { } trackMetadataDirectory
-			 && trackMetadataDirectory.TryGetDateTime(QuickTimeTrackHeaderDirectory.TagCreated, out var dateTime)
-			 && trackMetadataDirectory.TryGetInt32(QuickTimeTrackHeaderDirectory.TagWidth, out var width)
-			 && trackMetadataDirectory.TryGetInt32(QuickTimeTrackHeaderDirectory.TagHeight, out var height))
+			var trackMetadataDirectory = FindTrackMetadataDirectory(directories);
+
+			if (trackMetadataDirectory != null &&
+				TryExtractBasicMetadata(trackMetadataDirectory, out var dateTime, out var width, out var height))
 			{
-				var videoMediaMetadata = new VideoMediaMetadata(dateTime, width, height);
-				FillAllMetaData(trackMetadataDirectory, videoMediaMetadata);
-
-				if (directories.FirstOrDefault(d => d.Name.Equals("QuickTime Movie Header", StringComparison.OrdinalIgnoreCase)) is { } trackMovieDirectory)
-				{
-					if (trackMovieDirectory.GetObject(QuickTimeMovieHeaderDirectory.TagDuration) is TimeSpan duration)
-					{
-						videoMediaMetadata.Duration = duration;
-					}
-
-					FillAllMetaData(trackMovieDirectory, videoMediaMetadata);
-
-					return videoMediaMetadata;
-				}
-
-				return videoMediaMetadata;
+				return CreateVideoMediaMetadata(trackMetadataDirectory, directories, dateTime, width, height);
 			}
 		}
+		catch (FileNotFoundException ex)
+		{
+			throw new MediaPreviewProviderException($"Failed to open MP4 file: {url}", ex);
+		}
+		catch (Exception _)
+		{
+			return CreateUnsupportedMetadata(url);
+		}
 
-		return new UnsupportedMediaMetadata(new FileInfo(url).CreationTime);
+		return CreateUnsupportedMetadata(url);
 	}
 
-	/// <inheritdoc />
 	public Stream GetPreviewJpegStream(string url, MediaPreviewSize size)
 	{
-		return File.OpenRead(_unsupportedMediaPreview);
+		try
+		{
+			var previewPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, _mp4MediaPreview);
+			return File.OpenRead(previewPath);
+		}
+		catch (Exception ex)
+		{
+			throw new MediaPreviewProviderException($"Failed to get preview for MP4 file: {url}", ex);
+		}
 	}
 
-	/// <inheritdoc />
 	public DateTime? GetCreationDateTime(string url)
 	{
-		return GetMediaMetadata(url).CreationDateTime;
+		var metadata = GetMediaMetadata(url);
+		return metadata.CreationDateTime;
 	}
 
-	private void FillAllMetaData(Directory metadataDirectory, AllMetadataWrapper mediaMetadata)
+	private static Directory? FindTrackMetadataDirectory(IReadOnlyList<Directory> directories)
 	{
-		foreach (var metadata in metadataDirectory.Tags.Where(t => !string.IsNullOrEmpty(t.Description)))
+		return directories.FirstOrDefault(d =>
+			d.Name.Equals("QuickTime Track Header", StringComparison.OrdinalIgnoreCase));
+	}
+
+	private static bool TryExtractBasicMetadata(Directory directory, out DateTime dateTime, out int width, out int height)
+	{
+		dateTime = DateTime.MinValue;
+		width = 0;
+		height = 0;
+
+		return directory.TryGetDateTime(QuickTimeTrackHeaderDirectory.TagCreated, out dateTime) &&
+			   directory.TryGetInt32(QuickTimeTrackHeaderDirectory.TagWidth, out width) &&
+			   directory.TryGetInt32(QuickTimeTrackHeaderDirectory.TagHeight, out height);
+	}
+
+	private static VideoMediaMetadata CreateVideoMediaMetadata(Directory trackDirectory, IReadOnlyList<Directory> allDirectories, DateTime dateTime, int width, int height)
+	{
+		var metadata = new VideoMediaMetadata(dateTime, width, height);
+
+		FillMetadata(trackDirectory, metadata);
+		FillDurationFromMovieHeader(allDirectories, metadata);
+
+		return metadata;
+	}
+
+	private static void FillDurationFromMovieHeader(IReadOnlyList<Directory> directories, VideoMediaMetadata metadata)
+	{
+		var movieHeaderDirectory = directories.FirstOrDefault(d =>
+			d.Name.Equals("QuickTime Movie Header", StringComparison.OrdinalIgnoreCase));
+
+		if (movieHeaderDirectory?.GetObject(QuickTimeMovieHeaderDirectory.TagDuration) is TimeSpan duration)
 		{
-			mediaMetadata.AddOrUpdateMetadata(metadata.Name, metadata.Description);
+			metadata.Duration = duration;
+			FillMetadata(movieHeaderDirectory, metadata);
+		}
+	}
+
+	private static void FillMetadata(Directory directory, AllMetadataWrapper mediaMetadata)
+	{
+		foreach (var tag in directory.Tags.Where(t => !string.IsNullOrEmpty(t.Description)))
+		{
+			mediaMetadata.AddOrUpdateMetadata(tag.Name, tag.Description);
+		}
+	}
+
+	private static UnsupportedMediaMetadata CreateUnsupportedMetadata(string url)
+	{
+		try
+		{
+			var fileInfo = new FileInfo(url);
+			return new UnsupportedMediaMetadata(fileInfo.CreationTime);
+		}
+		catch (Exception ex)
+		{
+			throw new MediaPreviewProviderException($"Failed to create unsupported metadata for file: {url}", ex);
 		}
 	}
 }

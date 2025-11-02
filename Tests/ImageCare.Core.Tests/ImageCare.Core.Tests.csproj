@@ -10,6 +10,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="TestImages\1A1A0467.MP4" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="coverlet.collector" Version="6.0.0" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
     <PackageReference Include="NUnit" Version="3.14.0" />
@@ -26,6 +30,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Update="TestImages\test.MP4">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="TestImages\canon_geo.CR3">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
