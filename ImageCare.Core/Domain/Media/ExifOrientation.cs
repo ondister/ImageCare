@@ -17,30 +17,17 @@ public static class ExifOrientationExtensions
 {
 	public static double ToRotationAngle(this ExifOrientation imageOrientation)
 	{
-		switch (imageOrientation)
+		return imageOrientation switch
 		{
-			case ExifOrientation.Unknown:
-				break;
-			case ExifOrientation.TopLeft:
-				break;
-			case ExifOrientation.TopRight:
-				break;
-			case ExifOrientation.BottomRight:
-				break;
-			case ExifOrientation.BottomLeft:
-				break;
-			case ExifOrientation.LeftTop:
-				break;
-			case ExifOrientation.RightTop:
-				return 90;
-			case ExifOrientation.RightBottom:
-				break;
-			case ExifOrientation.LeftBottom:
-				return 270;
-			default:
-				return 0;
-		}
-
-		return 0;
+			ExifOrientation.TopLeft => 0, // Normal
+			ExifOrientation.TopRight => 0, // Mirror horizontal (flip handled separately)
+			ExifOrientation.BottomRight => 180, // Rotate 180°
+			ExifOrientation.BottomLeft => 180, // Mirror horizontal + rotate 180°
+			ExifOrientation.LeftTop => 270, // Mirror horizontal + rotate 270° CW
+			ExifOrientation.RightTop => 90, // Rotate 90° CW
+			ExifOrientation.RightBottom => 90, // Mirror horizontal + rotate 90° CW
+			ExifOrientation.LeftBottom => 270, // Rotate 270° CW (90° CCW)
+			_ => 0
+		};
 	}
 }
