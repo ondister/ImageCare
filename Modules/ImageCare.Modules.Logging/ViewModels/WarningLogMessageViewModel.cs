@@ -2,7 +2,7 @@
 
 internal sealed class WarningLogMessageViewModel : LogMessageViewModel
 {
-    /// <inheritdoc />
-    public WarningLogMessageViewModel(DateTimeOffset timestamp, string message, string? exceptionMessage)
-        : base(timestamp, message, exceptionMessage) { }
+	/// <inheritdoc />
+	public WarningLogMessageViewModel(DateTimeOffset timestamp, string message, string? exceptionMessage)
+		: base(timestamp, message, exceptionMessage) { }
 }

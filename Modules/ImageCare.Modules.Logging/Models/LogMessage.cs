@@ -2,16 +2,16 @@
 
 internal sealed class LogMessage
 {
-    public LogMessage(DateTimeOffset timestamp, string message, string? exceptionMessage)
-    {
-        Timestamp = timestamp;
-        Message = message;
-        ExceptionMessage = exceptionMessage;
-    }
+	public LogMessage(DateTimeOffset timestamp, string message, string? exceptionMessage)
+	{
+		Timestamp = timestamp;
+		Message = message;
+		ExceptionMessage = exceptionMessage;
+	}
 
-    public DateTimeOffset Timestamp { get; }
+	public DateTimeOffset Timestamp { get; }
 
-    public string Message { get; }
+	public string Message { get; }
 
-    public string? ExceptionMessage { get; }
+	public string? ExceptionMessage { get; }
 }

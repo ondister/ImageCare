@@ -7,9 +7,9 @@ namespace ImageCare.Modules.Logging.Mapping;
 
 public sealed class LoggerMapper : Profile
 {
-    public LoggerMapper()
-    {
-        CreateMap<LogMessage, ErrorLogMessageViewModel>();
-        CreateMap<LogMessage, WarningLogMessageViewModel>();
-    }
+	public LoggerMapper()
+	{
+		CreateMap<LogMessage, ErrorLogMessageViewModel>();
+		CreateMap<LogMessage, WarningLogMessageViewModel>();
+	}
 }

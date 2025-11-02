@@ -2,17 +2,17 @@
 
 namespace ImageCare.Modules.Logging.Services;
 
-interface ILogEventService
+internal interface ILogEventService
 {
-    public IObservable<LogMessage> ErrorReceived { get; }
+	public IObservable<LogMessage> ErrorReceived { get; }
 
-    public IObservable<LogMessage> WarningReceived { get; }
+	public IObservable<LogMessage> WarningReceived { get; }
 
-    public IObservable<bool> MessagesCleared { get; }
+	public IObservable<bool> MessagesCleared { get; }
 
-    public IEnumerable<LogMessage> GetLastErrors();
+	public IEnumerable<LogMessage> GetLastErrors();
 
-    public IEnumerable<LogMessage> GetLastWarnings();
+	public IEnumerable<LogMessage> GetLastWarnings();
 
-    public void ClearMessages();
+	public void ClearMessages();
 }
