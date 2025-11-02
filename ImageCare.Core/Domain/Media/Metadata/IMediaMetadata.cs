@@ -1,20 +1,18 @@
-﻿using System.Data.Common;
-
-namespace ImageCare.Core.Domain.Media.Metadata;
+﻿namespace ImageCare.Core.Domain.Media.Metadata;
 
 public interface IMediaMetadata
 {
-    int Width { get; }
+	int Width { get; }
 
-    int Height { get; }
+	int Height { get; }
 
-    DateTime CreationDateTime { get; }
+	DateTime CreationDateTime { get; }
 
-    ExifOrientation Orientation { get; internal set; }
+	ExifOrientation Orientation { get; internal set; }
 
-    IReadOnlyDictionary<string, string> AllMetadata { get;}
+	IReadOnlyDictionary<string, string> AllMetadata { get; }
 
-    string GetString();
+	Location Location { get; }
 
-    Location Location { get;}
+	string GetString();
 }

@@ -10,7 +10,8 @@ internal sealed class UnsupportedMediaPreviewProvider : IMediaPreviewProvider
     /// <inheritdoc />
     public IMediaMetadata GetMediaMetadata(string url)
     {
-        return new UnsupportedMediaMetadata();
+	    var fileInfo = new FileInfo(url);
+        return new UnsupportedMediaMetadata(fileInfo.CreationTime);
     }
 
     /// <inheritdoc />

@@ -2,5 +2,5 @@
 
 public interface IVideoMetadata : IMediaMetadata
 {
-    TimeSpan Duration { get; set; }
+	TimeSpan Duration { get; set; }
 }

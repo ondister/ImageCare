@@ -30,6 +30,6 @@ public class VideoMediaMetadata : AllMetadataWrapper, IVideoMetadata
 	/// <inheritdoc />
 	public string GetString()
 	{
-		return $"{Width}*{Height} - {Duration.ToString("g")}";
+		return $"{Width}x{Height} - {Duration.ToString("g")}";
 	}
 }

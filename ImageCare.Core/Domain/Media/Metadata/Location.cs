@@ -1,12 +1,15 @@
-﻿namespace ImageCare.Core.Domain.Media.Metadata;
+﻿using System.Globalization;
+
+namespace ImageCare.Core.Domain.Media.Metadata;
 
 public class Location : IEquatable<Location>
 {
 	public Location(double longitude, double latitude, double altitude)
 	{
-		Longitude = longitude;
-		Latitude = latitude;
-		Altitude = altitude;
+		// Round precision to 1 meter
+		Longitude = Math.Round(longitude, 5);
+		Latitude = Math.Round(latitude, 5);
+		Altitude = Math.Round(altitude, 5);
 	}
 
 	public static Location Empty { get; } = new(-1.0, -1.0, -1.0);
@@ -17,7 +20,6 @@ public class Location : IEquatable<Location>
 
 	public double Altitude { get; }
 
-	/// <inheritdoc />
 	public bool Equals(Location? other)
 	{
 		if (ReferenceEquals(null, other))
@@ -35,7 +37,6 @@ public class Location : IEquatable<Location>
 		    && Altitude.Equals(other.Altitude);
 	}
 
-	/// <inheritdoc />
 	public override bool Equals(object? obj)
 	{
 		if (ReferenceEquals(null, obj))
@@ -56,7 +57,6 @@ public class Location : IEquatable<Location>
 		return Equals((Location)obj);
 	}
 
-	/// <inheritdoc />
 	public override int GetHashCode()
 	{
 		return HashCode.Combine(Longitude, Latitude, Altitude);
@@ -72,9 +72,8 @@ public class Location : IEquatable<Location>
 		return !Equals(left, right);
 	}
 
-	/// <inheritdoc />
 	public override string ToString()
 	{
-		return $" {Latitude}, {Longitude}";
+		return $"{Latitude.ToString(CultureInfo.InvariantCulture)}, {Longitude.ToString(CultureInfo.InvariantCulture)}";
 	}
 }

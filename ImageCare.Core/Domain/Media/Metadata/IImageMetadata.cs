@@ -2,9 +2,9 @@
 
 public interface IImageMetadata : IMediaMetadata
 {
-    string? Aperture { get; }
+	string? Aperture { get; }
 
-    string? ShutterSpeed { get; }
+	string? ShutterSpeed { get; }
 
-    int? Iso { get; }
+	int? Iso { get; }
 }

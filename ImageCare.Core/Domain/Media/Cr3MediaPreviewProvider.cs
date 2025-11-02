@@ -54,7 +54,7 @@ internal sealed class Cr3MediaPreviewProvider : IMediaPreviewProvider
 			}
 		}
 
-		return new UnsupportedMediaMetadata();
+		return new UnsupportedMediaMetadata(new FileInfo(url).CreationTime);
 	}
 
 

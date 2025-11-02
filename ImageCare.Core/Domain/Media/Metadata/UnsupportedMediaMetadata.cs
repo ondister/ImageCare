@@ -2,6 +2,11 @@
 
 public sealed class UnsupportedMediaMetadata : AllMetadataWrapper, IMediaMetadata
 {
+	public UnsupportedMediaMetadata(DateTime creationDateTime)
+	{
+		CreationDateTime = creationDateTime;
+	}
+
 	/// <inheritdoc />
 	public int Width { get; } = 0;
 
@@ -9,7 +14,7 @@ public sealed class UnsupportedMediaMetadata : AllMetadataWrapper, IMediaMetadat
 	public int Height { get; } = 0;
 
 	/// <inheritdoc />
-	public DateTime CreationDateTime { get; } = DateTime.MinValue;
+	public DateTime CreationDateTime { get; }
 
 	/// <inheritdoc />
 	public ExifOrientation Orientation { get; set; }
