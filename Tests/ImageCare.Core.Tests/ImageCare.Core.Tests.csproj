@@ -26,6 +26,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Update="TestImages\canon_geo.CR3">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="TestImages\sony.ARW">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
