@@ -2,7 +2,7 @@
 
 public interface INotificationService
 {
-    IObservable<Notification> NotificationReceived { get; }
+	IObservable<Notification> NotificationReceived { get; }
 
-    void SendNotification(Notification notification);
+	void SendNotification(Notification notification);
 }

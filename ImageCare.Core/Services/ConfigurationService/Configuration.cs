@@ -4,12 +4,12 @@ namespace ImageCare.Core.Services.ConfigurationService;
 
 public sealed class Configuration
 {
-    [JsonInclude]
-    public string LastSourceDirectoryPath { get; set; } = string.Empty;
+	[JsonInclude]
+	public string LastSourceDirectoryPath { get; set; } = string.Empty;
 
-    [JsonInclude]
-    public string LastTargetDirectoryPath { get; set; } = string.Empty;
+	[JsonInclude]
+	public string LastTargetDirectoryPath { get; set; } = string.Empty;
 
-    [JsonInclude]
-    public List<FileApplicationAssociation> ApplicationAssociationPairs { get; set; } = new();
+	[JsonInclude]
+	public List<FileApplicationAssociation> ApplicationAssociationPairs { get; set; } = new();
 }

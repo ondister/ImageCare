@@ -5,5 +5,5 @@ namespace ImageCare.Core.Services.FileAssociationsService;
 
 public interface IFileAssociationsService
 {
-    IEnumerable<FileApplicationInfo> GetAssociations(MediaFormat mediaFormat);
+	IEnumerable<FileApplicationInfo> GetAssociations(MediaFormat mediaFormat);
 }

@@ -4,13 +4,13 @@ namespace ImageCare.Core.Services.DrivesWatcherService;
 
 public interface IDrivesWatcherService
 {
-    IObservable<DriveModel> DriveMounted { get; }
+	IObservable<DriveModel> DriveMounted { get; }
 
-    IObservable<string> DriveUnmounted { get; }
+	IObservable<string> DriveUnmounted { get; }
 
-    IObservable<AvailableFreeSpaceInfo> DriveAvailableFreeSpaceChanged { get; }
+	IObservable<AvailableFreeSpaceInfo> DriveAvailableFreeSpaceChanged { get; }
 
-    void StartWatching();
+	void StartWatching();
 
-    void StopWatching();
+	void StopWatching();
 }

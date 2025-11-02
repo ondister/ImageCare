@@ -18,7 +18,7 @@ internal sealed class Cr3MediaPreviewProvider : IMediaPreviewProvider
 		using (var stream = new FileStream(url, FileMode.Open, FileAccess.Read, FileShare.Read))
 		{
 			var directories = ImageMetadataReader.ReadMetadata(stream);
-			
+
 			var location = GetLocation(directories);
 
 			var mainMetadataDirectory = directories.FirstOrDefault(d => d.ContainsTag(ExifDirectoryBase.TagDateTimeOriginal) && d.ContainsTag(ExifDirectoryBase.TagExifImageWidth) && d.ContainsTag(ExifDirectoryBase.TagExifImageHeight));
@@ -56,7 +56,6 @@ internal sealed class Cr3MediaPreviewProvider : IMediaPreviewProvider
 
 		return new UnsupportedMediaMetadata(new FileInfo(url).CreationTime);
 	}
-
 
 	/// <inheritdoc />
 	public Stream GetPreviewJpegStream(string url, MediaPreviewSize size)

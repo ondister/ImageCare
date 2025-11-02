@@ -2,7 +2,7 @@
 
 public interface IMultiSourcesFileSystemWatcherService : IFileSystemWatcherService
 {
-    void StopWatchingDirectory(string directoryPath);
+	void StopWatchingDirectory(string directoryPath);
 
-    void ClearWatchers();
+	void ClearWatchers();
 }

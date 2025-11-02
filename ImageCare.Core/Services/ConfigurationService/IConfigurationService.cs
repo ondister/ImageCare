@@ -6,5 +6,5 @@ public interface IConfigurationService
 
 	Lazy<Configuration> Configuration { get; }
 
-    void SaveConfiguration();
+	void SaveConfiguration();
 }

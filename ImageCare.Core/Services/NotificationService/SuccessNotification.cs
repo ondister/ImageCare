@@ -2,7 +2,7 @@
 
 public sealed class SuccessNotification : Notification
 {
-    /// <inheritdoc />
-    public SuccessNotification(string title, string? description)
-        : base(title, description) { }
+	/// <inheritdoc />
+	public SuccessNotification(string title, string? description)
+		: base(title, description) { }
 }

@@ -99,7 +99,7 @@ public sealed class LocalFileSystemFolderService : IFolderService, IDisposable
 					       directoryInfo
 						       .EnumerateFiles(searchPattern)
 						       .Select(fileInfo => new FileModel(fileInfo.Name, fileInfo.FullName, fileInfo.LastWriteTime))
-						       .Where(f=>f.CreatedDateTime.HasValue)
+						       .Where(f => f.CreatedDateTime.HasValue)
 						       .OrderByDescending(f => f.CreatedDateTime.Value));
 
 				       return files;

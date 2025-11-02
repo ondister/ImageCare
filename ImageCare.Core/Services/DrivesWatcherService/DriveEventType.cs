@@ -2,8 +2,8 @@
 
 internal enum DriveEventType : ushort
 {
-    ConfigurationChanged = 1,
-    DeviceArrival = 2,
-    DeviceRemoval = 3,
-    Docking = 4
+	ConfigurationChanged = 1,
+	DeviceArrival = 2,
+	DeviceRemoval = 3,
+	Docking = 4
 }
