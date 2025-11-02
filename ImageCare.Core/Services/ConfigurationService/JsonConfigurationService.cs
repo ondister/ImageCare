@@ -8,87 +8,91 @@ namespace ImageCare.Core.Services.ConfigurationService;
 
 public sealed class JsonConfigurationService : IConfigurationService, IDisposable
 {
-	private const string _configurationFilename = "configuration.json";
-	private const string _exceptionMessage = "Unexpected exception in Json configuration service";
+	private const string ExceptionMessage = "Unexpected exception in Json configuration service";
 
 	private readonly Subject<Configuration> _configurationSavedSubject;
+	private readonly IConfigurationFileSource _fileSource;
+	private readonly JsonSerializerOptions _jsonOptions;
+	private bool _disposed;
 
-	public JsonConfigurationService()
+	public JsonConfigurationService(IConfigurationFileSource fileSource)
 	{
+		_fileSource = fileSource ?? throw new ArgumentNullException(nameof(fileSource));
 		_configurationSavedSubject = new Subject<Configuration>();
+		Configuration = new Lazy<Configuration>(LoadConfiguration);
+		_jsonOptions = new JsonSerializerOptions { WriteIndented = true };
 
 		CreateConfigurationFileIfNeeded();
 	}
 
-	/// <inheritdoc />
 	public IObservable<Configuration> ConfigurationSaved => _configurationSavedSubject.AsObservable();
 
-	public Lazy<Configuration> Configuration { get; } = new(LoadConfiguration);
+	public Lazy<Configuration> Configuration { get; }
 
 	public void SaveConfiguration()
 	{
+		if (_disposed)
+		{
+			throw new ObjectDisposedException(nameof(JsonConfigurationService));
+		}
+
 		try
 		{
 			var configuration = Configuration.Value;
-			var configurationPath = Path.Combine(GetConfigurationDirectoryPath(), _configurationFilename);
+			var filePath = _fileSource.GetConfigurationFilePath();
 
-			using (var fileStream = new FileStream(configurationPath, FileMode.Create, FileAccess.Write, FileShare.Read))
-			{
-				JsonSerializer.Serialize(fileStream, configuration, new JsonSerializerOptions { WriteIndented = true });
-			}
+			_fileSource.EnsureDirectoryExists();
+
+			using var fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None);
+			JsonSerializer.Serialize(fileStream, configuration, _jsonOptions);
 
 			_configurationSavedSubject.OnNext(configuration);
 		}
 		catch (Exception exception)
 		{
-			throw new ServiceException(_exceptionMessage, exception);
+			throw new ServiceException(ExceptionMessage, exception);
 		}
 	}
 
 	public void Dispose()
 	{
-		_configurationSavedSubject.Dispose();
+		if (!_disposed)
+		{
+			_configurationSavedSubject.Dispose();
+			_disposed = true;
+		}
 	}
 
-	private static Configuration LoadConfiguration()
+	private Configuration LoadConfiguration()
 	{
 		try
 		{
-			var configurationPath = Path.Combine(GetConfigurationDirectoryPath(), _configurationFilename);
-			using (var fileStream = new FileStream(configurationPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+			if (!_fileSource.ConfigurationFileExists())
 			{
-				return JsonSerializer.Deserialize<Configuration>(fileStream) ?? new Configuration();
+				return new Configuration();
 			}
+
+			var filePath = _fileSource.GetConfigurationFilePath();
+			using var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+			return JsonSerializer.Deserialize<Configuration>(fileStream) ?? new Configuration();
 		}
 		catch (Exception exception)
 		{
-			throw new ServiceException(_exceptionMessage, exception);
+			throw new ServiceException(ExceptionMessage, exception);
 		}
 	}
 
-	private static void CreateConfigurationFileIfNeeded()
+	private void CreateConfigurationFileIfNeeded()
 	{
-		var configurationFolderPath = GetConfigurationDirectoryPath();
-		if (!Directory.Exists(configurationFolderPath))
-		{
-			Directory.CreateDirectory(configurationFolderPath);
-		}
-
-		var configurationPath = Path.Combine(configurationFolderPath, _configurationFilename);
-
-		if (File.Exists(configurationPath))
+		if (_fileSource.ConfigurationFileExists())
 		{
 			return;
 		}
 
-		using (var fileStream = new FileStream(configurationPath, FileMode.Create, FileAccess.ReadWrite))
-		{
-			JsonSerializer.Serialize(fileStream, new Configuration());
-		}
-	}
+		_fileSource.EnsureDirectoryExists();
 
-	private static string GetConfigurationDirectoryPath()
-	{
-		return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ImageCare");
+		var filePath = _fileSource.GetConfigurationFilePath();
+		using var fileStream = new FileStream(filePath, FileMode.Create, FileAccess.ReadWrite);
+		JsonSerializer.Serialize(fileStream, new Configuration(), _jsonOptions);
 	}
 }

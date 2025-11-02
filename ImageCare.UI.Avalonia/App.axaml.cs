@@ -81,7 +81,8 @@ public class App : PrismApplication
         containerRegistry.RegisterSingleton<IFileSystemImageService, FileSystemImageService>();
         containerRegistry.RegisterSingleton<IFileOperationsService,CommonFileOperationService>();
         containerRegistry.RegisterSingleton<IDrivesWatcherService, WindowsDrivesWatcherService>();
-        containerRegistry.RegisterSingleton<IConfigurationService, JsonConfigurationService>();
+        containerRegistry.RegisterSingleton<IConfigurationFileSource, WindowsConfigurationFileSource>();
+		containerRegistry.RegisterSingleton<IConfigurationService, JsonConfigurationService>();
         containerRegistry.RegisterSingleton<INotificationService, LocalNotificationService>();
         containerRegistry.RegisterSingleton<IFileAssociationsService, ConfigurationFileAssociationsService>();
         containerRegistry.RegisterSingleton<IClipboardService>(provider =>
