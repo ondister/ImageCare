@@ -5,7 +5,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 
-using ImageCare.Core.Services;
+using ImageCare.Core.Domain.Folders;
 using ImageCare.Core.Services.ConfigurationService;
 using ImageCare.Core.Services.DrivesWatcherService;
 using ImageCare.Core.Services.FileAssociationsService;
@@ -30,77 +30,83 @@ namespace ImageCare.UI.Avalonia;
 
 public class App : PrismApplication
 {
-    public override void Initialize()
-    {
-        AvaloniaXamlLoader.Load(this);
-        base.Initialize();
-    }
+	public override void Initialize()
+	{
+		AvaloniaXamlLoader.Load(this);
+		base.Initialize();
+	}
 
-    public override void OnFrameworkInitializationCompleted()
-    {
-        if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
-        {
-            desktop.ShutdownRequested += OnShutdownRequested;
-        }
+	public override void OnFrameworkInitializationCompleted()
+	{
+		if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+		{
+			desktop.ShutdownRequested += OnShutdownRequested;
+		}
 
-        base.OnFrameworkInitializationCompleted();
-    }
+		base.OnFrameworkInitializationCompleted();
+	}
 
-    protected override void ConfigureModuleCatalog(IModuleCatalog moduleCatalog)
-    {
-        base.ConfigureModuleCatalog(moduleCatalog);
+	protected override void ConfigureModuleCatalog(IModuleCatalog moduleCatalog)
+	{
+		base.ConfigureModuleCatalog(moduleCatalog);
 
-        moduleCatalog.AddModule<LoggerModule>();
-    }
+		moduleCatalog.AddModule<LoggerModule>();
+	}
 
-    /// <inheritdoc />
-    protected override AvaloniaObject CreateShell()
-    {
-        return Container.Resolve<MainWindow>();
-    }
+	/// <inheritdoc />
+	protected override AvaloniaObject CreateShell()
+	{
+		return Container.Resolve<MainWindow>();
+	}
 
-    protected virtual void OnShutdownRequested(object? sender, ShutdownRequestedEventArgs e)
-    {
-        var configurationService = Container.Resolve<IConfigurationService>();
-        configurationService.SaveConfiguration();
-    }
+	protected virtual void OnShutdownRequested(object? sender, ShutdownRequestedEventArgs e)
+	{
+		var configurationService = Container.Resolve<IConfigurationService>();
+		configurationService.SaveConfiguration();
+	}
 
-    protected override void RegisterTypes(IContainerRegistry containerRegistry)
-    {
-        containerRegistry.Register<MainWindow>();
-        containerRegistry.Register<MainWindowTitleRightView>();
-        containerRegistry.Register<MetadataView>();
+	protected override void RegisterTypes(IContainerRegistry containerRegistry)
+	{
+		containerRegistry.Register<MainWindow>();
+		containerRegistry.Register<MainWindowTitleRightView>();
+		containerRegistry.Register<MetadataView>();
 
-        containerRegistry.RegisterForNavigation<FoldersView>();
-        containerRegistry.RegisterForNavigation<MainImageView>();
-        containerRegistry.RegisterForNavigation<MainVideoView>();
-        containerRegistry.RegisterForNavigation<PreviewPanelView>();
-        containerRegistry.RegisterForNavigation<BottomBarView>();
+		containerRegistry.RegisterForNavigation<FoldersView>();
+		containerRegistry.RegisterForNavigation<MainImageView>();
+		containerRegistry.RegisterForNavigation<MainVideoView>();
+		containerRegistry.RegisterForNavigation<PreviewPanelView>();
+		containerRegistry.RegisterForNavigation<BottomBarView>();
 
-        containerRegistry.RegisterSingleton<IFolderService, LocalFileSystemFolderService>();
-        containerRegistry.RegisterSingleton<IFileSystemImageService, FileSystemImageService>();
-        containerRegistry.RegisterSingleton<IFileOperationsService,CommonFileOperationService>();
-        containerRegistry.RegisterSingleton<IDrivesWatcherService, WindowsDrivesWatcherService>();
-        containerRegistry.RegisterSingleton<IConfigurationFileSource, WindowsConfigurationFileSource>();
+		containerRegistry.RegisterSingleton<IFolderService, LocalFileSystemFolderService>();
+		containerRegistry.RegisterSingleton<IFileSystemImageService, FileSystemImageService>();
+		containerRegistry.RegisterSingleton<IFileOperationsService, CommonFileOperationService>();
+
+		containerRegistry.RegisterSingleton<IManagementEventWatcher, WindowsManagementEventWatcher>();
+		containerRegistry.RegisterSingleton<IDriveInfoProvider, SystemDriveInfoProvider>();
+		containerRegistry.RegisterSingleton<IDriveModelsFactory, DriveModelsFactory>();
+		containerRegistry.RegisterSingleton<IDrivesWatcherService, WindowsDrivesWatcherService>();
+
+		containerRegistry.RegisterSingleton<IConfigurationFileSource, WindowsConfigurationFileSource>();
 		containerRegistry.RegisterSingleton<IConfigurationService, JsonConfigurationService>();
-        containerRegistry.RegisterSingleton<INotificationService, LocalNotificationService>();
-        containerRegistry.RegisterSingleton<IFileAssociationsService, ConfigurationFileAssociationsService>();
-        containerRegistry.RegisterSingleton<IClipboardService>(provider =>
-        {
-	        var topLevel = TopLevel.GetTopLevel(provider.Resolve<MainWindow>());
-	        return new ClipboardService(topLevel);
-        });
-        containerRegistry.RegisterSingleton<IFileDialogService, AvaloniaFileDialogService>();
+
+		containerRegistry.RegisterSingleton<INotificationService, LocalNotificationService>();
+		containerRegistry.RegisterSingleton<IFileAssociationsService, ConfigurationFileAssociationsService>();
+		containerRegistry.RegisterSingleton<IClipboardService>(provider =>
+		{
+			var topLevel = TopLevel.GetTopLevel(provider.Resolve<MainWindow>());
+			return new ClipboardService(topLevel);
+		});
+		containerRegistry.RegisterSingleton<IFileDialogService, AvaloniaFileDialogService>();
 
 		containerRegistry.RegisterInstance(new ApplicationMapper(Container).GetMapper());
-        containerRegistry.RegisterInstance(SynchronizationContext.Current);
-        containerRegistry.RegisterSingleton<MapControlMediator>();
+		containerRegistry.RegisterInstance(SynchronizationContext.Current);
+		containerRegistry.RegisterSingleton<MapControlMediator>();
 
-        containerRegistry.Register<IFileSystemWatcherService, LocalFileSystemWatcherService>();
-        containerRegistry.Register<IMultiSourcesFileSystemWatcherService, MultiSourcesLocalFileSystemWatcherService>();
-        containerRegistry.Register<ImagePreviewDropHandler, ImagePreviewDropHandler>();
+		containerRegistry.Register<IFileSystemWatcherService, LocalFileSystemWatcherService>();
+		containerRegistry.Register<IMultiSourcesFileSystemWatcherService, MultiSourcesLocalFileSystemWatcherService>();
+		containerRegistry.Register<ImagePreviewDropHandler, ImagePreviewDropHandler>();
 
-        containerRegistry.RegisterDialogWindow<ChildWindow>("childWindow");
-        containerRegistry.RegisterDialog<SettingsView>("settingsViewer");
+		containerRegistry.RegisterDialogWindow<ChildWindow>("childWindow");
+		containerRegistry.RegisterDialog<SettingsView>("settingsViewer");
 	}
 }

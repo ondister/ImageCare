@@ -1,6 +1,6 @@
 ﻿namespace ImageCare.Core.Domain.Folders;
 
-internal sealed class DriveModelsFactory
+public sealed class DriveModelsFactory : IDriveModelsFactory
 {
 	private static readonly Dictionary<DriveType, Func<DriveInfo, DriveModel>> _driveModelFactoryMethods = new()
 	{
