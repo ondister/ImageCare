@@ -2,7 +2,7 @@
 using System.Windows.Input;
 
 using ImageCare.Core.Domain.Preview;
-using ImageCare.Core.Services.FileOperationsService;
+using ImageCare.Core.Services.MediaPreviewOperationsService;
 
 using Prism.Commands;
 
@@ -14,13 +14,13 @@ internal sealed class FileApplicationPairViewModel
 {
     private readonly string _executablePath;
     private readonly MediaPreview _mediaPreview;
-    private readonly IFileOperationsService _fileOperationsService;
+    private readonly IMediaPreviewOperationsService _fileOperationsService;
     private readonly ILogger _logger;
 
     public FileApplicationPairViewModel(string name,
                                         string executablePath,
                                         MediaPreview mediaPreview,
-                                        IFileOperationsService fileOperationsService,
+                                        IMediaPreviewOperationsService fileOperationsService,
                                         ILogger logger)
     {
         Name = name;

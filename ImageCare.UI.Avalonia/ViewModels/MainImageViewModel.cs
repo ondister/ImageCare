@@ -13,9 +13,9 @@ using CommunityToolkit.Mvvm.Input;
 
 using ImageCare.Core.Domain.Media;
 using ImageCare.Core.Domain.Preview;
-using ImageCare.Core.Services.FileOperationsService;
 using ImageCare.Core.Services.FileSystemImageService;
 using ImageCare.Core.Services.FolderService;
+using ImageCare.Core.Services.MediaPreviewOperationsService;
 using ImageCare.UI.Avalonia.Controls;
 using ImageCare.UI.Avalonia.Services;
 
@@ -41,7 +41,7 @@ internal class MainImageViewModel : NavigatedViewModelBase
 
 	private readonly IFileSystemImageService _imageService;
 	private readonly IFolderService _folderService;
-	private readonly IFileOperationsService _fileOperationsService;
+	private readonly IMediaPreviewOperationsService _fileOperationsService;
 	private readonly IClipboardService _clipboardService;
 	private readonly ILogger _logger;
 	private readonly IContainerProvider _containerProvider;
@@ -57,7 +57,7 @@ internal class MainImageViewModel : NavigatedViewModelBase
 
 	public MainImageViewModel(IFileSystemImageService imageService,
 	                          IFolderService folderService,
-	                          IFileOperationsService fileOperationsService,
+	                          IMediaPreviewOperationsService fileOperationsService,
 	                          IClipboardService clipboardService,
 	                          ILogger logger,
 	                          IContainerProvider containerProvider,

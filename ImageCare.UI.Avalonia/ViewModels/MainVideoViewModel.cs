@@ -7,8 +7,8 @@ using System.Windows.Input;
 using HanumanInstitute.LibMpv;
 using ImageCare.Core.Domain.Folders;
 using ImageCare.Core.Domain.Preview;
-using ImageCare.Core.Services.FileOperationsService;
 using ImageCare.Core.Services.FolderService;
+using ImageCare.Core.Services.MediaPreviewOperationsService;
 
 using Prism.Commands;
 using Prism.Regions;
@@ -21,7 +21,7 @@ namespace ImageCare.UI.Avalonia.ViewModels;
 
 internal class MainVideoViewModel : NavigatedViewModelBase, IDisposable
 {
-    private readonly IFileOperationsService _fileOperationsService;
+    private readonly IMediaPreviewOperationsService _fileOperationsService;
     private readonly IFolderService _folderService;
     private readonly ILogger _logger;
     private readonly SynchronizationContext _synchronizationContext;
@@ -30,7 +30,7 @@ internal class MainVideoViewModel : NavigatedViewModelBase, IDisposable
     private CompositeDisposable? _compositeDisposable;
     private MpvContext? _mpv = new();
 
-    public MainVideoViewModel(IFileOperationsService fileOperationsService,
+    public MainVideoViewModel(IMediaPreviewOperationsService fileOperationsService,
                               IFolderService folderService,
                               ILogger logger,
                               SynchronizationContext synchronizationContext)

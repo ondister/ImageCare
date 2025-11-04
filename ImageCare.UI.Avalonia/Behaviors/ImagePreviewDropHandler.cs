@@ -7,7 +7,7 @@ using Avalonia.Input;
 using Avalonia.VisualTree;
 using Avalonia.Xaml.Interactions.DragAndDrop;
 using ImageCare.Core.Domain.Preview;
-using ImageCare.Core.Services.FileOperationsService;
+using ImageCare.Core.Services.MediaPreviewOperationsService;
 using ImageCare.Core.Services.NotificationService;
 using ImageCare.UI.Avalonia.ViewModels;
 using ImageCare.UI.Avalonia.ViewModels.Domain;
@@ -16,11 +16,11 @@ namespace ImageCare.UI.Avalonia.Behaviors;
 
 public class ImagePreviewDropHandler : DropHandlerBase
 {
-    private readonly IFileOperationsService _fileOperationsService;
+    private readonly IMediaPreviewOperationsService _fileOperationsService;
     private readonly INotificationService _notificationService;
     private readonly IMapper _mapper;
 
-    public ImagePreviewDropHandler(IFileOperationsService fileOperationsService,
+    public ImagePreviewDropHandler(IMediaPreviewOperationsService fileOperationsService,
                                    INotificationService notificationService,
                                    IMapper mapper)
     {

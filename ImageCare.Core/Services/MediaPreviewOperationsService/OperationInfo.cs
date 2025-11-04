@@ -1,4 +1,4 @@
-﻿namespace ImageCare.Core.Services.FileOperationsService;
+﻿namespace ImageCare.Core.Services.MediaPreviewOperationsService;
 
 public sealed class OperationInfo
 {
@@ -13,8 +13,6 @@ public sealed class OperationInfo
 	public long Transferred { get; set; }
 
 	public long BytesTransferred { get; set; }
-
-	public long StreamSize { get; set; }
 
 	public string ProcessedFile { get; set; }
 

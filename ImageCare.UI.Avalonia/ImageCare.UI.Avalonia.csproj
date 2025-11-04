@@ -11,6 +11,8 @@
         <Platforms>AnyCPU</Platforms>
         <ApplicationIcon>Assets\imagecare-logo.ico</ApplicationIcon>
         <Version>0.1.2</Version>
+        <Trimming>full</Trimming>
+        <OptimizationPreference>Speed</OptimizationPreference>
     </PropertyGroup>
 
   <ItemGroup>

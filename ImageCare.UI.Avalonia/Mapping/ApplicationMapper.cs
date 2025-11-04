@@ -6,9 +6,9 @@ using ImageCare.Core.Domain.Folders;
 using ImageCare.Core.Domain.Preview;
 using ImageCare.Core.Services.ConfigurationService;
 using ImageCare.Core.Services.FileAssociationsService;
-using ImageCare.Core.Services.FileOperationsService;
 using ImageCare.Core.Services.FileSystemImageService;
 using ImageCare.Core.Services.FolderService;
+using ImageCare.Core.Services.MediaPreviewOperationsService;
 using ImageCare.Core.Services.NotificationService;
 using ImageCare.Modules.Logging.Mapping;
 using ImageCare.UI.Avalonia.ViewModels.Domain;
@@ -150,7 +150,7 @@ internal sealed class ApplicationMapper
                            src.MediaFormat,
                            src.MaxImageHeight,
                            serviceLocator.Resolve<FileSystemImageService>(),
-                           serviceLocator.Resolve<IFileOperationsService>(),
+                           serviceLocator.Resolve<IMediaPreviewOperationsService>(),
                            serviceLocator.Resolve<INotificationService>(),
                            serviceLocator.Resolve<IFileAssociationsService>(),
                            _mapper,

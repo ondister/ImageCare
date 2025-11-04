@@ -9,11 +9,13 @@ using ImageCare.Core.Domain.Folders;
 using ImageCare.Core.Services.ConfigurationService;
 using ImageCare.Core.Services.DrivesWatcherService;
 using ImageCare.Core.Services.FileAssociationsService;
-using ImageCare.Core.Services.FileOperationsService;
 using ImageCare.Core.Services.FileSystemImageService;
+using ImageCare.Core.Services.FileSystemService;
 using ImageCare.Core.Services.FileSystemWatcherService;
 using ImageCare.Core.Services.FolderService;
+using ImageCare.Core.Services.MediaPreviewOperationsService;
 using ImageCare.Core.Services.NotificationService;
+using ImageCare.Core.Services.ProcessService;
 using ImageCare.Modules.Logging;
 using ImageCare.UI.Avalonia.Behaviors;
 using ImageCare.UI.Avalonia.Controls;
@@ -79,7 +81,10 @@ public class App : PrismApplication
 
 		containerRegistry.RegisterSingleton<IFolderService, LocalFileSystemFolderService>();
 		containerRegistry.RegisterSingleton<IFileSystemImageService, FileSystemImageService>();
-		containerRegistry.RegisterSingleton<IFileOperationsService, CommonFileOperationService>();
+
+		containerRegistry.RegisterSingleton<IFileSystemService, WindowsFileSystemService>();
+		containerRegistry.RegisterSingleton<IProcessService, WindowsProcessService>();
+		containerRegistry.RegisterSingleton<IMediaPreviewOperationsService, WindowsMediaPreviewOperationsService>();
 
 		containerRegistry.RegisterSingleton<IManagementEventWatcher, WindowsManagementEventWatcher>();
 		containerRegistry.RegisterSingleton<IDriveInfoProvider, SystemDriveInfoProvider>();

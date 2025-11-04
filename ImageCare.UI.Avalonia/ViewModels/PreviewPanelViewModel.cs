@@ -13,10 +13,10 @@ using CommunityToolkit.Mvvm.Input;
 using ImageCare.Core.Domain.Folders;
 using ImageCare.Core.Domain.Media;
 using ImageCare.Core.Domain.Preview;
-using ImageCare.Core.Services.FileOperationsService;
 using ImageCare.Core.Services.FileSystemImageService;
 using ImageCare.Core.Services.FileSystemWatcherService;
 using ImageCare.Core.Services.FolderService;
+using ImageCare.Core.Services.MediaPreviewOperationsService;
 using ImageCare.Core.Services.NotificationService;
 using ImageCare.Mvvm.Collections;
 using ImageCare.UI.Avalonia.Behaviors;
@@ -36,7 +36,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase, IDisposable
 	private readonly IFileSystemImageService _imageService;
 	private readonly IFolderService _folderService;
 	private readonly IFileSystemWatcherService _fileSystemWatcherService;
-	private readonly IFileOperationsService _fileOperationsService;
+	private readonly IMediaPreviewOperationsService _fileOperationsService;
 	private readonly INotificationService _notificationService;
 	private readonly IMapper _mapper;
 	private readonly ILogger _logger;
@@ -58,7 +58,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase, IDisposable
 	public PreviewPanelViewModel(IFileSystemImageService imageService,
 	                             IFolderService folderService,
 	                             IFileSystemWatcherService fileSystemWatcherService,
-	                             IFileOperationsService fileOperationsService,
+	                             IMediaPreviewOperationsService fileOperationsService,
 	                             INotificationService notificationService,
 	                             IMapper mapper,
 	                             ILogger logger,

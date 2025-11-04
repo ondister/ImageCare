@@ -13,8 +13,8 @@ using CommunityToolkit.Mvvm.Input;
 using ImageCare.Core.Domain.Folders;
 using ImageCare.Core.Domain.MediaFormats;
 using ImageCare.Core.Domain.Preview;
-using ImageCare.Core.Services.FileOperationsService;
 using ImageCare.Core.Services.FolderService;
+using ImageCare.Core.Services.MediaPreviewOperationsService;
 using ImageCare.Core.Services.NotificationService;
 using ImageCare.Mvvm;
 using ImageCare.UI.Avalonia.Views;
@@ -26,7 +26,7 @@ namespace ImageCare.UI.Avalonia.ViewModels;
 public class MainWindowViewModel : ViewModelBase
 {
 	private readonly IRegionManager _regionManager;
-	private readonly IFileOperationsService _fileOperationsService;
+	private readonly IMediaPreviewOperationsService _fileOperationsService;
 	private readonly IFolderService _folderService;
 	private readonly INotificationService _notificationService;
 	private readonly IMapper _mapper;
@@ -35,7 +35,7 @@ public class MainWindowViewModel : ViewModelBase
 	private SelectedMediaPreview? _currentSelectedPreview;
 
 	public MainWindowViewModel(IRegionManager regionManager,
-	                           IFileOperationsService fileOperationsService,
+	                           IMediaPreviewOperationsService fileOperationsService,
 	                           IFolderService folderService,
 	                           INotificationService notificationService,
 	                           IMapper mapper,
