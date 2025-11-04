@@ -9,7 +9,7 @@ using System.Windows.Input;
 using DryIoc;
 
 using ImageCare.Core.Domain.Preview;
-using ImageCare.Core.Services.FileSystemImageService;
+using ImageCare.Core.Services.MediaPreviewService;
 using ImageCare.Core.Services.MediaPreviewOperationsService;
 using ImageCare.Mvvm;
 using ImageCare.UI.Avalonia.ViewModels.Domain;
@@ -22,12 +22,12 @@ namespace ImageCare.UI.Avalonia.ViewModels
 {
     internal sealed class MetadataViewModel:ViewModelBase
     {
-        private readonly IFileSystemImageService _imageService;
+        private readonly IMediaPreviewService _imageService;
         private readonly IMediaPreviewOperationsService _fileOperationsService;
 
         public ObservableCollection<TagDescriptionViewModel> MetadataList { get; }
 
-        public MetadataViewModel(IFileSystemImageService imageService, 
+        public MetadataViewModel(IMediaPreviewService imageService, 
                                  IMediaPreviewOperationsService fileOperationsService)
         {
             _imageService = imageService;

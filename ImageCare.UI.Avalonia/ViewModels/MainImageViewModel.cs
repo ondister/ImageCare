@@ -13,7 +13,7 @@ using CommunityToolkit.Mvvm.Input;
 
 using ImageCare.Core.Domain.Media;
 using ImageCare.Core.Domain.Preview;
-using ImageCare.Core.Services.FileSystemImageService;
+using ImageCare.Core.Services.MediaPreviewService;
 using ImageCare.Core.Services.FolderService;
 using ImageCare.Core.Services.MediaPreviewOperationsService;
 using ImageCare.UI.Avalonia.Controls;
@@ -39,7 +39,7 @@ internal class MainImageViewModel : NavigatedViewModelBase
 {
 	private const string pointLayerName = "photo_point";
 
-	private readonly IFileSystemImageService _imageService;
+	private readonly IMediaPreviewService _imageService;
 	private readonly IFolderService _folderService;
 	private readonly IMediaPreviewOperationsService _fileOperationsService;
 	private readonly IClipboardService _clipboardService;
@@ -55,7 +55,7 @@ internal class MainImageViewModel : NavigatedViewModelBase
 	private Map _map;
 	private Location _location = Location.Empty;
 
-	public MainImageViewModel(IFileSystemImageService imageService,
+	public MainImageViewModel(IMediaPreviewService imageService,
 	                          IFolderService folderService,
 	                          IMediaPreviewOperationsService fileOperationsService,
 	                          IClipboardService clipboardService,

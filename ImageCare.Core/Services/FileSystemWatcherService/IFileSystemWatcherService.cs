@@ -10,13 +10,10 @@ public interface IFileSystemWatcherService
 
 	public IObservable<FileRenamedModel> FileRenamed { get; }
 
-	/// <inheritdoc />
 	public IObservable<DirectoryModel> DirectoryCreated { get; }
 
-	/// <inheritdoc />
 	public IObservable<DirectoryModel> DirectoryDeleted { get; }
 
-	/// <inheritdoc />
 	public IObservable<DirectoryRenamedModel> DirectoryRenamed { get; }
 
 	public void StartWatching();

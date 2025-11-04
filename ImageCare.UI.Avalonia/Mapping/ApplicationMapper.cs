@@ -6,7 +6,7 @@ using ImageCare.Core.Domain.Folders;
 using ImageCare.Core.Domain.Preview;
 using ImageCare.Core.Services.ConfigurationService;
 using ImageCare.Core.Services.FileAssociationsService;
-using ImageCare.Core.Services.FileSystemImageService;
+using ImageCare.Core.Services.MediaPreviewService;
 using ImageCare.Core.Services.FolderService;
 using ImageCare.Core.Services.MediaPreviewOperationsService;
 using ImageCare.Core.Services.NotificationService;
@@ -149,7 +149,7 @@ internal sealed class ApplicationMapper
                            src.Url,
                            src.MediaFormat,
                            src.MaxImageHeight,
-                           serviceLocator.Resolve<FileSystemImageService>(),
+                           serviceLocator.Resolve<IMediaPreviewService>(),
                            serviceLocator.Resolve<IMediaPreviewOperationsService>(),
                            serviceLocator.Resolve<INotificationService>(),
                            serviceLocator.Resolve<IFileAssociationsService>(),

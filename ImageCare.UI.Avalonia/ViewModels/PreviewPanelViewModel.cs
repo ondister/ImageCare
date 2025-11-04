@@ -13,10 +13,10 @@ using CommunityToolkit.Mvvm.Input;
 using ImageCare.Core.Domain.Folders;
 using ImageCare.Core.Domain.Media;
 using ImageCare.Core.Domain.Preview;
-using ImageCare.Core.Services.FileSystemImageService;
 using ImageCare.Core.Services.FileSystemWatcherService;
 using ImageCare.Core.Services.FolderService;
 using ImageCare.Core.Services.MediaPreviewOperationsService;
+using ImageCare.Core.Services.MediaPreviewService;
 using ImageCare.Core.Services.NotificationService;
 using ImageCare.Mvvm.Collections;
 using ImageCare.UI.Avalonia.Behaviors;
@@ -33,7 +33,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase, IDisposable
 	// Desired size of item
 	private const int maxItemWidth = 324;
 
-	private readonly IFileSystemImageService _imageService;
+	private readonly IMediaPreviewService _imageService;
 	private readonly IFolderService _folderService;
 	private readonly IFileSystemWatcherService _fileSystemWatcherService;
 	private readonly IMediaPreviewOperationsService _fileOperationsService;
@@ -55,7 +55,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase, IDisposable
 
 	private bool _isScrollResetRequested;
 
-	public PreviewPanelViewModel(IFileSystemImageService imageService,
+	public PreviewPanelViewModel(IMediaPreviewService imageService,
 	                             IFolderService folderService,
 	                             IFileSystemWatcherService fileSystemWatcherService,
 	                             IMediaPreviewOperationsService fileOperationsService,

@@ -9,7 +9,7 @@ using ImageCare.Core.Domain.Folders;
 using ImageCare.Core.Services.ConfigurationService;
 using ImageCare.Core.Services.DrivesWatcherService;
 using ImageCare.Core.Services.FileAssociationsService;
-using ImageCare.Core.Services.FileSystemImageService;
+using ImageCare.Core.Services.MediaPreviewService;
 using ImageCare.Core.Services.FileSystemService;
 using ImageCare.Core.Services.FileSystemWatcherService;
 using ImageCare.Core.Services.FolderService;
@@ -79,10 +79,11 @@ public class App : PrismApplication
 		containerRegistry.RegisterForNavigation<PreviewPanelView>();
 		containerRegistry.RegisterForNavigation<BottomBarView>();
 
-		containerRegistry.RegisterSingleton<IFolderService, LocalFileSystemFolderService>();
-		containerRegistry.RegisterSingleton<IFileSystemImageService, FileSystemImageService>();
-
 		containerRegistry.RegisterSingleton<IFileSystemService, WindowsFileSystemService>();
+		containerRegistry.RegisterSingleton<IFolderService, LocalFileSystemFolderService>();
+
+		containerRegistry.RegisterSingleton<IMediaPreviewService, CommonMediaPreviewService>();
+
 		containerRegistry.RegisterSingleton<IProcessService, WindowsProcessService>();
 		containerRegistry.RegisterSingleton<IMediaPreviewOperationsService, WindowsMediaPreviewOperationsService>();
 

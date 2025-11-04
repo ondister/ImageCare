@@ -14,7 +14,7 @@ using ImageCare.Core.Domain.Media.Metadata;
 using ImageCare.Core.Domain.MediaFormats;
 using ImageCare.Core.Domain.Preview;
 using ImageCare.Core.Services.FileAssociationsService;
-using ImageCare.Core.Services.FileSystemImageService;
+using ImageCare.Core.Services.MediaPreviewService;
 using ImageCare.Core.Services.MediaPreviewOperationsService;
 using ImageCare.Core.Services.NotificationService;
 using ImageCare.Mvvm;
@@ -25,7 +25,7 @@ namespace ImageCare.UI.Avalonia.ViewModels.Domain;
 
 internal class MediaPreviewViewModel : ViewModelBase, IComparable<MediaPreviewViewModel>
 {
-    private readonly IFileSystemImageService _imageService;
+    private readonly IMediaPreviewService _imageService;
     private readonly IMediaPreviewOperationsService _fileOperationsService;
     private readonly INotificationService _notificationService;
     private readonly IFileAssociationsService _fileAssociationsService;
@@ -46,7 +46,7 @@ internal class MediaPreviewViewModel : ViewModelBase, IComparable<MediaPreviewVi
                                  string url,
                                  MediaFormat mediaFormat,
                                  int maxImageHeight,
-                                 IFileSystemImageService imageService,
+                                 IMediaPreviewService imageService,
                                  IMediaPreviewOperationsService fileOperationsService,
                                  INotificationService notificationService,
                                  IFileAssociationsService fileAssociationsService,
