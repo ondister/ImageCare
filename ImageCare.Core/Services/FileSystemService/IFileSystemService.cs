@@ -10,11 +10,15 @@ public interface IFileSystemService
 
 	FileInfo GetFileInfo(string path);
 
+	DirectoryInfo GetDirectoryInfo(string path);
+
 	Stream OpenRead(string path);
 
 	Stream Create(string path);
 
 	void MoveFile(string source, string destination);
+
+	void CopyFile(string source, string destination);
 
 	void DeleteFile(string path);
 
@@ -35,4 +39,6 @@ public interface IFileSystemService
 	void SafeDelete(string path);
 
 	void SafeDeleteDirectory(string path);
+
+	string GetFileExtension(string path);
 }

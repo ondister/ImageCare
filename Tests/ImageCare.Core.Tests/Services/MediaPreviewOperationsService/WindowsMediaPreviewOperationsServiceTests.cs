@@ -41,16 +41,14 @@ public class WindowsMediaPreviewOperationsServiceTests
 	}
 
 	[Test]
-	public void CopyImagePreviewToDirectoryAsync_WhenDirectoryNotExists_ReturnsFailed()
+	public void CopyImagePreviewToDirectoryAsync_WhenDirectoryNotExists_ThrowsException()
 	{
 		var service = CreateService();
 		var mediaPreview = CreateMediaPreview();
 
 		_fileSystemServiceMock.Setup(x => x.DirectoryExists("targetDir")).Returns(false);
 
-		var result = service.CopyImagePreviewToDirectoryAsync(mediaPreview, "targetDir", new Progress<OperationInfo>()).Result;
-
-		Assert.AreEqual(OperationResult.Failed, result);
+		Assert.Throws<ServiceException>(() => service.CopyImagePreviewToDirectoryAsync(mediaPreview, "targetDir", new Progress<OperationInfo>()));
 	}
 
 	[Test]
@@ -73,16 +71,13 @@ public class WindowsMediaPreviewOperationsServiceTests
 	}
 
 	[Test]
-	public void DeleteImagePreviewAsync_WhenFileNotExists_ReturnsFailed()
+	public void DeleteImagePreviewAsync_WhenFileNotExists_ThrowsException()
 	{
 		var service = CreateService();
 		var mediaPreview = CreateMediaPreview("nonexistent.jpg");
 
 		_fileSystemServiceMock.Setup(x => x.FileExists("nonexistent.jpg")).Returns(false);
-
-		var result = service.DeleteImagePreviewAsync(mediaPreview).Result;
-
-		Assert.AreEqual(OperationResult.Failed, result);
+		Assert.Throws<ServiceException>(() => service.DeleteImagePreviewAsync(mediaPreview));
 	}
 
 	[Test]
@@ -170,16 +165,14 @@ public class WindowsMediaPreviewOperationsServiceTests
 	}
 
 	[Test]
-	public void MoveImagePreviewToDirectoryAsync_WhenDirectoryNotExists_ReturnsFailed()
+	public void MoveImagePreviewToDirectoryAsync_WhenDirectoryNotExists_ThrowsException()
 	{
 		var service = CreateService();
 		var mediaPreview = CreateMediaPreview();
 
 		_fileSystemServiceMock.Setup(x => x.DirectoryExists("targetDir")).Returns(false);
 
-		var result = service.MoveImagePreviewToDirectoryAsync(mediaPreview, "targetDir", new Progress<OperationInfo>()).Result;
-
-		Assert.AreEqual(OperationResult.Failed, result);
+		Assert.Throws<ServiceException>(() => service.MoveImagePreviewToDirectoryAsync(mediaPreview, "targetDir", new Progress<OperationInfo>()));
 	}
 
 	[Test]

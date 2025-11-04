@@ -27,6 +27,11 @@ public sealed class WindowsFileSystemService : IFileSystemService
 		return new FileInfo(path);
 	}
 
+	public DirectoryInfo GetDirectoryInfo(string path)
+	{
+		return new DirectoryInfo(path);
+	}
+
 	public Stream OpenRead(string path)
 	{
 		return new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 81920, true);
@@ -40,6 +45,12 @@ public sealed class WindowsFileSystemService : IFileSystemService
 	public void MoveFile(string source, string destination)
 	{
 		File.Move(source, destination);
+	}
+
+	/// <inheritdoc />
+	public void CopyFile(string source, string destination)
+	{
+		File.Copy(source, destination);
 	}
 
 	public void DeleteFile(string path)
@@ -116,6 +127,11 @@ public sealed class WindowsFileSystemService : IFileSystemService
 		// Recursively reset attributes before deletion
 		ResetAttributesRecursive(path);
 		DeleteDirectory(path, true);
+	}
+
+	public string GetFileExtension(string path)
+	{
+		return Path.GetExtension(path);
 	}
 
 	private void ResetAttributesRecursive(string path)
