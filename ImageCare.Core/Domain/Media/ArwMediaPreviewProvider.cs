@@ -31,9 +31,9 @@ internal sealed class ArwMediaPreviewProvider : IMediaPreviewProvider
 		{
 			throw new MediaPreviewProviderException($"Failed to open ARW file: {url}", ex);
 		}
-		catch (Exception _)
+		catch (Exception ex)
 		{
-			return CreateUnsupportedMetadata(url);
+			throw new MediaPreviewProviderException($"Failed to get metadata from ARW file: {url}", ex);
 		}
 
 		return CreateUnsupportedMetadata(url);

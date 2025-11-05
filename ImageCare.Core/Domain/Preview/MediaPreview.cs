@@ -22,7 +22,6 @@ public class MediaPreview : IEquatable<MediaPreview>
 
 	public int MaxImageHeight { get; }
 
-	/// <inheritdoc />
 	public bool Equals(MediaPreview? other)
 	{
 		if (ReferenceEquals(null, other))
@@ -47,6 +46,11 @@ public class MediaPreview : IEquatable<MediaPreview>
 		}
 
 		if (ReferenceEquals(this, obj))
+		{
+			return true;
+		}
+
+		if (Url == string.Empty && obj is MediaPreview other && other.Url == string.Empty)
 		{
 			return true;
 		}

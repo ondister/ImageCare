@@ -32,9 +32,9 @@ internal sealed class Mp4MediaPreviewProvider : IMediaPreviewProvider
 		{
 			throw new MediaPreviewProviderException($"Failed to open MP4 file: {url}", ex);
 		}
-		catch (Exception _)
+		catch (Exception ex)
 		{
-			return CreateUnsupportedMetadata(url);
+			throw new MediaPreviewProviderException($"Failed to get metadata from MP4 file: {url}", ex);
 		}
 
 		return CreateUnsupportedMetadata(url);

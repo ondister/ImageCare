@@ -30,9 +30,9 @@ internal sealed class JpegMediaPreviewProvider : IMediaPreviewProvider
 		{
 			throw new MediaPreviewProviderException($"Failed to open JPEG file: {url}", ex);
 		}
-		catch (Exception _)
+		catch (Exception ex)
 		{
-			return CreateUnsupportedMetadata(url);
+			throw new MediaPreviewProviderException($"Failed to get metadata from JPEG file: {url}", ex);
 		}
 
 		return CreateUnsupportedMetadata(url);
