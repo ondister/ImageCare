@@ -4,6 +4,7 @@ using System.Reactive.Linq;
 using System.Reactive.Subjects;
 
 using ImageCare.Core.Domain.Folders;
+using ImageCare.Core.Exceptions;
 
 namespace ImageCare.Core.Services.FileSystemWatcherService;
 
@@ -16,9 +17,10 @@ public sealed class MultiSourcesLocalFileSystemWatcherService : IMultiSourcesFil
 	private readonly Subject<DirectoryModel> _directoryCreatedSubject;
 	private readonly Subject<DirectoryModel> _directoryDeletedSubject;
 	private readonly Subject<DirectoryRenamedModel> _directoryRenamedSubject;
-	private readonly ConcurrentDictionary<string, LocalFileSystemWatcherService> _services = new();
 
+	private readonly ConcurrentDictionary<string, LocalFileSystemWatcherService> _services = new();
 	private readonly ConcurrentDictionary<string, CompositeDisposable> _subscriptions = new();
+	private bool _disposed;
 
 	public MultiSourcesLocalFileSystemWatcherService()
 	{
@@ -31,26 +33,25 @@ public sealed class MultiSourcesLocalFileSystemWatcherService : IMultiSourcesFil
 		_directoryRenamedSubject = new Subject<DirectoryRenamedModel>();
 	}
 
-	/// <inheritdoc />
 	public IObservable<FileModel> FileCreated => _fileCreatedSubject.AsObservable();
 
-	/// <inheritdoc />
 	public IObservable<FileModel> FileDeleted => _fileDeletedSubject.AsObservable();
 
-	/// <inheritdoc />
 	public IObservable<FileRenamedModel> FileRenamed => _fileRenamedSubject.AsObservable();
 
-	/// <inheritdoc />
 	public IObservable<DirectoryModel> DirectoryCreated => _directoryCreatedSubject.AsObservable();
 
-	/// <inheritdoc />
 	public IObservable<DirectoryModel> DirectoryDeleted => _directoryDeletedSubject.AsObservable();
 
-	/// <inheritdoc />
 	public IObservable<DirectoryRenamedModel> DirectoryRenamed => _directoryRenamedSubject.AsObservable();
 
 	public void Dispose()
 	{
+		if (_disposed)
+		{
+			return;
+		}
+
 		_fileCreatedSubject.Dispose();
 		_fileDeletedSubject.Dispose();
 		_fileRenamedSubject.Dispose();
@@ -72,32 +73,51 @@ public sealed class MultiSourcesLocalFileSystemWatcherService : IMultiSourcesFil
 		}
 
 		_services.Clear();
+
+		_disposed = true;
 	}
 
-	/// <inheritdoc />
 	public void StartWatching()
 	{
-		foreach (var localFileSystemWatcherService in _services.Values)
+		if (_disposed)
 		{
-			localFileSystemWatcherService.StartWatching();
+			throw new ObjectDisposedException(nameof(MultiSourcesLocalFileSystemWatcherService));
+		}
+
+		foreach (var service in _services.Values)
+		{
+			service.StartWatching();
 		}
 	}
 
-	/// <inheritdoc />
 	public void StopWatching()
 	{
-		foreach (var localFileSystemWatcherService in _services.Values)
+		if (_disposed)
 		{
-			localFileSystemWatcherService.StopWatching();
+			return;
+		}
+
+		foreach (var service in _services.Values)
+		{
+			service.StopWatching();
 		}
 	}
 
-	/// <inheritdoc />
 	public void StartWatchingDirectory(string directoryPath)
 	{
+		if (_disposed)
+		{
+			throw new ObjectDisposedException(nameof(MultiSourcesLocalFileSystemWatcherService));
+		}
+
+		if (string.IsNullOrWhiteSpace(directoryPath))
+		{
+			throw new ServiceException($"'{nameof(directoryPath)}' cannot be null or whitespace.");
+		}
+
 		if (!Directory.Exists(directoryPath))
 		{
-			throw new DirectoryNotFoundException(directoryPath);
+			throw new ServiceException($"{directoryPath} is not found.");
 		}
 
 		if (_services.ContainsKey(directoryPath))
@@ -105,37 +125,55 @@ public sealed class MultiSourcesLocalFileSystemWatcherService : IMultiSourcesFil
 			return;
 		}
 
-		if (_services.Keys.Any(path => directoryPath.StartsWith(path, StringComparison.OrdinalIgnoreCase)))
+		var parentDirectoryAlreadyWatched = _services.Keys.Any(path =>
+			                                                       directoryPath.StartsWith(path, StringComparison.OrdinalIgnoreCase));
+
+		if (parentDirectoryAlreadyWatched)
 		{
 			return;
 		}
 
-		var service = new LocalFileSystemWatcherService();
-		if (_services.TryAdd(directoryPath, service))
+		try
 		{
-			var compositeDisposable = new CompositeDisposable
+			var service = new LocalFileSystemWatcherService();
+			if (_services.TryAdd(directoryPath, service))
 			{
-				service.FileCreated.Subscribe(_fileCreatedSubject),
-				service.FileDeleted.Subscribe(_fileDeletedSubject),
-				service.FileRenamed.Subscribe(_fileRenamedSubject),
+				var compositeDisposable = new CompositeDisposable
+				{
+					service.FileCreated.Subscribe(_fileCreatedSubject),
+					service.FileDeleted.Subscribe(_fileDeletedSubject),
+					service.FileRenamed.Subscribe(_fileRenamedSubject),
+					service.DirectoryCreated.Subscribe(_directoryCreatedSubject),
+					service.DirectoryDeleted.Subscribe(_directoryDeletedSubject),
+					service.DirectoryRenamed.Subscribe(_directoryRenamedSubject)
+				};
 
-				service.DirectoryCreated.Subscribe(_directoryCreatedSubject),
-				service.DirectoryDeleted.Subscribe(_directoryDeletedSubject),
-				service.DirectoryRenamed.Subscribe(_directoryRenamedSubject)
-			};
-
-			_subscriptions.TryAdd(directoryPath, compositeDisposable);
-			service.StartWatchingDirectory(directoryPath);
+				_subscriptions.TryAdd(directoryPath, compositeDisposable);
+				service.StartWatchingDirectory(directoryPath);
+			}
+			else
+			{
+				service.Dispose();
+			}
 		}
-		else
+		catch (Exception ex)
 		{
-			service.Dispose();
+			throw new ServiceException($"Failed to start watching directory: {directoryPath}", ex);
 		}
 	}
 
-	/// <inheritdoc />
 	public void StopWatchingDirectory(string directoryPath)
 	{
+		if (_disposed)
+		{
+			throw new ObjectDisposedException(nameof(MultiSourcesLocalFileSystemWatcherService));
+		}
+
+		if (string.IsNullOrWhiteSpace(directoryPath))
+		{
+			throw new ServiceException($"'{nameof(directoryPath)}' cannot be null or whitespace.");
+		}
+
 		if (_services.TryRemove(directoryPath, out var service))
 		{
 			if (_subscriptions.TryRemove(directoryPath, out var disposable))
@@ -148,14 +186,25 @@ public sealed class MultiSourcesLocalFileSystemWatcherService : IMultiSourcesFil
 		}
 	}
 
-	/// <inheritdoc />
 	public void ClearWatchers()
 	{
+		if (_disposed)
+		{
+			throw new ObjectDisposedException(nameof(MultiSourcesLocalFileSystemWatcherService));
+		}
+
 		foreach (var service in _services.Values)
 		{
 			service.Dispose();
 		}
 
 		_services.Clear();
+
+		foreach (var subscription in _subscriptions.Values)
+		{
+			subscription.Dispose();
+		}
+
+		_subscriptions.Clear();
 	}
 }

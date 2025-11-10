@@ -2,6 +2,7 @@
 using System.Reactive.Subjects;
 
 using ImageCare.Core.Domain.Folders;
+using ImageCare.Core.Exceptions;
 
 namespace ImageCare.Core.Services.FileSystemWatcherService;
 
@@ -17,6 +18,8 @@ public sealed class LocalFileSystemWatcherService : IFileSystemWatcherService, I
 	private readonly Subject<DirectoryModel> _directoryCreatedSubject;
 	private readonly Subject<DirectoryModel> _directoryDeletedSubject;
 	private readonly Subject<DirectoryRenamedModel> _directoryRenamedSubject;
+
+	private bool _disposed;
 
 	public LocalFileSystemWatcherService()
 	{
@@ -42,27 +45,25 @@ public sealed class LocalFileSystemWatcherService : IFileSystemWatcherService, I
 		CreateObservables();
 	}
 
-	/// <inheritdoc />
 	public IObservable<FileModel> FileCreated => _fileCreatedSubject.AsObservable();
 
-	/// <inheritdoc />
 	public IObservable<FileModel> FileDeleted => _fileDeletedSubject.AsObservable();
 
-	/// <inheritdoc />
 	public IObservable<FileRenamedModel> FileRenamed => _fileRenamedSubject.AsObservable();
 
-	/// <inheritdoc />
 	public IObservable<DirectoryModel> DirectoryCreated => _directoryCreatedSubject.AsObservable();
 
-	/// <inheritdoc />
 	public IObservable<DirectoryModel> DirectoryDeleted => _directoryDeletedSubject.AsObservable();
 
-	/// <inheritdoc />
 	public IObservable<DirectoryRenamedModel> DirectoryRenamed => _directoryRenamedSubject.AsObservable();
 
-	/// <inheritdoc />
 	public void Dispose()
 	{
+		if (_disposed)
+		{
+			return;
+		}
+
 		_filesWatcher.Dispose();
 		_directoriesWatcher.Dispose();
 
@@ -73,85 +74,130 @@ public sealed class LocalFileSystemWatcherService : IFileSystemWatcherService, I
 		_directoryCreatedSubject.Dispose();
 		_directoryDeletedSubject.Dispose();
 		_directoryRenamedSubject.Dispose();
+
+		_disposed = true;
 	}
 
-	/// <inheritdoc />
 	public void StartWatching()
 	{
+		if (_disposed)
+		{
+			throw new ObjectDisposedException(nameof(LocalFileSystemWatcherService));
+		}
+
 		_filesWatcher.EnableRaisingEvents = true;
 		_directoriesWatcher.EnableRaisingEvents = true;
 	}
 
-	/// <inheritdoc />
 	public void StopWatching()
 	{
+		if (_disposed)
+		{
+			return;
+		}
+
 		_filesWatcher.EnableRaisingEvents = false;
 		_directoriesWatcher.EnableRaisingEvents = false;
 	}
 
-	/// <inheritdoc />
 	public void StartWatchingDirectory(string directoryPath)
 	{
+		if (_disposed)
+		{
+			throw new ObjectDisposedException(nameof(LocalFileSystemWatcherService));
+		}
+
 		if (string.IsNullOrWhiteSpace(directoryPath))
 		{
-			throw new ArgumentException($"'{nameof(directoryPath)}' cannot be null or whitespace.", nameof(directoryPath));
+			throw new ServiceException($"'{nameof(directoryPath)}' cannot be null or whitespace.");
 		}
 
 		if (!Directory.Exists(directoryPath))
 		{
-			throw new DirectoryNotFoundException($"{directoryPath} is not found.");
+			throw new ServiceException($"{directoryPath} is not found.");
 		}
 
-		_filesWatcher.EnableRaisingEvents = false;
-		_directoriesWatcher.EnableRaisingEvents = false;
+		try
+		{
+			_filesWatcher.EnableRaisingEvents = false;
+			_directoriesWatcher.EnableRaisingEvents = false;
 
-		_filesWatcher.Path = directoryPath;
-		_directoriesWatcher.Path = directoryPath;
+			_filesWatcher.Path = directoryPath;
+			_directoriesWatcher.Path = directoryPath;
 
-		_filesWatcher.EnableRaisingEvents = true;
-		_directoriesWatcher.EnableRaisingEvents = true;
+			_filesWatcher.EnableRaisingEvents = true;
+			_directoriesWatcher.EnableRaisingEvents = true;
+		}
+		catch (Exception ex)
+		{
+			throw new ServiceException($"Failed to start watching directory: {directoryPath}", ex);
+		}
 	}
 
 	private void CreateObservables()
 	{
+		SubscribeToFileEvents();
+		SubscribeToDirectoryEvents();
+	}
+
+	private void SubscribeToFileEvents()
+	{
 		Observable.FromEventPattern<FileSystemEventHandler, FileSystemEventArgs>(
 			          h => _filesWatcher.Created += h,
 			          h => _filesWatcher.Created -= h)
-		          .Select(e => new FileModel(e.EventArgs.Name, e.EventArgs.FullPath, null))
+		          .Select(e => CreateFileModel(e.EventArgs))
 		          .Throttle(TimeSpan.FromMilliseconds(100))
 		          .Subscribe(_fileCreatedSubject);
 
 		Observable.FromEventPattern<FileSystemEventHandler, FileSystemEventArgs>(
 			          h => _filesWatcher.Deleted += h,
 			          h => _filesWatcher.Deleted -= h)
-		          .Select(e => new FileModel(e.EventArgs.Name, e.EventArgs.FullPath, null))
+		          .Select(e => CreateFileModel(e.EventArgs))
 		          .Throttle(TimeSpan.FromMilliseconds(100))
 		          .Subscribe(_fileDeletedSubject);
 
 		Observable.FromEventPattern<RenamedEventHandler, RenamedEventArgs>(
 			          h => _filesWatcher.Renamed += h,
 			          h => _filesWatcher.Renamed -= h)
-		          .Select(e => new FileRenamedModel(new FileModel(e.EventArgs.OldName, e.EventArgs.OldFullPath, null), new FileModel(e.EventArgs.Name, e.EventArgs.FullPath, null)))
+		          .Select(e => new FileRenamedModel(
+			                  CreateFileModel(e.EventArgs, e.EventArgs.OldName, e.EventArgs.OldFullPath),
+			                  CreateFileModel(e.EventArgs)))
 		          .Subscribe(_fileRenamedSubject);
+	}
 
+	private void SubscribeToDirectoryEvents()
+	{
 		Observable.FromEventPattern<FileSystemEventHandler, FileSystemEventArgs>(
 			          h => _directoriesWatcher.Created += h,
 			          h => _directoriesWatcher.Created -= h)
-		          .Select(e => new DirectoryModel(new DirectoryInfo(e.EventArgs.FullPath).Name, e.EventArgs.FullPath))
+		          .Select(e => CreateDirectoryModel(e.EventArgs.FullPath))
 		          .Throttle(TimeSpan.FromMilliseconds(100))
 		          .Subscribe(_directoryCreatedSubject);
 
 		Observable.FromEventPattern<FileSystemEventHandler, FileSystemEventArgs>(
 			          h => _directoriesWatcher.Deleted += h,
 			          h => _directoriesWatcher.Deleted -= h)
-		          .Select(e => new DirectoryModel(new DirectoryInfo(e.EventArgs.FullPath).Name, e.EventArgs.FullPath))
+		          .Select(e => CreateDirectoryModel(e.EventArgs.FullPath))
 		          .Throttle(TimeSpan.FromMilliseconds(100))
 		          .Subscribe(_directoryDeletedSubject);
 
 		Observable.FromEventPattern<RenamedEventHandler, RenamedEventArgs>(
 			          h => _directoriesWatcher.Renamed += h,
 			          h => _directoriesWatcher.Renamed -= h)
-		          .Select(e => new DirectoryRenamedModel(new DirectoryModel(new DirectoryInfo(e.EventArgs.OldFullPath).Name, e.EventArgs.OldFullPath), new DirectoryModel(new DirectoryInfo(e.EventArgs.FullPath).Name, e.EventArgs.FullPath)))
+		          .Select(e => new DirectoryRenamedModel(
+			                  CreateDirectoryModel(e.EventArgs.OldFullPath),
+			                  CreateDirectoryModel(e.EventArgs.FullPath)))
 		          .Subscribe(_directoryRenamedSubject);
+	}
+
+	private static FileModel CreateFileModel(FileSystemEventArgs args, string? name = null, string? fullPath = null)
+	{
+		return new FileModel(name ?? args.Name, fullPath ?? args.FullPath, null);
+	}
+
+	private static DirectoryModel CreateDirectoryModel(string path)
+	{
+		var directoryInfo = new DirectoryInfo(path);
+		return new DirectoryModel(directoryInfo.Name, directoryInfo.FullName);
 	}
 }
