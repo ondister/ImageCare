@@ -32,7 +32,7 @@ public interface IFolderService
 
 	DirectoryModel? CreateSubFolder(DirectoryModel directoryModel);
 
-	string? RenameFolder(string? newName, string path);
-
 	Task<FolderStatistics> GetFolderStatisticsAsync(string folderPath);
+
+
 }

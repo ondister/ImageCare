@@ -8,6 +8,7 @@ using System.Windows.Input;
 
 using AutoMapper;
 using ImageCare.Core.Domain.Folders;
+using ImageCare.Core.Services.FileSystemService;
 using ImageCare.Core.Services.FolderService;
 using ImageCare.Mvvm;
 using ImageCare.Mvvm.Collections;
@@ -22,6 +23,7 @@ namespace ImageCare.UI.Avalonia.ViewModels.Domain;
 internal class DirectoryViewModel : ViewModelBase, IComparable<DirectoryViewModel>
 {
     private readonly IFolderService _folderService;
+    private readonly IFileSystemService _fileSystemService;
     private readonly ILogger _logger;
     private readonly IMapper _mapper;
     private bool _isExpanded;
@@ -36,10 +38,12 @@ internal class DirectoryViewModel : ViewModelBase, IComparable<DirectoryViewMode
                               string path,
                               IEnumerable<DirectoryViewModel> children,
                               IFolderService folderService,
+                              IFileSystemService fileSystemService,
                               IMapper mapper,
                               ILogger logger)
     {
         _folderService = folderService;
+        _fileSystemService = fileSystemService;
         _logger = logger;
         _mapper = mapper;
         Name = name;
@@ -169,7 +173,7 @@ internal class DirectoryViewModel : ViewModelBase, IComparable<DirectoryViewMode
 
     private void RenameFolder()
     {
-        EditableName = _folderService.RenameFolder(EditableName, Path);
+        EditableName = _fileSystemService.RenameFolder(EditableName, Path);
         IsEditing = false;
     }
     private void StartRenameFolder()

@@ -30,7 +30,13 @@ public interface IFileSystemService
 
 	string[] GetFiles(string directory);
 
+	string[] GetFiles(string directory, string searchPattern);
+
+	IEnumerable<string> EnumerateFiles(string directory, string searchPattern);
+
 	string[] GetDirectories(string directory);
+
+	IEnumerable<string> EnumerateDirectories(string directory, string searchPattern);
 
 	void CopyFileMetadata(string source, string destination);
 
@@ -41,4 +47,6 @@ public interface IFileSystemService
 	void SafeDeleteDirectory(string path);
 
 	string GetFileExtension(string path);
+
+	string? RenameFolder(string? newName, string path);
 }

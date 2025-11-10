@@ -1,4 +1,5 @@
-﻿using ImageCare.Core.Services.FileSystemService;
+﻿using ImageCare.Core.Exceptions;
+using ImageCare.Core.Services.FileSystemService;
 
 namespace ImageCare.Core.Tests.Services.FileSystemService;
 
@@ -220,6 +221,174 @@ public class WindowsFileSystemServiceTests
 			if (File.Exists(tempFile))
 			{
 				File.Delete(tempFile);
+			}
+		}
+	}
+
+	[Test]
+	public void RenameFolder_WithValidName_ReturnsNewName()
+	{
+		var service = new WindowsFileSystemService();
+		var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+		var newName = "RenamedFolder";
+		Directory.CreateDirectory(tempDir);
+
+		try
+		{
+			var result = service.RenameFolder(newName, tempDir);
+
+			Assert.That(result, Is.EqualTo(newName));
+			var parentDir = Directory.GetParent(tempDir).FullName;
+			var newPath = Path.Combine(parentDir, newName);
+			Assert.IsTrue(Directory.Exists(newPath));
+		}
+		finally
+		{
+			var parentDir = Directory.GetParent(tempDir).FullName;
+			var newPath = Path.Combine(parentDir, newName);
+			if (Directory.Exists(newPath))
+			{
+				Directory.Delete(newPath);
+			}
+
+			if (Directory.Exists(tempDir))
+			{
+				Directory.Delete(tempDir);
+			}
+		}
+	}
+
+	[Test]
+	public void RenameFolder_WithNullPath_ThrowsServiceException()
+	{
+		var service = new WindowsFileSystemService();
+
+		Assert.Throws<ServiceException>(() => service.RenameFolder("NewName", null));
+	}
+
+	[Test]
+	public void RenameFolder_WithEmptyPath_ThrowsServiceException()
+	{
+		var service = new WindowsFileSystemService();
+
+		Assert.Throws<ServiceException>(() => service.RenameFolder("NewName", ""));
+	}
+
+	[Test]
+	public void RenameFolder_WithWhitespacePath_ThrowsServiceException()
+	{
+		var service = new WindowsFileSystemService();
+
+		Assert.Throws<ServiceException>(() => service.RenameFolder("NewName", "   "));
+	}
+
+	[Test]
+	public void RenameFolder_WithNonExistentDirectory_ReturnsOriginalName()
+	{
+		var service = new WindowsFileSystemService();
+		var nonExistentPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+
+		var result = service.RenameFolder("NewName", nonExistentPath);
+
+		Assert.That(result, Is.EqualTo(Path.GetFileName(nonExistentPath)));
+	}
+
+	[Test]
+	public void RenameFolder_WithNullNewName_ReturnsOriginalName()
+	{
+		var service = new WindowsFileSystemService();
+		var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+		Directory.CreateDirectory(tempDir);
+
+		try
+		{
+			var result = service.RenameFolder(null, tempDir);
+
+			Assert.That(result, Is.EqualTo(Path.GetFileName(tempDir)));
+			Assert.IsTrue(Directory.Exists(tempDir)); // Directory should still exist
+		}
+		finally
+		{
+			if (Directory.Exists(tempDir))
+			{
+				Directory.Delete(tempDir);
+			}
+		}
+	}
+
+	[Test]
+	public void RenameFolder_WithEmptyNewName_ReturnsOriginalName()
+	{
+		var service = new WindowsFileSystemService();
+		var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+		Directory.CreateDirectory(tempDir);
+
+		try
+		{
+			var result = service.RenameFolder("", tempDir);
+
+			Assert.That(result, Is.EqualTo(Path.GetFileName(tempDir)));
+			Assert.IsTrue(Directory.Exists(tempDir)); // Directory should still exist
+		}
+		finally
+		{
+			if (Directory.Exists(tempDir))
+			{
+				Directory.Delete(tempDir);
+			}
+		}
+	}
+
+	[Test]
+	public void RenameFolder_WithExistingDestinationName_ReturnsOriginalName()
+	{
+		var service = new WindowsFileSystemService();
+		var tempDir1 = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+		var tempDir2 = Path.Combine(Path.GetTempPath(), "ExistingFolder");
+		Directory.CreateDirectory(tempDir1);
+		Directory.CreateDirectory(tempDir2);
+
+		try
+		{
+			var result = service.RenameFolder("ExistingFolder", tempDir1);
+
+			Assert.That(result, Is.EqualTo(Path.GetFileName(tempDir1)));
+			Assert.IsTrue(Directory.Exists(tempDir1)); // Original directory should still exist
+			Assert.IsTrue(Directory.Exists(tempDir2)); // Existing directory should still exist
+		}
+		finally
+		{
+			if (Directory.Exists(tempDir1))
+			{
+				Directory.Delete(tempDir1);
+			}
+
+			if (Directory.Exists(tempDir2))
+			{
+				Directory.Delete(tempDir2);
+			}
+		}
+	}
+
+	[Test]
+	public void RenameFolder_WithInvalidCharactersInName_ThrowsServiceException()
+	{
+		var service = new WindowsFileSystemService();
+		var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+		Directory.CreateDirectory(tempDir);
+
+		try
+		{
+			var invalidName = "Invalid<Name>";
+
+			Assert.Throws<ServiceException>(() => service.RenameFolder(invalidName, tempDir));
+			Assert.IsTrue(Directory.Exists(tempDir)); // Directory should still exist after failed rename
+		}
+		finally
+		{
+			if (Directory.Exists(tempDir))
+			{
+				Directory.Delete(tempDir);
 			}
 		}
 	}

@@ -4,10 +4,8 @@ using System.Reactive.Subjects;
 
 using ImageCare.Core.Domain.Folders;
 using ImageCare.Core.Domain.MediaFormats;
-
-using Microsoft.VisualBasic.FileIO;
-
-using SearchOption = System.IO.SearchOption;
+using ImageCare.Core.Exceptions;
+using ImageCare.Core.Services.FileSystemService;
 
 namespace ImageCare.Core.Services.FolderService;
 
@@ -16,67 +14,76 @@ public sealed class LocalFileSystemFolderService : IFolderService, IDisposable
 	private readonly Subject<SelectedDirectory> _selectedDirectorySubject;
 	private readonly Subject<SelectedDirectory> _folderVisitingSubject;
 	private readonly Subject<SelectedDirectory> _folderLeftSubject;
+	private readonly IFileSystemService _fileSystemService;
+	private readonly IDriveModelsFactory _driveModelsFactory;
 
 	private readonly ConcurrentDictionary<FileManagerPanel, DirectoryModel> _selectedDirectories = new();
 	private readonly ConcurrentDictionary<(string, FileManagerPanel), SelectedDirectory> _visitingDirectoryModels = new();
-	private readonly DriveModelsFactory _driveModelsFactory;
+	private bool _disposed;
 
-	public LocalFileSystemFolderService()
+	public LocalFileSystemFolderService(IFileSystemService fileSystemService, IDriveModelsFactory driveModelsFactory)
 	{
+		_fileSystemService = fileSystemService ?? throw new ArgumentNullException(nameof(fileSystemService));
+		_driveModelsFactory = driveModelsFactory ?? throw new ArgumentNullException(nameof(driveModelsFactory));
+
 		_selectedDirectorySubject = new Subject<SelectedDirectory>();
 		_folderVisitingSubject = new Subject<SelectedDirectory>();
 		_folderLeftSubject = new Subject<SelectedDirectory>();
-
-		_driveModelsFactory = new DriveModelsFactory();
 	}
 
-	/// <inheritdoc />
 	public IObservable<SelectedDirectory> FileSystemItemSelected => _selectedDirectorySubject.AsObservable();
 
-	/// <inheritdoc />
 	public IObservable<SelectedDirectory> FolderVisited => _folderVisitingSubject.AsObservable();
 
-	/// <inheritdoc />
 	public IObservable<SelectedDirectory> FolderLeft => _folderLeftSubject.AsObservable();
 
-	/// <inheritdoc />
 	public void Dispose()
 	{
+		if (_disposed)
+		{
+			return;
+		}
+
 		_selectedDirectorySubject.Dispose();
 		_folderVisitingSubject.Dispose();
 		_folderLeftSubject.Dispose();
+		_disposed = true;
 	}
 
-	/// <inheritdoc />
 	public async Task<DirectoryModel> GetDirectoryModelAsync(DirectoryModel? directoryModel = null)
 	{
-		if (directoryModel == null)
+		if (_disposed)
 		{
-			return await GetRootDirectoriesLevelAsync();
+			throw new ObjectDisposedException(nameof(LocalFileSystemFolderService));
 		}
+
+		return directoryModel == null
+			       ? await GetRootDirectoriesLevelAsync()
+			       : await GetCustomDirectoriesLevelAsync(directoryModel);
+	}
+
+	public async Task<DirectoryModel> GetDirectoryModelAsync(string directoryPath)
+	{
+		if (_disposed)
+		{
+			throw new ObjectDisposedException(nameof(LocalFileSystemFolderService));
+		}
+
+		if (string.IsNullOrWhiteSpace(directoryPath))
+		{
+			throw new ServiceException("Directory path cannot be null or empty");
+		}
+
+		if (!_fileSystemService.DirectoryExists(directoryPath))
+		{
+			return new DirectoryModel("Invalid folder", string.Empty);
+		}
+
+		var directoryModel = new DirectoryModel(Path.GetFileName(directoryPath), directoryPath);
 
 		return await GetCustomDirectoriesLevelAsync(directoryModel);
 	}
 
-	/// <inheritdoc />
-	public async Task<DirectoryModel> GetDirectoryModelAsync(string directoryPath)
-	{
-		return await Task.Run(
-			       async () =>
-			       {
-				       var directoryInfo = new DirectoryInfo(directoryPath);
-				       if (!directoryInfo.Exists)
-				       {
-					       return new DirectoryModel("Invalid folder", string.Empty);
-				       }
-
-				       var directoryModel = new DirectoryModel(directoryInfo.Name, directoryInfo.FullName);
-
-				       return await GetCustomDirectoriesLevelAsync(directoryModel);
-			       });
-	}
-
-	/// <inheritdoc />
 	public async Task<IEnumerable<FileModel>> GetFileModelAsync(DirectoryModel directoryModel, string searchPattern)
 	{
 		return await GetFileModelAsync(directoryModel.Path, searchPattern);
@@ -84,44 +91,60 @@ public sealed class LocalFileSystemFolderService : IFolderService, IDisposable
 
 	public async Task<IEnumerable<FileModel>> GetFileModelAsync(string directoryPath, string searchPattern)
 	{
-		return await Task.Run(
-			       () =>
-			       {
-				       var files = new List<FileModel>();
-				       var directoryInfo = new DirectoryInfo(directoryPath);
+		if (_disposed)
+		{
+			throw new ObjectDisposedException(nameof(LocalFileSystemFolderService));
+		}
 
-				       if (!directoryInfo.Exists)
-				       {
-					       return files;
-				       }
+		return await Task.Run(() =>
+		{
+			if (!_fileSystemService.DirectoryExists(directoryPath))
+			{
+				return Enumerable.Empty<FileModel>();
+			}
 
-				       files.AddRange(
-					       directoryInfo
-						       .EnumerateFiles(searchPattern)
-						       .Select(fileInfo => new FileModel(fileInfo.Name, fileInfo.FullName, fileInfo.LastWriteTime))
-						       .Where(f => f.CreatedDateTime.HasValue)
-						       .OrderByDescending(f => f.CreatedDateTime.Value));
+			var files = _fileSystemService.GetFiles(directoryPath)
+			                              .Where(file => MatchesSearchPattern(file, searchPattern))
+			                              .Select(file => CreateFileModel(file))
+			                              .Where(f => f.CreatedDateTime.HasValue)
+			                              .OrderByDescending(f => f.CreatedDateTime.Value)
+			                              .ToList();
 
-				       return files;
-			       });
+			return files;
+		});
 	}
 
-	/// <inheritdoc />
 	public void SetSelectedDirectory(SelectedDirectory selectedDirectory)
 	{
-		_selectedDirectories.AddOrUpdate(selectedDirectory.FileManagerPanel, _ => selectedDirectory, (_, _) => selectedDirectory);
+		if (_disposed)
+		{
+			throw new ObjectDisposedException(nameof(LocalFileSystemFolderService));
+		}
+
+		_selectedDirectories.AddOrUpdate(
+			selectedDirectory.FileManagerPanel,
+			selectedDirectory,
+			(_, _) => selectedDirectory);
 		_selectedDirectorySubject.OnNext(selectedDirectory);
 	}
 
-	/// <inheritdoc />
 	public DirectoryModel? GetSelectedDirectory(FileManagerPanel fileManagerPanel)
 	{
+		if (_disposed)
+		{
+			throw new ObjectDisposedException(nameof(LocalFileSystemFolderService));
+		}
+
 		return _selectedDirectories.GetValueOrDefault(fileManagerPanel);
 	}
 
-	/// <inheritdoc />
 	public void AddVisitingFolder(DirectoryModel directoryModel, FileManagerPanel fileManagerPanel)
 	{
+		if (_disposed)
+		{
+			throw new ObjectDisposedException(nameof(LocalFileSystemFolderService));
+		}
+
 		var visitingDirectory = new SelectedDirectory(directoryModel, fileManagerPanel);
 		if (_visitingDirectoryModels.TryAdd((directoryModel.Path, fileManagerPanel), visitingDirectory))
 		{
@@ -129,201 +152,284 @@ public sealed class LocalFileSystemFolderService : IFolderService, IDisposable
 		}
 	}
 
-	/// <inheritdoc />
 	public void RemoveVisitingFolder(DirectoryModel directoryModel, FileManagerPanel fileManagerPanel)
 	{
-		if (_visitingDirectoryModels.TryRemove((directoryModel.Path, fileManagerPanel), out var removedDirectoryModel))
+		if (_disposed)
 		{
-			_folderLeftSubject.OnNext(removedDirectoryModel);
+			throw new ObjectDisposedException(nameof(LocalFileSystemFolderService));
+		}
+
+		if (_visitingDirectoryModels.TryRemove((directoryModel.Path, fileManagerPanel), out var removedDirectory))
+		{
+			_folderLeftSubject.OnNext(removedDirectory);
 		}
 	}
 
-	/// <inheritdoc />
 	public void RemoveFolder(DirectoryModel directoryModel)
 	{
+		if (_disposed)
+		{
+			throw new ObjectDisposedException(nameof(LocalFileSystemFolderService));
+		}
+
 		if (directoryModel is DriveModel || directoryModel is DeviceModel)
 		{
 			return;
 		}
 
-		if (Directory.EnumerateFiles(directoryModel.Path).Any())
+		if (_fileSystemService.GetFiles(directoryModel.Path).Any())
 		{
 			return;
 		}
 
-		FileSystem.DeleteDirectory(directoryModel.Path, UIOption.AllDialogs, RecycleOption.SendToRecycleBin);
+		_fileSystemService.SafeDeleteDirectory(directoryModel.Path);
 	}
 
-	/// <inheritdoc />
 	public DirectoryModel? CreateSubFolder(DirectoryModel directoryModel)
 	{
+		if (_disposed)
+		{
+			throw new ObjectDisposedException(nameof(LocalFileSystemFolderService));
+		}
+
 		if (directoryModel is DeviceModel)
 		{
 			return null;
 		}
 
 		var fullName = CreateNewDirectoryFullName(directoryModel.Path);
-		FileSystem.CreateDirectory(fullName);
-		var directoryInfo = new DirectoryInfo(fullName);
+		_fileSystemService.CreateDirectory(fullName);
 
-		return new DirectoryModel(directoryInfo.Name, fullName);
+		return new DirectoryModel(Path.GetFileName(fullName), fullName);
 	}
 
-	/// <inheritdoc />
-	public string? RenameFolder(string? newName, string path)
-	{
-		var directoryInfo = new DirectoryInfo(path);
-
-		if (string.IsNullOrWhiteSpace(newName))
-		{
-			return directoryInfo.Name;
-		}
-
-		if (!directoryInfo.Exists)
-		{
-			return directoryInfo.Name;
-		}
-
-		if (Directory.Exists(Path.Combine(directoryInfo.Parent.FullName, newName)))
-		{
-			return directoryInfo.Name;
-		}
-
-		FileSystem.RenameDirectory(path, newName);
-
-		return newName;
-	}
-
-	/// <inheritdoc />
 	public async Task<FolderStatistics> GetFolderStatisticsAsync(string folderPath)
 	{
-		var tasks = new List<Task<(MediaFormat, long)>>();
-
-		foreach (var extension in MediaFormat.GetSupportedExtensions())
+		if (_disposed)
 		{
-			var task = Task.Factory.StartNew(() => GetMediaFormatCountFromFolder(folderPath, extension));
-			tasks.Add(task);
+			throw new ObjectDisposedException(nameof(LocalFileSystemFolderService));
 		}
+
+		var tasks = MediaFormat.GetSupportedExtensions()
+		                       .Select(extension => Task.Run(() => GetMediaFormatCountFromFolder(folderPath, extension)))
+		                       .ToList();
 
 		var results = await Task.WhenAll(tasks);
 		var statistics = new FolderStatistics();
 
-		foreach (var taskResult in results)
+		foreach (var (mediaFormat, count) in results)
 		{
-			statistics.AddMediaFormatStatistics(taskResult.Item1, taskResult.Item2);
+			statistics.AddMediaFormatStatistics(mediaFormat, count);
 		}
 
 		return statistics;
 	}
 
+	//public async Task<DirectoryModel> GetCustomDirectoriesLevelAsync(DirectoryModel directoryModel, bool preview = false)
+	//{
+	//	if (_disposed)
+	//	{
+	//		throw new ObjectDisposedException(nameof(LocalFileSystemFolderService));
+	//	}
+
+	//	return await Task.Run(() =>
+	//	{
+	//		if (!_fileSystemService.DirectoryExists(directoryModel.Path) || directoryModel.DirectoryModels.Any())
+	//		{
+	//			return directoryModel;
+	//		}
+
+	//		var subDirectories = _fileSystemService.GetDirectories(directoryModel.Path);
+
+	//		foreach (var subDirectory in preview ? subDirectories.Take(1) : subDirectories)
+	//		{
+	//			try
+	//			{
+	//				var directory = new DirectoryModel(Path.GetFileName(subDirectory), subDirectory);
+
+	//				if (!preview)
+	//				{
+	//					var firstSubDir = _fileSystemService.GetDirectories(subDirectory).FirstOrDefault();
+	//					if (firstSubDir != null)
+	//					{
+	//						directory.AddDirectory(new DirectoryModel(Path.GetFileName(firstSubDir), firstSubDir));
+	//					}
+	//				}
+
+	//				directory.HasSupportedMedia = HasSupportedMedia(subDirectory);
+	//				directoryModel.AddDirectory(directory);
+	//			}
+	//			catch (UnauthorizedAccessException)
+	//			{
+	//				// Ignored
+	//			}
+
+	//			if (preview)
+	//			{
+	//				break;
+	//			}
+	//		}
+
+	//		return directoryModel;
+	//	});
+	//}
+
 	public async Task<DirectoryModel> GetCustomDirectoriesLevelAsync(DirectoryModel directoryModel, bool preview = false)
 	{
-		return await Task.Run(
-			       () =>
-			       {
-				       var rootDirectoryInfo = new DirectoryInfo(directoryModel.Path);
-				       if (!rootDirectoryInfo.Exists || directoryModel.DirectoryModels.Any())
-				       {
-					       return directoryModel;
-				       }
+		if (_disposed)
+		{
+			throw new ObjectDisposedException(nameof(LocalFileSystemFolderService));
+		}
 
-				       foreach (var directoryInfo in rootDirectoryInfo.EnumerateDirectories())
-				       {
-					       var directory = new DirectoryModel(directoryInfo.Name, directoryInfo.FullName);
+		if (directoryModel.DirectoryModels.Any())
+		{
+			return directoryModel;
+		}
 
-					       // Add first subdirectory if possible.
-					       var directoryModelInfo = new DirectoryInfo(directory.Path);
+		return await Task.Run(() =>
+		{
+			if (!_fileSystemService.DirectoryExists(directoryModel.Path))
+			{
+				return directoryModel;
+			}
 
-					       try
-					       {
-						       if (directoryModelInfo.EnumerateDirectories().FirstOrDefault() is { } subDirectoryInfo)
-						       {
-							       directory.AddDirectory(new DirectoryModel(subDirectoryInfo.Name, subDirectoryInfo.FullName));
-						       }
+			var subDirectories = _fileSystemService.EnumerateDirectories(directoryModel.Path, "*");
+			var directoriesToProcess = preview ? subDirectories.Take(1) : subDirectories;
 
-						       foreach (var extension in MediaFormat.GetSupportedExtensions())
-						       {
-							       if (directoryModelInfo.EnumerateFiles($"*{extension}", SearchOption.TopDirectoryOnly).Any())
-							       {
-								       directory.HasSupportedMedia = true;
-								       break;
-							       }
-						       }
+			if (!preview)
+			{
+				var directories = directoriesToProcess
+				                  .AsParallel()
+				                  .WithDegreeOfParallelism(Environment.ProcessorCount)
+				                  .Select(subDirectory =>
+				                  {
+					                  try
+					                  {
+						                  return ProcessDirectory(subDirectory, preview);
+					                  }
+					                  catch (UnauthorizedAccessException)
+					                  {
+						                  return null;
+					                  }
+				                  })
+				                  .Where(dir => dir != null)
+				                  .ToList();
 
-						       directoryModel.AddDirectory(directory);
-					       }
-					       catch (UnauthorizedAccessException)
-					       {
-						       // Ignored.
-					       }
+				directoryModel.AddDirectories(directories);
+			}
+			else
+			{
+				foreach (var subDirectory in directoriesToProcess)
+				{
+					try
+					{
+						var directory = ProcessDirectory(subDirectory, preview);
+						directoryModel.AddDirectory(directory);
+						break;
+					}
+					catch (UnauthorizedAccessException)
+					{
+						// Ignored
+					}
+				}
+			}
 
-					       if (preview)
-					       {
-						       break;
-					       }
-				       }
-
-				       return directoryModel;
-			       });
+			return directoryModel;
+		});
 	}
 
-	private (MediaFormat, long) GetMediaFormatCountFromFolder(string folderPath, string extension)
+	private DirectoryModel ProcessDirectory(string subDirectory, bool preview)
+	{
+		var directoryName = Path.GetFileName(subDirectory);
+		var directory = new DirectoryModel(directoryName, subDirectory);
+
+		if (!preview)
+		{
+			var firstSubDir = _fileSystemService.EnumerateDirectories(subDirectory, "*").FirstOrDefault();
+			if (firstSubDir != null)
+			{
+				directory.AddDirectory(new DirectoryModel(Path.GetFileName(firstSubDir), firstSubDir));
+			}
+		}
+
+		directory.HasSupportedMedia = CheckHasSupportedMedia(subDirectory);
+		return directory;
+	}
+
+	private bool CheckHasSupportedMedia(string directoryPath)
+	{
+		var supportedExtensions = MediaFormat.GetSupportedExtensions();
+
+		return supportedExtensions
+		       .AsParallel()
+		       .WithDegreeOfParallelism(Environment.ProcessorCount / 2)
+		       .Any(extension => _fileSystemService.EnumerateFiles(directoryPath, $"*{extension}").Any());
+	}
+
+	private (MediaFormat mediaFormat, long count) GetMediaFormatCountFromFolder(string folderPath, string extension)
 	{
 		var mediaFormat = MediaFormat.GetMediaFormatByExtension(extension);
-		if (mediaFormat != null)
+		if (mediaFormat != null && _fileSystemService.DirectoryExists(folderPath))
 		{
-			var files = Directory.GetFiles(folderPath, $"*{extension}", SearchOption.TopDirectoryOnly);
-
+			var files = _fileSystemService.GetFiles(folderPath, $"*{extension}");
 			return (mediaFormat, files.Length);
 		}
 
 		return (MediaFormat.MediaFormatUnknown, 0);
 	}
 
-	private string CreateNewDirectoryFullName(string directoryModelPath)
+	private string CreateNewDirectoryFullName(string directoryPath)
 	{
 		const string initialName = "New Folder";
 		var counter = 0;
 		var finalName = initialName;
 
-		while (Directory.EnumerateDirectories(directoryModelPath, finalName, SearchOption.TopDirectoryOnly).Any())
+		while (_fileSystemService.EnumerateDirectories(directoryPath, finalName).Any())
 		{
-			finalName = $"{initialName}({counter})";
 			counter++;
+			finalName = $"{initialName}({counter})";
 		}
 
-		return Path.Combine(directoryModelPath, finalName);
+		return Path.Combine(directoryPath, finalName);
 	}
 
 	private async Task<DirectoryModel> GetRootDirectoriesLevelAsync()
 	{
-		return await Task.Run(
-			       async () =>
-			       {
-				       var rootModel = new DeviceModel(Environment.MachineName, "//");
-				       var drives = DriveInfo.GetDrives();
+		return await Task.Run(async () =>
+		{
+			var rootModel = new DeviceModel(Environment.MachineName, "//");
+			var drives = DriveInfo.GetDrives();
 
-				       foreach (var driveInfo in drives)
-				       {
-					       if (driveInfo is { DriveType: DriveType.Network, IsReady: false })
-					       {
-						       continue;
-					       }
+			foreach (var driveInfo in drives)
+			{
+				if (driveInfo is { DriveType: DriveType.Network, IsReady: false })
+				{
+					continue;
+				}
 
-					       if (_driveModelsFactory.CreateDriveModel(driveInfo) is { } drive)
-					       {
-						       rootModel.AddDirectory(drive);
-						       if (drive.RootDirectory == null)
-						       {
-							       continue;
-						       }
+				var drive = _driveModelsFactory.CreateDriveModel(driveInfo);
+				if (drive?.RootDirectory == null)
+				{
+					continue;
+				}
 
-						       var firstDirectoryTier = await GetCustomDirectoriesLevelAsync(drive.RootDirectory, true);
-						       drive.AddDirectories(firstDirectoryTier.DirectoryModels);
-					       }
-				       }
+				rootModel.AddDirectory(drive);
+				var firstDirectoryTier = await GetCustomDirectoriesLevelAsync(drive.RootDirectory, true);
+				drive.AddDirectories(firstDirectoryTier.DirectoryModels);
+			}
 
-				       return rootModel;
-			       });
+			return rootModel;
+		});
+	}
+
+	private static bool MatchesSearchPattern(string fileName, string searchPattern)
+	{
+		return searchPattern == "*.*" || fileName.EndsWith(searchPattern.TrimStart('*'), StringComparison.OrdinalIgnoreCase);
+	}
+
+	private FileModel CreateFileModel(string filePath)
+	{
+		var fileInfo = _fileSystemService.GetFileInfo(filePath);
+		return new FileModel(fileInfo.Name, fileInfo.FullName, fileInfo.LastWriteTime);
 	}
 }

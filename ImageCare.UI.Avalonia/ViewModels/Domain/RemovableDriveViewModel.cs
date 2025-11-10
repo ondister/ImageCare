@@ -3,6 +3,7 @@ using System.Collections.Generic;
 
 using AutoMapper;
 
+using ImageCare.Core.Services.FileSystemService;
 using ImageCare.Core.Services.FolderService;
 
 using Serilog;
@@ -22,9 +23,10 @@ internal sealed class RemovableDriveViewModel : DriveViewModel
 	                               long availableFreeSpace,
 	                               IEnumerable<DirectoryViewModel> children,
 	                               IFolderService folderService,
-	                               IMapper mapper,
+	                               IFileSystemService fileSystemService,
+								   IMapper mapper,
 	                               ILogger logger)
-		: base(name, path, children, folderService, mapper, logger)
+		: base(name, path, children, folderService,fileSystemService, mapper, logger)
 	{
 		TotalSize = totalSize;
 		AvailableFreeSpace = availableFreeSpace;

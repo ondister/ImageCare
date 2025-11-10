@@ -1,4 +1,9 @@
-﻿namespace ImageCare.Core.Services.FileSystemService;
+﻿using ImageCare.Core.Domain.Folders;
+using ImageCare.Core.Exceptions;
+
+using Microsoft.VisualBasic.FileIO;
+
+namespace ImageCare.Core.Services.FileSystemService;
 
 public sealed class WindowsFileSystemService : IFileSystemService
 {
@@ -78,9 +83,27 @@ public sealed class WindowsFileSystemService : IFileSystemService
 		return Directory.GetFiles(directory);
 	}
 
+	/// <inheritdoc />
+	public string[] GetFiles(string directory, string searchPattern)
+	{
+		return Directory.GetFiles(directory, searchPattern);
+	}
+
+	/// <inheritdoc />
+	public IEnumerable<string> EnumerateFiles(string directory, string searchPattern)
+	{
+		return Directory.EnumerateFiles(directory, searchPattern);
+	}
+
 	public string[] GetDirectories(string directory)
 	{
 		return Directory.GetDirectories(directory);
+	}
+
+	/// <inheritdoc />
+	public IEnumerable<string> EnumerateDirectories(string directory, string searchPattern)
+	{
+		return Directory.EnumerateDirectories(directory, searchPattern);
 	}
 
 	public void CopyFileMetadata(string source, string destination)
@@ -126,12 +149,47 @@ public sealed class WindowsFileSystemService : IFileSystemService
 
 		// Recursively reset attributes before deletion
 		ResetAttributesRecursive(path);
-		DeleteDirectory(path, true);
+		FileSystem.DeleteDirectory(path, UIOption.AllDialogs, RecycleOption.SendToRecycleBin);
 	}
 
 	public string GetFileExtension(string path)
 	{
 		return Path.GetExtension(path);
+	}
+
+	public string? RenameFolder(string? newName, string path)
+	{
+		if (string.IsNullOrWhiteSpace(path))
+		{
+			throw new ServiceException("Path cannot be null or empty");
+		}
+
+		try
+		{
+			var directoryInfo = GetDirectoryInfo(path);
+			if (!directoryInfo.Exists)
+			{
+				return directoryInfo.Name;
+			}
+
+			if (string.IsNullOrWhiteSpace(newName))
+			{
+				return directoryInfo.Name;
+			}
+
+			var newPath = Path.Combine(directoryInfo.Parent.FullName, newName);
+			if (DirectoryExists(newPath))
+			{
+				return directoryInfo.Name;
+			}
+
+			FileSystem.RenameDirectory(path, newName);
+			return newName;
+		}
+		catch (Exception ex) when (ex is not ServiceException)
+		{
+			throw new ServiceException($"Failed to rename folder from '{path}' to '{newName}'", ex);
+		}
 	}
 
 	private void ResetAttributesRecursive(string path)
