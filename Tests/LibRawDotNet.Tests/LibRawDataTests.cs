@@ -67,6 +67,7 @@ public class LibRawDataTests
 	{
 		var maxLoadingTime = TimeSpan.FromMilliseconds(150);
 		var config = new ManualConfig().WithOption(ConfigOptions.DisableOptimizationsValidator, true);
+		config.Add(DefaultConfig.Instance);
 		config.AddLogger(ConsoleLogger.Default);
 		config.AddJob(Job.Dry);
 		var summary = BenchmarkRunner.Run<LibRawDotNetBenchmarks>(config);

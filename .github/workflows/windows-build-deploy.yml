@@ -23,10 +23,11 @@ jobs:
     - name: Restore dependencies
       run: dotnet restore
     
-    - name: Build all projects
-      run: dotnet build --configuration Release --no-restore
+    - name: Build tests in Release with optimizations
+      run: |
+        dotnet build Tests/ --configuration Release -p:Optimize=true
     
-    - name: Run unit tests (excluding benchmarks)
+    - name: Run unit tests (including benchmarks)
       run: |
         Get-ChildItem -Path Tests -Recurse -Filter *.csproj | ForEach-Object {
           $projectPath = $_.FullName
@@ -34,12 +35,10 @@ jobs:
           
           Write-Host "Running tests in: $projectName"
           
-          # Исключаем тесты с категорией Benchmark
           dotnet test $projectPath `
             --configuration Release `
             --no-build `
             --verbosity normal `
-            --filter "TestCategory!=Benchmark" `
             --logger "trx;LogFileName=results-$projectName.trx" `
             --results-directory TestResults
         }
@@ -52,7 +51,6 @@ jobs:
         path: TestResults/
         retention-days: 7
 
-  # Остальная часть workflow остается без изменений
   deploy:
     runs-on: windows-latest
     needs: test
