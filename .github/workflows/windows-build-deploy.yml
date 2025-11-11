@@ -32,17 +32,14 @@ jobs:
           $projectPath = $_.FullName
           $projectName = $_.Name
           
-          # Exclude benchmark
-          if ($projectName -like "*Benchmark*" -or $projectName -like "*Performance*") {
-            Write-Host "Skipping benchmark project: $projectName"
-            continue
-          }
-          
           Write-Host "Running tests in: $projectName"
+          
+          # Исключаем тесты с категорией Benchmark
           dotnet test $projectPath `
             --configuration Release `
             --no-build `
             --verbosity normal `
+            --filter "TestCategory!=Benchmark" `
             --logger "trx;LogFileName=results-$projectName.trx" `
             --results-directory TestResults
         }
@@ -55,6 +52,7 @@ jobs:
         path: TestResults/
         retention-days: 7
 
+  # Остальная часть workflow остается без изменений
   deploy:
     runs-on: windows-latest
     needs: test

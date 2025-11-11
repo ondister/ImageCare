@@ -62,6 +62,7 @@ public class LibRawDataTests
 	}
 
 	[Test]
+	[Category("Benchmark")]
 	public void RunLibRawDataBenchmarks()
 	{
 		var maxLoadingTime = TimeSpan.FromMilliseconds(150);
