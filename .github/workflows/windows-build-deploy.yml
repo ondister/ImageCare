@@ -1,13 +1,40 @@
-name: Deploy Windows Build
+name: Test and Deploy
 
 on:
   push:
-    tags:
-    - 'v*'
+    branches: [dev, master]
+    tags: ['v*']
+  pull_request:
+    branches: [dev, master]
 
 jobs:
+  test:
+    runs-on: windows-latest
+    if: contains(fromJSON('["push", "pull_request"]'), github.event_name) && contains(fromJSON('["dev", "master"]'), github.ref_name)
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup .NET 8
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 8.0.x
+    
+    - name: Restore dependencies
+      run: dotnet restore
+    
+    - name: Run tests from Tests folder
+      run: |
+        Get-ChildItem -Path Tests -Recurse -Filter *.csproj | ForEach-Object {
+          echo "Running tests in $($_.Name)"
+          dotnet test $_.FullName --configuration Release --no-restore --verbosity normal
+        }
+
   deploy:
     runs-on: windows-latest
+    needs: test
+    if: startsWith(github.ref, 'refs/tags/v')
+    
     steps:
     - uses: actions/checkout@v4
     
