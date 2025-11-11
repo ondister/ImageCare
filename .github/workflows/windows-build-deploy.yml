@@ -23,11 +23,15 @@ jobs:
     - name: Restore dependencies
       run: dotnet restore
     
-    - name: Build tests in Release with optimizations
+    - name: Build with optimizations
       run: |
-        dotnet build Tests/ --configuration Release -p:Optimize=true
+        # Собираем все проекты в Tests папке с оптимизациями
+        Get-ChildItem -Path Tests -Recurse -Filter *.csproj | ForEach-Object {
+          Write-Host "Building $($_.Name) with optimizations..."
+          dotnet build $_.FullName --configuration Release -p:Optimize=true --no-restore
+        }
     
-    - name: Run unit tests (including benchmarks)
+    - name: Run all tests
       run: |
         Get-ChildItem -Path Tests -Recurse -Filter *.csproj | ForEach-Object {
           $projectPath = $_.FullName
