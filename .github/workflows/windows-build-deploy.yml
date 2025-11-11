@@ -23,12 +23,37 @@ jobs:
     - name: Restore dependencies
       run: dotnet restore
     
-    - name: Run tests from Tests folder
+    - name: Build all projects
+      run: dotnet build --configuration Release --no-restore
+    
+    - name: Run unit tests (excluding benchmarks)
       run: |
         Get-ChildItem -Path Tests -Recurse -Filter *.csproj | ForEach-Object {
-          echo "Running tests in $($_.Name)"
-          dotnet test $_.FullName --configuration Release --no-restore --verbosity normal
+          $projectPath = $_.FullName
+          $projectName = $_.Name
+          
+          # Exclude benchmark
+          if ($projectName -like "*Benchmark*" -or $projectName -like "*Performance*") {
+            Write-Host "Skipping benchmark project: $projectName"
+            continue
+          }
+          
+          Write-Host "Running tests in: $projectName"
+          dotnet test $projectPath `
+            --configuration Release `
+            --no-build `
+            --verbosity normal `
+            --logger "trx;LogFileName=results-$projectName.trx" `
+            --results-directory TestResults
         }
+    
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: test-results
+        path: TestResults/
+        retention-days: 7
 
   deploy:
     runs-on: windows-latest
