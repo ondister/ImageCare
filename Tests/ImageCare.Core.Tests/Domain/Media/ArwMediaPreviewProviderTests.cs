@@ -63,18 +63,15 @@ public class ArwMediaPreviewProviderTests
 	}
 
 	[Test]
-	public void GetMediaMetadata_WithUnsupportedFile_ReturnsUnsupportedMediaMetadata()
+	public void GetMediaMetadata_WithUnsupportedFile_ThrowsMediaPreviewProviderException()
 	{
 		var invalidFile = Path.Combine(_testImagesPath, "invalid.arw");
 		File.WriteAllText(invalidFile, "invalid content");
 
 		try
 		{
-			var result = _provider.GetMediaMetadata(invalidFile);
+			Assert.Throws<MediaPreviewProviderException>(() => _provider.GetMediaMetadata(invalidFile));
 
-			Assert.That(result, Is.InstanceOf<UnsupportedMediaMetadata>());
-			Assert.That(result.Width, Is.EqualTo(0));
-			Assert.That(result.Height, Is.EqualTo(0));
 		}
 		finally
 		{
@@ -167,17 +164,14 @@ public class ArwMediaPreviewProviderTests
 	}
 
 	[Test]
-	public void GetCreationDateTime_WithUnsupportedFile_ReturnsValue()
+	public void GetCreationDateTime_WithUnsupportedFile_ThrowsMediaPreviewProviderException()
 	{
 		var invalidFile = Path.Combine(_testImagesPath, "invalid.arw");
 		File.WriteAllText(invalidFile, "invalid content");
 
 		try
 		{
-			var result = _provider.GetCreationDateTime(invalidFile);
-
-			Assert.That(result, Is.Not.Null);
-			Assert.That(result, Is.GreaterThan(DateTime.MinValue));
+			Assert.Throws<MediaPreviewProviderException>(() => _provider.GetCreationDateTime(invalidFile));
 		}
 		finally
 		{

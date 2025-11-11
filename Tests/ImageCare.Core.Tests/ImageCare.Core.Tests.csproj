@@ -31,6 +31,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Update="TestImages\no_exif.jpg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="TestImages\test.jpg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="TestImages\test.MP4">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

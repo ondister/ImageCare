@@ -66,7 +66,6 @@ internal sealed class ArwMediaPreviewProvider : IMediaPreviewProvider
 		return metadata.CreationDateTime;
 	}
 
-	// Вспомогательные методы остаются без изменений
 	private static Directory? FindMainMetadataDirectory(IReadOnlyList<Directory> directories)
 	{
 		return directories.FirstOrDefault(d =>
