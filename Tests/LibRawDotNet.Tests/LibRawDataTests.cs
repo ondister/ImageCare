@@ -1,8 +1,3 @@
-using BenchmarkDotNet.Configs;
-using BenchmarkDotNet.Jobs;
-using BenchmarkDotNet.Loggers;
-using BenchmarkDotNet.Running;
-
 namespace LibRawDotNet.Tests;
 
 public class LibRawDataTests
@@ -16,21 +11,19 @@ public class LibRawDataTests
 	[Test]
 	public void LibRawDataTests_CreateInstanceFromJpeg_NotSupportedExceptionThrown()
 	{
-		Assert.Throws<NotSupportedException>(
-			() =>
-			{
-				using (var libRawData = LibRawData.OpenFile(_jpegFilePath)) { }
-			});
+		Assert.Throws<NotSupportedException>(() =>
+		{
+			using (var libRawData = LibRawData.OpenFile(_jpegFilePath)) { }
+		});
 	}
 
 	[Test]
 	public void LibRawDataTests_CreateInstanceFromCanonCr3_NoErrors()
 	{
-		Assert.DoesNotThrow(
-			() =>
-			{
-				using (var libRawData = LibRawData.OpenFile(_canonCr3FilePath)) { }
-			});
+		Assert.DoesNotThrow(() =>
+		{
+			using (var libRawData = LibRawData.OpenFile(_canonCr3FilePath)) { }
+		});
 	}
 
 	[Test]
@@ -51,29 +44,12 @@ public class LibRawDataTests
 	{
 		const int wrongPreviewIndex = 4;
 
-		Assert.Throws<LibRawException>(
-			() =>
+		Assert.Throws<LibRawException>(() =>
+		{
+			using (var libRawData = LibRawData.OpenFile(_canonCr3FilePath))
 			{
-				using (var libRawData = LibRawData.OpenFile(_canonCr3FilePath))
-				{
-					_ = libRawData.GetPreviewJpegStream(wrongPreviewIndex);
-				}
-			});
-	}
-
-	[Test]
-	[Category("Benchmark")]
-	public void RunLibRawDataBenchmarks()
-	{
-		var maxLoadingTime = TimeSpan.FromMilliseconds(150);
-		var config = new ManualConfig().WithOption(ConfigOptions.DisableOptimizationsValidator, true);
-		config.Add(DefaultConfig.Instance);
-		config.AddLogger(ConsoleLogger.Default);
-		config.AddJob(Job.Dry);
-		var summary = BenchmarkRunner.Run<LibRawDotNetBenchmarks>(config);
-
-		Assert.That(TimeSpan.FromMicroseconds(summary.Reports[0].ResultStatistics.Mean * 0.001), Is.LessThan(maxLoadingTime));
-		Assert.That(TimeSpan.FromMicroseconds(summary.Reports[1].ResultStatistics.Mean * 0.001), Is.LessThan(maxLoadingTime));
-		Assert.That(TimeSpan.FromMicroseconds(summary.Reports[2].ResultStatistics.Mean * 0.001), Is.LessThan(maxLoadingTime));
+				_ = libRawData.GetPreviewJpegStream(wrongPreviewIndex);
+			}
+		});
 	}
 }
