@@ -32,6 +32,7 @@ jobs:
     
     - name: Run tests
       run: |
+        $allTestsPassed = $true
         Get-ChildItem -Path Tests -Recurse -Filter *.csproj | ForEach-Object {
           $projectPath = $_.FullName
           $projectName = $_.Name
@@ -44,6 +45,16 @@ jobs:
             --verbosity normal `
             --logger "trx;LogFileName=results-$projectName.trx" `
             --results-directory TestResults
+            
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host "Tests failed in $projectName"
+            $allTestsPassed = $false
+          }
+        }
+        
+        if (-not $allTestsPassed) {
+          Write-Host "Some tests failed. Failing the build."
+          exit 1
         }
     
     - name: Upload test results
