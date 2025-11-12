@@ -213,26 +213,26 @@ internal class MainVideoViewModel : NavigatedViewModelBase, IDisposable
 
     private void OnVolumeChanged(object? sender, MpvValueChangedEventArgs<double, double> e)
     {
-        OnPropertyChanged(nameof(Volume));
+        RaisePropertyChanged(nameof(Volume));
     }
 
     private void OnPercentPosChanged(object? sender, MpvValueChangedEventArgs<double, double> e)
     {
-        OnPropertyChanged(nameof(PercentPos));
+	    RaisePropertyChanged(nameof(PercentPos));
     }
 
     private void OnSeekableChanged(object? sender, MpvValueChangedEventArgs<bool, bool> e)
     {
-        OnPropertyChanged(nameof(IsSeekable));
+	    RaisePropertyChanged(nameof(IsSeekable));
     }
 
     private void OnTimePosChanged(object? sender, MpvValueChangedEventArgs<double, double> e)
     {
-        OnPropertyChanged(nameof(TimePosition));
+	    RaisePropertyChanged(nameof(TimePosition));
     }
 
     private void OnTimeRemainingChanged(object? sender, MpvValueChangedEventArgs<double, double> e)
     {
-        OnPropertyChanged(nameof(TimeRemaining));
+	    RaisePropertyChanged(nameof(TimeRemaining));
     }
 }

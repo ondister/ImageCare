@@ -1,4 +1,5 @@
-﻿Microsoft Visual Studio Solution File, Format Version 12.00
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.9.34728.123
 MinimumVisualStudioVersion = 10.0.40219.1
@@ -8,7 +9,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ImageCare.Core", "ImageCare
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{7493C787-998F-4274-BF15-4E166C0B6B0C}"
 	ProjectSection(SolutionItems) = preProject
+		ChangeLog.txt = ChangeLog.txt
 		README.md = README.md
+		README_RU.md = README_RU.md
 	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ImageCare.Modules.Logging", "Modules\ImageCare.Modules.Logging\ImageCare.Modules.Logging.csproj", "{42A3FBC1-3C9B-43FD-A62C-7353BFF81028}"
@@ -26,6 +29,10 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ImageCare.Mvvm", "ImageCare.Mvvm\ImageCare.Mvvm.csproj", "{E6D61A16-4D6E-4FF0-95CD-EB544256EAB5}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ImageCare.Core.Tests", "Tests\ImageCare.Core.Tests\ImageCare.Core.Tests.csproj", "{8A0741F3-2C2F-4C3B-B20C-BF30F5E9BC89}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ImageCare.UI.Avalonia.Tests", "Tests\ImageCare.UI.Avalonia.Tests\ImageCare.UI.Avalonia.Tests.csproj", "{78953B2F-5C8E-4F90-BE4B-68C8EE177848}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ImageCare.Mvvm.Tests", "Tests\ImageCare.Mvvm.Tests\ImageCare.Mvvm.Tests.csproj", "{63F4D042-2F33-40AC-AE0E-56FE70338290}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -65,6 +72,14 @@ Global
 		{8A0741F3-2C2F-4C3B-B20C-BF30F5E9BC89}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8A0741F3-2C2F-4C3B-B20C-BF30F5E9BC89}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8A0741F3-2C2F-4C3B-B20C-BF30F5E9BC89}.Release|Any CPU.Build.0 = Release|Any CPU
+		{78953B2F-5C8E-4F90-BE4B-68C8EE177848}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{78953B2F-5C8E-4F90-BE4B-68C8EE177848}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{78953B2F-5C8E-4F90-BE4B-68C8EE177848}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{78953B2F-5C8E-4F90-BE4B-68C8EE177848}.Release|Any CPU.Build.0 = Release|Any CPU
+		{63F4D042-2F33-40AC-AE0E-56FE70338290}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{63F4D042-2F33-40AC-AE0E-56FE70338290}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{63F4D042-2F33-40AC-AE0E-56FE70338290}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{63F4D042-2F33-40AC-AE0E-56FE70338290}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -73,6 +88,8 @@ Global
 		{42A3FBC1-3C9B-43FD-A62C-7353BFF81028} = {8390C0CC-F8FA-468B-A65A-8B6F5C92E1EC}
 		{9EE2A335-196D-46C4-99E5-DD5F21D1C4C1} = {16C225A6-2574-488A-888B-1117BCBB6A1B}
 		{8A0741F3-2C2F-4C3B-B20C-BF30F5E9BC89} = {16C225A6-2574-488A-888B-1117BCBB6A1B}
+		{78953B2F-5C8E-4F90-BE4B-68C8EE177848} = {16C225A6-2574-488A-888B-1117BCBB6A1B}
+		{63F4D042-2F33-40AC-AE0E-56FE70338290} = {16C225A6-2574-488A-888B-1117BCBB6A1B}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {02DE58D6-28D5-4E13-BF9B-3FDE018480D8}

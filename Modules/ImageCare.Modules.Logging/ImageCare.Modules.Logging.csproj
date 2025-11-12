@@ -12,7 +12,6 @@
       <PackageReference Include="Avalonia" Version="11.2.3" />
       <PackageReference Include="Avalonia.Desktop" Version="11.2.3" />
       <PackageReference Include="Avalonia.Xaml.Interactivity" Version="11.2.0.7" />
-      <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
       <PackageReference Include="DynamicData" Version="9.0.4" />
       <PackageReference Include="IconPacks.Avalonia.Lucide" Version="1.0.0" />
       <PackageReference Include="Irihi.Ursa" Version="1.7.0" />
