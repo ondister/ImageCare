@@ -9,13 +9,10 @@ using System.Windows.Input;
 
 using Avalonia.Media.Imaging;
 
-using CommunityToolkit.Mvvm.Input;
-
 using ImageCare.Core.Domain.Media;
 using ImageCare.Core.Domain.Preview;
-using ImageCare.Core.Services.MediaPreviewService;
-using ImageCare.Core.Services.FolderService;
 using ImageCare.Core.Services.MediaPreviewOperationsService;
+using ImageCare.Core.Services.MediaPreviewService;
 using ImageCare.UI.Avalonia.Controls;
 using ImageCare.UI.Avalonia.Services;
 
@@ -40,7 +37,6 @@ internal class MainImageViewModel : NavigatedViewModelBase
 	private const string pointLayerName = "photo_point";
 
 	private readonly IMediaPreviewService _imageService;
-	private readonly IFolderService _folderService;
 	private readonly IMediaPreviewOperationsService _fileOperationsService;
 	private readonly IClipboardService _clipboardService;
 	private readonly ILogger _logger;
@@ -54,9 +50,10 @@ internal class MainImageViewModel : NavigatedViewModelBase
 	private bool _hasLocation;
 	private Map _map;
 	private Location _location = Location.Empty;
+	private bool _isDisposed;
+	private CancellationTokenSource _imageLoadCts;
 
 	public MainImageViewModel(IMediaPreviewService imageService,
-	                          IFolderService folderService,
 	                          IMediaPreviewOperationsService fileOperationsService,
 	                          IClipboardService clipboardService,
 	                          ILogger logger,
@@ -64,19 +61,28 @@ internal class MainImageViewModel : NavigatedViewModelBase
 	                          SynchronizationContext synchronizationContext)
 	{
 		_imageService = imageService;
-		_folderService = folderService;
 		_fileOperationsService = fileOperationsService;
 		_clipboardService = clipboardService;
 		_logger = logger;
 		_containerProvider = containerProvider;
 		_synchronizationContext = synchronizationContext;
-		CopyLocationToClipboardCommand = new AsyncRelayCommand(CopyLocationToClipboardAsync);
+
+		_imageLoadCts = new CancellationTokenSource();
+
+		CopyLocationToClipboardCommand = CreateAsyncCommand(CopyLocationToClipboardAsync);
 	}
 
 	public Bitmap? MainBitmap
 	{
 		get => _mainBitmap;
-		set => SetProperty(ref _mainBitmap, value);
+		private set
+		{
+			if (_mainBitmap != value)
+			{
+				_mainBitmap?.Dispose();
+				SetProperty(ref _mainBitmap, value);
+			}
+		}
 	}
 
 	public ICommand? ResetMatrixCommand { get; set; }
@@ -126,97 +132,184 @@ internal class MainImageViewModel : NavigatedViewModelBase
 		set => SetProperty(ref _location, value);
 	}
 
-	/// <inheritdoc />
 	public override void OnNavigatedTo(NavigationContext navigationContext)
 	{
-		Map = CreateMap();
-		var mapMediator = _containerProvider.Resolve<MapControlMediator>();
-		mapMediator.SetMap(Map);
+		ThrowIfDisposed();
 
-		_compositeDisposable = new CompositeDisposable
+		try
 		{
-			_fileOperationsService.ImagePreviewSelected.Throttle(TimeSpan.FromMilliseconds(150))
-			                      .ObserveOn(_synchronizationContext)
-			                      .Subscribe(OnImagePreviewSelected)
-		};
+			Map = CreateMap();
+			var mapMediator = _containerProvider.Resolve<MapControlMediator>();
+			mapMediator.SetMap(Map);
 
-		if (navigationContext.Parameters["imagePreview"] is SelectedMediaPreview imagePreview)
+			_compositeDisposable = new CompositeDisposable
+			{
+				_fileOperationsService.ImagePreviewSelected
+				                      .Throttle(TimeSpan.FromMilliseconds(150))
+				                      .ObserveOn(_synchronizationContext)
+				                      .Subscribe(OnImagePreviewSelected, OnObservableError)
+			};
+
+			if (navigationContext.Parameters["imagePreview"] is SelectedMediaPreview imagePreview)
+			{
+				OnImagePreviewSelected(imagePreview);
+			}
+		}
+		catch (Exception ex)
 		{
-			OnImagePreviewSelected(imagePreview);
+			_logger.Error(ex, "Failed to initialize MainImageViewModel");
 		}
 	}
 
 	/// <inheritdoc />
 	public override void OnNavigatedFrom(NavigationContext navigationContext)
 	{
-		_compositeDisposable?.Dispose();
+		try
+		{
+			CancelImageLoading();
+			_compositeDisposable?.Dispose();
+		}
+		catch (Exception ex)
+		{
+			_logger.Error(ex, "Error during MainImageViewModel cleanup");
+		}
+	}
+
+	protected override void OnDispose()
+	{
+		if (!_isDisposed)
+		{
+			try
+			{
+				CancelImageLoading();
+				_compositeDisposable?.Dispose();
+				MainBitmap = null; // Освобождает bitmap
+			}
+			catch (Exception ex)
+			{
+				_logger.Error(ex, "Error during MainImageViewModel disposal");
+			}
+
+			_isDisposed = true;
+		}
+
+		base.OnDispose();
 	}
 
 	private void OnImagePreviewSelected(SelectedMediaPreview imagePreview)
 	{
-		if (imagePreview == MediaPreview.Empty)
+		try
 		{
-			ClearPreview();
+			if (imagePreview == MediaPreview.Empty)
+			{
+				ClearPreview();
+				return;
+			}
 
-			return;
+			CancelImageLoading();
+			ResetMatrixCommand?.Execute(null);
+
+			_ = LoadImageAsync(imagePreview);
 		}
-
-		ResetMatrixCommand?.Execute(null);
-
-		_ = LoadImageAsync(imagePreview);
+		catch (Exception ex)
+		{
+			_logger.Error(ex, "Failed to handle image preview selection");
+		}
 	}
 
 	private void ClearPreview()
 	{
-		MainBitmap = null;
+		try
+		{
+			MainBitmap = null;
+			HasLocation = false;
+			Location = Location.Empty;
+			RotationAngle = 0;
+		}
+		catch (Exception ex)
+		{
+			_logger.Error(ex, "Failed to clear preview");
+		}
 	}
 
 	private async Task LoadImageAsync(MediaPreview imagePreview)
 	{
+		var cancellationToken = _imageLoadCts.Token;
+
 		try
 		{
-			await using (var imageStream = await _imageService.GetJpegImageStreamAsync(imagePreview, MediaPreviewSize.Large))
-			{
-				var metadata = await _imageService.GetMediaMetadataAsync(imagePreview);
-				HasLocation = metadata.Location != Location.Empty;
-				Location = metadata.Location;
-				RotationAngle = metadata.Orientation.ToRotationAngle();
+			cancellationToken.ThrowIfCancellationRequested();
 
-				MainBitmap = await Task.Run(() => new Bitmap(imageStream));
+			await using var imageStream = await _imageService.GetJpegImageStreamAsync(imagePreview, MediaPreviewSize.Large, cancellationToken)
+			                                                 .ConfigureAwait(false);
 
-				LocateMap(metadata.Location);
-			}
+			cancellationToken.ThrowIfCancellationRequested();
+
+			var metadata = await _imageService.GetMediaMetadataAsync(imagePreview)
+			                                  .ConfigureAwait(false);
+
+			cancellationToken.ThrowIfCancellationRequested();
+
+			HasLocation = metadata.Location != Location.Empty;
+			Location = metadata.Location;
+			RotationAngle = metadata.Orientation.ToRotationAngle();
+
+			var bitmap = await Task.Run(
+				                       () =>
+				                       {
+					                       cancellationToken.ThrowIfCancellationRequested();
+
+					                       return new Bitmap(imageStream);
+				                       },
+				                       cancellationToken)
+			                       .ConfigureAwait(false);
+
+			cancellationToken.ThrowIfCancellationRequested();
+
+			MainBitmap = bitmap;
+			LocateMap(metadata.Location);
 		}
-		catch (Exception exception)
+		catch (OperationCanceledException)
 		{
-			_logger.Error(exception, $"Unexpected exception during loading main image {imagePreview.Url}");
+			// Ignored
+		}
+		catch (Exception ex)
+		{
+			_logger.Error(ex, "Failed to load image: {Url}", imagePreview.Url);
+
+			ClearPreview();
 		}
 	}
 
 	private void LocateMap(Location location)
 	{
-		if (MapIsEnabled && location != Location.Empty)
+		try
 		{
-
-			if (Map.Navigator.Viewport.Width==0)
+			if (MapIsEnabled && location != Location.Empty)
 			{
-				Map.ViewportInitialized += (s, e) => LocateMap(location);
-				return;
+				if (Map.Navigator.Viewport.Width == 0)
+				{
+					Map.ViewportInitialized += (s, e) => LocateMap(location);
 
+					return;
+				}
+
+				var sphericalMercatorCoordinate = SphericalMercator.FromLonLat(location.Longitude, location.Latitude).ToMPoint();
+				Map.Navigator.CenterOnAndZoomTo(sphericalMercatorCoordinate, Map.Navigator.Viewport.Resolution);
+
+				Map.Layers.Remove(l => l.Name == pointLayerName);
+
+				Map.Layers.Add(CreatePointLayer());
+
+				var extent = new MRect(sphericalMercatorCoordinate.X - 1000, sphericalMercatorCoordinate.Y - 1000, sphericalMercatorCoordinate.X + 1000, sphericalMercatorCoordinate.Y + 1000);
+				Map.Navigator.ZoomToBox(extent);
+
+				Map.Refresh();
 			}
-			
-
-			var sphericalMercatorCoordinate = SphericalMercator.FromLonLat(location.Longitude, location.Latitude).ToMPoint();
-			Map.Navigator.CenterOnAndZoomTo(sphericalMercatorCoordinate, Map.Navigator.Viewport.Resolution);
-
-			Map.Layers.Remove(l => l.Name == pointLayerName);
-
-			Map.Layers.Add(CreatePointLayer());
-
-			var extent = new MRect(sphericalMercatorCoordinate.X - 1000, sphericalMercatorCoordinate.Y - 1000, sphericalMercatorCoordinate.X + 1000, sphericalMercatorCoordinate.Y + 1000);
-			Map.Navigator.ZoomToBox(extent);
-
-			Map.Refresh();
+		}
+		catch (Exception ex)
+		{
+			_logger.Error(ex, "Failed to locate map for coordinates: {Lat}, {Lon}", location.Latitude, location.Longitude);
 		}
 	}
 
@@ -232,49 +325,116 @@ internal class MainImageViewModel : NavigatedViewModelBase
 
 	private MemoryLayer CreatePointLayer()
 	{
-		return new MemoryLayer
+		try
 		{
-			Name = pointLayerName,
-			Features = GetPhotoPointFromEmbeddedResource(),
-			Style = CreateBitmapStyle()
-		};
+			return new MemoryLayer
+			{
+				Name = pointLayerName,
+				Features = GetPhotoPointFromEmbeddedResource(),
+				Style = CreateBitmapStyle()
+			};
+		}
+		catch (Exception ex)
+		{
+			_logger.Error(ex, "Failed to create point layer");
+			return new MemoryLayer { Name = pointLayerName };
+		}
 	}
 
 	private SymbolStyle CreateBitmapStyle()
 	{
-		var bitmapId = LoadBitmapId(GetType());
-		var bitmapHeight = 300;
-		return new SymbolStyle { BitmapId = bitmapId, SymbolScale = 0.20, SymbolOffset = new Offset(0, bitmapHeight * 0.5) };
+		try
+		{
+			var bitmapId = LoadBitmapId(GetType());
+			var bitmapHeight = 300;
+			return new SymbolStyle { BitmapId = bitmapId, SymbolScale = 0.20, SymbolOffset = new Offset(0, bitmapHeight * 0.5) };
+		}
+		catch (Exception ex)
+		{
+			_logger.Error(ex, "Failed to create bitmap style");
+
+			return new SymbolStyle();
+		}
 	}
 
 	private int LoadBitmapId(Type typeInAssemblyOfEmbeddedResource)
 	{
-		var fullName = "ImageCare.UI.Avalonia.Assets.birdPoint.png";
-		if (BitmapRegistry.Instance.TryGetBitmapId(fullName, out var bitmapId))
+		try
 		{
+			var fullName = "ImageCare.UI.Avalonia.Assets.birdPoint.png";
+			if (BitmapRegistry.Instance.TryGetBitmapId(fullName, out var bitmapId))
+			{
+				return bitmapId;
+			}
+
+			var assembly = typeInAssemblyOfEmbeddedResource.GetTypeInfo().Assembly;
+			var stream = assembly.GetManifestResourceStream(fullName);
+			if (stream == null)
+			{
+				return bitmapId;
+			}
+
+			bitmapId = BitmapRegistry.Instance.Register(stream, fullName);
 			return bitmapId;
 		}
-
-		var assembly = typeInAssemblyOfEmbeddedResource.GetTypeInfo().Assembly;
-		var stream = assembly.GetManifestResourceStream(fullName);
-		if (stream == null)
+		catch (Exception ex)
 		{
-			return bitmapId;
+			_logger.Error(ex, "Failed to load bitmap ID");
+			return -1;
 		}
-
-		bitmapId = BitmapRegistry.Instance.Register(stream, fullName);
-		return bitmapId;
 	}
 
 	private IEnumerable<IFeature> GetPhotoPointFromEmbeddedResource()
 	{
-		var feature = new PointFeature(SphericalMercator.FromLonLat(Location.Longitude, Location.Latitude).ToMPoint());
+		try
+		{
+			var feature = new PointFeature(SphericalMercator.FromLonLat(Location.Longitude, Location.Latitude).ToMPoint());
 
-		return new List<IFeature>(1) { feature };
+			return new List<IFeature>(1) { feature };
+		}
+		catch (Exception ex)
+		{
+			_logger.Error(ex, "Failed to create photo point feature");
+			return new List<IFeature>();
+		}
 	}
 
 	private async Task CopyLocationToClipboardAsync()
 	{
-		await _clipboardService.CopyToClipboardAsync(Location.ToString());
+		try
+		{
+			await _clipboardService.CopyToClipboardAsync(Location.ToString());
+		}
+		catch (Exception ex)
+		{
+			_logger.Error(ex, "Failed to copy location to clipboard");
+		}
+	}
+
+	private void OnObservableError(Exception ex)
+	{
+		_logger.Error(ex, "Error in observable subscription");
+	}
+
+	private void ThrowIfDisposed()
+	{
+		if (_isDisposed)
+		{
+			throw new ObjectDisposedException(nameof(MainImageViewModel));
+		}
+	}
+
+	private void CancelImageLoading()
+	{
+		try
+		{
+			_imageLoadCts.Cancel();
+			_imageLoadCts.Dispose();
+			_imageLoadCts = new CancellationTokenSource();
+		}
+		catch (Exception ex)
+		{
+			_logger.Error(ex, "Failed to cancel image loading");
+		}
 	}
 }
