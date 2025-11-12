@@ -4,50 +4,58 @@ namespace ImageCare.Mvvm.Collections;
 
 public class SortedObservableCollection<T> : ObservableCollection<T>
 {
-	private readonly IComparer<T>? _comparer;
+	private readonly IComparer<T> _comparer;
 
-	public SortedObservableCollection(IEnumerable<T> collection, IComparer<T>? comparer)
+	public SortedObservableCollection(IEnumerable<T> collection, IComparer<T>? comparer = null)
+		: this(comparer)
 	{
-		_comparer = comparer;
-		foreach (var item in collection)
+		AddRange(collection);
+	}
+
+	public SortedObservableCollection(IComparer<T>? comparer = null)
+	{
+		_comparer = comparer ?? Comparer<T>.Default;
+	}
+
+	public void AddRange(IEnumerable<T> items)
+	{
+		if (items == null)
 		{
-			InsertItem(item);
+			throw new ArgumentNullException(nameof(items));
+		}
+
+		foreach (var item in items)
+		{
+			Add(item);
 		}
 	}
 
-	public SortedObservableCollection(IComparer<T>? comparer)
+	protected override void InsertItem(int index, T item)
 	{
-		_comparer = comparer;
+		var correctIndex = FindInsertIndex(item);
+		base.InsertItem(correctIndex, item);
 	}
 
-	public void InsertItem(T item)
+	protected override void SetItem(int index, T item)
 	{
-		var indexToInsert = BinarySearch(Items, 0, Count, item, _comparer);
-
-		if (indexToInsert < 0)
-		{
-			indexToInsert = ~indexToInsert;
-		}
-
-		Insert(indexToInsert, item);
+		RemoveAt(index);
+		Add(item);
 	}
 
-	private int BinarySearch<T>(IList<T> items, int index, int length, T value, IComparer<T>? comparer)
+	private int FindInsertIndex(T item)
 	{
-		comparer ??= Comparer<T>.Default;
-
-		var low = index;
-		var high = index + length - 1;
+		var low = 0;
+		var high = Count - 1;
 
 		while (low <= high)
 		{
 			var mid = low + ((high - low) >> 1);
-			var comparison = comparer.Compare(items[mid], value);
+			var comparison = _comparer.Compare(Items[mid], item);
 
 			switch (comparison)
 			{
 				case 0:
-					return mid;
+					return mid; // Insert before existing equal element
 				case < 0:
 					low = mid + 1;
 					break;
@@ -57,6 +65,6 @@ public class SortedObservableCollection<T> : ObservableCollection<T>
 			}
 		}
 
-		return ~low;
+		return low;
 	}
 }
