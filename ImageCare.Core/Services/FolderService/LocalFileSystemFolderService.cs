@@ -373,26 +373,85 @@ public sealed class LocalFileSystemFolderService : IFolderService, IDisposable
 			var rootModel = new DeviceModel(Environment.MachineName, "//");
 			var drives = DriveInfo.GetDrives();
 
-			foreach (var driveInfo in drives)
+			var driveTasks = drives
+			                 .Select(async driveInfo =>
+			                 {
+				                 try
+				                 {
+					                 using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+					                 return await ProcessDriveAsync(driveInfo, cts.Token);
+				                 }
+				                 catch (OperationCanceledException ex)
+				                 {
+					                 throw new ServiceException($"Drive processing timeout: {driveInfo.Name}", ex);
+				                 }
+				                 catch (Exception ex)
+				                 {
+					                 throw new ServiceException($"Failed to process drive: {driveInfo.Name}", ex);
+				                 }
+			                 })
+			                 .ToList();
+
+			var processedDrives = await Task.WhenAll(driveTasks);
+
+			foreach (var drive in processedDrives)
 			{
-				if (driveInfo is { DriveType: DriveType.Network, IsReady: false })
+				if (drive != null)
 				{
-					continue;
+					rootModel.AddDirectory(drive);
 				}
-
-				var drive = _driveModelsFactory.CreateDriveModel(driveInfo);
-				if (drive?.RootDirectory == null)
-				{
-					continue;
-				}
-
-				rootModel.AddDirectory(drive);
-				var firstDirectoryTier = await GetCustomDirectoriesLevelAsync(drive.RootDirectory, true);
-				drive.AddDirectories(firstDirectoryTier.DirectoryModels);
 			}
 
 			return rootModel;
 		});
+	}
+
+	private async Task<DriveModel?> ProcessDriveAsync(DriveInfo driveInfo, CancellationToken cancellationToken)
+	{
+		if (driveInfo.DriveType == DriveType.Network)
+		{
+			try
+			{
+				var isReady = await CheckDriveReadyWithTimeoutAsync(driveInfo, cancellationToken);
+				if (!isReady)
+				{
+					return null;
+				}
+			}
+			catch (OperationCanceledException)
+			{
+				return null;
+			}
+		}
+
+		var drive = _driveModelsFactory.CreateDriveModel(driveInfo);
+		if (drive?.RootDirectory == null)
+		{
+			return null;
+		}
+
+		cancellationToken.ThrowIfCancellationRequested();
+
+		var firstDirectoryTier = await GetCustomDirectoriesLevelAsync(drive.RootDirectory, true);
+		drive.AddDirectories(firstDirectoryTier.DirectoryModels);
+
+		return drive;
+	}
+
+	private async Task<bool> CheckDriveReadyWithTimeoutAsync(DriveInfo driveInfo, CancellationToken cancellationToken)
+	{
+		try
+		{
+			return await Task.Run(() => { return driveInfo.IsReady; }, cancellationToken);
+		}
+		catch (OperationCanceledException)
+		{
+			return false;
+		}
+		catch (Exception)
+		{
+			return false;
+		}
 	}
 
 	private static bool MatchesSearchPattern(string fileName, string searchPattern)

@@ -4,7 +4,7 @@
              xmlns:viewModels="clr-namespace:ImageCare.UI.Avalonia.ViewModels"
              xmlns:domain="clr-namespace:ImageCare.UI.Avalonia.ViewModels.Domain"
              xmlns:iconPacks="https://github.com/MahApps/IconPacks.Avalonia"
-             xmlns:avaloniaProgressRing="clr-namespace:AvaloniaProgressRing;assembly=AvaloniaProgressRing"
+             xmlns:avaloniaProgressRing1="clr-namespace:AvaloniaProgressRing;assembly=AvaloniaProgressRing"
              x:Class="ImageCare.UI.Avalonia.Views.FoldersView"
              prism:ViewModelLocator.AutoWireViewModel="True"
              x:DataType="viewModels:FoldersViewModel"
@@ -38,7 +38,6 @@
                         <TextBlock Text="{Binding Name}"
                                    Margin="{StaticResource MarginHorizontal.Small}" />
                     </StackPanel>
-
                 </TreeDataTemplate>
 
                 <TreeDataTemplate DataType="domain:FixedDriveViewModel" ItemsSource="{Binding ChildFileSystemItems}">
@@ -97,7 +96,6 @@
                                 <MultiBinding Converter="{x:Static BoolConverters.And}">
                                     <Binding Path="!IsExpanded" />
                                     <Binding Path="!HasSupportedMedia" />
-
                                 </MultiBinding>
                             </iconPacks:PackIconMaterial.IsVisible>
                         </iconPacks:PackIconMaterial>
@@ -116,18 +114,17 @@
                                 <MultiBinding Converter="{x:Static BoolConverters.And}">
                                     <Binding Path="!IsExpanded" />
                                     <Binding Path="HasSupportedMedia" />
-
                                 </MultiBinding>
                             </iconPacks:PackIconMaterial.IsVisible>
                         </iconPacks:PackIconMaterial>
 
-                        <avaloniaProgressRing:ProgressRing Width="{StaticResource Icon.Size.Small}"
-                                                           Height="{StaticResource Icon.Size.Small}"
-                                                           IsActive="True"
-                                                           HorizontalAlignment="Center"
-                                                           VerticalAlignment="Center"
-                                                           Margin="{StaticResource MarginHorizontal.Small}"
-                                                           IsVisible="{Binding IsLoaded}" />
+                        <avaloniaProgressRing1:ProgressRing Width="{StaticResource Icon.Size.Small}"
+                                                            Height="{StaticResource Icon.Size.Small}"
+                                                            IsActive="True"
+                                                            HorizontalAlignment="Center"
+                                                            VerticalAlignment="Center"
+                                                            Margin="{StaticResource MarginHorizontal.Small}"
+                                                            IsVisible="{Binding IsLoaded}" />
                         <ContentPresenter Content="{Binding}"
                                           Classes.IsEditing="{Binding IsEditing}"
                                           Classes.IsNotEditing="{Binding !IsEditing}"
@@ -177,13 +174,22 @@
                                 </Style>
                             </ContentPresenter.Styles>
                         </ContentPresenter>
-
                     </StackPanel>
                 </TreeDataTemplate>
-
             </TreeView.DataTemplates>
-
         </TreeView>
+
+        <!-- Progress Ring over the content -->
+        <Border Background="{DynamicResource ThemeBackgroundBrush}"
+                Opacity="0.7"
+                IsVisible="{Binding IsLoading}">
+            <avaloniaProgressRing1:ProgressRing Width="60"
+                                                Height="60"
+                                                IsActive="{Binding IsLoading}"
+                                                HorizontalAlignment="Center"
+                                                VerticalAlignment="Center" />
+        </Border>
+
     </Grid>
 
     <!--Triggers for view loading and unloading. They use for subscribe to the production state changing-->
