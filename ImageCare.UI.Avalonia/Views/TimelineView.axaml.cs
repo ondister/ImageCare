@@ -4,8 +4,8 @@ namespace ImageCare.UI.Avalonia.Views;
 
 public partial class TimelineView : UserControl
 {
-    public TimelineView()
-    {
-        InitializeComponent();
-    }
+	public TimelineView()
+	{
+		InitializeComponent();
+	}
 }

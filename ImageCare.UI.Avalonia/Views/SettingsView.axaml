@@ -23,7 +23,7 @@
                         <TextBlock Text="Add New File Association"
                                    FontWeight="Bold"
                                    FontSize="{DynamicResource Font.Size.SectionHeader}"
-                                   Margin="{DynamicResource MarginBottom.Medium}"/>
+                                   Margin="{DynamicResource MarginBottom.Medium}" />
 
                         <Grid ColumnDefinitions="*,*,Auto"
                               Margin="{DynamicResource MarginVertical.Small}">
@@ -31,17 +31,17 @@
                                      Margin="{DynamicResource Form.HorizontalMargin}"
                                      Text="{Binding NewExtension}"
                                      Watermark="Extension (e.g., .cr2, .jpg)"
-                                     UseFloatingWatermark="True"/>
+                                     UseFloatingWatermark="True" />
                             <TextBox Grid.Column="1"
                                      Margin="{DynamicResource Form.HorizontalMargin}"
                                      Text="{Binding NewName}"
                                      Watermark="Display name"
-                                     UseFloatingWatermark="True"/>
+                                     UseFloatingWatermark="True" />
                             <Button Grid.Column="2"
                                     Content="Add"
                                     Command="{Binding AddAssociationCommand}"
                                     MinWidth="{DynamicResource Control.MinWidth.Medium}"
-                                    Background="{DynamicResource ThemeAccentBrush}"/>
+                                    Background="{DynamicResource ThemeAccentBrush}" />
                         </Grid>
                     </StackPanel>
                 </Border>
@@ -56,7 +56,7 @@
                         <TextBlock Text="Edit Selected Association"
                                    FontWeight="Bold"
                                    FontSize="{DynamicResource Font.Size.SectionHeader}"
-                                   Margin="{DynamicResource MarginBottom.Medium}"/>
+                                   Margin="{DynamicResource MarginBottom.Medium}" />
 
                         <Grid ColumnDefinitions="*,Auto"
                               Margin="{DynamicResource MarginVertical.Small}">
@@ -65,12 +65,12 @@
                                      Text="{Binding SelectedAssociation.ApplicationPath, Mode=TwoWay}"
                                      IsEnabled="{Binding SelectedAssociation}"
                                      Watermark="Path to executable"
-                                     UseFloatingWatermark="True"/>
+                                     UseFloatingWatermark="True" />
                             <Button Grid.Column="1"
                                     Content="Browse..."
                                     Command="{Binding EditApplicationPathCommand}"
                                     IsEnabled="{Binding SelectedAssociation}"
-                                    MinWidth="{DynamicResource Control.MinWidth.Medium}"/>
+                                    MinWidth="{DynamicResource Control.MinWidth.Medium}" />
                         </Grid>
                     </StackPanel>
                 </Border>
@@ -86,7 +86,7 @@
                                    Text="Current Associations"
                                    FontWeight="Bold"
                                    FontSize="{DynamicResource Font.Size.SectionHeader}"
-                                   Margin="{DynamicResource MarginBottom.Medium}"/>
+                                   Margin="{DynamicResource MarginBottom.Medium}" />
 
                         <ListBox Grid.Row="1"
                                  ItemsSource="{Binding Associations}"
@@ -101,24 +101,24 @@
                                                    Text="{Binding FileExtension}"
                                                    FontWeight="Bold"
                                                    Margin="{DynamicResource MarginAll.Small}"
-                                                   VerticalAlignment="Center"/>
+                                                   VerticalAlignment="Center" />
                                         <TextBlock Grid.Column="1"
                                                    Text="{Binding Name}"
                                                    Margin="{DynamicResource MarginAll.Small}"
-                                                   VerticalAlignment="Center"/>
+                                                   VerticalAlignment="Center" />
                                         <TextBlock Grid.Column="2"
                                                    Text="{Binding ApplicationPath}"
                                                    Margin="{DynamicResource MarginAll.Small}"
                                                    VerticalAlignment="Center"
-                                                   TextTrimming="CharacterEllipsis"/>
+                                                   TextTrimming="CharacterEllipsis" />
                                     </Grid>
                                 </DataTemplate>
                             </ListBox.ItemTemplate>
 
                             <ListBox.Styles>
                                 <Style Selector="ListBoxItem">
-                                    <Setter Property="Padding" Value="{DynamicResource Padding.Small}"/>
-                                    <Setter Property="Cursor" Value="Hand"/>
+                                    <Setter Property="Padding" Value="{DynamicResource Padding.Small}" />
+                                    <Setter Property="Cursor" Value="Hand" />
                                 </Style>
                             </ListBox.Styles>
                         </ListBox>
@@ -130,7 +130,7 @@
                                 Margin="{DynamicResource MarginTop.Medium}"
                                 MinWidth="{DynamicResource Control.MinWidth.Large}"
                                 IsEnabled="{Binding SelectedAssociation}"
-                                Background="{DynamicResource ThemeDangerBrush}"/>
+                                Background="{DynamicResource ThemeDangerBrush}" />
                     </Grid>
                 </Border>
 
@@ -142,7 +142,7 @@
                            Foreground="{DynamicResource ThemeForegroundBrush}"
                            Opacity="0.7"
                            TextWrapping="Wrap"
-                           Margin="{DynamicResource MarginAll.Small}"/>
+                           Margin="{DynamicResource MarginAll.Small}" />
             </Grid>
         </TabItem>
     </TabControl>

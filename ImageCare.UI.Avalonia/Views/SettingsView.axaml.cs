@@ -1,13 +1,11 @@
-using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Markup.Xaml;
 
 namespace ImageCare.UI.Avalonia.Views;
 
 public partial class SettingsView : UserControl
 {
-    public SettingsView()
-    {
-        InitializeComponent();
-    }
+	public SettingsView()
+	{
+		InitializeComponent();
+	}
 }

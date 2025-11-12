@@ -145,11 +145,11 @@
                                         <TextBlock.ContextMenu>
                                             <ContextMenu>
                                                 <MenuItem Header="Create"
-                                                          Command="{Binding DataContext.CreateFolderCommand, ElementName=This}"/>
+                                                          Command="{Binding DataContext.CreateFolderCommand, ElementName=This}" />
                                                 <MenuItem Header="Rename"
-                                                          Command="{Binding StartRenameFolderCommand}"/>
+                                                          Command="{Binding StartRenameFolderCommand}" />
                                                 <MenuItem Header="Delete"
-                                                          Command="{Binding DataContext.DeleteFolderCommand, ElementName=This}"/>
+                                                          Command="{Binding DataContext.DeleteFolderCommand, ElementName=This}" />
                                             </ContextMenu>
                                         </TextBlock.ContextMenu>
                                     </TextBlock>

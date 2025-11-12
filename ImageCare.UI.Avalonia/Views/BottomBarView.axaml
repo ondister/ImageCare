@@ -89,7 +89,7 @@
             </ContentControl>
 
             <!--Settings-->
-            <u:IconButton Grid.Column="3" 
+            <u:IconButton Grid.Column="3"
                           Classes="Small"
                           Content="Settings"
                           IconPlacement="Left"

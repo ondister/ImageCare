@@ -1,4 +1,8 @@
-﻿using ImageCare.Modules.Logging.Models;
+﻿using System.Runtime.CompilerServices;
+
+using ImageCare.Modules.Logging.Models;
+
+[assembly: InternalsVisibleTo("ImageCare.Modules.Logging.Tests")]
 
 namespace ImageCare.Modules.Logging.Services;
 

@@ -13,37 +13,41 @@ namespace ImageCare.Modules.Logging;
 
 public class LoggerModule : IModule
 {
+	private Logger? _serilogLogger;
+
 	/// <inheritdoc />
 	public void RegisterTypes(IContainerRegistry containerRegistry)
 	{
-		var logServiceSink = new LogEventService();
-		var serilogLogger = CreateLogger(logServiceSink);
+		var logService = new LogEventService();
+		containerRegistry.RegisterInstance<ILogEventService>(logService);
+		containerRegistry.RegisterInstance<ILogNotificationService>(logService);
+
+		_serilogLogger = CreateLogger(logService);
+		containerRegistry.RegisterInstance<ILogger>(_serilogLogger);
 
 		containerRegistry.RegisterDialog<LogViewerView>("logViewer");
-
-		containerRegistry.RegisterInstance<ILogEventService>(logServiceSink);
-		containerRegistry.RegisterInstance<ILogNotificationService>(logServiceSink);
-		containerRegistry.RegisterInstance<ILogger>(serilogLogger);
 	}
 
 	/// <inheritdoc />
-	public void OnInitialized(IContainerProvider containerProvider) { }
+	public void OnInitialized(IContainerProvider containerProvider)
+	{
+		Log.Logger = _serilogLogger;
+	}
 
-	private static Logger CreateLogger(ILogEventSink logServicEventSink)
+	private static Logger CreateLogger(ILogEventSink logEventSink)
 	{
 		var options = new DestructuringOptionsBuilder()
 			.WithDefaultDestructurers();
 
-		var serilogLogger = new LoggerConfiguration()
-		                    .MinimumLevel.Warning()
-		                    .Enrich.FromLogContext()
-		                    .Enrich.WithExceptionDetails(options)
-		                    .WriteTo.File(@"Logs\Errors.log", rollingInterval: RollingInterval.Day, outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {SourceContext} {Message} " + "{NewLine}{Exception}")
-		                    .WriteTo.Sink(logServicEventSink)
-		                    .CreateLogger();
-
-		Log.Logger = serilogLogger;
-
-		return serilogLogger;
+		return new LoggerConfiguration()
+		       .MinimumLevel.Warning()
+		       .Enrich.FromLogContext()
+		       .Enrich.WithExceptionDetails(options)
+		       .WriteTo.File(
+			       @"Logs\Errors.log",
+			       rollingInterval: RollingInterval.Day,
+			       outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {SourceContext} {Message} {NewLine}{Exception}")
+		       .WriteTo.Sink(logEventSink)
+		       .CreateLogger();
 	}
 }

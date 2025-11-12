@@ -1,12 +1,11 @@
 using Avalonia.Controls;
 
-namespace ImageCare.UI.Avalonia.Views
+namespace ImageCare.UI.Avalonia.Views;
+
+public partial class MetadataView : UserControl
 {
-    public partial class MetadataView : UserControl
-    {
-        public MetadataView()
-        {
-            InitializeComponent();
-        }
-    }
+	public MetadataView()
+	{
+		InitializeComponent();
+	}
 }

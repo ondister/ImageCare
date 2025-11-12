@@ -1,6 +1,5 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:s="https://github.com/avaloniaui"
              xmlns:prism="http://prismlibrary.com/"
              xmlns:viewModels="clr-namespace:ImageCare.UI.Avalonia.ViewModels"
              xmlns:domain="clr-namespace:ImageCare.UI.Avalonia.ViewModels.Domain"
@@ -25,7 +24,7 @@
     <Grid RowDefinitions="Auto,*"
           Margin="{StaticResource MarginAll.Small}">
 
-        <!--Статистика сколько отображено из-->
+        <!--Simple statistics-->
         <Grid Grid.Row="0"
               ColumnDefinitions="Auto,*"
               Margin="{StaticResource MarginAll.Small}">
@@ -44,7 +43,8 @@
                       HorizontalScrollBarVisibility="Auto"
                       VerticalScrollBarVisibility="Disabled">
             <Interaction.Behaviors>
-                <behaviors:HorizontalScrollBehavior IsScrollResetRequested="{Binding IsScrollResetRequested, Mode=TwoWay}"/>
+                <behaviors:HorizontalScrollBehavior
+                    IsScrollResetRequested="{Binding IsScrollResetRequested, Mode=TwoWay}" />
             </Interaction.Behaviors>
             <controls:PreviewsListBox ItemsSource="{Binding ImagePreviews}"
                                       SelectedItem="{Binding SelectedPreview, Mode=TwoWay}"
@@ -137,24 +137,24 @@
                                     <DropDownButton.Content>
                                         <iconPacks:PackIconMaterial Kind="ApplicationExport"
                                                                     Height="{StaticResource Icon.Size.Micro}"
-                                                                    Width="{StaticResource Icon.Size.Micro}"/>
+                                                                    Width="{StaticResource Icon.Size.Micro}" />
                                     </DropDownButton.Content>
 
                                     <DropDownButton.Flyout>
                                         <MenuFlyout ItemsSource="{Binding OpenWithViewModels}">
                                             <MenuFlyout.ItemContainerTheme>
                                                 <ControlTheme TargetType="MenuItem">
-                                                    <Setter Property="Command" Value="{Binding OpenWithCommand}"/>
-                                                    <Setter Property="Header" Value="{Binding Name}"/>
+                                                    <Setter Property="Command" Value="{Binding OpenWithCommand}" />
+                                                    <Setter Property="Header" Value="{Binding Name}" />
                                                     <Setter Property="Template">
                                                         <ControlTemplate>
                                                             <Border Name="border"
                                                                     Background="{TemplateBinding Background}"
                                                                     CornerRadius="{TemplateBinding CornerRadius}">
                                                                 <ContentPresenter Content="{TemplateBinding Header}"
-                                                                    TextBlock.Foreground="{TemplateBinding Foreground}"
-                                                                    Margin="{TemplateBinding Padding}"
-                                                                    VerticalAlignment="Center"/>
+                                                                        TextBlock.Foreground="{TemplateBinding Foreground}"
+                                                                        Margin="{TemplateBinding Padding}"
+                                                                        VerticalAlignment="Center" />
                                                             </Border>
                                                         </ControlTemplate>
                                                     </Setter>

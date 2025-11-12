@@ -79,14 +79,14 @@ public class HorizontalScrollBehavior : Behavior<ScrollViewer>
 			return;
 		}
 
-		// Игнорируем событие, если это программный скролл
+		// Ignore if program scroll
 		if (_isProgrammaticScroll)
 		{
 			_isProgrammaticScroll = false;
 			return;
 		}
 
-		// Дебаунсинг
+		// Debounce
 		if (Math.Abs(_lastOffset - _scrollViewer.Offset.X) < 324)
 		{
 			return;

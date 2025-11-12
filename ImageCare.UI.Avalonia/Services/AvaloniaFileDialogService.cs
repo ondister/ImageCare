@@ -18,11 +18,10 @@ public sealed class AvaloniaFileDialogService : IFileDialogService
 			return null;
 		}
 
-		var filePickerFilters = filters.Select(
-			                               f => new FilePickerFileType(f.Name)
-			                               {
-				                               Patterns = f.Patterns
-			                               })
+		var filePickerFilters = filters.Select(f => new FilePickerFileType(f.Name)
+		                               {
+			                               Patterns = f.Patterns
+		                               })
 		                               .ToArray();
 
 		var files = await topLevel.StorageProvider.OpenFilePickerAsync(

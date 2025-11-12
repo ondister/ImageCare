@@ -31,9 +31,9 @@
                     </u:IconButton.Icon>
 
                     <Button.Flyout>
-                        <Flyout Placement="TopEdgeAlignedLeft" >
+                        <Flyout Placement="TopEdgeAlignedLeft">
                             <Flyout.Content>
-                                <views:MetadataView/>
+                                <views:MetadataView />
                             </Flyout.Content>
                         </Flyout>
                     </Button.Flyout>

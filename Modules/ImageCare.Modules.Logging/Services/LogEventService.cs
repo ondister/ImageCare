@@ -19,9 +19,12 @@ internal sealed class LogEventService : ILogEventSink, ILogEventService, ILogNot
 
 	private readonly ConcurrentQueue<LogMessage> _warningMessages;
 	private readonly ConcurrentQueue<LogMessage> _errorMessages;
+	private readonly int _maxMessagesCapacity;
+	private bool _isDisposed;
 
-	public LogEventService()
+	public LogEventService(int maxMessagesCapacity = 1000)
 	{
+		_maxMessagesCapacity = maxMessagesCapacity;
 		_warningMessages = new ConcurrentQueue<LogMessage>();
 		_errorMessages = new ConcurrentQueue<LogMessage>();
 
@@ -32,94 +35,113 @@ internal sealed class LogEventService : ILogEventSink, ILogEventService, ILogNot
 		_warningsCountSubject = new Subject<int>();
 	}
 
-	/// <inheritdoc />
 	public IObservable<LogMessage> ErrorReceived => _errorReceivedSubject.AsObservable();
 
-	/// <inheritdoc />
 	public IObservable<LogMessage> WarningReceived => _warningReceivedSubject.AsObservable();
 
-	/// <inheritdoc />
 	public IObservable<bool> MessagesCleared => _messagesClearedSubject.AsObservable();
 
-	/// <inheritdoc />
 	public IObservable<int> ErrorsCountUpdated => _errorsCountSubject.AsObservable();
 
-	/// <inheritdoc />
 	public IObservable<int> WarningsCountUpdated => _warningsCountSubject.AsObservable();
 
-	/// <inheritdoc />
 	public void Dispose()
 	{
-		_errorReceivedSubject.Dispose();
-		_warningReceivedSubject.Dispose();
-		_messagesClearedSubject.Dispose();
-		_errorsCountSubject.Dispose();
-		_warningsCountSubject.Dispose();
+		if (!_isDisposed)
+		{
+			_errorReceivedSubject.OnCompleted();
+			_warningReceivedSubject.OnCompleted();
+			_messagesClearedSubject.OnCompleted();
+			_errorsCountSubject.OnCompleted();
+			_warningsCountSubject.OnCompleted();
+
+			_errorReceivedSubject.Dispose();
+			_warningReceivedSubject.Dispose();
+			_messagesClearedSubject.Dispose();
+			_errorsCountSubject.Dispose();
+			_warningsCountSubject.Dispose();
+
+			_isDisposed = true;
+		}
 	}
 
-	/// <inheritdoc />
 	public IEnumerable<LogMessage> GetLastErrors()
 	{
-		return [.. _errorMessages];
+		ThrowIfDisposed();
+		return _errorMessages.ToArray();
 	}
 
-	/// <inheritdoc />
 	public IEnumerable<LogMessage> GetLastWarnings()
 	{
-		return [.. _warningMessages];
+		ThrowIfDisposed();
+		return _warningMessages.ToArray();
 	}
 
-	/// <inheritdoc />
 	public void ClearMessages()
 	{
+		ThrowIfDisposed();
+
 		_warningMessages.Clear();
 		_errorMessages.Clear();
 
 		_errorsCountSubject.OnNext(0);
 		_warningsCountSubject.OnNext(0);
-
 		_messagesClearedSubject.OnNext(true);
 	}
 
-	/// <inheritdoc />
 	public void Emit(LogEvent logEvent)
 	{
+		ThrowIfDisposed();
 		HandleLogEvent(logEvent);
 	}
 
 	public int GetErrorsCount()
 	{
+		ThrowIfDisposed();
 		return _errorMessages.Count;
 	}
 
 	public int GetWarningsCount()
 	{
+		ThrowIfDisposed();
 		return _warningMessages.Count;
 	}
 
 	private void HandleLogEvent(LogEvent logEvent)
 	{
-		var logMessage = new LogMessage(logEvent.Timestamp, logEvent.MessageTemplate.Text, logEvent.Exception?.Message);
+		var logMessage = new LogMessage(
+			logEvent.Timestamp,
+			logEvent.MessageTemplate.Text,
+			logEvent.Exception?.Message);
+
 		switch (logEvent.Level)
 		{
-			case LogEventLevel.Verbose:
-				break;
-			case LogEventLevel.Debug:
-				break;
-			case LogEventLevel.Information:
-				break;
 			case LogEventLevel.Warning:
-				_warningMessages.Enqueue(logMessage);
+				AddMessageWithCapacity(_warningMessages, logMessage, _warningsCountSubject);
 				_warningReceivedSubject.OnNext(logMessage);
-				_warningsCountSubject.OnNext(_warningMessages.Count);
 				break;
 			case LogEventLevel.Error:
-				_errorMessages.Enqueue(logMessage);
-				_errorReceivedSubject.OnNext(logMessage);
-				_errorsCountSubject.OnNext(_errorMessages.Count);
-				break;
 			case LogEventLevel.Fatal:
+				AddMessageWithCapacity(_errorMessages, logMessage, _errorsCountSubject);
+				_errorReceivedSubject.OnNext(logMessage);
 				break;
+		}
+	}
+
+	private void AddMessageWithCapacity(ConcurrentQueue<LogMessage> queue, LogMessage message, Subject<int> countSubject)
+	{
+		queue.Enqueue(message);
+
+		while (queue.Count > _maxMessagesCapacity && queue.TryDequeue(out _)) { }
+
+		countSubject.OnNext(queue.Count);
+	}
+
+	private void ThrowIfDisposed()
+	{
+		if (_isDisposed)
+		{
+			throw new ObjectDisposedException(nameof(LogEventService));
 		}
 	}
 }

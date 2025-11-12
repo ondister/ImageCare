@@ -10,8 +10,4 @@
     <PackageReference Include="Prism.Commands.Ex" Version="0.1.9" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Commands\" />
-  </ItemGroup>
-
 </Project>

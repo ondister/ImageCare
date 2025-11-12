@@ -16,6 +16,8 @@ using ImageCare.Mvvm;
 using Prism.Commands;
 using Prism.Services.Dialogs;
 
+using Serilog;
+
 namespace ImageCare.Modules.Logging.ViewModels;
 
 internal sealed class LogViewerViewModel : ViewModelBase, IDialogAware, IDisposable
@@ -23,11 +25,12 @@ internal sealed class LogViewerViewModel : ViewModelBase, IDialogAware, IDisposa
 	private readonly ILogEventService _logEventService;
 	private readonly ILogNotificationService _logNotificationService;
 	private readonly IMapper _mapper;
+	private readonly ILogger _logger;
 	private readonly ReadOnlyObservableCollection<LogMessageViewModel> _messageViewModels;
 	private readonly SourceList<LogMessageViewModel> _sourceList = new();
-
 	private readonly Subject<string> _filterChanged;
 	private CompositeDisposable _compositeDisposable;
+	private bool _isDisposed;
 
 	private bool _showWarnings = true;
 	private bool _showErrors = true;
@@ -36,11 +39,13 @@ internal sealed class LogViewerViewModel : ViewModelBase, IDialogAware, IDisposa
 
 	public LogViewerViewModel(ILogEventService logEventService,
 	                          ILogNotificationService logNotificationService,
-	                          IMapper mapper)
+	                          IMapper mapper,
+	                          ILogger logger)
 	{
-		_logEventService = logEventService;
-		_logNotificationService = logNotificationService;
-		_mapper = mapper;
+		_logEventService = logEventService ?? throw new ArgumentNullException(nameof(logEventService));
+		_logNotificationService = logNotificationService ?? throw new ArgumentNullException(nameof(logNotificationService));
+		_mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
+		_logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
 		_filterChanged = new Subject<string>();
 
@@ -53,7 +58,8 @@ internal sealed class LogViewerViewModel : ViewModelBase, IDialogAware, IDisposa
 		           .Subscribe();
 		_filterChanged.OnNext(string.Empty);
 
-		ClearMessagesCommand = new DelegateCommand(ClearMessages, CanClearMessages).ObservesProperty(() => MessageViewModels.Count);
+		ClearMessagesCommand = new DelegateCommand(ClearMessages, CanClearMessages)
+			.ObservesProperty(() => MessageViewModels.Count);
 	}
 
 	public bool ShowWarnings
@@ -63,7 +69,7 @@ internal sealed class LogViewerViewModel : ViewModelBase, IDialogAware, IDisposa
 		{
 			if (SetProperty(ref _showWarnings, value))
 			{
-				_filterChanged.OnNext(nameof(ShowWarnings));
+				SafeFilterUpdate(nameof(ShowWarnings));
 			}
 		}
 	}
@@ -75,7 +81,7 @@ internal sealed class LogViewerViewModel : ViewModelBase, IDialogAware, IDisposa
 		{
 			if (SetProperty(ref _showErrors, value))
 			{
-				_filterChanged.OnNext(nameof(ShowErrors));
+				SafeFilterUpdate(nameof(ShowErrors));
 			}
 		}
 	}
@@ -96,98 +102,158 @@ internal sealed class LogViewerViewModel : ViewModelBase, IDialogAware, IDisposa
 
 	public ReadOnlyObservableCollection<LogMessageViewModel> MessageViewModels => _messageViewModels;
 
-	/// <inheritdoc />
 	public string Title { get; } = "Log messages";
 
-	/// <inheritdoc />
 	public bool CanCloseDialog()
 	{
 		return true;
 	}
 
-	/// <inheritdoc />
 	public void OnDialogOpened(IDialogParameters parameters)
 	{
-		_compositeDisposable = new CompositeDisposable
-		{
-			_logEventService.ErrorReceived.Subscribe(OnErrorReceived),
-			_logEventService.WarningReceived.Subscribe(OnWarningReceived),
-			_logEventService.MessagesCleared.Subscribe(OnMessagesCleared),
+		ThrowIfDisposed();
 
-			_logNotificationService.ErrorsCountUpdated.Subscribe(OnErrorsCountUpdated),
-			_logNotificationService.WarningsCountUpdated.Subscribe(OnWarningsCountUpdated)
-		};
-
-		var errors = _logEventService.GetLastErrors().ToList();
-		foreach (var message in errors)
+		try
 		{
-			_sourceList.Add(_mapper.Map<ErrorLogMessageViewModel>(message));
+			_compositeDisposable = new CompositeDisposable
+			{
+				_logEventService.ErrorReceived.Subscribe(OnErrorReceived),
+				_logEventService.WarningReceived.Subscribe(OnWarningReceived),
+				_logEventService.MessagesCleared.Subscribe(OnMessagesCleared),
+
+				_logNotificationService.ErrorsCountUpdated.Subscribe(OnErrorsCountUpdated),
+				_logNotificationService.WarningsCountUpdated.Subscribe(OnWarningsCountUpdated)
+			};
+
+			LoadExistingMessages();
 		}
-
-		ErrorsCount = errors.Count;
-
-		var warnings = _logEventService.GetLastWarnings().ToList();
-		foreach (var message in warnings)
+		catch (Exception ex)
 		{
-			_sourceList.Add(_mapper.Map<WarningLogMessageViewModel>(message));
+			_logger.Error(ex, "Failed to open log viewer dialog");
+			throw;
 		}
-
-		WarningsCount = warnings.Count;
 	}
 
-	/// <inheritdoc />
 	public void OnDialogClosed()
 	{
-		_compositeDisposable.Dispose();
+		SafeDispose(ref _compositeDisposable);
 	}
 
-	/// <inheritdoc />
 	public event Action<IDialogResult>? RequestClose;
 
-	/// <inheritdoc />
 	public void Dispose()
 	{
-		_sourceList.Dispose();
-		_filterChanged.Dispose();
-		_compositeDisposable.Dispose();
+		if (!_isDisposed)
+		{
+			_sourceList?.Dispose();
+			_filterChanged?.Dispose();
+			SafeDispose(ref _compositeDisposable);
+			_isDisposed = true;
+		}
+	}
+
+	private void LoadExistingMessages()
+	{
+		try
+		{
+			var errors = _logEventService.GetLastErrors().ToList();
+			foreach (var message in errors)
+			{
+				AddMessageSafe(() => _mapper.Map<ErrorLogMessageViewModel>(message));
+			}
+
+			ErrorsCount = errors.Count;
+
+			var warnings = _logEventService.GetLastWarnings().ToList();
+			foreach (var message in warnings)
+			{
+				AddMessageSafe(() => _mapper.Map<WarningLogMessageViewModel>(message));
+			}
+
+			WarningsCount = warnings.Count;
+		}
+		catch (Exception ex)
+		{
+			_logger.Error(ex, "Failed to load existing log messages");
+		}
+	}
+
+	private void AddMessageSafe(Func<LogMessageViewModel> messageFactory)
+	{
+		try
+		{
+			var viewModel = messageFactory();
+			_sourceList.Add(viewModel);
+		}
+		catch (Exception ex)
+		{
+			_logger.Error(ex, "Failed to add log message to view model");
+		}
+	}
+
+	private void SafeFilterUpdate(string filterName)
+	{
+		try
+		{
+			_filterChanged.OnNext(filterName);
+		}
+		catch (Exception ex)
+		{
+			_logger.Error(ex, "Failed to update filter: {FilterName}", filterName);
+		}
 	}
 
 	private Func<LogMessageViewModel, bool> BuildFilter(string filterPropertyName)
 	{
 		return m =>
 		{
-			if (ShowErrors && ShowWarnings)
+			try
 			{
-				return true;
-			}
+				if (ShowErrors && ShowWarnings)
+				{
+					return true;
+				}
 
-			if (ShowErrors && !ShowWarnings)
+				if (ShowErrors && !ShowWarnings)
+				{
+					return m is ErrorLogMessageViewModel;
+				}
+
+				if (!ShowErrors && ShowWarnings)
+				{
+					return m is WarningLogMessageViewModel;
+				}
+
+				return false;
+			}
+			catch (Exception ex)
 			{
-				return m is ErrorLogMessageViewModel;
+				_logger.Error(ex, "Filter evaluation failed for message: {MessageType}", m.GetType().Name);
+				return false;
 			}
-
-			if (!ShowErrors && ShowWarnings)
-			{
-				return m is WarningLogMessageViewModel;
-			}
-
-			return false;
 		};
 	}
 
 	private void OnErrorReceived(LogMessage message)
 	{
-		_sourceList.Add(_mapper.Map<ErrorLogMessageViewModel>(message));
+		AddMessageSafe(() => _mapper.Map<ErrorLogMessageViewModel>(message));
 	}
 
 	private void OnWarningReceived(LogMessage message)
 	{
-		_sourceList.Add(_mapper.Map<WarningLogMessageViewModel>(message));
+		AddMessageSafe(() => _mapper.Map<WarningLogMessageViewModel>(message));
 	}
 
 	private void OnMessagesCleared(bool obj)
 	{
-		_sourceList.Clear();
+		try
+		{
+			_sourceList.Clear();
+		}
+		catch (Exception ex)
+		{
+			_logger.Error(ex, "Failed to clear messages");
+		}
 	}
 
 	private void OnErrorsCountUpdated(int errorsCount)
@@ -207,6 +273,34 @@ internal sealed class LogViewerViewModel : ViewModelBase, IDialogAware, IDisposa
 
 	private void ClearMessages()
 	{
-		_logEventService.ClearMessages();
+		try
+		{
+			_logEventService.ClearMessages();
+		}
+		catch (Exception ex)
+		{
+			_logger.Error(ex, "Failed to clear log messages");
+		}
+	}
+
+	private void ThrowIfDisposed()
+	{
+		if (_isDisposed)
+		{
+			throw new ObjectDisposedException(nameof(LogViewerViewModel));
+		}
+	}
+
+	private void SafeDispose<T>(ref T disposable) where T : IDisposable?
+	{
+		try
+		{
+			disposable?.Dispose();
+			disposable = default;
+		}
+		catch (Exception ex)
+		{
+			_logger.Error(ex, "Failed to dispose {Type}", typeof(T).Name);
+		}
 	}
 }
