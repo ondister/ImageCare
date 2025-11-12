@@ -10,79 +10,78 @@
              x:DataType="viewModels:BottomBarViewModel">
 
     <UserControl.Styles>
-
         <Style Selector="iconPacks|PackIconLucide">
             <Setter Property="Width" Value="{StaticResource Icon.Size.Small}" />
             <Setter Property="Height" Value="{StaticResource Icon.Size.Small}" />
             <Setter Property="VerticalAlignment" Value="Center" />
         </Style>
-
     </UserControl.Styles>
 
     <Grid RowDefinitions="Auto,*">
-        <u:Divider Grid.Row="0"
-                   HorizontalContentAlignment="Center" />
+        <u:Divider Grid.Row="0" HorizontalContentAlignment="Center" />
 
         <Grid Grid.Row="1" ColumnDefinitions="Auto,Auto,*,Auto"
               Margin="{StaticResource MarginTop.Medium}">
-            <!--Logs-->
-            <u:Badge Margin="{StaticResource MarginTop.Large}"
-                     Header="{Binding MessagesCount}"
-                     OverflowCount="99">
 
-                <u:IconButton Classes="Small"
-                              Content="Messages List"
-                              IconPlacement="Left"
-                              Command="{Binding  OpenLogWindowCommand}">
-                    <u:IconButton.Icon>
+            <!--Messages List Button with Counter-->
+            <u:IconButton Grid.Column="0"
+                          Classes="Small"
+                          Content="Messages List"
+                          IconPlacement="Left"
+                          Command="{Binding OpenLogWindowCommand}"
+                          Margin="{StaticResource MarginHorizontal.Small}">
+                <u:IconButton.Icon>
+                    <StackPanel Orientation="Horizontal" Spacing="4">
                         <iconPacks:PackIconLucide Kind="List" />
-                    </u:IconButton.Icon>
-                </u:IconButton>
-            </u:Badge>
+                        <Border Background="{DynamicResource SemiColorDanger}"
+                                CornerRadius="8"
+                                Padding="4,2"
+                                VerticalAlignment="Center"
+                                IsVisible="{Binding !!MessagesCount}">
+                            <TextBlock Text="{Binding MessagesCount}"
+                                       Foreground="White"
+                                       FontWeight="Bold"
+                                       FontSize="{DynamicResource Font.Size.Micro}"
+                                       VerticalAlignment="Center"
+                                       HorizontalAlignment="Center" />
+                        </Border>
+                    </StackPanel>
+                </u:IconButton.Icon>
+            </u:IconButton>
 
             <!--Notification-->
             <ContentControl Grid.Column="1"
                             VerticalAlignment="Bottom"
                             Content="{Binding NotificationViewModel}">
                 <ContentControl.DataTemplates>
-
                     <DataTemplate DataType="domain:SuccessNotificationViewModel">
-                        <StackPanel Margin="{StaticResource MarginHorizontal.Small}"
-                                    Orientation="Horizontal">
+                        <StackPanel Margin="{StaticResource MarginHorizontal.Small}" Orientation="Horizontal">
                             <iconPacks:PackIconMaterial Kind="CheckCircleOutline"
                                                         Foreground="{DynamicResource SemiColorSuccess}"
                                                         Height="{StaticResource Icon.Size.Small}"
                                                         Width="{StaticResource Icon.Size.Small}"
                                                         Margin="{StaticResource MarginHorizontal.Small}" />
-                            <TextBlock Margin="{StaticResource MarginHorizontal.Small}"
-                                       Text="{Binding Title}" />
-                            <TextBlock Margin="{StaticResource MarginHorizontal.Small}"
-                                       Text="{Binding Description}" />
+                            <TextBlock Margin="{StaticResource MarginHorizontal.Small}" Text="{Binding Title}" />
+                            <TextBlock Margin="{StaticResource MarginHorizontal.Small}" Text="{Binding Description}" />
                         </StackPanel>
                     </DataTemplate>
 
                     <DataTemplate DataType="domain:ErrorNotificationViewModel">
-                        <StackPanel Margin="{StaticResource MarginHorizontal.Small}"
-                                    Orientation="Horizontal">
+                        <StackPanel Margin="{StaticResource MarginHorizontal.Small}" Orientation="Horizontal">
                             <iconPacks:PackIconMaterial Kind="AlertCircleOutline"
                                                         Foreground="{DynamicResource SemiColorDanger}"
                                                         Height="{StaticResource Icon.Size.Small}"
                                                         Width="{StaticResource Icon.Size.Small}"
                                                         Margin="{StaticResource MarginHorizontal.Small}" />
-                            <TextBlock Margin="{StaticResource MarginHorizontal.Small}"
-                                       Text="{Binding Title}" />
-                            <TextBlock Margin="{StaticResource MarginHorizontal.Small}"
-                                       Text="{Binding Description}" />
+                            <TextBlock Margin="{StaticResource MarginHorizontal.Small}" Text="{Binding Title}" />
+                            <TextBlock Margin="{StaticResource MarginHorizontal.Small}" Text="{Binding Description}" />
                         </StackPanel>
                     </DataTemplate>
 
                     <DataTemplate DataType="domain:NotificationViewModel">
-                        <StackPanel Margin="{StaticResource MarginHorizontal.Small}"
-                                    Orientation="Horizontal">
-                            <TextBlock Margin="{StaticResource MarginHorizontal.Small}"
-                                       Text="{Binding Title}" />
-                            <TextBlock Margin="{StaticResource MarginHorizontal.Small}"
-                                       Text="{Binding Description}" />
+                        <StackPanel Margin="{StaticResource MarginHorizontal.Small}" Orientation="Horizontal">
+                            <TextBlock Margin="{StaticResource MarginHorizontal.Small}" Text="{Binding Title}" />
+                            <TextBlock Margin="{StaticResource MarginHorizontal.Small}" Text="{Binding Description}" />
                         </StackPanel>
                     </DataTemplate>
                 </ContentControl.DataTemplates>
@@ -93,7 +92,8 @@
                           Classes="Small"
                           Content="Settings"
                           IconPlacement="Left"
-                          Command="{Binding  OpenSettingsWindowCommand}">
+                          Command="{Binding OpenSettingsWindowCommand}"
+                          Margin="{StaticResource MarginHorizontal.Small}">
                 <u:IconButton.Icon>
                     <iconPacks:PackIconLucide Kind="Settings" />
                 </u:IconButton.Icon>
