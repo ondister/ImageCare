@@ -95,6 +95,18 @@ public class LocalFileSystemFolderServiceTests
 	}
 
 	[Test]
+	public void AddVisitingFolderAsDevice_IgnoreFolderVisitedEvent()
+	{
+		var directory = new DeviceModel("test", "test_path");
+		SelectedDirectory capturedEvent = null;
+
+		using var subscription = _service.FolderVisited.Subscribe(dir => capturedEvent = dir);
+		_service.AddVisitingFolder(directory, FileManagerPanel.Left);
+
+		Assert.That(capturedEvent, Is.Null);
+	}
+
+	[Test]
 	public void RemoveVisitingFolder_EmitsFolderLeftEvent()
 	{
 		var directory = new DirectoryModel("test", "test_path");

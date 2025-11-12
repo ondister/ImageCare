@@ -20,7 +20,7 @@ public interface IFolderService
 
 	Task<DirectoryModel> GetCustomDirectoriesLevelAsync(DirectoryModel directoryModel, bool preview = false);
 
-	void SetSelectedDirectory(SelectedDirectory selecteddirectory);
+	void SetSelectedDirectory(SelectedDirectory selectedDirectory);
 
 	DirectoryModel? GetSelectedDirectory(FileManagerPanel fileManagerPanel);
 

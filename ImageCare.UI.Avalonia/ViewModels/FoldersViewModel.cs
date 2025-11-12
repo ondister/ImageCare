@@ -372,6 +372,11 @@ internal class FoldersViewModel : NavigatedViewModelBase
 
 	private void OnFolderVisited(DirectoryModel directoryModel)
 	{
+		if (directoryModel is DeviceModel)
+		{
+			return;
+		}
+
 		try
 		{
 			_multiSourcesFileSystemWatcherService.StartWatchingDirectory(directoryModel.Path);

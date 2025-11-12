@@ -145,6 +145,11 @@ public sealed class LocalFileSystemFolderService : IFolderService, IDisposable
 			throw new ObjectDisposedException(nameof(LocalFileSystemFolderService));
 		}
 
+		if (directoryModel is DeviceModel)
+		{
+			return;
+		}
+
 		var visitingDirectory = new SelectedDirectory(directoryModel, fileManagerPanel);
 		if (_visitingDirectoryModels.TryAdd((directoryModel.Path, fileManagerPanel), visitingDirectory))
 		{
