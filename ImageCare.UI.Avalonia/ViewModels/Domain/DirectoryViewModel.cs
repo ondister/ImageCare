@@ -233,7 +233,7 @@ internal class DirectoryViewModel : ViewModelBase, IComparable<DirectoryViewMode
             {
                 var fileSystemItemViewModel = _mapper.Map<DirectoryViewModel>(directoryModel);
 
-                ChildFileSystemItems.InsertItem(fileSystemItemViewModel);
+                ChildFileSystemItems.Add(fileSystemItemViewModel);
             }
         }
         catch (Exception exception)

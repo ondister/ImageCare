@@ -60,7 +60,7 @@ internal class TimelineViewModel : ViewModelBase, IDisposable
 				}
 				else
 				{
-					DateStatViewModels.InsertItem(
+					DateStatViewModels.Add(
 						new DateStatViewModel
 						{
 							Date = date,
@@ -95,7 +95,7 @@ internal class TimelineViewModel : ViewModelBase, IDisposable
 					}
 					else
 					{
-						DateStatViewModels.InsertItem(
+						DateStatViewModels.Add(
 							new DateStatViewModel
 							{
 								Date = date,

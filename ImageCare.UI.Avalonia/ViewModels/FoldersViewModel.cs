@@ -125,7 +125,7 @@ internal class FoldersViewModel : NavigatedViewModelBase
                 if (!parentVieModel.ChildFileSystemItems.Any(d => d.Path.Equals(directoryModel.Path, StringComparison.OrdinalIgnoreCase)))
                 {
                     var createdViewModel = _mapper.Map<DirectoryViewModel>(directoryModel);
-                    parentVieModel.ChildFileSystemItems.InsertItem(createdViewModel);
+                    parentVieModel.ChildFileSystemItems.Add(createdViewModel);
 
                     if (createdViewModel.Path.Equals(_createdSubFolder?.Path, StringComparison.OrdinalIgnoreCase))
                     {
@@ -206,7 +206,7 @@ internal class FoldersViewModel : NavigatedViewModelBase
             rootViewModel.SetFileManagerPanel(FileManagerPanel);
             rootViewModel.IsExpanded = true;
 
-            FileSystemItemViewModels.InsertItem(rootViewModel);
+            FileSystemItemViewModels.Add(rootViewModel);
         }
         catch (Exception exception)
         {
@@ -235,7 +235,7 @@ internal class FoldersViewModel : NavigatedViewModelBase
     private void OnDriveMounted(DriveModel model)
     {
         var root = FileSystemItemViewModels.FirstOrDefault(d => d is DeviceViewModel);
-        root?.ChildFileSystemItems.InsertItem(_mapper.Map<DriveViewModel>(model));
+        root?.ChildFileSystemItems.Add(_mapper.Map<DriveViewModel>(model));
     }
 
     private void OnFreeSpaceChanged(AvailableFreeSpaceInfo freeSpaceInfo)

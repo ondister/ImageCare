@@ -307,7 +307,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase, IDisposable
 			TimelineVm.AddFile(new FileModel(previewImage.Title, previewImage.Url, metadata.CreationDateTime));
 		}
 
-		_synchronizationContext.Send(d => { ImagePreviews.InsertItem(mediaPreviewViewModel); }, null);
+		_synchronizationContext.Send(d => { ImagePreviews.Add(mediaPreviewViewModel); }, null);
 	}
 
 	private void OnFolderSelected(SelectedDirectory selectedFileSystemItem)
@@ -367,7 +367,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase, IDisposable
 		{
 			lock (_imagePathsLock)
 			{
-				_imagePaths.InsertItem(fileModel);
+				_imagePaths.Add(fileModel);
 			}
 
 			LoadFolderStatisticsAsync(SelectedFolderPath);
@@ -410,7 +410,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase, IDisposable
 
 			lock (_imagePathsLock)
 			{
-				_imagePaths.InsertItem(model.NewFileModel);
+				_imagePaths.Add(model.NewFileModel);
 			}
 
 			CreateImagePreviewFromPathAsync(model.NewFileModel.FullName, true);
@@ -506,7 +506,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase, IDisposable
 			var previewImage = await _imageService.GetMediaPreviewAsync(_imagePaths[index].FullName);
 			var mediaPreviewViewModel = _mapper.Map<MediaPreviewViewModel>(previewImage);
 			mediaPreviewViewModel.FileDate = _imagePaths[index].CreatedDateTime.Value;
-			_synchronizationContext.Send(d => { ImagePreviews.InsertItem(mediaPreviewViewModel); }, null);
+			_synchronizationContext.Send(d => { ImagePreviews.Add(mediaPreviewViewModel); }, null);
 		}
 
 		for (var i = 0; i < initialCount; i++)
