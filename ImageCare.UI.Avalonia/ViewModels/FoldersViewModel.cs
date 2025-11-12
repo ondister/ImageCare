@@ -8,8 +8,6 @@ using System.Windows.Input;
 
 using AutoMapper;
 
-using CommunityToolkit.Mvvm.Input;
-
 using ImageCare.Core.Domain.Folders;
 using ImageCare.Core.Services.DrivesWatcherService;
 using ImageCare.Core.Services.FileSystemWatcherService;
@@ -17,7 +15,6 @@ using ImageCare.Core.Services.FolderService;
 using ImageCare.Mvvm.Collections;
 using ImageCare.UI.Avalonia.ViewModels.Domain;
 
-using Prism.Commands;
 using Prism.Regions;
 
 using Serilog;
@@ -26,254 +23,421 @@ namespace ImageCare.UI.Avalonia.ViewModels;
 
 internal class FoldersViewModel : NavigatedViewModelBase
 {
-    private readonly IFolderService _folderService;
-    private readonly IMultiSourcesFileSystemWatcherService _multiSourcesFileSystemWatcherService;
-    private readonly IDrivesWatcherService _drivesWatcherService;
-    private readonly IMapper _mapper;
-    private readonly ILogger _logger;
-    private readonly SynchronizationContext _synchronizationContext;
-    private DirectoryViewModel? _selectedFileSystemItem;
-    private CompositeDisposable _compositeDisposable;
-    private DirectoryModel? _createdSubFolder;
+	private readonly IFolderService _folderService;
+	private readonly IMultiSourcesFileSystemWatcherService _multiSourcesFileSystemWatcherService;
+	private readonly IDrivesWatcherService _drivesWatcherService;
+	private readonly IMapper _mapper;
+	private readonly ILogger _logger;
+	private readonly SynchronizationContext _synchronizationContext;
 
-    public FoldersViewModel(IFolderService folderService,
-                            IMultiSourcesFileSystemWatcherService multiSourcesFileSystemWatcherService,
-                            IDrivesWatcherService drivesWatcherService,
-                            IMapper mapper,
-                            ILogger logger,
-                            SynchronizationContext synchronizationContext)
-    {
-        _folderService = folderService;
-        _multiSourcesFileSystemWatcherService = multiSourcesFileSystemWatcherService;
-        _drivesWatcherService = drivesWatcherService;
-        _mapper = mapper;
-        _logger = logger;
-        _synchronizationContext = synchronizationContext;
+	private DirectoryViewModel? _selectedFileSystemItem;
+	private CompositeDisposable _compositeDisposable;
+	private DirectoryModel? _createdSubFolder;
 
-        OnViewLoadedCommand = new AsyncRelayCommand(OnViewLoaded);
-        DeleteFolderCommand = new DelegateCommand(DeleteFolder);
-        CreateFolderCommand = new DelegateCommand(CreateFolder);
+	private bool _isLoading;
 
-        FileSystemItemViewModels = new SortedObservableCollection<DirectoryViewModel>(null);
-    }
+	public FoldersViewModel(IFolderService folderService,
+	                        IMultiSourcesFileSystemWatcherService multiSourcesFileSystemWatcherService,
+	                        IDrivesWatcherService drivesWatcherService,
+	                        IMapper mapper,
+	                        ILogger logger,
+	                        SynchronizationContext synchronizationContext)
+	{
+		_folderService = folderService ?? throw new ArgumentNullException(nameof(folderService));
+		_multiSourcesFileSystemWatcherService = multiSourcesFileSystemWatcherService ?? throw new ArgumentNullException(nameof(multiSourcesFileSystemWatcherService));
+		_drivesWatcherService = drivesWatcherService ?? throw new ArgumentNullException(nameof(drivesWatcherService));
+		_mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
+		_logger = logger ?? throw new ArgumentNullException(nameof(logger));
+		_synchronizationContext = synchronizationContext ?? throw new ArgumentNullException(nameof(synchronizationContext));
 
-    public SortedObservableCollection<DirectoryViewModel> FileSystemItemViewModels { get; }
+		OnViewLoadedCommand = CreateAsyncCommand(OnViewLoadedAsync, () => !IsLoading);
+		DeleteFolderCommand = CreateCommand(DeleteFolder, CanDeleteFolder);
+		CreateFolderCommand = CreateCommand(CreateFolder, CanCreateFolder);
 
-    public ICommand OnViewLoadedCommand { get; }
+		FileSystemItemViewModels = new SortedObservableCollection<DirectoryViewModel>();
+	}
 
-    public ICommand CreateFolderCommand { get; }
+	public SortedObservableCollection<DirectoryViewModel> FileSystemItemViewModels { get; }
 
-    public ICommand DeleteFolderCommand { get; }
+	public ICommand OnViewLoadedCommand { get; }
 
-    public DirectoryViewModel? SelectedFileSystemItem
-    {
-        get => _selectedFileSystemItem;
-        set
-        {
-            if (SetProperty(ref _selectedFileSystemItem, value) && _selectedFileSystemItem != null)
-            {
-                _folderService.SetSelectedDirectory(new SelectedDirectory(_selectedFileSystemItem.Name, _selectedFileSystemItem.Path, FileManagerPanel));
-            }
-        }
-    }
+	public ICommand CreateFolderCommand { get; }
 
-    public FileManagerPanel FileManagerPanel { get; private set; }
+	public ICommand DeleteFolderCommand { get; }
 
-    /// <inheritdoc />
-    public override void OnNavigatedTo(NavigationContext navigationContext)
-    {
-        FileManagerPanel = (FileManagerPanel)navigationContext.Parameters["panel"];
+	public bool IsLoading
+	{
+		get => _isLoading;
+		private set => SetProperty(ref _isLoading, value);
+	}
 
-        _compositeDisposable = new CompositeDisposable
-        {
-            _drivesWatcherService.DriveMounted.Subscribe(OnDriveMounted),
-            _drivesWatcherService.DriveUnmounted.Subscribe(OnDriveUnmounted),
-            _drivesWatcherService.DriveAvailableFreeSpaceChanged.DistinctUntilChanged().Subscribe(OnFreeSpaceChanged),
-            _folderService.FolderVisited.Where(folder => folder.FileManagerPanel == FileManagerPanel).Subscribe(OnFolderVisited),
-            _folderService.FolderLeft.Where(folder => folder.FileManagerPanel == FileManagerPanel).Subscribe(OnFolderLeft),
-            _multiSourcesFileSystemWatcherService.DirectoryCreated.ObserveOn(_synchronizationContext).Subscribe(OnDirectoryCreated),
-            _multiSourcesFileSystemWatcherService.DirectoryDeleted.DistinctUntilChanged(folder => folder.Path).ObserveOn(_synchronizationContext).Subscribe(OnDirectoryRemoved),
-            _multiSourcesFileSystemWatcherService.DirectoryRenamed.DistinctUntilChanged(folder => folder.NewDirectoryModel.Path).ObserveOn(_synchronizationContext).Subscribe(OnDirectoryRenamed)
-        };
+	public DirectoryViewModel? SelectedFileSystemItem
+	{
+		get => _selectedFileSystemItem;
+		set => SetSelectedFileSystemItem(value);
+	}
 
-        _drivesWatcherService.StartWatching();
-        _multiSourcesFileSystemWatcherService.StartWatching();
-    }
+	public FileManagerPanel FileManagerPanel { get; private set; } = FileManagerPanel.Left;
 
-    /// <inheritdoc />
-    public override void OnNavigatedFrom(NavigationContext navigationContext)
-    {
-        _compositeDisposable.Dispose();
-        _drivesWatcherService.StopWatching();
+	public override void OnNavigatedTo(NavigationContext navigationContext)
+	{
+		try
+		{
+			if (navigationContext.Parameters["panel"] is not FileManagerPanel panel)
+			{
+				_logger.Error("Navigation parameter 'panel' is missing or invalid");
+				return;
+			}
 
-        _multiSourcesFileSystemWatcherService.StopWatching();
-        _multiSourcesFileSystemWatcherService.ClearWatchers();
-    }
+			FileManagerPanel = panel;
 
-    private void OnDirectoryCreated(DirectoryModel directoryModel)
-    {
-        var parent = directoryModel.GetParent();
-        if (parent == null)
-        {
-            return;
-        }
+			_compositeDisposable = new CompositeDisposable
+			{
+				_drivesWatcherService.DriveMounted.Subscribe(OnDriveMounted, OnObservableError),
+				_drivesWatcherService.DriveUnmounted.Subscribe(OnDriveUnmounted, OnObservableError),
+				_drivesWatcherService.DriveAvailableFreeSpaceChanged
+				                     .DistinctUntilChanged()
+				                     .Subscribe(OnFreeSpaceChanged, OnObservableError),
+				_folderService.FolderVisited
+				              .Where(folder => folder.FileManagerPanel == FileManagerPanel)
+				              .Subscribe(OnFolderVisited, OnObservableError),
+				_folderService.FolderLeft
+				              .Where(folder => folder.FileManagerPanel == FileManagerPanel)
+				              .Subscribe(OnFolderLeft, OnObservableError),
+				_multiSourcesFileSystemWatcherService.DirectoryCreated
+				                                     .ObserveOn(_synchronizationContext)
+				                                     .Subscribe(OnDirectoryCreated, OnObservableError),
+				_multiSourcesFileSystemWatcherService.DirectoryDeleted
+				                                     .DistinctUntilChanged(folder => folder.Path)
+				                                     .ObserveOn(_synchronizationContext)
+				                                     .Subscribe(OnDirectoryRemoved, OnObservableError),
+				_multiSourcesFileSystemWatcherService.DirectoryRenamed
+				                                     .DistinctUntilChanged(folder => folder.NewDirectoryModel.Path)
+				                                     .ObserveOn(_synchronizationContext)
+				                                     .Subscribe(OnDirectoryRenamed, OnObservableError)
+			};
 
-        foreach (var directoryViewModel in FileSystemItemViewModels)
-        {
-            if (directoryViewModel.FindChildByPathRecursively(parent.Path) is { } parentVieModel)
-            {
-                if (!parentVieModel.ChildFileSystemItems.Any(d => d.Path.Equals(directoryModel.Path, StringComparison.OrdinalIgnoreCase)))
-                {
-                    var createdViewModel = _mapper.Map<DirectoryViewModel>(directoryModel);
-                    parentVieModel.ChildFileSystemItems.Add(createdViewModel);
+			_drivesWatcherService.StartWatching();
+			_multiSourcesFileSystemWatcherService.StartWatching();
+		}
+		catch (Exception ex)
+		{
+			_logger.Error(ex, "Failed to initialize FoldersViewModel");
+			throw;
+		}
+	}
 
-                    if (createdViewModel.Path.Equals(_createdSubFolder?.Path, StringComparison.OrdinalIgnoreCase))
-                    {
-                        createdViewModel.IsEditing = true;
-                    }
-                }
+	public override void OnNavigatedFrom(NavigationContext navigationContext)
+	{
+		try
+		{
+			CancelGlobalOperations();
+			_compositeDisposable?.Dispose();
 
-                return;
-            }
-        }
-    }
+			_drivesWatcherService.StopWatching();
+			_multiSourcesFileSystemWatcherService.StopWatching();
+			_multiSourcesFileSystemWatcherService.ClearWatchers();
 
-    private void OnDirectoryRemoved(DirectoryModel directoryModel)
-    {
-        var parent = directoryModel.GetParent();
-        if (parent == null)
-        {
-            return;
-        }
+			base.OnNavigatedFrom(navigationContext);
+		}
+		catch (Exception ex)
+		{
+			_logger.Error(ex, "Error during FoldersViewModel cleanup");
+		}
+	}
 
-        foreach (var directoryViewModel in FileSystemItemViewModels)
-        {
-            if (directoryViewModel.FindChildByPathRecursively(parent.Path) is { } parentVieModel)
-            {
-                if (parentVieModel.ChildFileSystemItems.FirstOrDefault(d => d.Path.Equals(directoryModel.Path, StringComparison.OrdinalIgnoreCase)) is { } directoryViewModelForDelete)
-                {
-                    if (directoryViewModelForDelete.Path == SelectedFileSystemItem?.Path)
-                    {
-                        SelectedFileSystemItem = null;
-                    }
+	protected override void OnDispose()
+	{
+		try
+		{
+			_compositeDisposable?.Dispose();
+		}
+		catch (Exception ex)
+		{
+			_logger.Error(ex, "Error during FoldersViewModel disposal");
+		}
 
-                    parentVieModel.ChildFileSystemItems.Remove(directoryViewModelForDelete);
-                    if (parentVieModel.IsExpanded && !parentVieModel.ChildFileSystemItems.Any())
-                    {
-                        parentVieModel.IsExpanded = false;
-                    }
-                }
+		base.OnDispose();
+	}
 
-                return;
-            }
-        }
-    }
+	private void SetSelectedFileSystemItem(DirectoryViewModel? value)
+	{
+		if (SetProperty(ref _selectedFileSystemItem, value) && value != null)
+		{
+			try
+			{
+				var selectedDirectory = new SelectedDirectory(value.Name, value.Path, FileManagerPanel);
+				_folderService.SetSelectedDirectory(selectedDirectory);
+			}
+			catch (Exception ex)
+			{
+				_logger.Error(ex, "Failed to set selected directory: {Path}", value.Path);
+			}
+		}
+	}
 
-    private void OnDirectoryRenamed(DirectoryRenamedModel directoryRenamedModel)
-    {
-        var parent = directoryRenamedModel.OldDirectoryModel.GetParent();
-        if (parent == null)
-        {
-            return;
-        }
+	private async Task OnViewLoadedAsync()
+	{
+		IsLoading = true;
 
-        foreach (var directoryViewModel in FileSystemItemViewModels)
-        {
-            if (directoryViewModel.FindChildByPathRecursively(parent.Path) is { } parentVieModel)
-            {
-                if (parentVieModel.ChildFileSystemItems.FirstOrDefault(d => d.Path.Equals(directoryRenamedModel.OldDirectoryModel.Path, StringComparison.OrdinalIgnoreCase)) is { } directoryViewModelForRename)
-                {
-                    directoryViewModelForRename.UpdateDirectory(directoryRenamedModel.NewDirectoryModel);
-                    if (directoryRenamedModel.OldDirectoryModel.Path == SelectedFileSystemItem?.Path)
-                    {
-                        SelectedFileSystemItem = null;
-                        SelectedFileSystemItem = directoryViewModelForRename;
-                    }
-                }
+		try
+		{
+			var root = await _folderService.GetDirectoryModelAsync().ConfigureAwait(false);
 
-                return;
-            }
-        }
-    }
+			var rootViewModel = _mapper.Map<DirectoryViewModel>(root);
+			rootViewModel.SetFileManagerPanel(FileManagerPanel);
+			rootViewModel.IsExpanded = true;
 
-    private async Task OnViewLoaded()
-    {
-        try
-        {
-            var root = await _folderService.GetDirectoryModelAsync();
+			FileSystemItemViewModels.Add(rootViewModel);
+		}
+		catch (OperationCanceledException)
+		{
+			// Expected - no logging needed
+		}
+		catch (Exception ex)
+		{
+			_logger.Error(ex, "Failed to load root directories");
+		}
+		finally
+		{
+			IsLoading = false;
+		}
+	}
 
-            var rootViewModel = _mapper.Map<DirectoryViewModel>(root);
-            rootViewModel.SetFileManagerPanel(FileManagerPanel);
-            rootViewModel.IsExpanded = true;
+	private void OnDirectoryCreated(DirectoryModel directoryModel)
+	{
+		try
+		{
+			var parent = directoryModel.GetParent();
+			if (parent == null)
+			{
+				return;
+			}
 
-            FileSystemItemViewModels.Add(rootViewModel);
-        }
-        catch (Exception exception)
-        {
-            _logger.Error(exception, "Unexpected exception during root folders loading");
-        }
-    }
+			foreach (var directoryViewModel in FileSystemItemViewModels)
+			{
+				if (directoryViewModel.FindChildByPathRecursively(parent.Path) is { } parentViewModel)
+				{
+					if (!parentViewModel.ChildFileSystemItems.Any(d => d.Path.Equals(directoryModel.Path, StringComparison.OrdinalIgnoreCase)))
+					{
+						var createdViewModel = _mapper.Map<DirectoryViewModel>(directoryModel);
+						parentViewModel.ChildFileSystemItems.Add(createdViewModel);
 
-    private void OnDriveUnmounted(string driveName)
-    {
-        var root = FileSystemItemViewModels.FirstOrDefault(d => d is DeviceViewModel);
+						if (createdViewModel.Path.Equals(_createdSubFolder?.Path, StringComparison.OrdinalIgnoreCase))
+						{
+							createdViewModel.IsEditing = true;
+						}
+					}
 
-        var driveForRemove = root?.ChildFileSystemItems.FirstOrDefault(d => d.Name != null && d.Name.Equals(driveName, StringComparison.OrdinalIgnoreCase));
+					return;
+				}
+			}
+		}
+		catch (Exception ex)
+		{
+			_logger.Error(ex, "Failed to process directory creation: {Path}", directoryModel.Path);
+		}
+	}
 
-        if (driveForRemove != null)
-        {
-            // Reset selected drive to empty fo clearing preview panel
-            if (SelectedFileSystemItem != null && SelectedFileSystemItem.Path.StartsWith(driveName, StringComparison.OrdinalIgnoreCase))
-            {
-                _folderService.SetSelectedDirectory(new SelectedDirectory(DirectoryModel.Empty, FileManagerPanel));
-            }
+	private void OnDirectoryRemoved(DirectoryModel directoryModel)
+	{
+		try
+		{
+			var parent = directoryModel.GetParent();
+			if (parent == null)
+			{
+				return;
+			}
 
-            root?.ChildFileSystemItems.Remove(driveForRemove);
-        }
-    }
+			foreach (var directoryViewModel in FileSystemItemViewModels)
+			{
+				if (directoryViewModel.FindChildByPathRecursively(parent.Path) is { } parentViewModel)
+				{
+					if (parentViewModel.ChildFileSystemItems.FirstOrDefault(d => d.Path.Equals(directoryModel.Path, StringComparison.OrdinalIgnoreCase)) is { } directoryViewModelForDelete)
+					{
+						if (directoryViewModelForDelete.Path == SelectedFileSystemItem?.Path)
+						{
+							SelectedFileSystemItem = null;
+						}
 
-    private void OnDriveMounted(DriveModel model)
-    {
-        var root = FileSystemItemViewModels.FirstOrDefault(d => d is DeviceViewModel);
-        root?.ChildFileSystemItems.Add(_mapper.Map<DriveViewModel>(model));
-    }
+						parentViewModel.ChildFileSystemItems.Remove(directoryViewModelForDelete);
+						if (parentViewModel.IsExpanded && !parentViewModel.ChildFileSystemItems.Any())
+						{
+							parentViewModel.IsExpanded = false;
+						}
+					}
 
-    private void OnFreeSpaceChanged(AvailableFreeSpaceInfo freeSpaceInfo)
-    {
-        var root = FileSystemItemViewModels.FirstOrDefault(d => d is DeviceViewModel);
+					return;
+				}
+			}
+		}
+		catch (Exception ex)
+		{
+			_logger.Error(ex, "Failed to process directory removal: {Path}", directoryModel.Path);
+		}
+	}
 
-        var driveForUpdate = root?.ChildFileSystemItems.OfType<RemovableDriveViewModel>().FirstOrDefault(d => d.Path.Equals(freeSpaceInfo.DrivePath, StringComparison.OrdinalIgnoreCase));
-        if (driveForUpdate is not null)
-        {
-            driveForUpdate.AvailableFreeSpace = freeSpaceInfo.FreeSpace;
-        }
-    }
+	private void OnDirectoryRenamed(DirectoryRenamedModel directoryRenamedModel)
+	{
+		try
+		{
+			var parent = directoryRenamedModel.OldDirectoryModel.GetParent();
+			if (parent == null)
+			{
+				return;
+			}
 
-    private void OnFolderVisited(DirectoryModel directoryModel)
-    {
-        _multiSourcesFileSystemWatcherService.StartWatchingDirectory(directoryModel.Path);
-    }
+			foreach (var directoryViewModel in FileSystemItemViewModels)
+			{
+				if (directoryViewModel.FindChildByPathRecursively(parent.Path) is { } parentViewModel)
+				{
+					if (parentViewModel.ChildFileSystemItems.FirstOrDefault(d => d.Path.Equals(directoryRenamedModel.OldDirectoryModel.Path, StringComparison.OrdinalIgnoreCase)) is { } directoryViewModelForRename)
+					{
+						directoryViewModelForRename.UpdateDirectory(directoryRenamedModel.NewDirectoryModel);
+						parentViewModel.ChildFileSystemItems.RefreshSort();
+						if (directoryRenamedModel.OldDirectoryModel.Path == SelectedFileSystemItem?.Path)
+						{
+							SelectedFileSystemItem = null;
+							SelectedFileSystemItem = directoryViewModelForRename;
+						}
+					}
 
-    private void OnFolderLeft(DirectoryModel directoryModel)
-    {
-        _multiSourcesFileSystemWatcherService.StopWatchingDirectory(directoryModel.Path);
-    }
+					return;
+				}
+			}
+		}
+		catch (Exception ex)
+		{
+			_logger.Error(
+				ex,
+				"Failed to process directory rename from {OldPath} to {NewPath}",
+				directoryRenamedModel.OldDirectoryModel.Path,
+				directoryRenamedModel.NewDirectoryModel.Path);
+		}
+	}
 
-    private void CreateFolder()
-    {
-        if (SelectedFileSystemItem == null)
-        {
-            return;
-        }
+	private void OnDriveUnmounted(string driveName)
+	{
+		try
+		{
+			var root = FileSystemItemViewModels.FirstOrDefault(d => d is DeviceViewModel);
+			var driveForRemove = root?.ChildFileSystemItems.FirstOrDefault(d => d.Name != null && d.Name.Equals(driveName, StringComparison.OrdinalIgnoreCase));
 
-        _createdSubFolder = _folderService.CreateSubFolder(_mapper.Map<DirectoryModel>(SelectedFileSystemItem));
-    }
+			if (driveForRemove != null)
+			{
+				// Reset selected drive to empty for clearing preview panel
+				if (SelectedFileSystemItem != null && SelectedFileSystemItem.Path.StartsWith(driveName, StringComparison.OrdinalIgnoreCase))
+				{
+					_folderService.SetSelectedDirectory(new SelectedDirectory(DirectoryModel.Empty, FileManagerPanel));
+				}
 
-    private void DeleteFolder()
-    {
-        if (SelectedFileSystemItem != null && !SelectedFileSystemItem.HasSupportedMedia)
-        {
-            _folderService.RemoveFolder(_mapper.Map<DirectoryModel>(SelectedFileSystemItem));
-        }
-    }
+				root?.ChildFileSystemItems.Remove(driveForRemove);
+			}
+		}
+		catch (Exception ex)
+		{
+			_logger.Error(ex, "Failed to process drive unmount: {DriveName}", driveName);
+		}
+	}
+
+	private void OnDriveMounted(DriveModel model)
+	{
+		try
+		{
+			var root = FileSystemItemViewModels.FirstOrDefault(d => d is DeviceViewModel);
+			root?.ChildFileSystemItems.Add(_mapper.Map<DriveViewModel>(model));
+		}
+		catch (Exception ex)
+		{
+			_logger.Error(ex, "Failed to process drive mount: {DrivePath}", model.Path);
+		}
+	}
+
+	private void OnFreeSpaceChanged(AvailableFreeSpaceInfo freeSpaceInfo)
+	{
+		try
+		{
+			var root = FileSystemItemViewModels.FirstOrDefault(d => d is DeviceViewModel);
+			var driveForUpdate = root?.ChildFileSystemItems.OfType<RemovableDriveViewModel>().FirstOrDefault(d => d.Path.Equals(freeSpaceInfo.DrivePath, StringComparison.OrdinalIgnoreCase));
+			if (driveForUpdate is not null)
+			{
+				driveForUpdate.AvailableFreeSpace = freeSpaceInfo.FreeSpace;
+			}
+		}
+		catch (Exception ex)
+		{
+			_logger.Error(ex, "Failed to update free space for drive: {DrivePath}", freeSpaceInfo.DrivePath);
+		}
+	}
+
+	private void OnFolderVisited(DirectoryModel directoryModel)
+	{
+		try
+		{
+			_multiSourcesFileSystemWatcherService.StartWatchingDirectory(directoryModel.Path);
+		}
+		catch (Exception ex)
+		{
+			_logger.Error(ex, "Failed to start watching directory: {Path}", directoryModel.Path);
+		}
+	}
+
+	private void OnFolderLeft(DirectoryModel directoryModel)
+	{
+		try
+		{
+			_multiSourcesFileSystemWatcherService.StopWatchingDirectory(directoryModel.Path);
+		}
+		catch (Exception ex)
+		{
+			_logger.Error(ex, "Failed to stop watching directory: {Path}", directoryModel.Path);
+		}
+	}
+
+	private void CreateFolder()
+	{
+		try
+		{
+			if (SelectedFileSystemItem == null)
+			{
+				return;
+			}
+
+			_createdSubFolder = _folderService.CreateSubFolder(_mapper.Map<DirectoryModel>(SelectedFileSystemItem));
+		}
+		catch (Exception ex)
+		{
+			_logger.Error(ex, "Failed to create folder for: {SelectedPath}", SelectedFileSystemItem?.Path);
+		}
+	}
+
+	private void DeleteFolder()
+	{
+		try
+		{
+			if (SelectedFileSystemItem != null && !SelectedFileSystemItem.HasSupportedMedia)
+			{
+				_folderService.RemoveFolder(_mapper.Map<DirectoryModel>(SelectedFileSystemItem));
+			}
+		}
+		catch (Exception ex)
+		{
+			_logger.Error(ex, "Failed to delete folder: {Path}", SelectedFileSystemItem?.Path);
+		}
+	}
+
+	private bool CanCreateFolder()
+	{
+		return SelectedFileSystemItem != null;
+	}
+
+	private bool CanDeleteFolder()
+	{
+		return SelectedFileSystemItem != null && !SelectedFileSystemItem.HasSupportedMedia;
+	}
+
+	private void OnObservableError(Exception ex)
+	{
+		_logger.Error(ex, "Error in observable subscription");
+	}
 }

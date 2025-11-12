@@ -225,55 +225,6 @@ public sealed class LocalFileSystemFolderService : IFolderService, IDisposable
 		return statistics;
 	}
 
-	//public async Task<DirectoryModel> GetCustomDirectoriesLevelAsync(DirectoryModel directoryModel, bool preview = false)
-	//{
-	//	if (_disposed)
-	//	{
-	//		throw new ObjectDisposedException(nameof(LocalFileSystemFolderService));
-	//	}
-
-	//	return await Task.Run(() =>
-	//	{
-	//		if (!_fileSystemService.DirectoryExists(directoryModel.Path) || directoryModel.DirectoryModels.Any())
-	//		{
-	//			return directoryModel;
-	//		}
-
-	//		var subDirectories = _fileSystemService.GetDirectories(directoryModel.Path);
-
-	//		foreach (var subDirectory in preview ? subDirectories.Take(1) : subDirectories)
-	//		{
-	//			try
-	//			{
-	//				var directory = new DirectoryModel(Path.GetFileName(subDirectory), subDirectory);
-
-	//				if (!preview)
-	//				{
-	//					var firstSubDir = _fileSystemService.GetDirectories(subDirectory).FirstOrDefault();
-	//					if (firstSubDir != null)
-	//					{
-	//						directory.AddDirectory(new DirectoryModel(Path.GetFileName(firstSubDir), firstSubDir));
-	//					}
-	//				}
-
-	//				directory.HasSupportedMedia = HasSupportedMedia(subDirectory);
-	//				directoryModel.AddDirectory(directory);
-	//			}
-	//			catch (UnauthorizedAccessException)
-	//			{
-	//				// Ignored
-	//			}
-
-	//			if (preview)
-	//			{
-	//				break;
-	//			}
-	//		}
-
-	//		return directoryModel;
-	//	});
-	//}
-
 	public async Task<DirectoryModel> GetCustomDirectoriesLevelAsync(DirectoryModel directoryModel, bool preview = false)
 	{
 		if (_disposed)
@@ -353,17 +304,34 @@ public sealed class LocalFileSystemFolderService : IFolderService, IDisposable
 		}
 
 		directory.HasSupportedMedia = CheckHasSupportedMedia(subDirectory);
+
 		return directory;
 	}
 
 	private bool CheckHasSupportedMedia(string directoryPath)
 	{
-		var supportedExtensions = MediaFormat.GetSupportedExtensions();
+		try
+		{
+			var supportedExtensions = MediaFormat.GetSupportedExtensions();
+			var supportedExtensionsSet = new HashSet<string>(supportedExtensions, StringComparer.OrdinalIgnoreCase);
 
-		return supportedExtensions
-		       .AsParallel()
-		       .WithDegreeOfParallelism(Environment.ProcessorCount / 2)
-		       .Any(extension => _fileSystemService.EnumerateFiles(directoryPath, $"*{extension}").Any());
+			var files = _fileSystemService.EnumerateFiles(directoryPath, "*.*");
+
+			foreach (var file in files)
+			{
+				var extension = Path.GetExtension(file);
+				if (supportedExtensionsSet.Contains(extension))
+				{
+					return true;
+				}
+			}
+
+			return false;
+		}
+		catch (Exception _)
+		{
+			return false;
+		}
 	}
 
 	private (MediaFormat mediaFormat, long count) GetMediaFormatCountFromFolder(string folderPath, string extension)

@@ -1,4 +1,5 @@
 ﻿using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 
 namespace ImageCare.Mvvm.Collections;
 
@@ -28,6 +29,18 @@ public class SortedObservableCollection<T> : ObservableCollection<T>
 		{
 			Add(item);
 		}
+	}
+
+	public void RefreshSort()
+	{
+		var items = Items.ToList();
+		Items.Clear();
+		foreach (var item in items.OrderBy(x => x, _comparer))
+		{
+			Items.Add(item);
+		}
+
+		OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
 	}
 
 	protected override void InsertItem(int index, T item)

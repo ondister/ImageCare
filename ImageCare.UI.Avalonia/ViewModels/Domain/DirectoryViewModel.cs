@@ -7,13 +7,12 @@ using System.Threading.Tasks;
 using System.Windows.Input;
 
 using AutoMapper;
+
 using ImageCare.Core.Domain.Folders;
 using ImageCare.Core.Services.FileSystemService;
 using ImageCare.Core.Services.FolderService;
 using ImageCare.Mvvm;
 using ImageCare.Mvvm.Collections;
-
-using Prism.Commands;
 
 using Serilog;
 
@@ -22,227 +21,312 @@ namespace ImageCare.UI.Avalonia.ViewModels.Domain;
 [DebuggerDisplay("{Path}")]
 internal class DirectoryViewModel : ViewModelBase, IComparable<DirectoryViewModel>
 {
-    private readonly IFolderService _folderService;
-    private readonly IFileSystemService _fileSystemService;
-    private readonly ILogger _logger;
-    private readonly IMapper _mapper;
-    private bool _isExpanded;
-    private bool _isLoaded;
-    private string? _name;
-    private string _path;
-    private bool _hasSupportedMedia;
-    private bool _isEditing;
-    private string? _editableName;
+	private readonly IFolderService _folderService;
+	private readonly IFileSystemService _fileSystemService;
+	private readonly ILogger _logger;
+	private readonly IMapper _mapper;
+	private bool _isExpanded;
+	private bool _isLoaded;
+	private string? _name;
+	private string _path;
+	private bool _hasSupportedMedia;
+	private bool _isEditing;
+	private string? _editableName;
+	private bool _isDisposed;
 
-    public DirectoryViewModel(string? name,
-                              string path,
-                              IEnumerable<DirectoryViewModel> children,
-                              IFolderService folderService,
-                              IFileSystemService fileSystemService,
-                              IMapper mapper,
-                              ILogger logger)
-    {
-        _folderService = folderService;
-        _fileSystemService = fileSystemService;
-        _logger = logger;
-        _mapper = mapper;
-        Name = name;
-        Path = path;
+	public DirectoryViewModel(string? name,
+	                          string path,
+	                          IEnumerable<DirectoryViewModel> children,
+	                          IFolderService folderService,
+	                          IFileSystemService fileSystemService,
+	                          IMapper mapper,
+	                          ILogger logger)
+	{
+		_folderService = folderService ?? throw new ArgumentNullException(nameof(folderService));
+		_fileSystemService = fileSystemService ?? throw new ArgumentNullException(nameof(fileSystemService));
+		_mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
+		_logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
-        ChildFileSystemItems = new SortedObservableCollection<DirectoryViewModel>(children,null);
-        ChildFileSystemItems.CollectionChanged += OnChildFileSystemItemsCollectionChanged;
+		Name = name;
+		Path = path;
 
-        RenameFolderCommand = new DelegateCommand(RenameFolder);
-        StartRenameFolderCommand = new DelegateCommand(StartRenameFolder);
-		NameTextBoxLostFocusCommand = new DelegateCommand(NameTextBoxLostFocus);
-    }
+		ChildFileSystemItems = new SortedObservableCollection<DirectoryViewModel>(children);
+		ChildFileSystemItems.CollectionChanged += OnChildFileSystemItemsCollectionChanged;
 
-    public ICommand StartRenameFolderCommand { get;}
+		RenameFolderCommand = CreateCommand(RenameFolder, () => IsEditing);
+		StartRenameFolderCommand = CreateCommand(StartRenameFolder);
+		NameTextBoxLostFocusCommand = CreateCommand(NameTextBoxLostFocus);
+	}
 
-    public ICommand RenameFolderCommand { get; }
+	public ICommand StartRenameFolderCommand { get; }
 
-    public ICommand NameTextBoxLostFocusCommand { get; }
+	public ICommand RenameFolderCommand { get; }
 
-    public string? Name
-    {
-        get => _name;
-        private set
-        {
-            SetProperty(ref _name, value);
-            EditableName = value;
-        } 
-    }
+	public ICommand NameTextBoxLostFocusCommand { get; }
 
-    public string? EditableName
-    {
-        get => _editableName;
-        set => SetProperty(ref _editableName, value);
-    }
+	public string? Name
+	{
+		get => _name;
+		private set
+		{
+			SetProperty(ref _name, value);
+			EditableName = value;
+		}
+	}
 
-    public string Path
-    {
-        get => _path;
-        private set => SetProperty(ref _path, value);
-    }
+	public string? EditableName
+	{
+		get => _editableName;
+		set => SetProperty(ref _editableName, value);
+	}
 
-    public bool IsEditing
-    {
-        get => _isEditing;
-        set => SetProperty(ref _isEditing, value);
-    }
+	public string Path
+	{
+		get => _path;
+		private set => SetProperty(ref _path, value);
+	}
 
-    public FileManagerPanel FileManagerPanel { get; private set; }
+	public bool IsEditing
+	{
+		get => _isEditing;
+		set => SetProperty(ref _isEditing, value);
+	}
 
-    public SortedObservableCollection<DirectoryViewModel> ChildFileSystemItems { get; }
+	public FileManagerPanel FileManagerPanel { get; private set; }
 
-    public bool IsLoaded
-    {
-        get => _isLoaded;
-        set => SetProperty(ref _isLoaded, value);
-    }
+	public SortedObservableCollection<DirectoryViewModel> ChildFileSystemItems { get; }
 
-    public bool IsExpanded
-    {
-        get => _isExpanded;
-        set
-        {
-            if (SetProperty(ref _isExpanded, value) && _isExpanded)
-            {
-                if (this is DeviceViewModel)
-                {
-                    return;
-                }
+	public bool IsLoaded
+	{
+		get => _isLoaded;
+		private set => SetProperty(ref _isLoaded, value);
+	}
 
-                ChildFileSystemItems.Clear();
-                _ = SeedFileSystemItemsAsync();
-            }
+	public bool IsExpanded
+	{
+		get => _isExpanded;
+		set
+		{
+			if (SetProperty(ref _isExpanded, value))
+			{
+				HandleExpansionChange();
+			}
+		}
+	}
 
-            if (_isExpanded)
-            {
-                _folderService.AddVisitingFolder(_mapper.Map<DirectoryModel>(this), FileManagerPanel);
-            }
-            else
-            {
-                _folderService.RemoveVisitingFolder(_mapper.Map<DirectoryModel>(this), FileManagerPanel);
-            }
-        }
-    }
+	public bool HasSupportedMedia
+	{
+		get => _hasSupportedMedia;
+		set => SetProperty(ref _hasSupportedMedia, value);
+	}
 
-    public bool HasSupportedMedia
-    {
-        get => _hasSupportedMedia;
-        set => SetProperty(ref _hasSupportedMedia, value);
-    }
+	public int CompareTo(DirectoryViewModel? other)
+	{
+		if (ReferenceEquals(this, other))
+		{
+			return 0;
+		}
 
-    /// <inheritdoc />
-    public int CompareTo(DirectoryViewModel? other)
-    {
-        if (ReferenceEquals(this, other))
-        {
-            return 0;
-        }
+		if (ReferenceEquals(null, other))
+		{
+			return 1;
+		}
 
-        if (ReferenceEquals(null, other))
-        {
-            return 1;
-        }
+		return string.Compare(Path, other.Path, StringComparison.Ordinal);
+	}
 
-        return string.Compare(Path, other.Path, StringComparison.Ordinal);
-    }
+	public DirectoryViewModel? FindChildByPathRecursively(string pathToFind)
+	{
+		try
+		{
+			return FindPathRecursive(ChildFileSystemItems, pathToFind);
+		}
+		catch (Exception ex)
+		{
+			_logger.Error(ex, "Failed to find child by path: {Path}", pathToFind);
 
-    public DirectoryViewModel? FindChildByPathRecursively(string pathToFind)
-    {
-        return FindPathRecursive(ChildFileSystemItems, pathToFind);
-    }
+			return null;
+		}
+	}
 
-    public void SetFileManagerPanel(FileManagerPanel panel)
-    {
-        FileManagerPanel = panel;
+	public void SetFileManagerPanel(FileManagerPanel panel)
+	{
+		FileManagerPanel = panel;
+		foreach (var child in ChildFileSystemItems)
+		{
+			child.FileManagerPanel = FileManagerPanel;
+		}
+	}
 
-        foreach (var child in ChildFileSystemItems)
-        {
-            child.FileManagerPanel = FileManagerPanel;
-        }
-    }
+	public void UpdateDirectory(DirectoryModel newDirectoryModel)
+	{
+		try
+		{
+			Name = newDirectoryModel.Name;
+			Path = newDirectoryModel.Path;
+		}
+		catch (Exception ex)
+		{
+			_logger.Error(ex, "Failed to update directory: {Path}", newDirectoryModel.Path);
+		}
+	}
 
-    public void UpdateDirectory(DirectoryModel newDirectoryModel)
-    {
-        Name = newDirectoryModel.Name;
-        Path = newDirectoryModel.Path;
-    }
+	protected override void OnDispose()
+	{
+		if (!_isDisposed)
+		{
+			try
+			{
+				ChildFileSystemItems.CollectionChanged -= OnChildFileSystemItemsCollectionChanged;
+				ChildFileSystemItems.Clear();
+			}
+			catch (Exception ex)
+			{
+				_logger.Error(ex, "Error during DirectoryViewModel disposal");
+			}
 
-    private void RenameFolder()
-    {
-        EditableName = _fileSystemService.RenameFolder(EditableName, Path);
-        IsEditing = false;
-    }
-    private void StartRenameFolder()
-    {
-	    IsEditing = true;
-    }
+			_isDisposed = true;
+		}
+
+		base.OnDispose();
+	}
+
+	private void RenameFolder()
+	{
+		try
+		{
+			if (string.IsNullOrWhiteSpace(EditableName))
+			{
+				EditableName = Name;
+				IsEditing = false;
+				return;
+			}
+
+			var newName = _fileSystemService.RenameFolder(EditableName, Path);
+			if (!string.IsNullOrEmpty(newName))
+			{
+				Name = newName;
+			}
+
+			IsEditing = false;
+		}
+		catch (Exception ex)
+		{
+			_logger.Error(ex, "Failed to rename folder from {OldName} to {NewName}", Name, EditableName);
+			EditableName = Name; // Restore on error
+		}
+	}
+
+	private void StartRenameFolder()
+	{
+		try
+		{
+			IsEditing = true;
+		}
+		catch (Exception ex)
+		{
+			_logger.Error(ex, "Failed to start folder rename");
+		}
+	}
 
 	private void NameTextBoxLostFocus()
-    {
-        RenameFolder();
-    }
+	{
+		try
+		{
+			RenameFolder();
+		}
+		catch (Exception ex)
+		{
+			_logger.Error(ex, "Failed to handle name text box lost focus");
+		}
+	}
 
-    private DirectoryViewModel? FindPathRecursive(SortedObservableCollection<DirectoryViewModel> directories, string pathToFind)
-    {
-        foreach (var directory in directories)
-        {
-            if (directory.Path.Equals(pathToFind, StringComparison.OrdinalIgnoreCase))
-            {
-                return directory;
-            }
+	private void HandleExpansionChange()
+	{
+		try
+		{
+			if (_isExpanded)
+			{
+				if (this is not DeviceViewModel)
+				{
+					ChildFileSystemItems.Clear();
+					_ = SeedFileSystemItemsAsync(); // Fire and forget. We should get subdirs anyway
+				}
 
-            if (directory.ChildFileSystemItems.Count == 0)
-            {
-                continue;
-            }
+				_folderService.AddVisitingFolder(_mapper.Map<DirectoryModel>(this), FileManagerPanel);
+			}
+			else
+			{
+				_folderService.RemoveVisitingFolder(_mapper.Map<DirectoryModel>(this), FileManagerPanel);
+			}
+		}
+		catch (Exception ex)
+		{
+			_logger.Error(ex, "Failed to handle expansion change for: {Path}", Path);
+		}
+	}
 
-            if (FindPathRecursive(directory.ChildFileSystemItems, pathToFind) is { } foundDirectoryViewModel)
-            {
-                return foundDirectoryViewModel;
-            }
-        }
+	private DirectoryViewModel? FindPathRecursive(SortedObservableCollection<DirectoryViewModel> directories, string pathToFind)
+	{
+		foreach (var directory in directories)
+		{
+			if (directory.Path.Equals(pathToFind, StringComparison.OrdinalIgnoreCase))
+			{
+				return directory;
+			}
 
-        return null;
-    }
+			if (pathToFind.StartsWith(directory.Path, StringComparison.OrdinalIgnoreCase) && directory.ChildFileSystemItems.Count > 0)
+			{
+				if (FindPathRecursive(directory.ChildFileSystemItems, pathToFind) is { } foundDirectoryViewModel)
+				{
+					return foundDirectoryViewModel;
+				}
+			}
+		}
 
-    private void OnChildFileSystemItemsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs eventArgs)
-    {
-        if (eventArgs.NewItems == null)
-        {
-            return;
-        }
+		return null;
+	}
 
-        foreach (var item in eventArgs.NewItems.OfType<DirectoryViewModel>())
-        {
-            item.FileManagerPanel = FileManagerPanel;
-        }
-    }
+	private void OnChildFileSystemItemsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs eventArgs)
+	{
+		try
+		{
+			if (eventArgs.NewItems != null)
+			{
+				foreach (var item in eventArgs.NewItems.OfType<DirectoryViewModel>())
+				{
+					item.FileManagerPanel = FileManagerPanel;
+				}
+			}
+		}
+		catch (Exception ex)
+		{
+			_logger.Error(ex, "Failed to handle child collection change");
+		}
+	}
 
-    private async Task SeedFileSystemItemsAsync()
-    {
-        IsLoaded = true;
-        try
-        {
-            var currentDirectoryModel = await _folderService.GetDirectoryModelAsync(Path);
+	private async Task SeedFileSystemItemsAsync()
+	{
+		IsLoaded = true;
 
-            foreach (var directoryModel in currentDirectoryModel.DirectoryModels)
-            {
-                var fileSystemItemViewModel = _mapper.Map<DirectoryViewModel>(directoryModel);
+		try
+		{
+			var currentDirectoryModel = await _folderService.GetDirectoryModelAsync(Path);
 
-                ChildFileSystemItems.Add(fileSystemItemViewModel);
-            }
-        }
-        catch (Exception exception)
-        {
-            _logger.Error(exception, $"Unexpected exception during getting files from folder: {Path}");
-        }
-        finally
-        {
-            IsLoaded = false;
-        }
-    }
+			foreach (var directoryModel in currentDirectoryModel.DirectoryModels)
+			{
+				var fileSystemItemViewModel = _mapper.Map<DirectoryViewModel>(directoryModel);
+
+				ChildFileSystemItems.Add(fileSystemItemViewModel);
+			}
+		}
+		catch (Exception exception)
+		{
+			_logger.Error(exception, $"Unexpected exception during getting files from folder: {Path}");
+		}
+		finally
+		{
+			IsLoaded = false;
+		}
+	}
 }
