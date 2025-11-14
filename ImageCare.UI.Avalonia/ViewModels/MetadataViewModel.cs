@@ -1,67 +1,84 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Input;
 
-using DryIoc;
-
 using ImageCare.Core.Domain.Preview;
-using ImageCare.Core.Services.MediaPreviewService;
 using ImageCare.Core.Services.MediaPreviewOperationsService;
+using ImageCare.Core.Services.MediaPreviewService;
 using ImageCare.Mvvm;
 using ImageCare.UI.Avalonia.ViewModels.Domain;
 
 using Prism.Commands;
 
-using XmpCore.Impl;
+using Serilog;
 
-namespace ImageCare.UI.Avalonia.ViewModels
+namespace ImageCare.UI.Avalonia.ViewModels;
+
+internal sealed class MetadataViewModel : ViewModelBase
 {
-    internal sealed class MetadataViewModel:ViewModelBase
-    {
-        private readonly IMediaPreviewService _imageService;
-        private readonly IMediaPreviewOperationsService _fileOperationsService;
+	private readonly IMediaPreviewService _imageService;
+	private readonly IMediaPreviewOperationsService _fileOperationsService;
+	private readonly ILogger _logger;
 
-        public ObservableCollection<TagDescriptionViewModel> MetadataList { get; }
+	public MetadataViewModel(IMediaPreviewService imageService,
+	                         IMediaPreviewOperationsService fileOperationsService,
+	                         ILogger logger)
+	{
+		_imageService = imageService;
+		_fileOperationsService = fileOperationsService;
+		_logger = logger;
 
-        public MetadataViewModel(IMediaPreviewService imageService, 
-                                 IMediaPreviewOperationsService fileOperationsService)
-        {
-            _imageService = imageService;
-            _fileOperationsService = fileOperationsService;
+		MetadataList = new ObservableCollection<TagDescriptionViewModel>();
+		OnViewLoadedCommand = new DelegateCommand(OnViewLoaded);
+	}
 
-            MetadataList = new ObservableCollection<TagDescriptionViewModel>();
-            OnViewLoadedCommand = new DelegateCommand(OnViewLoaded);
-        }
+	public ObservableCollection<TagDescriptionViewModel> MetadataList { get; }
 
-        private void OnViewLoaded()
-        {
-            MetadataList.Clear();
+	public ICommand OnViewLoadedCommand { get; }
 
-            var lastSelectedMediaPreview = _fileOperationsService.GetLastSelectedMediaPreview();
+	private void OnViewLoaded()
+	{
+		try
+		{
+			MetadataList.Clear();
 
-            if (lastSelectedMediaPreview == null)
-            {
-                return;
-            }
+			var lastSelectedMediaPreview = _fileOperationsService.GetLastSelectedMediaPreview();
 
-            FillMetadataListAsync(lastSelectedMediaPreview);
-        }
+			if (lastSelectedMediaPreview == null)
+			{
+				return;
+			}
 
-        private async Task FillMetadataListAsync(MediaPreview lastSelectedMediaPreview)
-        {
-            var metadata = await _imageService.GetMediaMetadataAsync(lastSelectedMediaPreview);
+			_ = FillMetadataListAsync(lastSelectedMediaPreview);
+		}
+		catch (Exception ex)
+		{
+			_logger.Error(ex, "Error during metadata view initialization");
+		}
+	}
 
-            foreach (var item in metadata.AllMetadata)
-            {
-                MetadataList.Add(new TagDescriptionViewModel(item.Key, item.Value));
-            }
-        }
+	private async Task FillMetadataListAsync(MediaPreview lastSelectedMediaPreview)
+	{
+		try
+		{
+			var metadata = await _imageService.GetMediaMetadataAsync(lastSelectedMediaPreview);
 
-        public ICommand OnViewLoadedCommand { get; }
-
-    }
+			foreach (var item in metadata.AllMetadata)
+			{
+				try
+				{
+					MetadataList.Add(new TagDescriptionViewModel(item.Key, item.Value));
+				}
+				catch (Exception ex)
+				{
+					_logger.Error(ex, "Failed to add metadata item with key: {Key}", item.Key);
+				}
+			}
+		}
+		catch (Exception ex)
+		{
+			_logger.Error(ex, "Failed to load metadata for: {Url}", lastSelectedMediaPreview.Url);
+		}
+	}
 }
