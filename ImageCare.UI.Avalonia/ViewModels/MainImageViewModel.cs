@@ -79,7 +79,6 @@ internal class MainImageViewModel : NavigatedViewModelBase
 		{
 			if (_mainBitmap != value)
 			{
-				_mainBitmap?.Dispose();
 				SetProperty(ref _mainBitmap, value);
 			}
 		}
@@ -183,7 +182,7 @@ internal class MainImageViewModel : NavigatedViewModelBase
 			{
 				CancelImageLoading();
 				_compositeDisposable?.Dispose();
-				MainBitmap = null; // Освобождает bitmap
+				MainBitmap = null;
 			}
 			catch (Exception ex)
 			{
