@@ -21,6 +21,8 @@ using ImageCare.UI.Avalonia.Views;
 
 using Prism.Regions;
 
+using Serilog;
+
 namespace ImageCare.UI.Avalonia.ViewModels;
 
 public class MainWindowViewModel : ViewModelBase
@@ -31,15 +33,17 @@ public class MainWindowViewModel : ViewModelBase
 	private readonly INotificationService _notificationService;
 	private readonly IMapper _mapper;
 	private readonly SynchronizationContext _synchronizationContext;
+	private readonly ILogger _logger;
 	private CompositeDisposable _subscriptions;
 	private SelectedMediaPreview? _currentSelectedPreview;
 
 	public MainWindowViewModel(IRegionManager regionManager,
-	                           IMediaPreviewOperationsService fileOperationsService,
-	                           IFolderService folderService,
-	                           INotificationService notificationService,
-	                           IMapper mapper,
-	                           SynchronizationContext synchronizationContext)
+							   IMediaPreviewOperationsService fileOperationsService,
+							   IFolderService folderService,
+							   INotificationService notificationService,
+							   IMapper mapper,
+							   SynchronizationContext synchronizationContext,
+							   ILogger logger)
 	{
 		_regionManager = regionManager;
 		_fileOperationsService = fileOperationsService;
@@ -47,6 +51,7 @@ public class MainWindowViewModel : ViewModelBase
 		_notificationService = notificationService;
 		_mapper = mapper;
 		_synchronizationContext = synchronizationContext;
+		_logger = logger;
 
 		OnViewLoadedCommand = new RelayCommand(OnViewLoaded);
 		OnViewUnloadedCommand = new RelayCommand(OnViewUnloaded);
@@ -65,148 +70,220 @@ public class MainWindowViewModel : ViewModelBase
 
 	private async Task CopyImagePreviewAsync()
 	{
-		if (_currentSelectedPreview == null)
+		try
 		{
-			return;
+			if (_currentSelectedPreview == null)
+			{
+				return;
+			}
+
+			var targetDirectory = _folderService.GetSelectedDirectory(_currentSelectedPreview.FileManagerPanel == FileManagerPanel.Left ? FileManagerPanel.Right : FileManagerPanel.Left);
+
+			if (targetDirectory == null)
+			{
+				return;
+			}
+
+			var notificationTitle = $"{_currentSelectedPreview.Url} => {targetDirectory.Path}";
+			_notificationService.SendNotification(new Notification(notificationTitle, string.Empty));
+			var progress = new Progress<OperationInfo>();
+
+			progress.ProgressChanged += (o, info) => { _notificationService.SendNotification(new Notification(notificationTitle, info.Percentage.ToString("F1"))); };
+
+			var result = await _fileOperationsService.CopyImagePreviewToDirectoryAsync(
+							 _mapper.Map<MediaPreview>(_currentSelectedPreview),
+							 targetDirectory.Path,
+							 progress);
+
+			switch (result)
+			{
+				case OperationResult.Success:
+					_notificationService.SendNotification(new SuccessNotification(notificationTitle, ""));
+					break;
+				case OperationResult.Failed:
+					_notificationService.SendNotification(new ErrorNotification(notificationTitle, ""));
+					_logger.Error("Failed to copy image preview from {Source} to {Target}", _currentSelectedPreview.Url, targetDirectory.Path);
+					break;
+			}
 		}
-
-		var targetDirectory = _folderService.GetSelectedDirectory(_currentSelectedPreview.FileManagerPanel == FileManagerPanel.Left ? FileManagerPanel.Right : FileManagerPanel.Left);
-
-		if (targetDirectory == null)
+		catch (Exception ex)
 		{
-			return;
-		}
-
-		var notificationTitle = $"{_currentSelectedPreview.Url} => {targetDirectory.Path}";
-		_notificationService.SendNotification(new Notification(notificationTitle, string.Empty));
-		var progress = new Progress<OperationInfo>();
-
-		progress.ProgressChanged += (o, info) => { _notificationService.SendNotification(new Notification(notificationTitle, info.Percentage.ToString("F1"))); };
-
-		var result = await _fileOperationsService.CopyImagePreviewToDirectoryAsync(
-			             _mapper.Map<MediaPreview>(_currentSelectedPreview),
-			             targetDirectory.Path,
-			             progress);
-
-		switch (result)
-		{
-			case OperationResult.Success:
-				_notificationService.SendNotification(new SuccessNotification(notificationTitle, ""));
-				break;
-			case OperationResult.Failed:
-				_notificationService.SendNotification(new ErrorNotification(notificationTitle, ""));
-				break;
+			_logger.Error(ex, "Error copying image preview from {Source}", _currentSelectedPreview?.Url);
 		}
 	}
 
 	private async Task MoveImagePreviewAsync()
 	{
-		if (_currentSelectedPreview == null)
+		try
 		{
-			return;
+			if (_currentSelectedPreview == null)
+			{
+				return;
+			}
+
+			var targetDirectory = _folderService.GetSelectedDirectory(_currentSelectedPreview.FileManagerPanel == FileManagerPanel.Left ? FileManagerPanel.Right : FileManagerPanel.Left);
+
+			if (targetDirectory == null)
+			{
+				return;
+			}
+
+			var notificationTitle = $"{_currentSelectedPreview.Url} => {targetDirectory.Path}";
+			_notificationService.SendNotification(new Notification(notificationTitle, string.Empty));
+			var progress = new Progress<OperationInfo>();
+
+			progress.ProgressChanged += (o, info) => { _notificationService.SendNotification(new Notification(notificationTitle, info.Percentage.ToString("F1"))); };
+
+			var result = await _fileOperationsService.MoveImagePreviewToDirectoryAsync(
+							 _mapper.Map<MediaPreview>(_currentSelectedPreview),
+							 targetDirectory.Path,
+							 progress);
+
+			switch (result)
+			{
+				case OperationResult.Success:
+					_notificationService.SendNotification(new SuccessNotification(notificationTitle, ""));
+					break;
+				case OperationResult.Failed:
+					_notificationService.SendNotification(new ErrorNotification(notificationTitle, ""));
+					_logger.Error("Failed to move image preview from {Source} to {Target}", _currentSelectedPreview.Url, targetDirectory.Path);
+					break;
+			}
 		}
-
-		var targetDirectory = _folderService.GetSelectedDirectory(_currentSelectedPreview.FileManagerPanel == FileManagerPanel.Left ? FileManagerPanel.Right : FileManagerPanel.Left);
-
-		if (targetDirectory == null)
+		catch (Exception ex)
 		{
-			return;
-		}
-
-		var notificationTitle = $"{_currentSelectedPreview.Url} => {targetDirectory.Path}";
-		_notificationService.SendNotification(new Notification(notificationTitle, string.Empty));
-		var progress = new Progress<OperationInfo>();
-
-		progress.ProgressChanged += (o, info) => { _notificationService.SendNotification(new Notification(notificationTitle, info.Percentage.ToString("F1"))); };
-
-		var result = await _fileOperationsService.MoveImagePreviewToDirectoryAsync(
-			             _mapper.Map<MediaPreview>(_currentSelectedPreview),
-			             targetDirectory.Path,
-			             progress);
-
-		switch (result)
-		{
-			case OperationResult.Success:
-				_notificationService.SendNotification(new SuccessNotification(notificationTitle, ""));
-				break;
-			case OperationResult.Failed:
-				_notificationService.SendNotification(new ErrorNotification(notificationTitle, ""));
-				break;
+			_logger.Error(ex, "Error moving image preview from {Source}", _currentSelectedPreview?.Url);
 		}
 	}
 
 	private bool CanDoPreviewOperation()
 	{
-		if (_currentSelectedPreview?.Url != string.Empty)
+		try
 		{
-			switch (_currentSelectedPreview?.FileManagerPanel)
+			if (_currentSelectedPreview?.Url != string.Empty)
 			{
-				case FileManagerPanel.Left when _folderService.GetSelectedDirectory(FileManagerPanel.Right) != null:
-				case FileManagerPanel.Right when _folderService.GetSelectedDirectory(FileManagerPanel.Left) != null:
-					return true;
+				switch (_currentSelectedPreview?.FileManagerPanel)
+				{
+					case FileManagerPanel.Left when _folderService.GetSelectedDirectory(FileManagerPanel.Right) != null:
+					case FileManagerPanel.Right when _folderService.GetSelectedDirectory(FileManagerPanel.Left) != null:
+						return true;
+				}
 			}
-		}
 
-		return false;
+			return false;
+		}
+		catch (Exception ex)
+		{
+			_logger.Error(ex, "Error checking if preview operation can be performed");
+			return false;
+		}
 	}
 
 	private void OnImagePreviewSelected(SelectedMediaPreview preview)
 	{
-		if (preview.MediaFormat.MediaType == MediaType.Video && !_regionManager.Regions[RegionNames.MainImageViewRegion].ActiveViews.Any(v => v is MainVideoView))
+		try
 		{
-			_regionManager.RequestNavigate(RegionNames.MainImageViewRegion, "MainVideoView", new NavigationParameters { { "imagePreview", preview } });
-		}
+			if (preview.MediaFormat.MediaType == MediaType.Video && !_regionManager.Regions[RegionNames.MainImageViewRegion].ActiveViews.Any(v => v is MainVideoView))
+			{
+				_regionManager.RequestNavigate(RegionNames.MainImageViewRegion, "MainVideoView", new NavigationParameters { { "imagePreview", preview } });
+			}
 
-		if (preview.MediaFormat.MediaType == MediaType.Image && !_regionManager.Regions[RegionNames.MainImageViewRegion].ActiveViews.Any(v => v is MainImageView))
+			if (preview.MediaFormat.MediaType == MediaType.Image && !_regionManager.Regions[RegionNames.MainImageViewRegion].ActiveViews.Any(v => v is MainImageView))
+			{
+				_regionManager.RequestNavigate(RegionNames.MainImageViewRegion, "MainImageView", new NavigationParameters { { "imagePreview", preview } });
+			}
+
+			_currentSelectedPreview = preview;
+			NotifyFileOperationCommandsCanExecuteChanged();
+		}
+		catch (Exception ex)
 		{
-			_regionManager.RequestNavigate(RegionNames.MainImageViewRegion, "MainImageView", new NavigationParameters { { "imagePreview", preview } });
+			_logger.Error(ex, "Error handling image preview selection for {Url}", preview?.Url);
 		}
-
-		_currentSelectedPreview = preview;
-		NotifyFileOperationCommandsCanExecuteChanged();
 	}
 
 	private void OnFolderSelected(SelectedDirectory directory)
 	{
-		NotifyFileOperationCommandsCanExecuteChanged();
+		try
+		{
+			NotifyFileOperationCommandsCanExecuteChanged();
+		}
+		catch (Exception ex)
+		{
+			_logger.Error(ex, "Error handling folder selection for {Path}", directory?.Path);
+		}
 	}
 
 	private void NotifyFileOperationCommandsCanExecuteChanged()
 	{
-		(CopySelectedPreviewCommand as AsyncRelayCommand)?.NotifyCanExecuteChanged();
-		(MoveSelectedPreviewCommand as AsyncRelayCommand)?.NotifyCanExecuteChanged();
+		try
+		{
+			(CopySelectedPreviewCommand as AsyncRelayCommand)?.NotifyCanExecuteChanged();
+			(MoveSelectedPreviewCommand as AsyncRelayCommand)?.NotifyCanExecuteChanged();
+		}
+		catch (Exception ex)
+		{
+			_logger.Error(ex, "Error notifying commands can execute changed");
+		}
 	}
 
 	private void OnViewLoaded()
 	{
-		_regionManager.RequestNavigate(RegionNames.SourceFoldersRegion, "FoldersView", OnNavigationResult, new NavigationParameters { { "panel", FileManagerPanel.Left } });
-		_regionManager.RequestNavigate(RegionNames.TargetFoldersRegion, "FoldersView", new NavigationParameters { { "panel", FileManagerPanel.Right } });
-		_regionManager.RequestNavigate(RegionNames.MainImageViewRegion, "MainImageView");
-		_regionManager.RequestNavigate(RegionNames.SourcePreviewImageRegion, "PreviewPanelView", new NavigationParameters { { "panel", FileManagerPanel.Left } });
-		_regionManager.RequestNavigate(RegionNames.TargetPreviewImageRegion, "PreviewPanelView", new NavigationParameters { { "panel", FileManagerPanel.Right } });
-		_regionManager.RequestNavigate(RegionNames.BottomBarRegion, "BottomBarView");
-
-		_subscriptions = new CompositeDisposable
+		try
 		{
-			_fileOperationsService.ImagePreviewSelected
-			                      .ObserveOn(_synchronizationContext)
-			                      .Subscribe(OnImagePreviewSelected),
-			_folderService.FileSystemItemSelected
-			              .ObserveOn(_synchronizationContext)
-			              .Subscribe(OnFolderSelected)
-		};
+			_regionManager.RequestNavigate(RegionNames.SourceFoldersRegion, "FoldersView", OnNavigationResult, new NavigationParameters { { "panel", FileManagerPanel.Left } });
+			_regionManager.RequestNavigate(RegionNames.TargetFoldersRegion, "FoldersView", new NavigationParameters { { "panel", FileManagerPanel.Right } });
+			_regionManager.RequestNavigate(RegionNames.MainImageViewRegion, "MainImageView");
+			_regionManager.RequestNavigate(RegionNames.SourcePreviewImageRegion, "PreviewPanelView", new NavigationParameters { { "panel", FileManagerPanel.Left } });
+			_regionManager.RequestNavigate(RegionNames.TargetPreviewImageRegion, "PreviewPanelView", new NavigationParameters { { "panel", FileManagerPanel.Right } });
+			_regionManager.RequestNavigate(RegionNames.BottomBarRegion, "BottomBarView");
+
+			_subscriptions = new CompositeDisposable
+			{
+				_fileOperationsService.ImagePreviewSelected
+									  .ObserveOn(_synchronizationContext)
+									  .Subscribe(OnImagePreviewSelected, OnObservableError),
+				_folderService.FileSystemItemSelected
+							  .ObserveOn(_synchronizationContext)
+							  .Subscribe(OnFolderSelected, OnObservableError)
+			};
+		}
+		catch (Exception ex)
+		{
+			_logger.Error(ex, "Error during MainWindowViewModel initialization");
+		}
 	}
 
 	private void OnViewUnloaded()
 	{
-		_subscriptions?.Dispose();
+		try
+		{
+			_subscriptions?.Dispose();
+		}
+		catch (Exception ex)
+		{
+			_logger.Error(ex, "Error during MainWindowViewModel cleanup");
+		}
 	}
 
 	private void OnNavigationResult(NavigationResult result)
 	{
-		if (result.Error?.InnerException != null)
+		try
 		{
-			throw result.Error.InnerException;
+			if (result.Error?.InnerException != null)
+			{
+				_logger.Error(result.Error.InnerException, "Navigation failed for region {Region}", result.Context.NavigationService.Region.Name);
+				throw result.Error.InnerException;
+			}
 		}
+		catch (Exception ex)
+		{
+			_logger.Error(ex, "Error handling navigation result");
+		}
+	}
+
+	private void OnObservableError(Exception exception)
+	{
+		_logger.Error(exception, "Error in observable sequence");
 	}
 }

@@ -1,19 +1,16 @@
-using System.Threading;
-
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
-
 using ImageCare.Core.Domain.Folders;
 using ImageCare.Core.Services.ConfigurationService;
 using ImageCare.Core.Services.DrivesWatcherService;
 using ImageCare.Core.Services.FileAssociationsService;
-using ImageCare.Core.Services.MediaPreviewService;
 using ImageCare.Core.Services.FileSystemService;
 using ImageCare.Core.Services.FileSystemWatcherService;
 using ImageCare.Core.Services.FolderService;
 using ImageCare.Core.Services.MediaPreviewOperationsService;
+using ImageCare.Core.Services.MediaPreviewService;
 using ImageCare.Core.Services.NotificationService;
 using ImageCare.Core.Services.ProcessService;
 using ImageCare.Modules.Logging;
@@ -23,10 +20,11 @@ using ImageCare.UI.Avalonia.Mapping;
 using ImageCare.UI.Avalonia.Services;
 using ImageCare.UI.Avalonia.Views;
 using ImageCare.UI.Common.Desktop.Views;
-
 using Prism.DryIoc;
 using Prism.Ioc;
 using Prism.Modularity;
+using Serilog;
+using System.Threading;
 
 namespace ImageCare.UI.Avalonia;
 
@@ -50,9 +48,9 @@ public class App : PrismApplication
 
 	protected override void ConfigureModuleCatalog(IModuleCatalog moduleCatalog)
 	{
-		base.ConfigureModuleCatalog(moduleCatalog);
-
 		moduleCatalog.AddModule<LoggerModule>();
+
+		base.ConfigureModuleCatalog(moduleCatalog);
 	}
 
 	/// <inheritdoc />
@@ -69,6 +67,8 @@ public class App : PrismApplication
 
 	protected override void RegisterTypes(IContainerRegistry containerRegistry)
 	{
+		containerRegistry.RegisterSingleton<ILogger>(provider => Log.Logger);
+
 		containerRegistry.Register<MainWindow>();
 		containerRegistry.Register<MainWindowTitleRightView>();
 		containerRegistry.Register<MetadataView>();
