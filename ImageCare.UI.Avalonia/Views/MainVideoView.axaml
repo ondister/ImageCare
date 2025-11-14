@@ -43,7 +43,8 @@
                 <Button
                     Background="Transparent"
                     BorderBrush="Transparent"
-                    Command="{Binding PlayCommand}">
+                    Command="{Binding PlayCommand}"
+                    IsEnabled="{Binding PlayCommand.CanExecute}">
                     <iconPacks:PackIconMaterial Kind="Play"
                                                 Height="{StaticResource Icon.Size.Small}"
                                                 Width="{StaticResource Icon.Size.Small}"
@@ -53,16 +54,19 @@
                 <Button
                     Background="Transparent"
                     BorderBrush="Transparent"
-                    Command="{Binding PauseCommand}">
+                    Command="{Binding PauseCommand}"
+                    IsEnabled="{Binding PauseCommand.CanExecute}">
                     <iconPacks:PackIconMaterial Kind="Pause"
                                                 Height="{StaticResource Icon.Size.Small}"
                                                 Width="{StaticResource Icon.Size.Small}"
                                                 Margin="{StaticResource MarginHorizontal.Small}" />
                 </Button>
+
                 <Button
                     Background="Transparent"
                     BorderBrush="Transparent"
-                    Command="{Binding StopCommand}">
+                    Command="{Binding StopCommand}"
+                    IsEnabled="{Binding StopCommand.CanExecute}">
                     <iconPacks:PackIconMaterial Kind="Stop"
                                                 Height="{StaticResource Icon.Size.Small}"
                                                 Width="{StaticResource Icon.Size.Small}"
