@@ -22,7 +22,7 @@ using ImageCare.Mvvm.Collections;
 using ImageCare.UI.Avalonia.Behaviors;
 using ImageCare.UI.Avalonia.ViewModels.Domain;
 
-using Prism.Regions;
+using Prism.Navigation.Regions;
 
 using Serilog;
 

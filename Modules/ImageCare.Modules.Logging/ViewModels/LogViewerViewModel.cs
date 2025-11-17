@@ -13,9 +13,6 @@ using ImageCare.Modules.Logging.Models;
 using ImageCare.Modules.Logging.Services;
 using ImageCare.Mvvm;
 
-using Prism.Commands;
-using Prism.Services.Dialogs;
-
 using Serilog;
 
 namespace ImageCare.Modules.Logging.ViewModels;
@@ -36,11 +33,12 @@ internal sealed class LogViewerViewModel : ViewModelBase, IDialogAware, IDisposa
 	private bool _showErrors = true;
 	private int _errorsCount;
 	private int _warningsCount;
+    private DialogCloseListener _requestClose;
 
-	public LogViewerViewModel(ILogEventService logEventService,
-	                          ILogNotificationService logNotificationService,
-	                          IMapper mapper,
-	                          ILogger logger)
+    public LogViewerViewModel(ILogEventService logEventService,
+                              ILogNotificationService logNotificationService,
+                              IMapper mapper,
+                              ILogger logger)
 	{
 		_logEventService = logEventService ?? throw new ArgumentNullException(nameof(logEventService));
 		_logNotificationService = logNotificationService ?? throw new ArgumentNullException(nameof(logNotificationService));
@@ -134,7 +132,10 @@ internal sealed class LogViewerViewModel : ViewModelBase, IDialogAware, IDisposa
 		}
 	}
 
-	public void OnDialogClosed()
+    /// <inheritdoc />
+    DialogCloseListener IDialogAware.RequestClose => _requestClose;
+
+    public void OnDialogClosed()
 	{
 		SafeDispose(ref _compositeDisposable);
 	}

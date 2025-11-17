@@ -22,9 +22,12 @@ using Mapsui.Layers;
 using Mapsui.Projections;
 using Mapsui.Styles;
 using Mapsui.Tiling;
+using Mapsui.Utilities;
+using Mapsui.Widgets;
+using Mapsui.Widgets.InfoWidgets;
 
 using Prism.Ioc;
-using Prism.Regions;
+using Prism.Navigation.Regions;
 
 using Serilog;
 
@@ -293,6 +296,8 @@ internal class MainImageViewModel : NavigatedViewModelBase
 					return;
 				}
 
+                LoggingWidget.ShowLoggingInMap = ActiveMode.No;
+				
 				var sphericalMercatorCoordinate = SphericalMercator.FromLonLat(location.Longitude, location.Latitude).ToMPoint();
 				Map.Navigator.CenterOnAndZoomTo(sphericalMercatorCoordinate, Map.Navigator.Viewport.Resolution);
 
@@ -316,7 +321,13 @@ internal class MainImageViewModel : NavigatedViewModelBase
 	{
 		var map = new Map();
 
-		map.Layers.Add(OpenStreetMap.CreateTileLayer());
+        var widgets=map.GetWidgetsOfMapAndLayers();
+        foreach (var widget in widgets)
+        {
+            widget.Enabled = false;
+        }
+
+        map.Layers.Add(OpenStreetMap.CreateTileLayer());
 		map.Navigator.RotationLock = true;
 
 		return map;
@@ -340,50 +351,27 @@ internal class MainImageViewModel : NavigatedViewModelBase
 		}
 	}
 
-	private SymbolStyle CreateBitmapStyle()
-	{
-		try
-		{
-			var bitmapId = LoadBitmapId(GetType());
-			var bitmapHeight = 300;
-			return new SymbolStyle { BitmapId = bitmapId, SymbolScale = 0.20, SymbolOffset = new Offset(0, bitmapHeight * 0.5) };
-		}
-		catch (Exception ex)
-		{
-			_logger.Error(ex, "Failed to create bitmap style");
+    private ImageStyle? CreateBitmapStyle()
+    {
+        try
+        {
+            var bitmapHeight = 300;
 
-			return new SymbolStyle();
-		}
-	}
+            return new ImageStyle
+            {
+                Image = "embedded://ImageCare.UI.Avalonia.Assets.birdPoint.png",
+                SymbolScale = 0.20,
+				Offset = new Offset(0, bitmapHeight * 0.5)
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "Failed to create bitmap style");
+            return null;
+        }
+    }
 
-	private int LoadBitmapId(Type typeInAssemblyOfEmbeddedResource)
-	{
-		try
-		{
-			var fullName = "ImageCare.UI.Avalonia.Assets.birdPoint.png";
-			if (BitmapRegistry.Instance.TryGetBitmapId(fullName, out var bitmapId))
-			{
-				return bitmapId;
-			}
-
-			var assembly = typeInAssemblyOfEmbeddedResource.GetTypeInfo().Assembly;
-			var stream = assembly.GetManifestResourceStream(fullName);
-			if (stream == null)
-			{
-				return bitmapId;
-			}
-
-			bitmapId = BitmapRegistry.Instance.Register(stream, fullName);
-			return bitmapId;
-		}
-		catch (Exception ex)
-		{
-			_logger.Error(ex, "Failed to load bitmap ID");
-			return -1;
-		}
-	}
-
-	private IEnumerable<IFeature> GetPhotoPointFromEmbeddedResource()
+    private IEnumerable<IFeature> GetPhotoPointFromEmbeddedResource()
 	{
 		try
 		{

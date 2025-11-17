@@ -1,7 +1,4 @@
-﻿using System.Linq;
-
-using AutoMapper;
-
+﻿using AutoMapper;
 using ImageCare.Core.Domain.Folders;
 using ImageCare.Core.Domain.Preview;
 using ImageCare.Core.Services.ConfigurationService;
@@ -13,10 +10,13 @@ using ImageCare.Core.Services.MediaPreviewService;
 using ImageCare.Core.Services.NotificationService;
 using ImageCare.Modules.Logging.Mapping;
 using ImageCare.UI.Avalonia.ViewModels.Domain;
-
 using Prism.Ioc;
 
-using Serilog;
+using System.Linq;
+
+using Microsoft.Extensions.Logging;
+
+using ILogger = Serilog.ILogger;
 
 namespace ImageCare.UI.Avalonia.Mapping;
 
@@ -24,7 +24,7 @@ internal sealed class ApplicationMapper
 {
 	private readonly Mapper _mapper;
 
-	public ApplicationMapper(IContainerProvider serviceLocator)
+	public ApplicationMapper(IContainerProvider serviceLocator, ILoggerFactory loggerFactory)
 	{
 		var config = new MapperConfiguration(cfg =>
 		{
@@ -157,7 +157,7 @@ internal sealed class ApplicationMapper
 			   .IncludeBase<Notification, NotificationViewModel>();
 
 			cfg.CreateMap<FileApplicationAssociation, FileApplicationAssociationViewModel>();
-		});
+		}, loggerFactory);
 
 		config.AssertConfigurationIsValid();
 

@@ -11,8 +11,8 @@ using ImageCare.Modules.Logging.Services;
 using ImageCare.UI.Avalonia.ViewModels.Domain;
 
 using Prism.Commands;
-using Prism.Regions;
-using Prism.Services.Dialogs;
+using Prism.Dialogs;
+using Prism.Navigation.Regions;
 
 using Serilog;
 
@@ -144,9 +144,7 @@ internal class BottomBarViewModel : NavigatedViewModelBase
 			var parameters = new DialogParameters();
 			_dialogService.ShowDialog(
 				"settingsViewer",
-				parameters,
-				null,
-				"childWindow");
+				parameters);
 
 			_logger.Debug("Settings window opened");
 		}

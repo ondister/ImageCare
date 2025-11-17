@@ -26,6 +26,10 @@ using Prism.Modularity;
 using Serilog;
 using System.Threading;
 
+using Microsoft.Extensions.Logging;
+
+using ILogger = Serilog.ILogger;
+
 namespace ImageCare.UI.Avalonia;
 
 public class App : PrismApplication
@@ -66,8 +70,10 @@ public class App : PrismApplication
 	}
 
 	protected override void RegisterTypes(IContainerRegistry containerRegistry)
-	{
-		containerRegistry.RegisterSingleton<ILogger>(provider => Log.Logger);
+    {
+        var loggerFactory = new Serilog.Extensions.Logging.SerilogLoggerFactory(Log.Logger);
+        containerRegistry.RegisterSingleton<ILoggerFactory>(_=>loggerFactory);
+        containerRegistry.RegisterSingleton<ILogger>(_ => Log.Logger);
 
 		containerRegistry.Register<MainWindow>();
 		containerRegistry.Register<MainWindowTitleRightView>();
@@ -104,7 +110,7 @@ public class App : PrismApplication
 		});
 		containerRegistry.RegisterSingleton<IFileDialogService, AvaloniaFileDialogService>();
 
-		containerRegistry.RegisterInstance(new ApplicationMapper(Container).GetMapper());
+		containerRegistry.RegisterInstance(new ApplicationMapper(Container, loggerFactory).GetMapper());
 		containerRegistry.RegisterInstance(SynchronizationContext.Current);
 		containerRegistry.RegisterSingleton<MapControlMediator>();
 

@@ -12,7 +12,7 @@ using ImageCare.Core.Services.FolderService;
 using ImageCare.Core.Services.MediaPreviewOperationsService;
 
 using Prism.Commands;
-using Prism.Regions;
+using Prism.Navigation.Regions;
 
 using Serilog;
 

@@ -1,6 +1,6 @@
 ﻿using ImageCare.Mvvm;
 
-using Prism.Regions;
+using Prism.Navigation.Regions;
 
 namespace ImageCare.UI.Avalonia;
 

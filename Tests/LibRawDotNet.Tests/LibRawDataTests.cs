@@ -35,8 +35,8 @@ public class LibRawDataTests
 		using (var libRawData = LibRawData.OpenFile(_canonCr3FilePath))
 		{
 			var stream = libRawData.GetPreviewJpegStream(index);
-			Assert.IsNotNull(stream);
-		}
+            Assert.That(stream, Is.Not.Null);
+        }
 	}
 
 	[Test]

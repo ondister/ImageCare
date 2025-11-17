@@ -19,7 +19,8 @@ using ImageCare.Core.Services.NotificationService;
 using ImageCare.Mvvm;
 using ImageCare.UI.Avalonia.Views;
 
-using Prism.Regions;
+using Prism.Navigation;
+using Prism.Navigation.Regions;
 
 using Serilog;
 
@@ -270,10 +271,11 @@ public class MainWindowViewModel : ViewModelBase
 	{
 		try
 		{
-			if (result.Error?.InnerException != null)
+			if (result.Exception?.InnerException != null)
 			{
-				_logger.Error(result.Error.InnerException, "Navigation failed for region {Region}", result.Context.NavigationService.Region.Name);
-				throw result.Error.InnerException;
+				_logger.Error(result.Exception?.InnerException, "Navigation failed for region {Region}", result.Context.NavigationService.Region.Name);
+
+				throw result.Exception?.InnerException;
 			}
 		}
 		catch (Exception ex)

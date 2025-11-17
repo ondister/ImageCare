@@ -12,7 +12,7 @@ using ImageCare.Mvvm;
 using ImageCare.UI.Avalonia.Services;
 using ImageCare.UI.Avalonia.ViewModels.Domain;
 
-using Prism.Services.Dialogs;
+using Prism.Dialogs;
 
 using Serilog;
 
@@ -28,11 +28,12 @@ public sealed class SettingsViewModel : ViewModelBase, IDialogAware
 	private string _newExtension = string.Empty;
 	private string _newName = string.Empty;
 	private FileApplicationAssociationViewModel? _selectedAssociation;
+    private DialogCloseListener _requestClose;
 
-	public SettingsViewModel(IConfigurationService configurationService,
-	                         IFileDialogService fileDialogService,
-	                         IMapper mapper,
-	                         ILogger logger)
+    public SettingsViewModel(IConfigurationService configurationService,
+                             IFileDialogService fileDialogService,
+                             IMapper mapper,
+                             ILogger logger)
 	{
 		_configService = configurationService;
 		_fileDialogService = fileDialogService;
@@ -109,7 +110,10 @@ public sealed class SettingsViewModel : ViewModelBase, IDialogAware
 		}
 	}
 
-	/// <inheritdoc />
+    /// <inheritdoc />
+    DialogCloseListener IDialogAware.RequestClose => _requestClose;
+
+    /// <inheritdoc />
 	public event Action<IDialogResult>? RequestClose;
 
 	protected override void OnDispose()

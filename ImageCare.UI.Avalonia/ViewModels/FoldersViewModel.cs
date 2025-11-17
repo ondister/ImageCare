@@ -15,7 +15,7 @@ using ImageCare.Core.Services.FolderService;
 using ImageCare.Mvvm.Collections;
 using ImageCare.UI.Avalonia.ViewModels.Domain;
 
-using Prism.Regions;
+using Prism.Navigation.Regions;
 
 using Serilog;
 
