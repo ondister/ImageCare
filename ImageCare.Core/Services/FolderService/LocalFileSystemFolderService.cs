@@ -103,16 +103,16 @@ public sealed class LocalFileSystemFolderService : IFolderService, IDisposable
                 return Enumerable.Empty<FileModel>();
             }
 
-            var files = _fileSystemService.GetFiles(directoryPath)
-                                          .Where(file => MatchesSearchPattern(file, searchPattern))
+            var files = _fileSystemService.EnumerateFiles(directoryPath, searchPattern)
                                           .Select(file => CreateFileModel(file))
-                                          .Where(f => f.CreatedDateTime.HasValue)
-                                          .OrderByDescending(f => f.CreatedDateTime.Value)
-                                          .ToList();
+                                          .Where(f => f.CreatedDateTime.HasValue);
 
             return files;
         });
     }
+
+
+
 
     public void SetSelectedDirectory(SelectedDirectory selectedDirectory)
     {
