@@ -23,7 +23,7 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" /> <!--Splitter-->
-            <RowDefinition Height="Auto" MinHeight="200" />
+            <RowDefinition Height="Auto" MinHeight="324" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
