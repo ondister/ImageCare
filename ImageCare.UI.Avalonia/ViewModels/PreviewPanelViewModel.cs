@@ -168,7 +168,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase, IDisposable
 		_сompositeDisposable.Dispose();
 	}
 
-	internal async Task HandleScroll(double horizontalOffset, double viewportWidth)
+	internal async Task HandleScrollAsync(double horizontalOffset, double viewportWidth)
 	{
 		_currentScrollCancellation.Cancel();
 		_currentScrollCancellation.Dispose();
@@ -306,7 +306,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase, IDisposable
 		mediaPreviewViewModel.Metadata = metadata;
 
 		mediaPreviewViewModel.RotateAngle = mediaPreviewViewModel.Metadata.Orientation.ToRotationAngle();
-		_ = mediaPreviewViewModel.LoadPreviewAsync();
+		_ = mediaPreviewViewModel.LoadPreviewAsync(CancellationToken.None);
 
 		_synchronizationContext.Send(d => { ImagePreviews.Add(mediaPreviewViewModel); }, null);
 	}
@@ -536,7 +536,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase, IDisposable
 			previewVm.Metadata = metadata;
 			previewVm.RotateAngle = metadata.Orientation.ToRotationAngle();
 
-			await previewVm.LoadPreviewAsync();
+			await previewVm.LoadPreviewAsync(CancellationToken.None);
 		}
 		finally
 		{

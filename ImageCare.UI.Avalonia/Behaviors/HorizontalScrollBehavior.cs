@@ -96,7 +96,7 @@ public class HorizontalScrollBehavior : Behavior<ScrollViewer>
 
 		if (_scrollViewer.DataContext is PreviewPanelViewModel vm)
 		{
-			await vm.HandleScroll(_scrollViewer.Offset.X, _scrollViewer.Viewport.Width);
+			await vm.HandleScrollAsync(_scrollViewer.Offset.X, _scrollViewer.Viewport.Width);
 		}
 	}
 }

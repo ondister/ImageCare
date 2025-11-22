@@ -95,8 +95,17 @@
                                                         VerticalAlignment="Center"
                                                         HorizontalAlignment="Center"
                                                         MaxHeight="{Binding MaxImageHeight}">
-                                    <Image Source="{Binding PreviewBitmap}" />
-                                    <LayoutTransformControl.LayoutTransform>
+                                    <Grid>
+                                        <iconPacks:PackIconLucide Kind="Image"
+                                                                  HorizontalAlignment="Center"
+                                                                  VerticalAlignment="Center"
+                                                                  Height="{StaticResource Icon.Size.Giant}"
+                                                                  Width="{StaticResource Icon.Size.Giant}"
+                                                                  IsVisible="{Binding IsLoading}"/>
+                                        <Image Source="{Binding PreviewBitmap}" />
+									</Grid>
+
+									<LayoutTransformControl.LayoutTransform>
                                         <RotateTransform Angle="{Binding RotateAngle}" />
                                     </LayoutTransformControl.LayoutTransform>
                                 </LayoutTransformControl>

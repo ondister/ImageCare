@@ -14,8 +14,8 @@ using ImageCare.Core.Domain.Media.Metadata;
 using ImageCare.Core.Domain.MediaFormats;
 using ImageCare.Core.Domain.Preview;
 using ImageCare.Core.Services.FileAssociationsService;
-using ImageCare.Core.Services.MediaPreviewService;
 using ImageCare.Core.Services.MediaPreviewOperationsService;
+using ImageCare.Core.Services.MediaPreviewService;
 using ImageCare.Core.Services.NotificationService;
 using ImageCare.Mvvm;
 
@@ -33,7 +33,7 @@ internal class MediaPreviewViewModel : ViewModelBase, IComparable<MediaPreviewVi
     private readonly ILogger _logger;
     private Bitmap? _previewBitmap;
     private bool _selected;
-    private bool _isLoading;
+    private bool _isLoading = true;
     private int _maxImageHeight = 200;
     private string _metadataString;
     private string _dateTimeString;
@@ -41,6 +41,8 @@ internal class MediaPreviewViewModel : ViewModelBase, IComparable<MediaPreviewVi
     private bool _useOpenWith;
     private bool _hasLocation;
     private IMediaMetadata? _metadata;
+
+    private DateTime _fileDate;
 
     public MediaPreviewViewModel(string? title,
                                  string url,
@@ -67,18 +69,17 @@ internal class MediaPreviewViewModel : ViewModelBase, IComparable<MediaPreviewVi
 
         RemoveImagePreviewCommand = new AsyncRelayCommand(RemoveImagePreviewAsync);
 
-      //  _ = LoadPreviewAsync();
+        //  _ = LoadPreviewAsync();
         OpenWithViewModels = CreateOpenWithItems();
     }
 
-    private DateTime _fileDate;
     public DateTime FileDate
     {
-	    get => _fileDate;
-	    set => SetProperty(ref _fileDate, value);
+        get => _fileDate;
+        set => SetProperty(ref _fileDate, value);
     }
 
-	public string? Title { get; }
+    public string? Title { get; }
 
     public string Url { get; }
 
@@ -138,24 +139,24 @@ internal class MediaPreviewViewModel : ViewModelBase, IComparable<MediaPreviewVi
 
     public bool HasLocation
     {
-	    get => _hasLocation;
-	    set => SetProperty(ref _hasLocation, value);
+        get => _hasLocation;
+        set => SetProperty(ref _hasLocation, value);
     }
 
     public IMediaMetadata? Metadata
     {
-	    get => _metadata;
-	    internal set
-	    {
-		    SetProperty(ref _metadata, value);
-		    HasLocation = _metadata != null && _metadata.Location != Location.Empty;
-		    FileDate = _metadata.CreationDateTime;
-	    } 
+        get => _metadata;
+        internal set
+        {
+            SetProperty(ref _metadata, value);
+            HasLocation = _metadata != null && _metadata.Location != Location.Empty;
+            FileDate = _metadata.CreationDateTime;
+        }
     }
 
     public bool IsLoaded => PreviewBitmap != null;
 
-	public int CompareTo(MediaPreviewViewModel? other)
+    public int CompareTo(MediaPreviewViewModel? other)
     {
         if (other == null)
         {
@@ -163,6 +164,25 @@ internal class MediaPreviewViewModel : ViewModelBase, IComparable<MediaPreviewVi
         }
 
         return string.CompareOrdinal(Url, other.Url);
+    }
+
+    public async Task LoadPreviewAsync(CancellationToken token)
+    {
+        IsLoading = true;
+
+        try
+        {
+            await using var imageStream = await _imageService.GetJpegImageStreamAsync(_mapper.Map<MediaPreview>(this), MediaPreviewSize.Medium, token);
+            PreviewBitmap = await Task.Run(() => Bitmap.DecodeToHeight(imageStream, MaxImageHeight, BitmapInterpolationMode.LowQuality), token);
+        }
+        catch (Exception exception)
+        {
+            _logger.Error(exception, $"Unexpected exception during creating bitmap preview for file {Url}");
+        }
+        finally
+        {
+            IsLoading = false;
+        }
     }
 
     internal async Task RemoveImagePreviewAsync()
@@ -187,27 +207,6 @@ internal class MediaPreviewViewModel : ViewModelBase, IComparable<MediaPreviewVi
         catch (Exception exception)
         {
             _logger.Error(exception, $"Unexpected exception during preview deletion for file {Url}");
-        }
-    }
-
-    public async Task LoadPreviewAsync()
-    {
-        IsLoading = true;
-
-        try
-        {
-            await using (var imageStream = await _imageService.GetJpegImageStreamAsync(_mapper.Map<MediaPreview>(this), MediaPreviewSize.Medium))
-            {
-				PreviewBitmap = await Task.Run(() => Bitmap.DecodeToHeight(imageStream, MaxImageHeight, BitmapInterpolationMode.LowQuality));
-            }
-        }
-        catch (Exception exception)
-        {
-            _logger.Error(exception, $"Unexpected exception during creating bitmap preview for file {Url}");
-        }
-        finally
-        {
-            IsLoading = false;
         }
     }
 
