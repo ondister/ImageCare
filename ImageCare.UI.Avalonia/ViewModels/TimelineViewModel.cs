@@ -1,14 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Threading;
 using System.Windows.Input;
 
+using DynamicData;
+
 using ImageCare.Core.Domain.Folders;
+using ImageCare.Core.Services.FolderStatisticsService;
 using ImageCare.Mvvm;
-using ImageCare.Mvvm.Collections;
 using ImageCare.UI.Avalonia.ViewModels.Domain;
 
 using Prism.Commands;
@@ -17,177 +20,169 @@ namespace ImageCare.UI.Avalonia.ViewModels;
 
 internal class TimelineViewModel : ViewModelBase, IDisposable
 {
-	private readonly SynchronizationContext _synchronizationContext;
-	private readonly Subject<DateTime> _dateSelectedSubject;
+    private readonly SynchronizationContext _synchronizationContext;
+    private readonly Subject<DateTime> _dateSelectedSubject;
+    private readonly CompositeDisposable _disposables = new();
+    private readonly IFolderStatisticsService _folderStatisticsService;
+    private readonly SourceCache<DateStatViewModel, DateTime> _dateStatsCache;
+    private int _totalFilesCount;
+    private bool _isLoading;
 
-	public TimelineViewModel()
-		: this(SynchronizationContext.Current ?? new SynchronizationContext()) { }
+    public TimelineViewModel(IFolderStatisticsService folderStatisticsService, SynchronizationContext synchronizationContext)
+    {
+        _folderStatisticsService = folderStatisticsService ?? throw new ArgumentNullException(nameof(folderStatisticsService));
+        _synchronizationContext = synchronizationContext ?? throw new ArgumentNullException(nameof(synchronizationContext));
 
-	public TimelineViewModel(SynchronizationContext synchronizationContext)
-	{
-		_synchronizationContext = synchronizationContext ?? throw new ArgumentNullException(nameof(synchronizationContext));
-		DateStatViewModels = new SortedObservableCollection<DateStatViewModel>(new DateStatViewModelDescendingComparer());
-		_dateSelectedSubject = new Subject<DateTime>();
-	}
+        _dateStatsCache = new SourceCache<DateStatViewModel, DateTime>(x => x.Date);
 
-	public ICommand ColumnClickCommand => new DelegateCommand<DateStatViewModel>(
-		item =>
-		{
-			_dateSelectedSubject.OnNext(item.Date);
-		});
+        _dateStatsCache.Connect()
+                       .Sort(new DateStatViewModelDescendingComparer())
+                       .Bind(out var dateStatViewModels)
+                       .Subscribe()
+                       .DisposeWith(_disposables);
 
-	public IObservable<DateTime> DateSelected => _dateSelectedSubject.AsObservable();
+        DateStatViewModels = dateStatViewModels;
+        _dateSelectedSubject = new Subject<DateTime>();
 
-	public SortedObservableCollection<DateStatViewModel> DateStatViewModels { get; }
+        _folderStatisticsService.BucketChanged
+                                .Buffer(TimeSpan.FromMilliseconds(500))
+                                .Where(bufferedBuckets => bufferedBuckets.Count > 0)
+                                .Subscribe(OnBucketsChanged)
+                                .DisposeWith(_disposables);
 
-	public void AddFile(FileModel file)
-	{
-		if (file.CreatedDateTime == null)
-		{
-			return;
-		}
+        _folderStatisticsService.ScanProgress
+                                .Subscribe(OnScanProgressChanged)
+                                .DisposeWith(_disposables);
+        _folderStatisticsService.TotalFilesCount
+                                .ObserveOn(_synchronizationContext)
+                                .Subscribe(totalFiles => TotalFilesCount = totalFiles)
+                                .DisposeWith(_disposables);
+    }
 
-		var date = file.CreatedDateTime.Value.Date;
+    public ICommand ColumnClickCommand => new DelegateCommand<DateStatViewModel>(item => { _dateSelectedSubject.OnNext(item.Date); });
 
-		_synchronizationContext.Post(
-			_ =>
-			{
-				var existingItem = DateStatViewModels.FirstOrDefault(x => x.Date == date);
+    public IObservable<DateTime> DateSelected => _dateSelectedSubject.AsObservable();
 
-				if (existingItem != null)
-				{
-					existingItem.Count++;
-				}
-				else
-				{
-					DateStatViewModels.Add(
-						new DateStatViewModel
-						{
-							Date = date,
-							Count = 1
-						});
-				}
+    public IReadOnlyCollection<DateStatViewModel> DateStatViewModels { get; }
 
-				UpdateDateFlags();
-				UpdateNormalizedHeights();
-			},
-			null);
-	}
+    public int TotalFilesCount
+    {
+        get => _totalFilesCount;
+        private set => SetProperty(ref _totalFilesCount, value);
+    }
 
-	public void AddFiles(IEnumerable<FileModel> files)
-	{
-		_synchronizationContext.Post(
-			_ =>
-			{
-				foreach (var file in files)
-				{
-					if (file.CreatedDateTime == null)
-					{
-						continue;
-					}
+    public bool IsLoading
+    {
+        get => _isLoading;
+        private set => SetProperty(ref _isLoading, value);
+    }
 
-					var date = file.CreatedDateTime.Value.Date;
-					var existingItem = DateStatViewModels.FirstOrDefault(x => x.Date == date);
+    public void Dispose()
+    {
+        _dateSelectedSubject.Dispose();
+        _disposables.Dispose();
+        _dateStatsCache.Dispose();
+    }
 
-					if (existingItem != null)
-					{
-						existingItem.Count++;
-					}
-					else
-					{
-						DateStatViewModels.Add(
-							new DateStatViewModel
-							{
-								Date = date,
-								Count = 1
-							});
-					}
-				}
+    public void Clear()
+    {
+        _synchronizationContext.Post(
+            _ =>
+            {
+                _dateStatsCache.Clear();
+                TotalFilesCount = 0;
+                IsLoading = false;
+            },
+            null);
+    }
 
-				UpdateDateFlags();
-				UpdateNormalizedHeights();
-			},
-			null);
-	}
+    public static double Normalize(double x, double min, double max, double a, double b)
+    {
+        if (Math.Abs(max - min) < double.Epsilon)
+        {
+            return (a + b) / 2d;
+        }
 
-	public void RemoveFile(FileModel file)
-	{
-		if (file.CreatedDateTime == null)
-		{
-			return;
-		}
+        var result = a + (x - min) * (b - a) / (max - min);
 
-		var date = file.CreatedDateTime.Value.Date;
+        if (double.IsNaN(result) || double.IsInfinity(result))
+        {
+            return a;
+        }
 
-		_synchronizationContext.Post(
-			_ =>
-			{
-				var existingItem = DateStatViewModels.FirstOrDefault(x => x.Date == date);
+        return result;
+    }
 
-				if (existingItem != null)
-				{
-					existingItem.Count--;
+    private void OnBucketsChanged(IList<FilesBucket> bufferedBuckets)
+    {
+        _synchronizationContext.Post(
+            _ =>
+            {
+                _dateStatsCache.Edit(innerCache =>
+                {
+                    foreach (var bucket in bufferedBuckets)
+                    {
+                        var dateStat = new DateStatViewModel
+                        {
+                            Date = bucket.Date,
+                            Count = bucket.FilesCount
+                        };
 
-					if (existingItem.Count <= 0)
-					{
-						DateStatViewModels.Remove(existingItem);
-					}
+                        innerCache.AddOrUpdate(dateStat);
+                    }
+                });
 
-					UpdateNormalizedHeights();
-				}
-			},
-			null);
-	}
+                UpdateDateFlags();
+                UpdateNormalizedHeights();
+            },
+            null);
+    }
 
-	public void Clear()
-	{
-		_synchronizationContext.Post(
-			_ => { DateStatViewModels.Clear(); },
-			null);
-	}
+    private void OnScanProgressChanged(ScanProgress progress)
+    {
+        _synchronizationContext.Post(
+            _ =>
+            {
+                switch (progress.Status)
+                {
+                    case ScanStatus.InitialScanStarted:
+                        IsLoading = true;
+                        break;
+                    case ScanStatus.InitialScanCompleted:
+                        IsLoading = false;
+                        break;
+                    case ScanStatus.ErrorOccurred:
+                        IsLoading = false;
+                        break;
+                }
+            },
+            null);
+    }
 
-	public static double Normalize(double x, double min, double max, double a, double b)
-	{
-		if (Math.Abs(max - min) < double.Epsilon)
-		{
-			return (a + b) / 2d;
-		}
+    private void UpdateDateFlags()
+    {
+        var allItems = _dateStatsCache.Items.ToList();
+        foreach (var item in allItems)
+        {
+            item.UpdateMonthYearFlag(allItems);
+        }
+    }
 
-		var result = a + (x - min) * (b - a) / (max - min);
+    private void UpdateNormalizedHeights()
+    {
+        var items = _dateStatsCache.Items.ToList();
+        if (items.Count == 0)
+        {
+            return;
+        }
 
-		if (double.IsNaN(result) || double.IsInfinity(result))
-		{
-			return a;
-		}
+        var minCount = items.Min(s => s.Count);
+        var maxCount = items.Max(s => s.Count);
 
-		return result;
-	}
-
-	private void UpdateDateFlags()
-	{
-		foreach (var item in DateStatViewModels)
-		{
-			item.UpdateMonthYearFlag(DateStatViewModels);
-		}
-	}
-
-	private void UpdateNormalizedHeights()
-	{
-		if (DateStatViewModels.Count == 0)
-		{
-			return;
-		}
-
-		foreach (var item in DateStatViewModels)
-		{
-			var normalizedHeight = Normalize(item.Count, DateStatViewModels.Min(s => s.Count), DateStatViewModels.Max(s => s.Count), 0, 40); //40 - max bar height
-
-			item.NormalizedHeight = Math.Max(normalizedHeight, 4);
-		}
-	}
-
-	public void Dispose()
-	{
-		_dateSelectedSubject.Dispose();
-	}
+        foreach (var item in items)
+        {
+            var normalizedHeight = Normalize(item.Count, minCount, maxCount, 0, 40);
+            item.NormalizedHeight = Math.Max(normalizedHeight, 4);
+        }
+    }
 }

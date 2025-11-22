@@ -24,20 +24,10 @@
     <Grid RowDefinitions="Auto,*"
           Margin="{StaticResource MarginAll.Small}">
 
-        <!--Simple statistics-->
-        <Grid Grid.Row="0"
-              ColumnDefinitions="Auto,*"
-              Margin="{StaticResource MarginAll.Small}">
+        <!--Statistics-->
 
-            <TextBlock Grid.Column="0"
-                       Margin="{StaticResource MarginHorizontal.Small}"
-                       VerticalAlignment="Bottom"
-                       Text="{Binding Statistics}"
-                       FontWeight="Bold" />
-
-            <views:TimelineView Grid.Column="1"
+            <views:TimelineView Grid.Row="0"
                                 DataContext="{Binding TimelineVm}" />
-        </Grid>
 
         <ScrollViewer Grid.Row="1"
                       HorizontalScrollBarVisibility="Auto"

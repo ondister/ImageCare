@@ -26,6 +26,8 @@ using Prism.Modularity;
 using Serilog;
 using System.Threading;
 
+using ImageCare.Core.Services.FolderStatisticsService;
+
 using Microsoft.Extensions.Logging;
 
 using ILogger = Serilog.ILogger;
@@ -116,7 +118,8 @@ public class App : PrismApplication
 
 		containerRegistry.Register<IFileSystemWatcherService, LocalFileSystemWatcherService>();
 		containerRegistry.Register<IMultiSourcesFileSystemWatcherService, MultiSourcesLocalFileSystemWatcherService>();
-		containerRegistry.Register<ImagePreviewDropHandler, ImagePreviewDropHandler>();
+        containerRegistry.Register<IFolderStatisticsService, FileWatcherFolderStatisticsService>();
+        containerRegistry.Register<ImagePreviewDropHandler, ImagePreviewDropHandler>();
 
 		containerRegistry.RegisterDialogWindow<ChildWindow>("childWindow");
 		containerRegistry.RegisterDialog<SettingsView>("settingsViewer");

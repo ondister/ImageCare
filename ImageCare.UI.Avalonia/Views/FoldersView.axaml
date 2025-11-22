@@ -4,7 +4,7 @@
              xmlns:viewModels="clr-namespace:ImageCare.UI.Avalonia.ViewModels"
              xmlns:domain="clr-namespace:ImageCare.UI.Avalonia.ViewModels.Domain"
              xmlns:iconPacks="https://github.com/MahApps/IconPacks.Avalonia"
-             xmlns:avaloniaProgressRing1="clr-namespace:AvaloniaProgressRing;assembly=AvaloniaProgressRing"
+             xmlns:avaloniaProgressRing="clr-namespace:AvaloniaProgressRing;assembly=AvaloniaProgressRing"
              x:Class="ImageCare.UI.Avalonia.Views.FoldersView"
              prism:ViewModelLocator.AutoWireViewModel="True"
              x:DataType="viewModels:FoldersViewModel"
@@ -118,7 +118,7 @@
                             </iconPacks:PackIconMaterial.IsVisible>
                         </iconPacks:PackIconMaterial>
 
-                        <avaloniaProgressRing1:ProgressRing Width="{StaticResource Icon.Size.Small}"
+                        <avaloniaProgressRing:ProgressRing Width="{StaticResource Icon.Size.Small}"
                                                             Height="{StaticResource Icon.Size.Small}"
                                                             IsActive="True"
                                                             HorizontalAlignment="Center"
@@ -183,7 +183,7 @@
         <Border Background="{DynamicResource ThemeBackgroundBrush}"
                 Opacity="0.7"
                 IsVisible="{Binding IsLoading}">
-            <avaloniaProgressRing1:ProgressRing Width="60"
+            <avaloniaProgressRing:ProgressRing Width="60"
                                                 Height="60"
                                                 IsActive="{Binding IsLoading}"
                                                 HorizontalAlignment="Center"

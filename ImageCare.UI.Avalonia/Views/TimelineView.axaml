@@ -2,75 +2,108 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:behaviors="clr-namespace:ImageCare.UI.Avalonia.Behaviors"
              xmlns:domain="clr-namespace:ImageCare.UI.Avalonia.ViewModels.Domain"
+             xmlns:avaloniaProgressRing="clr-namespace:AvaloniaProgressRing;assembly=AvaloniaProgressRing"
              x:Class="ImageCare.UI.Avalonia.Views.TimelineView">
 
+    <Grid ColumnDefinitions="Auto,*">
 
-    <ScrollViewer HorizontalScrollBarVisibility="Visible"
-                  VerticalScrollBarVisibility="Disabled"
-                  AllowAutoHide="False"
-                  Background="Transparent">
-        <ScrollViewer.Styles>
-            <Style Selector="ScrollViewer">
-                <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Visible" />
-                <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Disabled" />
-            </Style>
-            <Style Selector="ScrollViewer > ScrollBar:horizontal">
-                <Setter Property="Height" Value="10" />
-                <Setter Property="Background" Value="Transparent" />
-                <Setter Property="Margin" Value="0,0,0,-10" />
-            </Style>
-        </ScrollViewer.Styles>
-        <Interaction.Behaviors>
-            <behaviors:WheelScrollBehaviour />
-        </Interaction.Behaviors>
 
-        <ItemsControl ItemsSource="{Binding DateStatViewModels}">
-            <ItemsControl.ItemsPanel>
-                <ItemsPanelTemplate>
-                    <StackPanel Orientation="Horizontal" Spacing="2" />
-                </ItemsPanelTemplate>
-            </ItemsControl.ItemsPanel>
-            <ItemsControl.ItemTemplate>
-                <DataTemplate DataType="domain:DateStatViewModel">
-                    <Button Command="{Binding $parent[UserControl].DataContext.ColumnClickCommand}"
-                            CommandParameter="{Binding}"
-                            MinHeight="10"
-                            Margin="0,0,0,1"
-                            Width="38"
-                            Padding="0"
-                            Background="Transparent"
-                            Cursor="Hand">
-                        <Button.Styles>
-                            <Style Selector="Button /template/ ContentPresenter">
-                                <Setter Property="Background" Value="Transparent" />
-                            </Style>
-                            <Style Selector="Button:pointerover /template/ ContentPresenter">
-                                <Setter Property="Background" Value="{DynamicResource SemiBlue0}" />
-                            </Style>
-                        </Button.Styles>
-                        <Grid Height="40">
-                            <!-- Column -->
-                            <Rectangle Fill="{DynamicResource SemiBlue5}"
-                                       VerticalAlignment="Bottom"
-                                       Height="{Binding NormalizedHeight}"
-                                       Width="36" />
-                            <!-- Date text -->
-                            <TextBlock Text="{Binding DisplayText}"
-                                       VerticalAlignment="Bottom"
-                                       HorizontalAlignment="Center"
-                                       Margin="0,-10,0,0"
-                                       FontSize="{StaticResource Font.Size.Small}"
-                                       Foreground="{DynamicResource SemiColorText0}" />
-                        </Grid>
-                        <ToolTip.Tip>
-                            <StackPanel>
-                                <TextBlock Text="{Binding Date, StringFormat='{}{0:dd MMMM yyyy}'}" />
-                                <TextBlock Text="{Binding Count}" />
-                            </StackPanel>
-                        </ToolTip.Tip>
-                    </Button>
-                </DataTemplate>
-            </ItemsControl.ItemTemplate>
-        </ItemsControl>
-    </ScrollViewer>
+        <!-- Progress Ring Overlay -->
+        <avaloniaProgressRing:ProgressRing Grid.Column="0"
+                                           IsVisible="{Binding IsLoading}"
+                                           IsActive="{Binding IsLoading}"
+                                           Width="50"
+                                           Height="50"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"
+                                           Foreground="{DynamicResource SemiBlue5}"
+                                           ZIndex="1000" />
+        <!-- Total Files Count -->
+        <Border Grid.Column="0"
+                Background="{DynamicResource SemiBlue5}"
+                CornerRadius="{StaticResource BorderRadius.Small}"
+                Padding="{StaticResource Padding.Inner}"
+                Margin="{StaticResource MarginAll.ExtraLarge}"
+                MinWidth="32"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                IsVisible="{Binding TotalFilesCount}">
+            <TextBlock Text="{Binding TotalFilesCount}"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center"
+                       FontSize="{StaticResource Font.Size.Small}"
+                       Foreground="{DynamicResource SemiColorText0}" />
+        </Border>
+
+        <!-- Timeline Chart -->
+        <ScrollViewer Grid.Column="1"
+                      HorizontalScrollBarVisibility="Visible"
+                      VerticalScrollBarVisibility="Disabled"
+                      AllowAutoHide="True"
+                      Background="Transparent">
+            <ScrollViewer.Styles>
+                <Style Selector="ScrollViewer">
+                    <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Visible" />
+                    <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Disabled" />
+                </Style>
+                <Style Selector="ScrollViewer > ScrollBar:horizontal">
+                    <Setter Property="Height" Value="10" />
+                    <Setter Property="Background" Value="Transparent" />
+                    <Setter Property="Margin" Value="0,0,0,-10" />
+                </Style>
+            </ScrollViewer.Styles>
+            <Interaction.Behaviors>
+                <behaviors:WheelScrollBehaviour />
+            </Interaction.Behaviors>
+
+            <ItemsControl ItemsSource="{Binding DateStatViewModels}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel Orientation="Horizontal" Spacing="2" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="domain:DateStatViewModel">
+                        <Button Command="{Binding $parent[UserControl].DataContext.ColumnClickCommand}"
+                                CommandParameter="{Binding}"
+                                MinHeight="10"
+                                Margin="0,0,0,1"
+                                Width="38"
+                                Padding="0"
+                                Background="Transparent"
+                                Cursor="Hand">
+                            <Button.Styles>
+                                <Style Selector="Button /template/ ContentPresenter">
+                                    <Setter Property="Background" Value="Transparent" />
+                                </Style>
+                                <Style Selector="Button:pointerover /template/ ContentPresenter">
+                                    <Setter Property="Background" Value="{DynamicResource SemiBlue0}" />
+                                </Style>
+                            </Button.Styles>
+                            <Grid Height="40">
+                                <!-- Column -->
+                                <Rectangle Fill="{DynamicResource SemiBlue5}"
+                                           VerticalAlignment="Bottom"
+                                           Height="{Binding NormalizedHeight}"
+                                           Width="36" />
+                                <!-- Date text -->
+                                <TextBlock Text="{Binding DisplayText}"
+                                           VerticalAlignment="Bottom"
+                                           HorizontalAlignment="Center"
+                                           Margin="0,-10,0,0"
+                                           FontSize="{StaticResource Font.Size.Small}"
+                                           Foreground="{DynamicResource SemiColorText0}" />
+                            </Grid>
+                            <ToolTip.Tip>
+                                <StackPanel>
+                                    <TextBlock Text="{Binding Date, StringFormat='{}{0:dd MMMM yyyy}'}" />
+                                    <TextBlock Text="{Binding Count}" />
+                                </StackPanel>
+                            </ToolTip.Tip>
+                        </Button>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+    </Grid>
 </UserControl>
