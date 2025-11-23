@@ -661,6 +661,11 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
             var start = Math.Max(0, index - PreloadCount);
             var end = Math.Min(ImagePreviews.Count - 1, index + PreloadCount);
 
+           
+
+            await LoadImageAsync(index, token);
+            SelectedPreview = targetPreview;
+
             var loadTasks = new List<Task>();
             for (var i = start; i <= end; i++)
             {
@@ -671,9 +676,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
 
                 loadTasks.Add(LoadImageAsync(i, token));
             }
-
             await Task.WhenAll(loadTasks);
-            SelectedPreview = targetPreview;
         }
         catch (Exception ex)
         {
