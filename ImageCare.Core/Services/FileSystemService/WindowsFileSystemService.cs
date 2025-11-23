@@ -1,4 +1,6 @@
-﻿using ImageCare.Core.Exceptions;
+﻿using ImageCare.Core.Domain.Folders;
+using ImageCare.Core.Exceptions;
+using ImageCare.Core.Services.FileSystemService.Windows;
 
 using Microsoft.VisualBasic.FileIO;
 
@@ -96,9 +98,9 @@ public sealed class WindowsFileSystemService : IFileSystemService
         return Directory.EnumerateFiles(directory, searchPattern, SearchOption.TopDirectoryOnly);
     }
 
-    public IEnumerable<FileData> EnumerateFiles(string directory, string searchPattern, SearchOption searchOption)
+    public IEnumerable<FileModel> EnumerateFiles(string directory, string searchPattern, SearchOption searchOption)
     {
-        return FastDirectoryEnumerator.EnumerateFiles(directory, searchPattern, searchOption);
+        return NativeDirectoryEnumerator.EnumerateFiles(directory, searchPattern, searchOption).Select(f => new FileModel(f.Name, f.Path, f.LastWriteTime));
     }
 
     public string[] GetDirectories(string directory)

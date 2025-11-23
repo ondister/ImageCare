@@ -6,6 +6,7 @@ using ImageCare.Core.Domain.Folders;
 using ImageCare.Core.Domain.MediaFormats;
 using ImageCare.Core.Exceptions;
 using ImageCare.Core.Services.FileSystemService;
+using ImageCare.Core.Services.FileSystemService.Windows;
 
 namespace ImageCare.Core.Services.FolderService;
 
@@ -104,7 +105,6 @@ public sealed class LocalFileSystemFolderService : IFolderService, IDisposable
             }
 
             var files = _fileSystemService.EnumerateFiles(directoryPath, searchPattern,SearchOption.TopDirectoryOnly)
-                                          .Select(file => CreateFileModel(file))
                                           .Where(f => f.CreatedDateTime.HasValue);
 
             return files;
@@ -427,21 +427,5 @@ public sealed class LocalFileSystemFolderService : IFolderService, IDisposable
         {
             return false;
         }
-    }
-
-    private static bool MatchesSearchPattern(string fileName, string searchPattern)
-    {
-        return searchPattern == "*.*" || fileName.EndsWith(searchPattern.TrimStart('*'), StringComparison.OrdinalIgnoreCase);
-    }
-
-    private FileModel CreateFileModel(string filePath)
-    {
-        var fileInfo = _fileSystemService.GetFileInfo(filePath);
-        return new FileModel(fileInfo.Name, fileInfo.FullName, fileInfo.LastWriteTime);
-    }
-
-    private FileModel CreateFileModel(FileData file)
-    {
-        return new FileModel(file.Name, file.Path, file.LastWriteTime);
     }
 }

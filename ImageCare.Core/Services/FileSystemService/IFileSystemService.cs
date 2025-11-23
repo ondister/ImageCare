@@ -1,4 +1,6 @@
-﻿namespace ImageCare.Core.Services.FileSystemService;
+﻿using ImageCare.Core.Domain.Folders;
+
+namespace ImageCare.Core.Services.FileSystemService;
 
 public interface IFileSystemService
 {
@@ -38,7 +40,7 @@ public interface IFileSystemService
 
 	IEnumerable<string> EnumerateDirectories(string directory, string searchPattern);
 
-    IEnumerable<FileData> EnumerateFiles(string directory, string searchPattern, SearchOption searchOption);
+    IEnumerable<FileModel> EnumerateFiles(string directory, string searchPattern, SearchOption searchOption);
 
 
     void CopyFileMetadata(string source, string destination);
