@@ -36,12 +36,11 @@ public interface IFileSystemService
 
 	IEnumerable<string> EnumerateFiles(string directory, string searchPattern);
 
-	string[] GetDirectories(string directory);
-
-	IEnumerable<string> EnumerateDirectories(string directory, string searchPattern);
-
     IEnumerable<FileModel> EnumerateFiles(string directory, string searchPattern, SearchOption searchOption);
 
+    string[] GetDirectories(string directory);
+
+	IEnumerable<string> EnumerateDirectories(string directory, string searchPattern);
 
     void CopyFileMetadata(string source, string destination);
 

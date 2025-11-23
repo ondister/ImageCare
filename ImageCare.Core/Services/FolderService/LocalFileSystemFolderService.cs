@@ -295,11 +295,11 @@ public sealed class LocalFileSystemFolderService : IFolderService, IDisposable
             var supportedExtensions = MediaFormat.GetSupportedExtensions();
             var supportedExtensionsSet = new HashSet<string>(supportedExtensions, StringComparer.OrdinalIgnoreCase);
 
-            var files = _fileSystemService.EnumerateFiles(directoryPath, "*.*");
+            var files = _fileSystemService.EnumerateFiles(directoryPath, "*.*",SearchOption.TopDirectoryOnly);
 
             foreach (var file in files)
             {
-                var extension = Path.GetExtension(file);
+                var extension = Path.GetExtension(file.Name);
                 if (supportedExtensionsSet.Contains(extension))
                 {
                     return true;
