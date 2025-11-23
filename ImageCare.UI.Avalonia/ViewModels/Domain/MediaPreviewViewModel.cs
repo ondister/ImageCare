@@ -175,6 +175,10 @@ internal class MediaPreviewViewModel : ViewModelBase, IComparable<MediaPreviewVi
             await using var imageStream = await _imageService.GetJpegImageStreamAsync(_mapper.Map<MediaPreview>(this), MediaPreviewSize.Medium, token);
             PreviewBitmap = await Task.Run(() => Bitmap.DecodeToHeight(imageStream, MaxImageHeight, BitmapInterpolationMode.LowQuality), token);
         }
+        catch (OperationCanceledException)
+        {
+            // Ignored
+        }
         catch (Exception exception)
         {
             _logger.Error(exception, $"Unexpected exception during creating bitmap preview for file {Url}");

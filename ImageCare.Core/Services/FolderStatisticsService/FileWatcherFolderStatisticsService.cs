@@ -148,8 +148,7 @@ public sealed class FileWatcherFolderStatisticsService : IFolderStatisticsServic
 
         var parallelOptions = new ParallelOptions
         {
-            CancellationToken = cancellationToken,
-            MaxDegreeOfParallelism = Environment.ProcessorCount
+            CancellationToken = cancellationToken
         };
 
         _currentTotalFiles = 0;

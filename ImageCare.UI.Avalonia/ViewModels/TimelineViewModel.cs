@@ -45,7 +45,7 @@ internal class TimelineViewModel : ViewModelBase, IDisposable
         _dateSelectedSubject = new Subject<DateTime>();
 
         _folderStatisticsService.BucketChanged
-                                .Buffer(TimeSpan.FromMilliseconds(500))
+                                .Buffer(TimeSpan.FromMilliseconds(250))
                                 .Where(bufferedBuckets => bufferedBuckets.Count > 0)
                                 .Subscribe(OnBucketsChanged)
                                 .DisposeWith(_disposables);
@@ -54,6 +54,7 @@ internal class TimelineViewModel : ViewModelBase, IDisposable
                                 .Subscribe(OnScanProgressChanged)
                                 .DisposeWith(_disposables);
         _folderStatisticsService.TotalFilesCount
+                                .Sample(TimeSpan.FromMilliseconds(250))
                                 .ObserveOn(_synchronizationContext)
                                 .Subscribe(totalFiles => TotalFilesCount = totalFiles)
                                 .DisposeWith(_disposables);

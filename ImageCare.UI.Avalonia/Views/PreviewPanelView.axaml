@@ -25,9 +25,17 @@
           Margin="{StaticResource MarginAll.Small}">
 
         <!--Statistics-->
-
             <views:TimelineView Grid.Row="0"
                                 DataContext="{Binding TimelineVm}" />
+
+        <!--Panel-->
+        <TextBlock Grid.Row="1"
+                   Text="Loading folder structure. Please wait a second..."
+                   HorizontalAlignment="Center"
+                   VerticalAlignment="Center"
+                   FontSize="{StaticResource Font.Size.SectionHeader}"
+                   Foreground="{DynamicResource SemiColorText0}"
+                   IsVisible="{Binding FilesLoading}"/>
 
         <ScrollViewer Grid.Row="1"
                       HorizontalScrollBarVisibility="Auto"

@@ -16,8 +16,7 @@
                                            Height="50"
                                            HorizontalAlignment="Center"
                                            VerticalAlignment="Center"
-                                           Foreground="{DynamicResource SemiBlue5}"
-                                           ZIndex="1000" />
+                                           Foreground="{DynamicResource SemiBlue5}"/>
         <!-- Total Files Count -->
         <Border Grid.Column="0"
                 Background="{DynamicResource SemiBlue5}"
