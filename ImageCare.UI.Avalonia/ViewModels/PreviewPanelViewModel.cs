@@ -537,6 +537,11 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
     {
         try
         {
+            if (_imagePaths.Count == 0)
+            {
+                return;
+            }
+
             var initialCount = Math.Min(PreloadCount * 2, _imagePaths.Count);
 
             var firstChunk = true;
@@ -563,9 +568,9 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
                 }
             }
         }
-        catch (Exception exception)
+        catch (Exception ex)
         {
-            _logger.Error("Unexpected exception during loading initial images", exception);
+            _logger.Error(ex,$"Unexpected exception during loading initial images: {ex.Message}");
         }
     }
 

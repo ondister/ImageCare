@@ -129,7 +129,14 @@ internal class TimelineViewModel : ViewModelBase, IDisposable
                             Count = bucket.FilesCount
                         };
 
-                        innerCache.AddOrUpdate(dateStat);
+                        if (dateStat.Count == 0)
+                        {
+                            innerCache.Remove(dateStat);
+                        }
+                        else
+                        {
+                            innerCache.AddOrUpdate(dateStat);
+                        }
                     }
                 });
 

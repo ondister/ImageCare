@@ -249,7 +249,8 @@ public sealed class FileWatcherFolderStatisticsService : IFolderStatisticsServic
                     // Remove empty bucket
                     if (_buckets.TryRemove(date, out var removedBucket))
                     {
-                        _bucketChangedSubject.OnNext(removedBucket);
+                        var updatedBucket = removedBucket with { FilesCount = existingBucket.Files.Count };
+                        _bucketChangedSubject.OnNext(updatedBucket);
                     }
                 }
                 else
