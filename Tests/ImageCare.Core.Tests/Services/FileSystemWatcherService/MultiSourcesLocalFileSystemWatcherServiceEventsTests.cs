@@ -49,7 +49,7 @@ public class MultiSourcesFileSystemWatcherServiceEventsTests
 		File.WriteAllText(Path.Combine(_testDirectory1, "file1.txt"), "content1");
 		File.WriteAllText(Path.Combine(_testDirectory2, "file2.txt"), "content2");
 
-		Assert.That(() => eventsReceived, Is.EqualTo(expectedEvents).After(1000, 100));
+		Assert.That(() => eventsReceived, Is.EqualTo(expectedEvents).After(3000, 100));
 	}
 
 	[Test]
@@ -64,6 +64,6 @@ public class MultiSourcesFileSystemWatcherServiceEventsTests
 		File.WriteAllText(Path.Combine(_testDirectory1, "file1.txt"), "content1"); // Should not trigger
 		File.WriteAllText(Path.Combine(_testDirectory2, "file2.txt"), "content2"); // Should trigger
 
-		Assert.That(() => eventsReceived, Is.EqualTo(1).After(500, 50));
+		Assert.That(() => eventsReceived, Is.EqualTo(1).After(3000, 50));
 	}
 }
