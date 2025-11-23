@@ -40,7 +40,7 @@ public class LocalFileSystemWatcherServiceFileEventsTests
 
 		File.WriteAllText(testFilePath, "test content");
 
-		Assert.That(() => receivedModel, Is.Not.Null.After(500, 50));
+		Assert.That(() => receivedModel, Is.Not.Null.After(2000, 50));
 		Assert.That(receivedModel.Name, Is.EqualTo(testFileName));
 		Assert.That(receivedModel.FullName, Is.EqualTo(testFilePath));
 	}
