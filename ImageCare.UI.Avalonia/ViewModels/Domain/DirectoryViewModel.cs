@@ -262,7 +262,7 @@ internal class DirectoryViewModel : ViewModelBase, IComparable<DirectoryViewMode
 		}
 		catch (Exception ex)
 		{
-			_logger.Error($"Failed to handle expansion change for: {Path}",ex);
+			_logger.Error(ex, $"Failed to handle expansion change for: {Path}");
 		}
 	}
 

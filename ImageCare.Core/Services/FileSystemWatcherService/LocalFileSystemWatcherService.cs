@@ -145,11 +145,12 @@ public sealed class LocalFileSystemWatcherService : IFileSystemWatcherService, I
 		Observable.FromEventPattern<FileSystemEventHandler, FileSystemEventArgs>(
 			          h => _filesWatcher.Created += h,
 			          h => _filesWatcher.Created -= h)
-		          .Select(e => CreateFileModel(e.EventArgs))
-		          .Throttle(TimeSpan.FromMilliseconds(100))
-		          .Subscribe(_fileCreatedSubject);
+                  .Select(e => CreateFileModel(e.EventArgs))
+                  .GroupBy(file => file.FullName)
+                  .SelectMany(group => group.Throttle(TimeSpan.FromSeconds(1))) // Ignore duble event for large files
+                  .Subscribe(_fileCreatedSubject);
 
-		Observable.FromEventPattern<FileSystemEventHandler, FileSystemEventArgs>(
+        Observable.FromEventPattern<FileSystemEventHandler, FileSystemEventArgs>(
 			          h => _filesWatcher.Deleted += h,
 			          h => _filesWatcher.Deleted -= h)
 		          .Select(e => CreateFileModel(e.EventArgs))

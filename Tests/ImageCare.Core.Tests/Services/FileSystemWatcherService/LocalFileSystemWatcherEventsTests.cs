@@ -103,4 +103,5 @@ public class LocalFileSystemWatcherServiceDirectoryEventsTests
 		Assert.That(receivedModel.Name, Is.EqualTo(newDirectoryName));
 		Assert.That(receivedModel.Path, Is.EqualTo(newDirectoryPath));
 	}
+
 }
