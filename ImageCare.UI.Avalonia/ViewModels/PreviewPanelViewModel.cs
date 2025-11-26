@@ -31,7 +31,7 @@ namespace ImageCare.UI.Avalonia.ViewModels;
 internal class PreviewPanelViewModel : NavigatedViewModelBase
 {
     // Desired size of item
-    private const int MaxItemWidth = 300;
+    private const int MaxItemWidth = 316;
     private const int PreloadCount = 20;
 
     private readonly IMediaPreviewService _imageService;
@@ -54,6 +54,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
 
     private bool _isScrollResetRequested;
     private bool _filesLoading;
+    private FileClustersStatistics? _lastClustersStatistics;
 
     public PreviewPanelViewModel(IMediaPreviewService imageService,
                                  IFolderService folderService,
@@ -349,6 +350,8 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
             _folderSelectedCancellationTokenSource.Dispose();
             _folderSelectedCancellationTokenSource = new CancellationTokenSource();
 
+            _lastClustersStatistics = null;
+
             ClearPreviewPanel();
 
             if (selectedFileSystemItem.Path == string.Empty)
@@ -554,6 +557,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
 
                 if (firstChunk)
                 {
+                    firstChunk = false;
                     for (var i = 0; i < initialCount; i++)
                     {
                         if (token.IsCancellationRequested)
@@ -582,6 +586,13 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
             var mediaPreviewViewModel = _mapper.Map<MediaPreviewViewModel>(previewImage);
             mediaPreviewViewModel.FileDate = fileModel.CreatedDateTime.Value;
             previews.Add(mediaPreviewViewModel);
+
+            var fileCluster = _lastClustersStatistics?.GetClusterByFilePath(mediaPreviewViewModel.Url);
+            if (fileCluster != null)
+            {
+                mediaPreviewViewModel.FrameColorCode = fileCluster.ColorCode;
+            }
+
         }
 
         _synchronizationContext.Send(d => { ImagePreviews.AddRange(previews); }, null);
@@ -620,7 +631,6 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
             previewVm.RotateAngle = metadata.Orientation.ToRotationAngle();
 
             await previewVm.LoadPreviewAsync(token);
-
         }
         catch (OperationCanceledException)
         {
@@ -679,6 +689,8 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
 
     private void OnClusterizationCompleted(FileClustersStatistics statistics)
     {
+        _lastClustersStatistics = statistics;
+
         var count = ImagePreviews.Count;
 
         for (var index = 0; index < count; index++)

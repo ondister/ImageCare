@@ -8,8 +8,6 @@ using AutoMapper;
 
 using Avalonia.Media.Imaging;
 
-using CommunityToolkit.Mvvm.Input;
-
 using ImageCare.Core.Domain.Media.Metadata;
 using ImageCare.Core.Domain.MediaFormats;
 using ImageCare.Core.Domain.Preview;
@@ -43,7 +41,7 @@ internal class MediaPreviewViewModel : ViewModelBase, IComparable<MediaPreviewVi
     private IMediaMetadata? _metadata;
 
     private DateTime _fileDate;
-    private string _frameColorCode= "Transparent";
+    private string _frameColorCode = "Transparent";
 
     public MediaPreviewViewModel(string? title,
                                  string url,
