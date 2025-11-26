@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Reactive.Disposables;
 using System.Threading;
@@ -179,15 +178,30 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
 
         try
         {
+            var totalContentCount = ImagePreviews.Count * MaxItemWidth;
+
+            // Используем более точные границы с запасом
             var firstVisibleIndex = (int)(horizontalOffset / MaxItemWidth);
             var lastVisibleIndex = (int)((horizontalOffset + viewportWidth) / MaxItemWidth);
 
-            firstVisibleIndex = Math.Max(0, firstVisibleIndex);
-            lastVisibleIndex = Math.Min(ImagePreviews.Count - 1, lastVisibleIndex);
+            // Добавляем небольшую погрешность для компенсации целочисленного деления
+            var epsilon = 2; // несколько пикселей погрешности
 
-            for (var i = Math.Max(0, firstVisibleIndex - PreloadCount);
-                 i <= Math.Min(ImagePreviews.Count - 1, lastVisibleIndex + PreloadCount);
-                 i++)
+            firstVisibleIndex = Math.Max(0, firstVisibleIndex - epsilon);
+            lastVisibleIndex = Math.Min(ImagePreviews.Count - 1, lastVisibleIndex + epsilon);
+
+            var loadStartIndex = Math.Max(0, firstVisibleIndex - PreloadCount);
+            var loadEndIndex = Math.Min(ImagePreviews.Count - 1, lastVisibleIndex + PreloadCount);
+
+            // Всегда включаем последние несколько элементов при скролле в конец
+            var scrollToEndThreshold = viewportWidth * 0.9; // 90% от ширины viewport
+            if (horizontalOffset + viewportWidth >= totalContentCount - scrollToEndThreshold)
+            {
+                loadEndIndex = ImagePreviews.Count - 1;
+                loadStartIndex = Math.Max(0, ImagePreviews.Count - 20); // последние 20 элементов
+            }
+
+            for (var i = loadStartIndex; i <= loadEndIndex; i++)
             {
                 if (token.IsCancellationRequested)
                 {
@@ -196,10 +210,9 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
 
                 if (ImagePreviews[i].PreviewBitmap == null)
                 {
-                   await LoadImageAsync(i, token);
+                    await LoadImageAsync(i, token);
                 }
             }
-
         }
         catch (OperationCanceledException)
         {
@@ -553,11 +566,10 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
                     return;
                 }
 
-                await LoadChunkAsync(chunk);
-
                 if (firstChunk)
                 {
                     firstChunk = false;
+                    await LoadChunkAsync(chunk);
                     for (var i = 0; i < initialCount; i++)
                     {
                         if (token.IsCancellationRequested)
@@ -565,8 +577,12 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
                             return;
                         }
 
-                        await LoadImageAsync(i, token);
+                        _ = LoadImageAsync(i, token);
                     }
+                }
+                else
+                {
+                    await LoadChunkAsync(chunk);
                 }
             }
         }
@@ -592,7 +608,6 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
             {
                 mediaPreviewViewModel.FrameColorCode = fileCluster.ColorCode;
             }
-
         }
 
         _synchronizationContext.Send(d => { ImagePreviews.AddRange(previews); }, null);
@@ -622,7 +637,6 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
             {
                 return;
             }
-
 
             var metadata = await _imageService.GetMediaMetadataAsync(mediaPreview);
             previewVm.MetadataString = metadata.GetString();
@@ -662,24 +676,42 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
             var token = _currentScrollCancellation.Token;
 
             // Load range nearby item
-            var start = Math.Max(0, index - PreloadCount);
-            var end = Math.Min(ImagePreviews.Count - 1, index + PreloadCount);
+            var start = Math.Max(0, index - PreloadCount/2);
+            var end = Math.Min(ImagePreviews.Count - 1, index + PreloadCount/2);
 
             await LoadImageAsync(index, token);
             SelectedPreview = targetPreview;
 
-            var loadTasks = new List<Task>();
-            for (var i = start; i <= end; i++)
-            {
-                if (token.IsCancellationRequested)
+            var leftLineTask = Task.Run(
+                async () =>
                 {
-                    return;
-                }
+                    for (var i = index-1; i >= start; i--)
+                    {
+                        if (token.IsCancellationRequested)
+                        {
+                            return;
+                        }
 
-                loadTasks.Add(LoadImageAsync(i, token));
-            }
+                        await LoadImageAsync(i, token);
+                    }
+                },
+                token);
+            var rightLineTask = Task.Run(
+                async () =>
+                {
+                    for (var i = index; i <= end; i++)
+                    {
+                        if (token.IsCancellationRequested)
+                        {
+                            return;
+                        }
 
-            await Task.WhenAll(loadTasks);
+                        await LoadImageAsync(i, token);
+                    }
+                },
+                token);
+
+            await Task.WhenAll(leftLineTask, rightLineTask);
         }
         catch (Exception ex)
         {
@@ -701,11 +733,14 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
             }
 
             var preview = ImagePreviews[index];
+            if (preview.FrameColorCode.StartsWith("#"))
+            {
+                continue;
+            }
             var cluster = statistics.GetClusterByFilePath(preview.Url);
             if (cluster != null)
             {
                 preview.FrameColorCode = cluster.ColorCode;
-
             }
         }
     }
