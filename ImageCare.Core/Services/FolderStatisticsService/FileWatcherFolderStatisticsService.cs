@@ -8,13 +8,17 @@ using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 
+using ImageCare.Core.Services.FileSystemService;
+
 namespace ImageCare.Core.Services.FolderStatisticsService;
 
 public sealed class FileWatcherFolderStatisticsService : IFolderStatisticsService
 {
     private readonly IMediaPreviewService _previewService;
+    private readonly IFileSystemService _fileSystemService;
     private readonly ConcurrentDictionary<DateTime, FilesBucket> _buckets;
     private readonly Subject<FilesBucket> _bucketChangedSubject;
+    private readonly Subject<FileClustersStatistics> _clasterizationCompletedSubject;
     private readonly BehaviorSubject<ScanProgress> _progressSubject;
     private readonly BehaviorSubject<int> _totalFilesSubject;
 
@@ -27,11 +31,13 @@ public sealed class FileWatcherFolderStatisticsService : IFolderStatisticsServic
     private volatile bool _isDisposed;
     private volatile bool _isScanning;
 
-    public FileWatcherFolderStatisticsService(IMediaPreviewService previewService)
+    public FileWatcherFolderStatisticsService(IMediaPreviewService previewService, IFileSystemService fileSystemService)
     {
         _previewService = previewService;
+        _fileSystemService = fileSystemService;
         _buckets = new ConcurrentDictionary<DateTime, FilesBucket>();
         _bucketChangedSubject = new Subject<FilesBucket>();
+        _clasterizationCompletedSubject= new Subject<FileClustersStatistics>();
         _progressSubject = new BehaviorSubject<ScanProgress>(new ScanProgress(ScanStatus.Idle));
         _totalFilesSubject = new BehaviorSubject<int>(0);
         _currentTotalFiles = 0;
@@ -39,6 +45,9 @@ public sealed class FileWatcherFolderStatisticsService : IFolderStatisticsServic
     }
 
     public IObservable<FilesBucket> BucketChanged => _bucketChangedSubject.AsObservable();
+
+    /// <inheritdoc />
+    public IObservable<FileClustersStatistics> ClusterizationCompleted => _clasterizationCompletedSubject.AsObservable();
 
     public IObservable<ScanProgress> ScanProgress => _progressSubject.AsObservable();
 
@@ -58,6 +67,7 @@ public sealed class FileWatcherFolderStatisticsService : IFolderStatisticsServic
         _isDisposed = true;
         Stop();
         _bucketChangedSubject.Dispose();
+        _clasterizationCompletedSubject.Dispose();
         _progressSubject.Dispose();
         _scanCancellation?.Dispose();
         _subscriptions?.Dispose();
@@ -68,7 +78,7 @@ public sealed class FileWatcherFolderStatisticsService : IFolderStatisticsServic
         }
     }
 
-    public async Task StartAsync(string directoryPath, CancellationToken cancellationToken = default)
+    public async Task StartAsync(string directoryPath, bool useClusterization=false, CancellationToken cancellationToken = default)
     {
         ObjectDisposedException.ThrowIf(_isDisposed, this);
 
@@ -91,7 +101,13 @@ public sealed class FileWatcherFolderStatisticsService : IFolderStatisticsServic
         {
             ClearBuckets();
             SetupFileSystemWatcher(directoryPath);
-            await PerformInitialScanAsync(directoryPath, _scanCancellation.Token);
+
+            // Get all files and filter by supported formats
+             var allFiles = _fileSystemService.EnumerateFiles(directoryPath, "*.*", SearchOption.TopDirectoryOnly);
+             var supportedFiles = allFiles.Where(IsSupportedMediaFile);
+
+            await PerformInitialScanAsync(supportedFiles, useClusterization, _scanCancellation.Token);
+
         }
         catch (OperationCanceledException)
         {
@@ -138,12 +154,8 @@ public sealed class FileWatcherFolderStatisticsService : IFolderStatisticsServic
         _totalFilesSubject.OnNext(0);
     }
 
-    private async Task PerformInitialScanAsync(string directoryPath, CancellationToken cancellationToken)
+    private async Task PerformInitialScanAsync(IEnumerable<FileModel> files, bool useClusterization, CancellationToken cancellationToken)
     {
-        // Get all files and filter by supported formats
-        var allFiles = Directory.EnumerateFiles(directoryPath, "*.*", SearchOption.TopDirectoryOnly);
-        var supportedFiles = allFiles.Where(IsSupportedMediaFile);
-
         var processedFiles = 0;
 
         var parallelOptions = new ParallelOptions
@@ -154,16 +166,20 @@ public sealed class FileWatcherFolderStatisticsService : IFolderStatisticsServic
         _currentTotalFiles = 0;
         _totalFilesSubject.OnNext(0);
 
+        var verifiedFileModels = new ConcurrentBag<FileModel>();
+
         try
         {
+            var fileModels = files.ToList();
             await Parallel.ForEachAsync(
-                              supportedFiles,
+                              fileModels,
                               parallelOptions,
-                              async (filePath, ct) =>
+                              async (file, ct) =>
                               {
-                                  var fileModel = await ProcessFileAsync(filePath, ct).ConfigureAwait(false);
+                                  var fileModel = await ProcessFileAsync(file.FullName, ct).ConfigureAwait(false);
                                   if (fileModel != null && fileModel.CreatedDateTime.HasValue)
                                   {
+                                      verifiedFileModels.Add(fileModel);
                                       AddOrUpdateFileInBucket(fileModel);
                                       var newCount = Interlocked.Increment(ref processedFiles);
 
@@ -181,12 +197,30 @@ public sealed class FileWatcherFolderStatisticsService : IFolderStatisticsServic
                               })
                           .ConfigureAwait(false);
 
+            cancellationToken.ThrowIfCancellationRequested();
+
             _progressSubject.OnNext(
                 new ScanProgress(
                     ScanStatus.InitialScanCompleted,
                     processedFiles,
                     _buckets.Count,
                     _currentTotalFiles));
+
+            if (!useClusterization)
+            {
+                return;
+            }
+
+           
+
+            var clusteringService = new DbScanClusteringService();
+            var filesForClusteringService = verifiedFileModels.Select(f => new ClusterFileModel(f)).ToList();
+            var clusters = clusteringService.ClusterAutomatically(filesForClusteringService);
+
+            cancellationToken.ThrowIfCancellationRequested();
+
+            _clasterizationCompletedSubject.OnNext(clusters);
+           
         }
         catch (OperationCanceledException)
         {
@@ -385,6 +419,12 @@ public sealed class FileWatcherFolderStatisticsService : IFolderStatisticsServic
     private bool IsSupportedMediaFile(string filePath)
     {
         var extension = Path.GetExtension(filePath);
+        return MediaFormat.IsSupportedExtension(extension);
+    }
+
+    private bool IsSupportedMediaFile(FileModel fileModel)
+    {
+        var extension = Path.GetExtension(fileModel.FullName);
         return MediaFormat.IsSupportedExtension(extension);
     }
 }

@@ -138,7 +138,8 @@ internal sealed class ApplicationMapper
 			   .ForMember(dst => dst.UseOpenWith, opt => opt.Ignore())
 			   .ForMember(dst => dst.HasLocation, opt => opt.Ignore())
 			   .ForMember(dst => dst.FileDate, opt => opt.Ignore())
-			   .ConstructUsing(src => new MediaPreviewViewModel(
+               .ForMember(dst => dst.FrameColorCode, opt => opt.Ignore())
+               .ConstructUsing(src => new MediaPreviewViewModel(
 				                   src.Title,
 				                   src.Url,
 				                   src.MediaFormat,

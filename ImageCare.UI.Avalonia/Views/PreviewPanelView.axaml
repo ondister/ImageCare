@@ -64,21 +64,32 @@
                 </controls:PreviewsListBox.ItemsPanel>
 
                 <controls:PreviewsListBox.Styles>
+
                     <Style Selector="Grid.Selected">
                         <Setter Property="Background" Value="{DynamicResource SemiBlue5}" />
                     </Style>
                     <Style Selector="Grid.NotSelected">
                         <Setter Property="Background" Value="Transparent" />
                     </Style>
+
+
+                    <Style Selector="ListBoxItem">
+                        <Setter Property="Margin" Value="{StaticResource MarginHorizontal.Small}" />
+                        <Setter Property="Padding" Value="0" />
+                    </Style>
                 </controls:PreviewsListBox.Styles>
 
                 <controls:PreviewsListBox.ItemTemplate>
                     <DataTemplate DataType="domain:MediaPreviewViewModel">
-                        <Grid RowDefinitions="Auto,*,Auto"
-                              Classes.Selected="{Binding Selected }"
-                              Classes.NotSelected="{Binding !Selected }"
-                              Width="300"
-                              Height="250">
+                        <Border BorderThickness="2"
+                                BorderBrush="{Binding FrameColorCode}"
+                                Padding="{StaticResource Padding.Micro}">
+
+                            <Grid RowDefinitions="Auto,*,Auto"
+                                  Classes.Selected="{Binding Selected }"
+                                  Classes.NotSelected="{Binding !Selected }"
+                                  Width="300"
+                                  Height="250">
 
                             <Grid Grid.Row="0"
                                   ColumnDefinitions="*,Auto">
@@ -194,6 +205,7 @@
                             </i:Interaction.Behaviors>
                         </Grid>
 
+                        </Border>
                     </DataTemplate>
                 </controls:PreviewsListBox.ItemTemplate>
             </controls:PreviewsListBox>

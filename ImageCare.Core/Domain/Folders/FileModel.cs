@@ -1,6 +1,6 @@
 ﻿namespace ImageCare.Core.Domain.Folders;
 
-public sealed class FileModel
+public class FileModel
 {
 	public FileModel(string? name, string fullName, DateTime? createdDateTime)
 	{

@@ -6,6 +6,8 @@ public interface IFolderStatisticsService : IDisposable
 {
     IObservable<FilesBucket> BucketChanged { get; }
 
+    IObservable<FileClustersStatistics> ClusterizationCompleted { get; }
+
     IObservable<ScanProgress> ScanProgress { get; }
 
     bool IsScanning { get; }
@@ -14,7 +16,7 @@ public interface IFolderStatisticsService : IDisposable
 
     int CurrentTotalFiles { get; }
 
-    Task StartAsync(string directoryPath, CancellationToken cancellationToken = default);
+    Task StartAsync(string directoryPath, bool useClusterization = false, CancellationToken cancellationToken = default);
 
     void Stop();
 }

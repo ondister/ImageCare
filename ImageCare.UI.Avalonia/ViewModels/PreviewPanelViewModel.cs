@@ -150,6 +150,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
             _fileSystemWatcherService.FileRenamed.Subscribe(OnFileRenamed),
             _folderService.FileSystemItemSelected.Subscribe(OnFolderSelected),
             _fileOperationsService.ImagePreviewSelected.Subscribe(OnImagePreviewSelected),
+            _folderStatisticsService.ClusterizationCompleted.Subscribe(OnClusterizationCompleted),
             TimelineVm.DateSelected.Subscribe(OnTimelineDateSelected)
         };
     }
@@ -249,9 +250,9 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
                     break;
             }
         }
-        catch (Exception exception)
+        catch (Exception ex)
         {
-            _logger.Error($"Error of image copying:{SelectedPreview}", exception);
+            _logger.Error(ex, $"Error of image copying:{SelectedPreview}");
         }
     }
 
@@ -292,9 +293,9 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
                     break;
             }
         }
-        catch (Exception exception)
+        catch (Exception ex)
         {
-            _logger.Error($"Error of image moving:{SelectedPreview}", exception);
+            _logger.Error(ex, $"Error of image moving:{SelectedPreview}");
         }
     }
 
@@ -309,9 +310,9 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
 
             await SelectedPreview.RemoveImagePreviewAsync();
         }
-        catch (Exception exception)
+        catch (Exception ex)
         {
-            _logger.Error($"Error of image removing:{SelectedPreview}", exception);
+            _logger.Error(ex, $"Error of image removing:{SelectedPreview}");
         }
     }
 
@@ -331,9 +332,9 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
 
             _synchronizationContext.Send(d => { ImagePreviews.Add(mediaPreviewViewModel); }, null);
         }
-        catch (Exception exception)
+        catch (Exception ex)
         {
-            _logger.Error($"Error of adding image to preview: {previewImage.Url}", exception);
+            _logger.Error(ex, $"Error of adding image to preview: {previewImage.Url}");
         }
     }
 
@@ -368,9 +369,9 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
                 {
                     _fileSystemWatcherService.StartWatchingDirectory(SelectedFolderPath);
                 }
-                catch (Exception exception)
+                catch (Exception ex)
                 {
-                    _logger.Error($"Unexpected exception during set watching directory {SelectedFolderPath}", exception);
+                    _logger.Error(ex, $"Unexpected exception during set watching directory {SelectedFolderPath}");
                 }
             }
         }
@@ -396,7 +397,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
                     token.ThrowIfCancellationRequested();
 
                     LoadInitialImagesAsync(_folderSelectedCancellationTokenSource.Token);
-                    _folderStatisticsService.StartAsync(selectedFileSystemItem.Path, token);
+                    _folderStatisticsService.StartAsync(selectedFileSystemItem.Path, true, token);
                 },
                 token);
         }
@@ -406,7 +407,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
         }
         catch (Exception ex)
         {
-            _logger.Error($"Failed on initial folder loading: {selectedFileSystemItem.Path}", ex);
+            _logger.Error(ex, $"Failed on initial folder loading: {selectedFileSystemItem.Path}");
         }
         finally
         {
@@ -435,9 +436,9 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
 
             RemoveImagePreviewByPath(fileModel.FullName);
         }
-        catch (Exception exception)
+        catch (Exception ex)
         {
-            _logger.Error(exception, $"Unexpected exception during handling of file deletion: {fileModel.FullName}");
+            _logger.Error(ex, $"Unexpected exception during handling of file deletion: {fileModel.FullName}");
         }
     }
 
@@ -459,9 +460,9 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
 
             CreateImagePreviewFromPathAsync(model.NewFileModel.FullName, true);
         }
-        catch (Exception exception)
+        catch (Exception ex)
         {
-            _logger.Error(exception, $"Unexpected exception during handling of file renaming: {model.OldFileModel.FullName}");
+            _logger.Error(ex, $"Unexpected exception during handling of file renaming: {model.OldFileModel.FullName}");
         }
     }
 
@@ -483,9 +484,9 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
 
             await AddImagePreviewAsync(imagePreview);
         }
-        catch (Exception exception)
+        catch (Exception ex)
         {
-            _logger.Error(exception, $"Unexpected exception during Creating image preview from path: {filePath}");
+            _logger.Error(ex, $"Unexpected exception during Creating image preview from path: {filePath}");
         }
     }
 
@@ -511,9 +512,9 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
                 }
             }
         }
-        catch (Exception exception)
+        catch (Exception ex)
         {
-            _logger.Error(exception, $"Unexpected exception during Creating image preview from path: {filePath}");
+            _logger.Error(ex, $"Unexpected exception during Creating image preview from path: {filePath}");
         }
     }
 
@@ -570,7 +571,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
         }
         catch (Exception ex)
         {
-            _logger.Error(ex,$"Unexpected exception during loading initial images: {ex.Message}");
+            _logger.Error(ex, $"Unexpected exception during loading initial images: {ex.Message}");
         }
     }
 
@@ -666,8 +667,6 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
             var start = Math.Max(0, index - PreloadCount);
             var end = Math.Min(ImagePreviews.Count - 1, index + PreloadCount);
 
-           
-
             await LoadImageAsync(index, token);
             SelectedPreview = targetPreview;
 
@@ -681,11 +680,32 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
 
                 loadTasks.Add(LoadImageAsync(i, token));
             }
+
             await Task.WhenAll(loadTasks);
         }
         catch (Exception ex)
         {
             _logger.Error($"Date selection failed: {dateTime}", ex);
+        }
+    }
+
+    private void OnClusterizationCompleted(FileClustersStatistics statistics)
+    {
+        var count = ImagePreviews.Count;
+
+        for (var index = 0; index < count; index++)
+        {
+            if (index >= ImagePreviews.Count)
+            {
+                continue;
+            }
+
+            var preview = ImagePreviews[index];
+            var cluster = statistics.GetClusterByFilePath(preview.Url);
+            if (cluster != null)
+            {
+                preview.FrameColorCode = cluster.ColorCode;
+            }
         }
     }
 }

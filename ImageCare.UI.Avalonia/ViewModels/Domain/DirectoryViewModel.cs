@@ -47,11 +47,11 @@ internal class DirectoryViewModel : ViewModelBase, IComparable<DirectoryViewMode
 		_mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
 		_logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
-		Name = name;
-		Path = path;
+        ChildFileSystemItems = new SortedObservableCollection<DirectoryViewModel>(children);
+        ChildFileSystemItems.CollectionChanged += OnChildFileSystemItemsCollectionChanged;
 
-		ChildFileSystemItems = new SortedObservableCollection<DirectoryViewModel>(children);
-		ChildFileSystemItems.CollectionChanged += OnChildFileSystemItemsCollectionChanged;
+        Name = name;
+		Path = path;
 
 		RenameFolderCommand = CreateCommand(RenameFolder, () => IsEditing);
 		StartRenameFolderCommand = CreateCommand(StartRenameFolder);

@@ -43,6 +43,7 @@ internal class MediaPreviewViewModel : ViewModelBase, IComparable<MediaPreviewVi
     private IMediaMetadata? _metadata;
 
     private DateTime _fileDate;
+    private string _frameColorCode= "Transparent";
 
     public MediaPreviewViewModel(string? title,
                                  string url,
@@ -67,9 +68,8 @@ internal class MediaPreviewViewModel : ViewModelBase, IComparable<MediaPreviewVi
         _mapper = mapper;
         _logger = logger;
 
-        RemoveImagePreviewCommand = new AsyncRelayCommand(RemoveImagePreviewAsync);
+        RemoveImagePreviewCommand = CreateAsyncCommand(RemoveImagePreviewAsync);
 
-        //  _ = LoadPreviewAsync();
         OpenWithViewModels = CreateOpenWithItems();
     }
 
@@ -127,6 +127,12 @@ internal class MediaPreviewViewModel : ViewModelBase, IComparable<MediaPreviewVi
     {
         get => _rotateAngle;
         set => SetProperty(ref _rotateAngle, value);
+    }
+
+    public string FrameColorCode
+    {
+        get => _frameColorCode;
+        set => SetProperty(ref _frameColorCode, value);
     }
 
     public IEnumerable<FileApplicationPairViewModel> OpenWithViewModels { get; }
