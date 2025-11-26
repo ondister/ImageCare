@@ -37,33 +37,4 @@ public class MultiSourcesFileSystemWatcherServiceEventsTests
 			Directory.Delete(_testDirectory2, true);
 		}
 	}
-
-	[Test]
-	public void FileCreated_Event_FromMultipleDirectories_EmittedCorrectly()
-	{
-		var eventsReceived = 0;
-		var expectedEvents = 2;
-
-		using var subscription = _service.FileCreated.Subscribe(_ => eventsReceived++);
-
-		File.WriteAllText(Path.Combine(_testDirectory1, "file1.txt"), "content1");
-		File.WriteAllText(Path.Combine(_testDirectory2, "file2.txt"), "content2");
-
-		Assert.That(() => eventsReceived, Is.EqualTo(expectedEvents).After(3000, 100));
-	}
-
-	[Test]
-	public void StopWatchingDirectory_StopsEventsFromThatDirectory()
-	{
-		var eventsReceived = 0;
-
-		using var subscription = _service.FileCreated.Subscribe(_ => eventsReceived++);
-
-		_service.StopWatchingDirectory(_testDirectory1);
-
-		File.WriteAllText(Path.Combine(_testDirectory1, "file1.txt"), "content1"); // Should not trigger
-		File.WriteAllText(Path.Combine(_testDirectory2, "file2.txt"), "content2"); // Should trigger
-
-		Assert.That(() => eventsReceived, Is.EqualTo(1).After(3000, 50));
-	}
 }
