@@ -44,8 +44,6 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
     private readonly ILogger _logger;
     private readonly SynchronizationContext _synchronizationContext;
 
-    private readonly SemaphoreSlim _loadSemaphore = new(1, 1);
-
     private readonly object _imagePathsLock = new();
     private MediaPreviewViewModel? _selectedPreview;
     private CompositeDisposable _disposable;
@@ -602,12 +600,8 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
             return;
         }
 
-        var lockTaken = false;
         try
         {
-            await _loadSemaphore.WaitAsync(token);
-            lockTaken = true;
-
             token.ThrowIfCancellationRequested();
 
             var imagePath = previewVm.Url;
@@ -618,6 +612,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
                 return;
             }
 
+
             var metadata = await _imageService.GetMediaMetadataAsync(mediaPreview);
             previewVm.MetadataString = metadata.GetString();
             previewVm.DateTimeString = metadata.CreationDateTime.ToString("dd.MM.yyyy HH:mm");
@@ -625,6 +620,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
             previewVm.RotateAngle = metadata.Orientation.ToRotationAngle();
 
             await previewVm.LoadPreviewAsync(token);
+
         }
         catch (OperationCanceledException)
         {
@@ -633,13 +629,6 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
         catch (Exception ex)
         {
             _logger.Error($"Failed to load image: {previewVm.Url}", ex);
-        }
-        finally
-        {
-            if (lockTaken)
-            {
-                _loadSemaphore.Release();
-            }
         }
     }
 

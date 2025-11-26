@@ -4,6 +4,7 @@ using ImageCare.Core.Services.FileSystemWatcherService;
 namespace ImageCare.Core.Tests.Services.FileSystemWatcherService;
 
 [TestFixture]
+[NonParallelizable]
 public class LocalFileSystemWatcherServiceTests
 {
 	private LocalFileSystemWatcherService _service;

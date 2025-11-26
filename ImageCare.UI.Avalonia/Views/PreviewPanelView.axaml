@@ -59,7 +59,7 @@
 
                 <controls:PreviewsListBox.ItemsPanel>
                     <ItemsPanelTemplate>
-                        <VirtualizingStackPanel Orientation="Horizontal" />
+                        <StackPanel Orientation="Horizontal" />
                     </ItemsPanelTemplate>
                 </controls:PreviewsListBox.ItemsPanel>
 
