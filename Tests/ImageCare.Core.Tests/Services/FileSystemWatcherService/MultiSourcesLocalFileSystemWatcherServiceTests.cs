@@ -24,7 +24,7 @@ public class MultiSourcesLocalFileSystemWatcherServiceTests
 	[TearDown]
 	public void TearDown()
 	{
-		_service?.Dispose();
+        _service?.Dispose();
 		if (Directory.Exists(_testDirectory1))
 		{
 			Directory.Delete(_testDirectory1, true);

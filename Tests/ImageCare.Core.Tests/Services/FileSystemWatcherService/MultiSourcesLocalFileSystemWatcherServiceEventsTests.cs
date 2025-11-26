@@ -3,6 +3,7 @@
 namespace ImageCare.Core.Tests.Services.FileSystemWatcherService;
 
 [TestFixture]
+[NonParallelizable]
 public class MultiSourcesFileSystemWatcherServiceEventsTests
 {
 	private MultiSourcesLocalFileSystemWatcherService _service;
