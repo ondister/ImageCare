@@ -72,7 +72,7 @@
                         <Setter Property="Background" Value="Transparent" />
                     </Style>
 
-
+                    
                     <Style Selector="ListBoxItem">
                         <Setter Property="Margin" Value="{StaticResource MarginHorizontal.Small}" />
                         <Setter Property="Padding" Value="0" />

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Reactive.Disposables;
 using System.Threading;
@@ -30,7 +31,7 @@ namespace ImageCare.UI.Avalonia.ViewModels;
 internal class PreviewPanelViewModel : NavigatedViewModelBase
 {
     // Desired size of item
-    private const int MaxItemWidth = 324;
+    private const int MaxItemWidth = 300;
     private const int PreloadCount = 20;
 
     private readonly IMediaPreviewService _imageService;
@@ -185,7 +186,6 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
             firstVisibleIndex = Math.Max(0, firstVisibleIndex);
             lastVisibleIndex = Math.Min(ImagePreviews.Count - 1, lastVisibleIndex);
 
-            var loadTasks = new List<Task>();
             for (var i = Math.Max(0, firstVisibleIndex - PreloadCount);
                  i <= Math.Min(ImagePreviews.Count - 1, lastVisibleIndex + PreloadCount);
                  i++)
@@ -197,11 +197,10 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
 
                 if (ImagePreviews[i].PreviewBitmap == null)
                 {
-                    loadTasks.Add(LoadImageAsync(i, token));
+                   await LoadImageAsync(i, token);
                 }
             }
 
-            await Task.WhenAll(loadTasks);
         }
         catch (OperationCanceledException)
         {
@@ -705,6 +704,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
             if (cluster != null)
             {
                 preview.FrameColorCode = cluster.ColorCode;
+
             }
         }
     }

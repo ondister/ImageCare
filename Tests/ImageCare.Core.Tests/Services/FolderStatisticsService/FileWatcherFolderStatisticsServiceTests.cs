@@ -3,6 +3,7 @@ using System.Reactive.Threading.Tasks;
 
 using ImageCare.Core.Domain.MediaFormats;
 using ImageCare.Core.Domain.Preview;
+using ImageCare.Core.Services.FileSystemService;
 using ImageCare.Core.Services.FolderStatisticsService;
 using ImageCare.Core.Services.MediaPreviewService;
 
@@ -15,6 +16,7 @@ public class FileWatcherFolderStatisticsServiceTests
 {
     private string _testDirectory;
     private Mock<IMediaPreviewService> _previewServiceMock;
+    private Mock<IFileSystemService> _fileSystemServiceMock;
     private FileWatcherFolderStatisticsService _service;
 
     [SetUp]
@@ -24,7 +26,8 @@ public class FileWatcherFolderStatisticsServiceTests
         Directory.CreateDirectory(_testDirectory);
 
         _previewServiceMock = new Mock<IMediaPreviewService>();
-        _service = new FileWatcherFolderStatisticsService(_previewServiceMock.Object);
+        _fileSystemServiceMock = new Mock<IFileSystemService>();
+        _service = new FileWatcherFolderStatisticsService(_previewServiceMock.Object, _fileSystemServiceMock.Object);
     }
 
     [TearDown]
