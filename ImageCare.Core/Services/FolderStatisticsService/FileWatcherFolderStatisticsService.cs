@@ -1,14 +1,14 @@
-﻿using ImageCare.Core.Domain.Folders;
-using ImageCare.Core.Domain.MediaFormats;
-using ImageCare.Core.Domain.Preview;
-using ImageCare.Core.Exceptions;
-using ImageCare.Core.Services.MediaPreviewService;
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 
+using ImageCare.Core.Domain.Folders;
+using ImageCare.Core.Domain.MediaFormats;
+using ImageCare.Core.Domain.Preview;
+using ImageCare.Core.Exceptions;
 using ImageCare.Core.Services.FileSystemService;
+using ImageCare.Core.Services.MediaPreviewService;
 
 namespace ImageCare.Core.Services.FolderStatisticsService;
 
@@ -37,7 +37,7 @@ public sealed class FileWatcherFolderStatisticsService : IFolderStatisticsServic
         _fileSystemService = fileSystemService;
         _buckets = new ConcurrentDictionary<DateTime, FilesBucket>();
         _bucketChangedSubject = new Subject<FilesBucket>();
-        _clasterizationCompletedSubject= new Subject<FileClustersStatistics>();
+        _clasterizationCompletedSubject = new Subject<FileClustersStatistics>();
         _progressSubject = new BehaviorSubject<ScanProgress>(new ScanProgress(ScanStatus.Idle));
         _totalFilesSubject = new BehaviorSubject<int>(0);
         _currentTotalFiles = 0;
@@ -78,7 +78,7 @@ public sealed class FileWatcherFolderStatisticsService : IFolderStatisticsServic
         }
     }
 
-    public async Task StartAsync(string directoryPath, bool useClusterization=false, CancellationToken cancellationToken = default)
+    public async Task StartAsync(string directoryPath, bool useClusterization = false, CancellationToken cancellationToken = default)
     {
         ObjectDisposedException.ThrowIf(_isDisposed, this);
 
@@ -103,11 +103,10 @@ public sealed class FileWatcherFolderStatisticsService : IFolderStatisticsServic
             SetupFileSystemWatcher(directoryPath);
 
             // Get all files and filter by supported formats
-             var allFiles = _fileSystemService.EnumerateFiles(directoryPath, "*.*", SearchOption.TopDirectoryOnly);
-             var supportedFiles = allFiles.Where(IsSupportedMediaFile);
+            var allFiles = _fileSystemService.EnumerateFiles(directoryPath, "*.*", SearchOption.TopDirectoryOnly);
+            var supportedFiles = allFiles.Where(IsSupportedMediaFile);
 
             await PerformInitialScanAsync(supportedFiles, useClusterization, _scanCancellation.Token);
-
         }
         catch (OperationCanceledException)
         {
@@ -176,7 +175,7 @@ public sealed class FileWatcherFolderStatisticsService : IFolderStatisticsServic
                               parallelOptions,
                               async (file, ct) =>
                               {
-                                  var fileModel = await ProcessFileAsync(file.FullName, ct).ConfigureAwait(false);
+                                  var fileModel = await ProcessFileAsync(file, ct).ConfigureAwait(false);
                                   if (fileModel != null && fileModel.CreatedDateTime.HasValue)
                                   {
                                       verifiedFileModels.Add(fileModel);
@@ -211,8 +210,6 @@ public sealed class FileWatcherFolderStatisticsService : IFolderStatisticsServic
                 return;
             }
 
-           
-
             var clusteringService = new DbScanClusteringService();
             var filesForClusteringService = verifiedFileModels.Select(f => new ClusterFileModel(f)).ToList();
             var clusters = clusteringService.ClusterAutomatically(filesForClusteringService);
@@ -220,7 +217,6 @@ public sealed class FileWatcherFolderStatisticsService : IFolderStatisticsServic
             cancellationToken.ThrowIfCancellationRequested();
 
             _clasterizationCompletedSubject.OnNext(clusters);
-           
         }
         catch (OperationCanceledException)
         {
@@ -304,7 +300,32 @@ public sealed class FileWatcherFolderStatisticsService : IFolderStatisticsServic
         _totalFilesSubject.OnNext(newTotal);
     }
 
-    private async ValueTask<FileModel?> ProcessFileAsync(string filePath, CancellationToken cancellationToken)
+    private async ValueTask<FileModel?> ProcessFileAsync(FileModel file, CancellationToken cancellationToken)
+    {
+        try
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var preview = await _previewService.GetMediaPreviewAsync(file.FullName);
+            if (preview == null || preview == MediaPreview.Empty)
+            {
+                return null;
+            }
+
+            var creationDate = await _previewService.GetCreationDateTime(preview);
+            return new FileModel(file.Name, file.FullName, creationDate);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            throw new ServiceException($"Failed to process file: {file.FullName}", ex);
+        }
+    }
+
+    private async Task<FileModel?> ProcessFileAsync(string filePath, CancellationToken cancellationToken)
     {
         try
         {
