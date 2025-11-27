@@ -27,6 +27,7 @@ using Serilog;
 using System.Threading;
 
 using ImageCare.Core.Services.FolderStatisticsService;
+using ImageCare.UI.Avalonia.ViewModels;
 
 using Microsoft.Extensions.Logging;
 
@@ -80,8 +81,9 @@ public class App : PrismApplication
 		containerRegistry.Register<MainWindow>();
 		containerRegistry.Register<MainWindowTitleRightView>();
 		containerRegistry.Register<MetadataView>();
+        containerRegistry.Register<MainImageView>();
 
-		containerRegistry.RegisterForNavigation<FoldersView>();
+        containerRegistry.RegisterForNavigation<FoldersView>();
 		containerRegistry.RegisterForNavigation<MainImageView>();
 		containerRegistry.RegisterForNavigation<MainVideoView>();
 		containerRegistry.RegisterForNavigation<PreviewPanelView>();
@@ -114,7 +116,6 @@ public class App : PrismApplication
 
 		containerRegistry.RegisterInstance(new ApplicationMapper(Container, loggerFactory).GetMapper());
 		containerRegistry.RegisterInstance(SynchronizationContext.Current);
-		containerRegistry.RegisterSingleton<MapControlMediator>();
 
 		containerRegistry.Register<IFileSystemWatcherService, LocalFileSystemWatcherService>();
 		containerRegistry.Register<IMultiSourcesFileSystemWatcherService, MultiSourcesLocalFileSystemWatcherService>();
@@ -123,5 +124,6 @@ public class App : PrismApplication
 
 		containerRegistry.RegisterDialogWindow<ChildWindow>("childWindow");
 		containerRegistry.RegisterDialog<SettingsView>("settingsViewer");
-	}
+        containerRegistry.RegisterDialog<MainImageSeparateView>("imageViewer");
+    }
 }

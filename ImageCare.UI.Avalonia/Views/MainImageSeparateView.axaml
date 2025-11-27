@@ -1,0 +1,63 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:u="https://irihi.tech/ursa"
+             xmlns:iconPacks="https://github.com/MahApps/IconPacks.Avalonia"
+             mc:Ignorable="d"
+             x:Name="This"
+             x:Class="ImageCare.UI.Avalonia.Views.MainImageSeparateView">
+
+    <Grid Margin="{StaticResource MarginAll.Small}"
+          RowDefinitions="Auto,*,Auto">
+
+        <TextBlock Text="{Binding Title}" Grid.Row="0" />
+
+        <LayoutTransformControl Grid.Row="1"
+                                Grid.RowSpan="2">
+            <LayoutTransformControl.LayoutTransform>
+                <RotateTransform Angle="{Binding RotationAngle}" />
+            </LayoutTransformControl.LayoutTransform>
+
+            <ZoomBorder x:Name="ZoomBorder"
+
+                        Stretch="Uniform"
+                        ZoomSpeed="1.1"
+                        EnableConstrains="True"
+                        EnablePan="True"
+                        PanButton="Left"
+                        ClipToBounds="True"
+                        Focusable="True"
+                        MinZoomX="1"
+                        MinZoomY="1"
+                        VerticalAlignment="Stretch">
+
+                <Image x:Name="Image"
+                       Name="MainViewer"
+                       Source="{Binding MainBitmap}" />
+            </ZoomBorder>
+
+        </LayoutTransformControl>
+
+
+        <Grid Grid.Row="2"
+              Margin="{StaticResource MarginAll.Small}"
+              ColumnDefinitions="Auto,*,Auto">
+
+
+            <u:IconButton Grid.Column="2"
+                          Margin="{StaticResource MarginAll.Small}"
+                          Theme="{DynamicResource SolidIconButton}"
+                          IsEnabled="{Binding !!MainBitmap}"
+                          Command="{Binding ElementName=This, Path=ResetMatrixCommand}">
+                <u:IconButton.Icon>
+                    <iconPacks:PackIconLucide Kind="Square"
+                                              Height="{StaticResource Icon.Size.Small}"
+                                              Width="{StaticResource Icon.Size.Small}" />
+                </u:IconButton.Icon>
+            </u:IconButton>
+        </Grid>
+
+
+    </Grid>
+</UserControl>

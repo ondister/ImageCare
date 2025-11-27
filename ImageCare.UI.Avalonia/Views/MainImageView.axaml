@@ -46,7 +46,7 @@
               Grid.RowSpan="2"
               IsVisible="{Binding MapIsEnabled}">
 
-            <avalonia:MapControl x:Name="OsmMapControl" />
+            <avalonia:MapControl x:Name="OsmMapControl" Map="{Binding Map}" />
             <StackPanel Margin="{StaticResource MarginAll.ExtraLarge}"
                         Orientation="Horizontal"
                         VerticalAlignment="Bottom"
@@ -81,6 +81,7 @@
                 <ToggleButton Grid.Row="0"
                               Grid.Column="0"
                               Margin="{StaticResource MarginHorizontal.Small}"
+                              Width="40"
                               IsChecked="{Binding MapIsEnabled}"
                               IsVisible="{Binding HasLocation}">
                     <iconPacks:PackIconLucide Kind="MapPinned"
@@ -91,6 +92,7 @@
                 <u:IconButton Grid.Row="1"
                               Grid.Column="0"
                               Margin="{StaticResource MarginAll.Small}"
+                              Width="40"
                               Theme="{DynamicResource SolidIconButton}"
                               IsEnabled="{Binding !!MainBitmap}">
                     <u:IconButton.Icon>
@@ -109,19 +111,35 @@
 
                 </u:IconButton>
 
-                <u:IconButton Grid.Row="1"
-                              Grid.Column="2"
-                              Margin="{StaticResource MarginAll.Small}"
-                              Theme="{DynamicResource SolidIconButton}"
-                              IsEnabled="{Binding !!MainBitmap}"
-                              IsVisible="{Binding !MapIsEnabled}"
-                              Command="{Binding ElementName=This, Path=ResetMatrixCommand}">
-                    <u:IconButton.Icon>
-                        <iconPacks:PackIconLucide Kind="Scaling"
-                                                  Height="{StaticResource Icon.Size.Small}"
-                                                  Width="{StaticResource Icon.Size.Small}" />
-                    </u:IconButton.Icon>
-                </u:IconButton>
+                <Grid Grid.Row="1"
+                      Grid.Column="2"
+                      ColumnDefinitions="Auto,Auto">
+                    <u:IconButton Grid.Column="0"
+                                  Margin="{StaticResource MarginAll.Small}"
+                                  Theme="{DynamicResource SolidIconButton}"
+                                  IsEnabled="{Binding !!MainBitmap}"
+                                  IsVisible="{Binding !MapIsEnabled}"
+                                  Command="{Binding ElementName=This, Path=ResetMatrixCommand}">
+                        <u:IconButton.Icon>
+                            <iconPacks:PackIconLucide Kind="Square"
+                                                      Height="{StaticResource Icon.Size.Small}"
+                                                      Width="{StaticResource Icon.Size.Small}" />
+                        </u:IconButton.Icon>
+                    </u:IconButton>
+                    <u:IconButton Grid.Column="1"
+                                  Margin="{StaticResource MarginAll.Small}"
+                                  Theme="{DynamicResource SolidIconButton}"
+                                  IsEnabled="{Binding !!MainBitmap}"
+                                  IsVisible="{Binding !MapIsEnabled}"
+                                  Command="{Binding OpenInWindowCommand}">
+                        <u:IconButton.Icon>
+                            <iconPacks:PackIconLucide Kind="SquareArrowOutUpRight"
+                                                      Height="{StaticResource Icon.Size.Small}"
+                                                      Width="{StaticResource Icon.Size.Small}" />
+                        </u:IconButton.Icon>
+                    </u:IconButton>
+				</Grid>
+               
 
             </Grid>
 

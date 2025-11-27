@@ -3,18 +3,17 @@ using System.Windows.Input;
 using Avalonia;
 using Avalonia.Controls;
 
-using Prism.Commands;
+using Prism.Commands.Ex;
 
 namespace ImageCare.UI.Avalonia.Views;
 
-public partial class MainImageView : UserControl
+public partial class MainImageSeparateView : UserControl
 {
     public static readonly StyledProperty<ICommand> ResetMatrixCommandProperty = AvaloniaProperty.Register<MainImageView, ICommand>(nameof(ResetMatrixCommand));
 
-    public MainImageView()
+    public MainImageSeparateView()
     {
         InitializeComponent();
-
         ResetMatrixCommand = new DelegateCommand(ResetMatrix);
     }
 

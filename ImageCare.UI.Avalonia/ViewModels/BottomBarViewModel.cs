@@ -128,8 +128,6 @@ internal class BottomBarViewModel : NavigatedViewModelBase
 				parameters,
 				null,
 				"childWindow");
-
-			_logger.Debug("Log window opened");
 		}
 		catch (Exception ex)
 		{
@@ -145,8 +143,6 @@ internal class BottomBarViewModel : NavigatedViewModelBase
 			_dialogService.ShowDialog(
 				"settingsViewer",
 				parameters);
-
-			_logger.Debug("Settings window opened");
 		}
 		catch (Exception ex)
 		{
