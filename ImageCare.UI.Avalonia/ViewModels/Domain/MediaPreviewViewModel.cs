@@ -177,7 +177,7 @@ internal class MediaPreviewViewModel : ViewModelBase, IComparable<MediaPreviewVi
         try
         {
             await using var imageStream = await _imageService.GetJpegImageStreamAsync(_mapper.Map<MediaPreview>(this), MediaPreviewSize.Medium, token);
-            PreviewBitmap = await Task.Run(() => Bitmap.DecodeToHeight(imageStream, MaxImageHeight, BitmapInterpolationMode.LowQuality), token);
+            PreviewBitmap = await Task.Run(() =>new Bitmap(imageStream), token);
         }
         catch (OperationCanceledException)
         {

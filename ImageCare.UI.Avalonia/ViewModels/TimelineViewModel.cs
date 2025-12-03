@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reactive;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
@@ -22,6 +23,7 @@ internal class TimelineViewModel : ViewModelBase, IDisposable
 {
     private readonly SynchronizationContext _synchronizationContext;
     private readonly Subject<DateTime> _dateSelectedSubject;
+    private readonly Subject<Unit> _statisticsClickSubject;
     private readonly CompositeDisposable _disposables = new();
     private readonly IFolderStatisticsService _folderStatisticsService;
     private readonly SourceCache<DateStatViewModel, DateTime> _dateStatsCache;
@@ -43,6 +45,7 @@ internal class TimelineViewModel : ViewModelBase, IDisposable
 
         DateStatViewModels = dateStatViewModels;
         _dateSelectedSubject = new Subject<DateTime>();
+        _statisticsClickSubject = new Subject<Unit>();
 
         _folderStatisticsService.BucketChanged
                                 .Buffer(TimeSpan.FromMilliseconds(250))
@@ -62,7 +65,12 @@ internal class TimelineViewModel : ViewModelBase, IDisposable
 
     public ICommand ColumnClickCommand => new DelegateCommand<DateStatViewModel>(item => { _dateSelectedSubject.OnNext(item.Date); });
 
+    public ICommand StatisticsClickCommand => new DelegateCommand(()=>_statisticsClickSubject.OnNext(Unit.Default));
+
+
     public IObservable<DateTime> DateSelected => _dateSelectedSubject.AsObservable();
+
+    public IObservable<Unit> StatisticsClick => _statisticsClickSubject.AsObservable();
 
     public IReadOnlyCollection<DateStatViewModel> DateStatViewModels { get; }
 
@@ -81,6 +89,7 @@ internal class TimelineViewModel : ViewModelBase, IDisposable
     public void Dispose()
     {
         _dateSelectedSubject.Dispose();
+        _statisticsClickSubject.Dispose();
         _disposables.Dispose();
         _dateStatsCache.Dispose();
     }

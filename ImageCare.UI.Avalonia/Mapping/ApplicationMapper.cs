@@ -151,7 +151,34 @@ internal sealed class ApplicationMapper
 				                   _mapper,
 				                   serviceLocator.Resolve<ILogger>()));
 
-			cfg.CreateMap<Notification, NotificationViewModel>();
+            cfg.CreateMap<MediaPreview, GlanceMediaPreviewViewModel>()
+               .IncludeBase<MediaPreview, MediaPreviewViewModel>()
+               .ForMember(dst => dst.PreviewBitmap, opt => opt.Ignore())
+               .ForMember(dst => dst.RemoveImagePreviewCommand, opt => opt.Ignore())
+               .ForMember(dst => dst.Selected, opt => opt.Ignore())
+               .ForMember(dst => dst.IsLoading, opt => opt.Ignore())
+               .ForMember(dst => dst.Metadata, opt => opt.Ignore())
+               .ForMember(dst => dst.MetadataString, opt => opt.Ignore())
+               .ForMember(dst => dst.DateTimeString, opt => opt.Ignore())
+               .ForMember(dst => dst.RotateAngle, opt => opt.Ignore())
+               .ForMember(dst => dst.OpenWithViewModels, opt => opt.Ignore())
+               .ForMember(dst => dst.UseOpenWith, opt => opt.Ignore())
+               .ForMember(dst => dst.HasLocation, opt => opt.Ignore())
+               .ForMember(dst => dst.FileDate, opt => opt.Ignore())
+               .ForMember(dst => dst.FrameColorCode, opt => opt.Ignore())
+               .ConstructUsing(src => new GlanceMediaPreviewViewModel(
+                                   src.Title,
+                                   src.Url,
+                                   src.MediaFormat,
+                                   src.MaxImageHeight,
+                                   serviceLocator.Resolve<IMediaPreviewService>(),
+                                   serviceLocator.Resolve<IMediaPreviewOperationsService>(),
+                                   serviceLocator.Resolve<INotificationService>(),
+                                   serviceLocator.Resolve<IFileAssociationsService>(),
+                                   _mapper,
+                                   serviceLocator.Resolve<ILogger>()));
+
+            cfg.CreateMap<Notification, NotificationViewModel>();
 			cfg.CreateMap<SuccessNotification, SuccessNotificationViewModel>()
 			   .IncludeBase<Notification, NotificationViewModel>();
 			cfg.CreateMap<ErrorNotification, ErrorNotificationViewModel>()

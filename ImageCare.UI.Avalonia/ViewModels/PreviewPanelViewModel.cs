@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reactive;
 using System.Reactive.Disposables;
 using System.Threading;
 using System.Threading.Tasks;
@@ -21,9 +22,12 @@ using ImageCare.Mvvm.Collections;
 using ImageCare.UI.Avalonia.Behaviors;
 using ImageCare.UI.Avalonia.ViewModels.Domain;
 
+using Prism.Dialogs;
 using Prism.Navigation.Regions;
 
 using Serilog;
+
+using Notification = ImageCare.Core.Services.NotificationService.Notification;
 
 namespace ImageCare.UI.Avalonia.ViewModels;
 
@@ -39,6 +43,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
     private readonly IMediaPreviewOperationsService _fileOperationsService;
     private readonly IFolderStatisticsService _folderStatisticsService;
     private readonly INotificationService _notificationService;
+    private readonly IDialogService _dialogService;
     private readonly IMapper _mapper;
     private readonly ILogger _logger;
     private readonly SynchronizationContext _synchronizationContext;
@@ -54,6 +59,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
     private bool _isScrollResetRequested;
     private bool _filesLoading;
     private FileClustersStatistics? _lastClustersStatistics;
+    private SelectedDirectory? _selectedDirectory;
 
     public PreviewPanelViewModel(IMediaPreviewService imageService,
                                  IFolderService folderService,
@@ -61,6 +67,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
                                  IMediaPreviewOperationsService fileOperationsService,
                                  IFolderStatisticsService folderStatisticsService,
                                  INotificationService notificationService,
+                                 IDialogService dialogService,
                                  IMapper mapper,
                                  ILogger logger,
                                  ImagePreviewDropHandler imagePreviewDropHandler,
@@ -72,6 +79,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
         _fileOperationsService = fileOperationsService;
         _folderStatisticsService = folderStatisticsService;
         _notificationService = notificationService;
+        _dialogService = dialogService;
         _mapper = mapper;
         _logger = logger;
         _synchronizationContext = synchronizationContext;
@@ -150,7 +158,8 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
             _folderService.FileSystemItemSelected.Subscribe(OnFolderSelected),
             _fileOperationsService.ImagePreviewSelected.Subscribe(OnImagePreviewSelected),
             _folderStatisticsService.ClusterizationCompleted.Subscribe(OnClusterizationCompleted),
-            TimelineVm.DateSelected.Subscribe(OnTimelineDateSelected)
+            TimelineVm.DateSelected.Subscribe(OnTimelineDateSelected),
+            TimelineVm.StatisticsClick.Subscribe(OnStatisticsClick)
         };
     }
 
@@ -356,36 +365,37 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
             return;
         }
 
+        _selectedDirectory = selectedFileSystemItem;
+
+        _folderStatisticsService.Stop();
+        _fileSystemWatcherService.StopWatching();
+
+        _folderSelectedCancellationTokenSource.Cancel();
+        _folderSelectedCancellationTokenSource.Dispose();
+        _folderSelectedCancellationTokenSource = new CancellationTokenSource();
+
+        _lastClustersStatistics = null;
+
+        ClearPreviewPanel();
+
+        if (selectedFileSystemItem.Path == string.Empty)
         {
-            _folderStatisticsService.Stop();
+            return;
+        }
 
-            _folderSelectedCancellationTokenSource.Cancel();
-            _folderSelectedCancellationTokenSource.Dispose();
-            _folderSelectedCancellationTokenSource = new CancellationTokenSource();
+        _ = LoadFolderAsync(selectedFileSystemItem, _folderSelectedCancellationTokenSource.Token);
 
-            _lastClustersStatistics = null;
+        SelectedFolderPath = selectedFileSystemItem.Path;
 
-            ClearPreviewPanel();
-
-            if (selectedFileSystemItem.Path == string.Empty)
+        if (!string.IsNullOrWhiteSpace(SelectedFolderPath))
+        {
+            try
             {
-                return;
+                _fileSystemWatcherService.StartWatchingDirectory(SelectedFolderPath);
             }
-
-            _ = LoadFolderAsync(selectedFileSystemItem, _folderSelectedCancellationTokenSource.Token);
-
-            SelectedFolderPath = selectedFileSystemItem.Path;
-
-            if (!string.IsNullOrWhiteSpace(SelectedFolderPath))
+            catch (Exception ex)
             {
-                try
-                {
-                    _fileSystemWatcherService.StartWatchingDirectory(SelectedFolderPath);
-                }
-                catch (Exception ex)
-                {
-                    _logger.Error(ex, $"Unexpected exception during set watching directory {SelectedFolderPath}");
-                }
+                _logger.Error(ex, $"Unexpected exception during set watching directory {SelectedFolderPath}");
             }
         }
     }
@@ -676,8 +686,8 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
             var token = _currentScrollCancellation.Token;
 
             // Load range nearby item
-            var start = Math.Max(0, index - PreloadCount/2);
-            var end = Math.Min(ImagePreviews.Count - 1, index + PreloadCount/2);
+            var start = Math.Max(0, index - PreloadCount / 2);
+            var end = Math.Min(ImagePreviews.Count - 1, index + PreloadCount / 2);
 
             await LoadImageAsync(index, token);
             SelectedPreview = targetPreview;
@@ -685,7 +695,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
             var leftLineTask = Task.Run(
                 async () =>
                 {
-                    for (var i = index-1; i >= start; i--)
+                    for (var i = index - 1; i >= start; i--)
                     {
                         if (token.IsCancellationRequested)
                         {
@@ -737,11 +747,25 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
             {
                 continue;
             }
+
             var cluster = statistics.GetClusterByFilePath(preview.Url);
             if (cluster != null)
             {
                 preview.FrameColorCode = cluster.ColorCode;
             }
+        }
+    }
+
+    private void OnStatisticsClick(Unit unit)
+    {
+        try
+        {
+            var parameters = new DialogParameters { { "selectedFolder", _selectedDirectory! } };
+            _dialogService.Show("glanceViewer", parameters, null, "childWindow");
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "Failed to open glance viewer window");
         }
     }
 }

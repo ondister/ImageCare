@@ -15,7 +15,6 @@ using ImageCare.Core.Services.NotificationService;
 using ImageCare.Core.Services.ProcessService;
 using ImageCare.Modules.Logging;
 using ImageCare.UI.Avalonia.Behaviors;
-using ImageCare.UI.Avalonia.Controls;
 using ImageCare.UI.Avalonia.Mapping;
 using ImageCare.UI.Avalonia.Services;
 using ImageCare.UI.Avalonia.Views;
@@ -27,7 +26,6 @@ using Serilog;
 using System.Threading;
 
 using ImageCare.Core.Services.FolderStatisticsService;
-using ImageCare.UI.Avalonia.ViewModels;
 
 using Microsoft.Extensions.Logging;
 
@@ -125,5 +123,6 @@ public class App : PrismApplication
 		containerRegistry.RegisterDialogWindow<ChildWindow>("childWindow");
 		containerRegistry.RegisterDialog<SettingsView>("settingsViewer");
         containerRegistry.RegisterDialog<MainImageSeparateView>("imageViewer");
+        containerRegistry.RegisterDialog<Views.GlancePanelView>("glanceViewer");
     }
 }

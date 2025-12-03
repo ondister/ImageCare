@@ -16,9 +16,9 @@
                                            Height="50"
                                            HorizontalAlignment="Center"
                                            VerticalAlignment="Center"
-                                           Foreground="{DynamicResource SemiBlue5}"/>
+                                           Foreground="{DynamicResource SemiBlue5}" />
         <!-- Total Files Count -->
-        <Border Grid.Column="0"
+        <Button Grid.Column="0"
                 Background="{DynamicResource SemiBlue5}"
                 CornerRadius="{StaticResource BorderRadius.Small}"
                 Padding="{StaticResource Padding.Inner}"
@@ -26,13 +26,11 @@
                 MinWidth="32"
                 HorizontalAlignment="Center"
                 VerticalAlignment="Center"
-                IsVisible="{Binding TotalFilesCount}">
-            <TextBlock Text="{Binding TotalFilesCount}"
-                       HorizontalAlignment="Center"
-                       VerticalAlignment="Center"
-                       FontSize="{StaticResource Font.Size.Small}"
-                       Foreground="{DynamicResource SemiColorText0}" />
-        </Border>
+                IsVisible="{Binding TotalFilesCount}"
+                Content="{Binding TotalFilesCount}"
+                FontSize="{StaticResource Font.Size.Small}"
+                Foreground="{DynamicResource SemiColorText0}"
+                Command="{Binding StatisticsClickCommand}" />
 
         <!-- Timeline Chart -->
         <ScrollViewer Grid.Column="1"

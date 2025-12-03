@@ -249,7 +249,8 @@ internal class DirectoryViewModel : ViewModelBase, IComparable<DirectoryViewMode
 			{
 				if (this is not DeviceViewModel)
 				{
-					ChildFileSystemItems.Clear();
+                        ChildFileSystemItems.Clear();
+					
 					_ = SeedFileSystemItemsAsync(); // Fire and forget. We should get subdirs anyway
 				}
 
