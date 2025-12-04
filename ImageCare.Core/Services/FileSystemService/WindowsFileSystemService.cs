@@ -109,9 +109,9 @@ public sealed class WindowsFileSystemService : IFileSystemService
     }
 
     /// <inheritdoc />
-    public IEnumerable<string> EnumerateDirectories(string directory, string searchPattern)
+    public IEnumerable<string> EnumerateDirectories(string directory, string searchPattern, SearchOption searchOption = SearchOption.TopDirectoryOnly)
     {
-        return Directory.EnumerateDirectories(directory, searchPattern);
+        return Directory.EnumerateDirectories(directory, searchPattern,searchOption);
     }
 
     public void CopyFileMetadata(string source, string destination)

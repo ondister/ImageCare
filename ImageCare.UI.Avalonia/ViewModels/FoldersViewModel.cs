@@ -1,25 +1,23 @@
-﻿using System;
+﻿using AutoMapper;
+using ImageCare.Core.Domain.Folders;
+using ImageCare.Core.Services.DrivesWatcherService;
+using ImageCare.Core.Services.FileSystemService;
+using ImageCare.Core.Services.FileSystemWatcherService;
+using ImageCare.Core.Services.FolderHistoryService;
+using ImageCare.Core.Services.FolderService;
+using ImageCare.Mvvm.Collections;
+using ImageCare.UI.Avalonia.ViewModels.Domain;
+using Prism.Navigation.Regions;
+using Serilog;
+using System;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
-
-using AutoMapper;
-
-using ImageCare.Core.Domain.Folders;
-using ImageCare.Core.Services.DrivesWatcherService;
-using ImageCare.Core.Services.FileSystemWatcherService;
-using ImageCare.Core.Services.FolderHistoryService;
-using ImageCare.Core.Services.FolderService;
-using ImageCare.Mvvm.Collections;
-using ImageCare.UI.Avalonia.ViewModels.Domain;
-
-using Prism.Navigation.Regions;
-
-using Serilog;
 
 namespace ImageCare.UI.Avalonia.ViewModels;
 
