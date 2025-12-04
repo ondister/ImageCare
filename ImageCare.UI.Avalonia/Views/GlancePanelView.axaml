@@ -13,14 +13,17 @@
              mvvm:ViewModelLocator.AutoWireViewModel="True"
              x:Class="ImageCare.UI.Avalonia.Views.GlancePanelView">
 
-    <Grid RowDefinitions="Auto,*,Auto"
+    <Grid RowDefinitions="Auto, Auto,*,Auto"
           Margin="{StaticResource MarginAll.Small}">
+
+        <TextBlock Text="{Binding Title}" Grid.Row="0" />
+
         <!--Statistics-->
-        <views:TimelineView Grid.Row="0"
+        <views:TimelineView Grid.Row="1"
                             DataContext="{Binding TimelineVm}" />
 
         <!--Panel-->
-        <ScrollViewer Grid.Row="1"
+        <ScrollViewer Grid.Row="2"
                       HorizontalScrollBarVisibility="Disabled"
                       VerticalScrollBarVisibility="Auto">
             <Interaction.Behaviors>
@@ -177,7 +180,7 @@
         </ScrollViewer>
 
         <!-- Panel Settings -->
-        <Grid Grid.Row="2"
+        <Grid Grid.Row="3"
               ColumnDefinitions="Auto,Auto"
               Margin="{StaticResource MarginAll.Small}">
 

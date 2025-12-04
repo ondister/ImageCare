@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Reactive;
 using System.Reactive.Disposables;
@@ -13,6 +14,7 @@ using ImageCare.Core.Domain.Folders;
 using ImageCare.Core.Domain.Media;
 using ImageCare.Core.Domain.Preview;
 using ImageCare.Core.Services.FileSystemWatcherService;
+using ImageCare.Core.Services.FolderClusterizationService;
 using ImageCare.Core.Services.FolderService;
 using ImageCare.Core.Services.FolderStatisticsService;
 using ImageCare.Core.Services.MediaPreviewOperationsService;
@@ -42,6 +44,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
     private readonly IFileSystemWatcherService _fileSystemWatcherService;
     private readonly IMediaPreviewOperationsService _fileOperationsService;
     private readonly IFolderStatisticsService _folderStatisticsService;
+    private readonly IFolderClusterizationService _folderClusterizationService;
     private readonly INotificationService _notificationService;
     private readonly IDialogService _dialogService;
     private readonly IMapper _mapper;
@@ -58,7 +61,6 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
 
     private bool _isScrollResetRequested;
     private bool _filesLoading;
-    private FileClustersStatistics? _lastClustersStatistics;
     private SelectedDirectory? _selectedDirectory;
 
     public PreviewPanelViewModel(IMediaPreviewService imageService,
@@ -66,6 +68,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
                                  IFileSystemWatcherService fileSystemWatcherService,
                                  IMediaPreviewOperationsService fileOperationsService,
                                  IFolderStatisticsService folderStatisticsService,
+                                 IFolderClusterizationService folderClusterizationService,
                                  INotificationService notificationService,
                                  IDialogService dialogService,
                                  IMapper mapper,
@@ -78,6 +81,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
         _fileSystemWatcherService = fileSystemWatcherService;
         _fileOperationsService = fileOperationsService;
         _folderStatisticsService = folderStatisticsService;
+        _folderClusterizationService = folderClusterizationService;
         _notificationService = notificationService;
         _dialogService = dialogService;
         _mapper = mapper;
@@ -157,7 +161,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
             _fileSystemWatcherService.FileRenamed.Subscribe(OnFileRenamed),
             _folderService.FileSystemItemSelected.Subscribe(OnFolderSelected),
             _fileOperationsService.ImagePreviewSelected.Subscribe(OnImagePreviewSelected),
-            _folderStatisticsService.ClusterizationCompleted.Subscribe(OnClusterizationCompleted),
+            _folderClusterizationService.ClusterizationCompleted.Subscribe(OnClusterizationCompleted),
             TimelineVm.DateSelected.Subscribe(OnTimelineDateSelected),
             TimelineVm.StatisticsClick.Subscribe(OnStatisticsClick)
         };
@@ -363,8 +367,6 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
         _folderSelectedCancellationTokenSource.Dispose();
         _folderSelectedCancellationTokenSource = new CancellationTokenSource();
 
-        _lastClustersStatistics = null;
-
         ClearPreviewPanel();
 
         if (selectedFileSystemItem.Path == string.Empty)
@@ -409,7 +411,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
                     token.ThrowIfCancellationRequested();
 
                     LoadInitialImagesAsync(_folderSelectedCancellationTokenSource.Token);
-                    _folderStatisticsService.StartAsync(selectedFileSystemItem.Path, true, token);
+                    _folderStatisticsService.StartAsync(selectedFileSystemItem.Path,  token);
                 },
                 token);
         }
@@ -584,6 +586,8 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
                     await LoadChunkAsync(chunk);
                 }
             }
+
+            _folderClusterizationService.StartAsync(SelectedFolderPath, token);
         }
         catch (Exception ex)
         {
@@ -601,12 +605,6 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
             var mediaPreviewViewModel = _mapper.Map<MediaPreviewViewModel>(previewImage);
             mediaPreviewViewModel.FileDate = fileModel.CreatedDateTime.Value;
             previews.Add(mediaPreviewViewModel);
-
-            var fileCluster = _lastClustersStatistics?.GetClusterByFilePath(mediaPreviewViewModel.Url);
-            if (fileCluster != null)
-            {
-                mediaPreviewViewModel.FrameColorCode = fileCluster.ColorCode;
-            }
         }
 
         _synchronizationContext.Send(d => { ImagePreviews.AddRange(previews); }, null);
@@ -720,8 +718,6 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
 
     private void OnClusterizationCompleted(FileClustersStatistics statistics)
     {
-        _lastClustersStatistics = statistics;
-
         var count = ImagePreviews.Count;
 
         for (var index = 0; index < count; index++)

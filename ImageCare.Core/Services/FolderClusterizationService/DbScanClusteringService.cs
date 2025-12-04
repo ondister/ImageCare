@@ -1,6 +1,7 @@
 ﻿using ImageCare.Core.Domain.Folders;
+using ImageCare.Core.Services.FolderStatisticsService;
 
-namespace ImageCare.Core.Services.FolderStatisticsService;
+namespace ImageCare.Core.Services.FolderClusterizationService;
 
 public sealed class DbScanClusteringService
 {

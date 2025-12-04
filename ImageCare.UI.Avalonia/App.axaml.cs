@@ -27,6 +27,9 @@ using Prism.Ioc;
 using Prism.Modularity;
 using Serilog;
 using System.Threading;
+
+using ImageCare.Core.Services.FolderClusterizationService;
+
 using ILogger = Serilog.ILogger;
 
 namespace ImageCare.UI.Avalonia;
@@ -116,6 +119,7 @@ public class App : PrismApplication
 		containerRegistry.Register<IFileSystemWatcherService, LocalFileSystemWatcherService>();
 		containerRegistry.Register<IMultiSourcesFileSystemWatcherService, MultiSourcesLocalFileSystemWatcherService>();
         containerRegistry.Register<IFolderStatisticsService, FileWatcherFolderStatisticsService>();
+        containerRegistry.Register<IFolderClusterizationService, FastFolderClusterizationService>();
         containerRegistry.Register<ImagePreviewDropHandler, ImagePreviewDropHandler>();
 
 		containerRegistry.RegisterDialogWindow<ChildWindow>("childWindow");

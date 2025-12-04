@@ -1,4 +1,6 @@
-﻿namespace ImageCare.Core.Services.FolderStatisticsService;
+﻿using ImageCare.Core.Services.FolderStatisticsService;
+
+namespace ImageCare.Core.Services.FolderClusterizationService;
 
 public sealed class FileClustersStatistics
 {
@@ -7,7 +9,6 @@ public sealed class FileClustersStatistics
 
     public FileClustersStatistics()
     {
-       
         _fileToClusterMap = new Dictionary<string, FilesCluster>();
     }
 
