@@ -6,7 +6,7 @@ using ImageCare.Core.Domain.Folders;
 using ImageCare.Core.Domain.MediaFormats;
 using ImageCare.Core.Exceptions;
 using ImageCare.Core.Services.FileSystemService;
-using ImageCare.Core.Services.FileSystemService.Windows;
+using ImageCare.Core.Services.FolderHistoryService;
 
 namespace ImageCare.Core.Services.FolderService;
 
@@ -17,15 +17,19 @@ public sealed class LocalFileSystemFolderService : IFolderService, IDisposable
     private readonly Subject<SelectedDirectory> _folderLeftSubject;
     private readonly IFileSystemService _fileSystemService;
     private readonly IDriveModelsFactory _driveModelsFactory;
+    private readonly IFolderHistoryService _folderHistoryService;
 
     private readonly ConcurrentDictionary<FileManagerPanel, DirectoryModel> _selectedDirectories = new();
     private readonly ConcurrentDictionary<(string, FileManagerPanel), SelectedDirectory> _visitingDirectoryModels = new();
     private bool _disposed;
 
-    public LocalFileSystemFolderService(IFileSystemService fileSystemService, IDriveModelsFactory driveModelsFactory)
+    public LocalFileSystemFolderService(IFileSystemService fileSystemService,
+                                        IDriveModelsFactory driveModelsFactory,
+                                        IFolderHistoryService folderHistoryService)
     {
         _fileSystemService = fileSystemService ?? throw new ArgumentNullException(nameof(fileSystemService));
         _driveModelsFactory = driveModelsFactory ?? throw new ArgumentNullException(nameof(driveModelsFactory));
+        _folderHistoryService = folderHistoryService ?? throw new ArgumentNullException(nameof(folderHistoryService));
 
         _selectedDirectorySubject = new Subject<SelectedDirectory>();
         _folderVisitingSubject = new Subject<SelectedDirectory>();
@@ -104,7 +108,7 @@ public sealed class LocalFileSystemFolderService : IFolderService, IDisposable
                 return Enumerable.Empty<FileModel>();
             }
 
-            var files = _fileSystemService.EnumerateFiles(directoryPath, searchPattern,SearchOption.TopDirectoryOnly)
+            var files = _fileSystemService.EnumerateFiles(directoryPath, searchPattern, SearchOption.TopDirectoryOnly)
                                           .Where(f => f.CreatedDateTime.HasValue);
 
             return files;
@@ -117,6 +121,8 @@ public sealed class LocalFileSystemFolderService : IFolderService, IDisposable
         {
             throw new ObjectDisposedException(nameof(LocalFileSystemFolderService));
         }
+
+        _folderHistoryService.AddFolderToHistory(selectedDirectory.Path);
 
         _selectedDirectories.AddOrUpdate(
             selectedDirectory.FileManagerPanel,
@@ -142,7 +148,7 @@ public sealed class LocalFileSystemFolderService : IFolderService, IDisposable
             throw new ObjectDisposedException(nameof(LocalFileSystemFolderService));
         }
 
-        if (directoryModel is DeviceModel)
+        if (directoryModel is DeviceModel or SpecialDirectoryModel)
         {
             return;
         }
@@ -174,7 +180,7 @@ public sealed class LocalFileSystemFolderService : IFolderService, IDisposable
             throw new ObjectDisposedException(nameof(LocalFileSystemFolderService));
         }
 
-        if (directoryModel is DriveModel || directoryModel is DeviceModel)
+        if (directoryModel is DriveModel or DeviceModel or SpecialDirectoryModel)
         {
             return;
         }
@@ -194,7 +200,7 @@ public sealed class LocalFileSystemFolderService : IFolderService, IDisposable
             throw new ObjectDisposedException(nameof(LocalFileSystemFolderService));
         }
 
-        if (directoryModel is DeviceModel)
+        if (directoryModel is DeviceModel or SpecialDirectoryModel)
         {
             return null;
         }
@@ -295,7 +301,7 @@ public sealed class LocalFileSystemFolderService : IFolderService, IDisposable
             var supportedExtensions = MediaFormat.GetSupportedExtensions();
             var supportedExtensionsSet = new HashSet<string>(supportedExtensions, StringComparer.OrdinalIgnoreCase);
 
-            var files = _fileSystemService.EnumerateFiles(directoryPath, "*.*",SearchOption.TopDirectoryOnly);
+            var files = _fileSystemService.EnumerateFiles(directoryPath, "*.*", SearchOption.TopDirectoryOnly);
 
             foreach (var file in files)
             {
@@ -346,6 +352,11 @@ public sealed class LocalFileSystemFolderService : IFolderService, IDisposable
         return await Task.Run(async () =>
         {
             var rootModel = new DeviceModel(Environment.MachineName, "//");
+
+            var smartFolder = await GetSmartFolderAsync();
+
+            rootModel.AddDirectory(smartFolder);
+
             var drives = DriveInfo.GetDrives();
 
             var driveTasks = drives
@@ -379,6 +390,20 @@ public sealed class LocalFileSystemFolderService : IFolderService, IDisposable
 
             return rootModel;
         });
+    }
+
+    private async Task<DirectoryModel> GetSmartFolderAsync()
+    {
+        var rootFolder= new SpecialDirectoryModel("Recent", "//");
+        var smartFolders = _folderHistoryService.GetSmartFolders(10);
+        foreach (var smartDirectoryModel in smartFolders)
+        {
+           
+            var firstDirectoryTier = await GetCustomDirectoriesLevelAsync(smartDirectoryModel, true);
+            smartDirectoryModel.AddDirectories(firstDirectoryTier.DirectoryModels);
+        }
+        rootFolder.AddDirectories(smartFolders);
+        return rootFolder;
     }
 
     private async Task<DriveModel?> ProcessDriveAsync(DriveInfo driveInfo, CancellationToken cancellationToken)

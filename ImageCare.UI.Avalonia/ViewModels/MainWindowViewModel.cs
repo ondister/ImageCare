@@ -13,6 +13,7 @@ using CommunityToolkit.Mvvm.Input;
 using ImageCare.Core.Domain.Folders;
 using ImageCare.Core.Domain.MediaFormats;
 using ImageCare.Core.Domain.Preview;
+using ImageCare.Core.Services.FolderHistoryService;
 using ImageCare.Core.Services.FolderService;
 using ImageCare.Core.Services.MediaPreviewOperationsService;
 using ImageCare.Core.Services.NotificationService;
@@ -32,7 +33,8 @@ public class MainWindowViewModel : ViewModelBase
 	private readonly IMediaPreviewOperationsService _fileOperationsService;
 	private readonly IFolderService _folderService;
 	private readonly INotificationService _notificationService;
-	private readonly IMapper _mapper;
+    private readonly IFolderHistoryService _folderHistoryService;
+    private readonly IMapper _mapper;
 	private readonly SynchronizationContext _synchronizationContext;
 	private readonly ILogger _logger;
 	private CompositeDisposable _subscriptions;
@@ -42,6 +44,7 @@ public class MainWindowViewModel : ViewModelBase
 							   IMediaPreviewOperationsService fileOperationsService,
 							   IFolderService folderService,
 							   INotificationService notificationService,
+							   IFolderHistoryService folderHistoryService,
 							   IMapper mapper,
 							   SynchronizationContext synchronizationContext,
 							   ILogger logger)
@@ -50,15 +53,16 @@ public class MainWindowViewModel : ViewModelBase
 		_fileOperationsService = fileOperationsService;
 		_folderService = folderService;
 		_notificationService = notificationService;
-		_mapper = mapper;
+        _folderHistoryService = folderHistoryService;
+        _mapper = mapper;
 		_synchronizationContext = synchronizationContext;
 		_logger = logger;
 
-		OnViewLoadedCommand = new RelayCommand(OnViewLoaded);
-		OnViewUnloadedCommand = new RelayCommand(OnViewUnloaded);
+		OnViewLoadedCommand =  CreateCommand(OnViewLoaded);
+		OnViewUnloadedCommand =  CreateCommand(OnViewUnloaded);
 
-		CopySelectedPreviewCommand = new AsyncRelayCommand(CopyImagePreviewAsync, CanDoPreviewOperation);
-		MoveSelectedPreviewCommand = new AsyncRelayCommand(MoveImagePreviewAsync, CanDoPreviewOperation);
+		CopySelectedPreviewCommand = CreateAsyncCommand(CopyImagePreviewAsync, CanDoPreviewOperation);
+		MoveSelectedPreviewCommand = CreateAsyncCommand(MoveImagePreviewAsync, CanDoPreviewOperation);
 	}
 
 	public ICommand OnViewLoadedCommand { get; }
@@ -232,6 +236,8 @@ public class MainWindowViewModel : ViewModelBase
 	{
 		try
 		{
+			_folderHistoryService.LoadHistory();
+
 			_regionManager.RequestNavigate(RegionNames.SourceFoldersRegion, "FoldersView", OnNavigationResult, new NavigationParameters { { "panel", FileManagerPanel.Left } });
 			_regionManager.RequestNavigate(RegionNames.TargetFoldersRegion, "FoldersView", new NavigationParameters { { "panel", FileManagerPanel.Right } });
 			_regionManager.RequestNavigate(RegionNames.MainImageViewRegion, "MainImageView");
@@ -259,6 +265,7 @@ public class MainWindowViewModel : ViewModelBase
 	{
 		try
 		{
+            _folderHistoryService.SaveHistory();
 			_subscriptions?.Dispose();
 		}
 		catch (Exception ex)

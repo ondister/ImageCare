@@ -226,7 +226,7 @@ internal class DirectoryViewModel : ViewModelBase, IComparable<DirectoryViewMode
         {
             if (_isExpanded)
             {
-                if (this is not DeviceViewModel)
+                if (this is not DeviceViewModel and not SpecialDirectoryViewModel)
                 {
                     ChildFileSystemItems.Clear();
 

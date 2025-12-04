@@ -114,7 +114,7 @@
         <EventTriggerBehavior EventName="Loaded">
             <InvokeCommandAction Command="{Binding OnViewLoadedCommand}" />
         </EventTriggerBehavior>
-        <EventTriggerBehavior EventName="Unloaded">
+        <EventTriggerBehavior EventName="Closing">
             <InvokeCommandAction Command="{Binding OnViewUnloadedCommand}" />
         </EventTriggerBehavior>
     </Interaction.Behaviors>

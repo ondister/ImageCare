@@ -12,4 +12,10 @@ public sealed class Configuration
 
 	[JsonInclude]
 	public List<FileApplicationAssociation> ApplicationAssociationPairs { get; set; } = new();
+
+    [JsonInclude]
+    public List<string> RecentFolderPaths { get; set; } = new();
+
+    [JsonInclude]
+    public List<string> SmartFolderPaths { get; set; } = new();
 }

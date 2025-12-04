@@ -47,7 +47,12 @@ internal sealed class ApplicationMapper
 			   .IncludeBase<DirectoryModel, DirectoryViewModel>()
 			   .ConstructUsing(src => new DriveViewModel(src.Name, src.Path, src.DirectoryModels.Select(m => _mapper.Map(m, m.GetType(), typeof(DirectoryViewModel)) as DirectoryViewModel), serviceLocator.Resolve<IFolderService>(), serviceLocator.Resolve<IFileSystemService>(), _mapper, serviceLocator.Resolve<ILogger>()));
 
-			cfg.CreateMap<DeviceModel, DeviceViewModel>()
+
+            cfg.CreateMap<SpecialDirectoryModel, SpecialDirectoryViewModel>()
+               .IncludeBase<DriveModel, DriveViewModel>()
+               .ConstructUsing(src => new SpecialDirectoryViewModel(src.Name, src.Path, src.DirectoryModels.Select(m => _mapper.Map(m, m.GetType(), typeof(DirectoryViewModel)) as DirectoryViewModel), serviceLocator.Resolve<IFolderService>(), serviceLocator.Resolve<IFileSystemService>(), _mapper, serviceLocator.Resolve<ILogger>()));
+
+            cfg.CreateMap<DeviceModel, DeviceViewModel>()
 			   .IncludeBase<DriveModel, DriveViewModel>()
 			   .ConstructUsing(src => new DeviceViewModel(src.Name, src.Path, src.DirectoryModels.Select(m => _mapper.Map(m, m.GetType(), typeof(DirectoryViewModel)) as DirectoryViewModel), serviceLocator.Resolve<IFolderService>(), serviceLocator.Resolve<IFileSystemService>(), _mapper, serviceLocator.Resolve<ILogger>()));
 

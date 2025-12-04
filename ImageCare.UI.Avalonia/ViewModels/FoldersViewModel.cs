@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
@@ -11,6 +12,7 @@ using AutoMapper;
 using ImageCare.Core.Domain.Folders;
 using ImageCare.Core.Services.DrivesWatcherService;
 using ImageCare.Core.Services.FileSystemWatcherService;
+using ImageCare.Core.Services.FolderHistoryService;
 using ImageCare.Core.Services.FolderService;
 using ImageCare.Mvvm.Collections;
 using ImageCare.UI.Avalonia.ViewModels.Domain;
@@ -357,7 +359,7 @@ internal class FoldersViewModel : NavigatedViewModelBase
 
     private void OnFolderVisited(DirectoryModel directoryModel)
     {
-        if (directoryModel is DeviceModel)
+        if (directoryModel is DeviceModel or SpecialDirectoryModel)
         {
             return;
         }

@@ -29,6 +29,7 @@ using Serilog;
 using System.Threading;
 
 using ImageCare.Core.Services.FolderClusterizationService;
+using ImageCare.Core.Services.FolderHistoryService;
 
 using ILogger = Serilog.ILogger;
 
@@ -90,8 +91,9 @@ public class App : PrismApplication
 
 		containerRegistry.RegisterSingleton<IFileSystemService, WindowsFileSystemService>();
 		containerRegistry.RegisterSingleton<IFolderService, LocalFileSystemFolderService>();
+        containerRegistry.RegisterSingleton<IFolderHistoryService, LocalFolderHistoryService>();
 
-		containerRegistry.RegisterSingleton<IMediaPreviewService, CommonMediaPreviewService>();
+        containerRegistry.RegisterSingleton<IMediaPreviewService, CommonMediaPreviewService>();
 
 		containerRegistry.RegisterSingleton<IProcessService, WindowsProcessService>();
 		containerRegistry.RegisterSingleton<IMediaPreviewOperationsService, WindowsMediaPreviewOperationsService>();
