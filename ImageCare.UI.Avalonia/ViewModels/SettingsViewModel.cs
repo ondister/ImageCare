@@ -20,322 +20,315 @@ namespace ImageCare.UI.Avalonia.ViewModels;
 
 public sealed class SettingsViewModel : ViewModelBase, IDialogAware
 {
-	private readonly IConfigurationService _configService;
-	private readonly IFileDialogService _fileDialogService;
-	private readonly IMapper _mapper;
-	private readonly ILogger _logger;
+    private readonly IConfigurationService _configService;
+    private readonly IFileDialogService _fileDialogService;
+    private readonly IMapper _mapper;
+    private readonly ILogger _logger;
+    private readonly DialogCloseListener _requestClose;
 
-	private string _newExtension = string.Empty;
-	private string _newName = string.Empty;
-	private FileApplicationAssociationViewModel? _selectedAssociation;
-    private DialogCloseListener _requestClose;
+    private string _newExtension = string.Empty;
+    private string _newName = string.Empty;
+    private FileApplicationAssociationViewModel? _selectedAssociation;
 
     public SettingsViewModel(IConfigurationService configurationService,
                              IFileDialogService fileDialogService,
                              IMapper mapper,
-                             ILogger logger)
-	{
-		_configService = configurationService;
-		_fileDialogService = fileDialogService;
-		_mapper = mapper;
-		_logger = logger;
+                             ILogger logger,
+                             DialogCloseListener requestClose)
+    {
+        _configService = configurationService;
+        _fileDialogService = fileDialogService;
+        _mapper = mapper;
+        _logger = logger;
+        _requestClose = requestClose;
 
-		AddAssociationCommand = CreateCommand(AddAssociation, CanAddAssociation, OnCommandException)
-		                        .ObservesProperty(() => NewExtension)
-		                        .ObservesProperty(() => NewName);
-		RemoveAssociationCommand = CreateCommand(RemoveAssociation, CanRemoveAssociation, OnCommandException)
-			.ObservesProperty(() => SelectedAssociation);
-		EditApplicationPathCommand = CreateAsyncCommand(EditApplicationPathAsync, CanEditApplicationPath, OnCommandException)
-			.ObservesProperty(() => SelectedAssociation);
-	}
+        AddAssociationCommand = CreateCommand(AddAssociation, CanAddAssociation, OnCommandException)
+                                .ObservesProperty(() => NewExtension)
+                                .ObservesProperty(() => NewName);
+        RemoveAssociationCommand = CreateCommand(RemoveAssociation, CanRemoveAssociation, OnCommandException)
+            .ObservesProperty(() => SelectedAssociation);
+        EditApplicationPathCommand = CreateAsyncCommand(EditApplicationPathAsync, CanEditApplicationPath, OnCommandException)
+            .ObservesProperty(() => SelectedAssociation);
+    }
 
-	/// <inheritdoc />
-	public string Title { get; } = "Settings";
+    /// <inheritdoc />
+    public string Title { get; } = "Settings";
 
-	public ObservableCollection<FileApplicationAssociationViewModel> Associations { get; } = new();
+    public ObservableCollection<FileApplicationAssociationViewModel> Associations { get; } = new();
 
-	public string NewExtension
-	{
-		get => _newExtension;
-		set => SetProperty(ref _newExtension, value?.Trim() ?? string.Empty);
-	}
+    public string NewExtension
+    {
+        get => _newExtension;
+        set => SetProperty(ref _newExtension, value?.Trim() ?? string.Empty);
+    }
 
-	public string NewName
-	{
-		get => _newName;
-		set => SetProperty(ref _newName, value?.Trim() ?? string.Empty);
-	}
+    public string NewName
+    {
+        get => _newName;
+        set => SetProperty(ref _newName, value?.Trim() ?? string.Empty);
+    }
 
-	public FileApplicationAssociationViewModel? SelectedAssociation
-	{
-		get => _selectedAssociation;
-		set => SetProperty(ref _selectedAssociation, value);
-	}
+    public FileApplicationAssociationViewModel? SelectedAssociation
+    {
+        get => _selectedAssociation;
+        set => SetProperty(ref _selectedAssociation, value);
+    }
 
-	public ICommand AddAssociationCommand { get; }
+    public ICommand AddAssociationCommand { get; }
 
-	public ICommand RemoveAssociationCommand { get; }
+    public ICommand RemoveAssociationCommand { get; }
 
-	public ICommand EditApplicationPathCommand { get; }
-
-	/// <inheritdoc />
-	public bool CanCloseDialog()
-	{
-		return true;
-	}
-
-	/// <inheritdoc />
-	public void OnDialogClosed()
-	{
-		try
-		{
-			Associations.Clear();
-		}
-		catch (Exception ex)
-		{
-			_logger.Error(ex, "Error during SettingsViewModel disposal");
-		}
-	}
-
-	/// <inheritdoc />
-	public void OnDialogOpened(IDialogParameters parameters)
-	{
-		try
-		{
-			LoadAssociations();
-		}
-		catch (Exception ex)
-		{
-			_logger.Error(ex, "Error during dialog open");
-		}
-	}
+    public ICommand EditApplicationPathCommand { get; }
 
     /// <inheritdoc />
     DialogCloseListener IDialogAware.RequestClose => _requestClose;
 
     /// <inheritdoc />
-	public event Action<IDialogResult>? RequestClose;
+    public bool CanCloseDialog()
+    {
+        return true;
+    }
 
-	protected override void OnDispose()
-	{
-		try
-		{
-			Associations.Clear();
-		}
-		catch (Exception ex)
-		{
-			_logger.Error(ex, "Error during SettingsViewModel disposal");
-		}
+    /// <inheritdoc />
+    public void OnDialogClosed()
+    {
+        try
+        {
+            Associations.Clear();
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "Error during SettingsViewModel disposal");
+        }
+    }
 
-		base.OnDispose();
-	}
+    /// <inheritdoc />
+    public void OnDialogOpened(IDialogParameters parameters)
+    {
+        try
+        {
+            LoadAssociations();
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "Error during dialog open");
+        }
+    }
 
-	private void AddAssociation()
-	{
-		if (string.IsNullOrWhiteSpace(NewExtension) || string.IsNullOrWhiteSpace(NewName))
-		{
-			return;
-		}
+    /// <inheritdoc />
+    public event Action<IDialogResult>? RequestClose;
 
-		var trimmedExtension = NewExtension.Trim();
-		var trimmedName = NewName.Trim();
+    private void AddAssociation()
+    {
+        if (string.IsNullOrWhiteSpace(NewExtension) || string.IsNullOrWhiteSpace(NewName))
+        {
+            return;
+        }
 
-		if (_configService.Configuration.Value.ApplicationAssociationPairs
-		                  .Any(a => a.FileExtension.Equals(trimmedExtension, StringComparison.OrdinalIgnoreCase)
-		                         && a.Name.Equals(trimmedName, StringComparison.OrdinalIgnoreCase)))
-		{
-			return;
-		}
+        var trimmedExtension = NewExtension.Trim();
+        var trimmedName = NewName.Trim();
 
-		var association = new FileApplicationAssociation
-		{
-			FileExtension = trimmedExtension,
-			Name = trimmedName,
-			ApplicationPath = string.Empty
-		};
+        if (_configService.Configuration.Value.ApplicationAssociationPairs
+                          .Any(a => a.FileExtension.Equals(trimmedExtension, StringComparison.OrdinalIgnoreCase)
+                                 && a.Name.Equals(trimmedName, StringComparison.OrdinalIgnoreCase)))
+        {
+            return;
+        }
 
-		_configService.Configuration.Value.ApplicationAssociationPairs.Add(association);
-		SaveConfiguration();
+        var association = new FileApplicationAssociation
+        {
+            FileExtension = trimmedExtension,
+            Name = trimmedName,
+            ApplicationPath = string.Empty
+        };
 
-		NewExtension = string.Empty;
-		NewName = string.Empty;
+        _configService.Configuration.Value.ApplicationAssociationPairs.Add(association);
+        SaveConfiguration();
 
-		LoadAssociations();
-	}
+        NewExtension = string.Empty;
+        NewName = string.Empty;
 
-	private bool CanAddAssociation()
-	{
-		try
-		{
-			return !string.IsNullOrWhiteSpace(NewExtension) && !string.IsNullOrWhiteSpace(NewName);
-		}
-		catch (Exception ex)
-		{
-			_logger.Error(ex, "Error in CanAddAssociation");
+        LoadAssociations();
+    }
 
-			return false;
-		}
-	}
+    private bool CanAddAssociation()
+    {
+        try
+        {
+            return !string.IsNullOrWhiteSpace(NewExtension) && !string.IsNullOrWhiteSpace(NewName);
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "Error in CanAddAssociation");
 
-	private void RemoveAssociation()
-	{
-		try
-		{
-			if (SelectedAssociation == null)
-			{
-				return;
-			}
+            return false;
+        }
+    }
 
-			var associationToRemove = _configService.Configuration.Value.ApplicationAssociationPairs
-			                                        .FirstOrDefault(a => a.FileExtension == SelectedAssociation.FileExtension
-			                                                          && a.Name == SelectedAssociation.Name);
+    private void RemoveAssociation()
+    {
+        try
+        {
+            if (SelectedAssociation == null)
+            {
+                return;
+            }
 
-			if (associationToRemove == null)
-			{
-				return;
-			}
+            var associationToRemove = _configService.Configuration.Value.ApplicationAssociationPairs
+                                                    .FirstOrDefault(a => a.FileExtension == SelectedAssociation.FileExtension
+                                                                      && a.Name == SelectedAssociation.Name);
 
-			_configService.Configuration.Value.ApplicationAssociationPairs.Remove(associationToRemove);
-			SaveConfiguration();
+            if (associationToRemove == null)
+            {
+                return;
+            }
 
-			LoadAssociations();
-			SelectedAssociation = null;
-		}
-		catch (Exception ex)
-		{
-			_logger.Error(
-				ex,
-				"Failed to remove association: {Extension} - {Name}",
-				SelectedAssociation?.FileExtension,
-				SelectedAssociation?.Name);
-		}
-	}
+            _configService.Configuration.Value.ApplicationAssociationPairs.Remove(associationToRemove);
+            SaveConfiguration();
 
-	private bool CanRemoveAssociation()
-	{
-		try
-		{
-			return SelectedAssociation != null;
-		}
-		catch (Exception ex)
-		{
-			_logger.Error(ex, "Error in CanRemoveAssociation");
+            LoadAssociations();
+            SelectedAssociation = null;
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(
+                ex,
+                "Failed to remove association: {Extension} - {Name}",
+                SelectedAssociation?.FileExtension,
+                SelectedAssociation?.Name);
+        }
+    }
 
-			return false;
-		}
-	}
+    private bool CanRemoveAssociation()
+    {
+        try
+        {
+            return SelectedAssociation != null;
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "Error in CanRemoveAssociation");
 
-	private async Task EditApplicationPathAsync(IProgress<int> progress, CancellationToken cancellationToken = default)
-	{
-		try
-		{
-			if (SelectedAssociation == null)
-			{
-				_logger.Warning("Attempted to edit application path for null association");
-				return;
-			}
+            return false;
+        }
+    }
 
-			var filePath = await _fileDialogService.ShowOpenFileDialogAsync(
-				               "Select application",
-				               ("Executable", new[] { "*.exe", "*.bat" }),
-				               ("All files", new[] { "*.*" }));
+    private async Task EditApplicationPathAsync(IProgress<int> progress, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            if (SelectedAssociation == null)
+            {
+                _logger.Warning("Attempted to edit application path for null association");
+                return;
+            }
 
-			if (string.IsNullOrEmpty(filePath))
-			{
-				_logger.Debug(
-					"User cancelled file selection for association: {Extension} - {Name}",
-					SelectedAssociation.FileExtension,
-					SelectedAssociation.Name);
-				return;
-			}
+            var filePath = await _fileDialogService.ShowOpenFileDialogAsync(
+                               "Select application",
+                               ("Executable", new[] { "*.exe", "*.bat" }),
+                               ("All files", new[] { "*.*" }));
 
-			var associationToEdit = _configService.Configuration.Value.ApplicationAssociationPairs
-			                                      .FirstOrDefault(a => a.FileExtension == SelectedAssociation.FileExtension
-			                                                        && a.Name == SelectedAssociation.Name);
+            if (string.IsNullOrEmpty(filePath))
+            {
+                _logger.Debug(
+                    "User cancelled file selection for association: {Extension} - {Name}",
+                    SelectedAssociation.FileExtension,
+                    SelectedAssociation.Name);
+                return;
+            }
 
-			if (associationToEdit == null)
-			{
-				return;
-			}
+            var associationToEdit = _configService.Configuration.Value.ApplicationAssociationPairs
+                                                  .FirstOrDefault(a => a.FileExtension == SelectedAssociation.FileExtension
+                                                                    && a.Name == SelectedAssociation.Name);
 
-			SelectedAssociation.ApplicationPath = filePath;
-			associationToEdit.ApplicationPath = filePath;
+            if (associationToEdit == null)
+            {
+                return;
+            }
 
-			SaveConfiguration();
-		}
-		catch (OperationCanceledException)
-		{
-			// Ignored
-		}
-		catch (Exception ex)
-		{
-			_logger.Error(
-				ex,
-				"Failed to edit application path for: {Extension} - {Name}",
-				SelectedAssociation?.FileExtension,
-				SelectedAssociation?.Name);
-		}
-	}
+            SelectedAssociation.ApplicationPath = filePath;
+            associationToEdit.ApplicationPath = filePath;
 
-	private bool CanEditApplicationPath()
-	{
-		try
-		{
-			return SelectedAssociation != null;
-		}
-		catch (Exception ex)
-		{
-			_logger.Error(ex, "Error in CanEditApplicationPath");
+            SaveConfiguration();
+        }
+        catch (OperationCanceledException)
+        {
+            // Ignored
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(
+                ex,
+                "Failed to edit application path for: {Extension} - {Name}",
+                SelectedAssociation?.FileExtension,
+                SelectedAssociation?.Name);
+        }
+    }
 
-			return false;
-		}
-	}
+    private bool CanEditApplicationPath()
+    {
+        try
+        {
+            return SelectedAssociation != null;
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "Error in CanEditApplicationPath");
 
-	private void LoadAssociations()
-	{
-		try
-		{
-			Associations.Clear();
-			var orderedList = _configService.Configuration.Value.ApplicationAssociationPairs
-			                                .OrderBy(p => p.FileExtension)
-			                                .ThenBy(p => p.Name);
+            return false;
+        }
+    }
 
-			foreach (var association in orderedList)
-			{
-				try
-				{
-					Associations.Add(_mapper.Map<FileApplicationAssociationViewModel>(association));
-				}
-				catch (Exception ex)
-				{
-					_logger.Error(
-						ex,
-						"Failed to map association: {Extension} - {Name}",
-						association.FileExtension,
-						association.Name);
-				}
-			}
-		}
-		catch (Exception ex)
-		{
-			_logger.Error(ex, "Failed to load associations");
-		}
-	}
+    private void LoadAssociations()
+    {
+        try
+        {
+            Associations.Clear();
+            var orderedList = _configService.Configuration.Value.ApplicationAssociationPairs
+                                            .OrderBy(p => p.FileExtension)
+                                            .ThenBy(p => p.Name);
 
-	private void SaveConfiguration()
-	{
-		try
-		{
-			_configService.SaveConfiguration();
-		}
-		catch (Exception ex)
-		{
-			_logger.Error(ex, "Failed to save configuration");
-		}
-	}
+            foreach (var association in orderedList)
+            {
+                try
+                {
+                    Associations.Add(_mapper.Map<FileApplicationAssociationViewModel>(association));
+                }
+                catch (Exception ex)
+                {
+                    _logger.Error(
+                        ex,
+                        "Failed to map association: {Extension} - {Name}",
+                        association.FileExtension,
+                        association.Name);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "Failed to load associations");
+        }
+    }
 
-	private void OnCommandException(Exception exception)
-	{
-		_logger.Error(exception, "Command execution failed");
-	}
+    private void SaveConfiguration()
+    {
+        try
+        {
+            _configService.SaveConfiguration();
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "Failed to save configuration");
+        }
+    }
+
+    private void OnCommandException(Exception exception)
+    {
+        _logger.Error(exception, "Command execution failed");
+    }
+
+    private void OnRequestClose(IDialogResult obj)
+    {
+        RequestClose?.Invoke(obj);
+    }
 }

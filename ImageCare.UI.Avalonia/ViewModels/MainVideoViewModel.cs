@@ -250,8 +250,12 @@ internal class MainVideoViewModel : NavigatedViewModelBase
         try
         {
             Stop();
+            UnsubscribeMpvEvents();
             _compositeDisposable?.Dispose();
             _compositeDisposable = null;
+
+            Mpv?.Dispose();
+            Mpv = null;
         }
         catch (Exception ex)
         {
@@ -340,27 +344,6 @@ internal class MainVideoViewModel : NavigatedViewModelBase
             IsPlaying = false;
             HasMediaLoaded = false;
         }
-    }
-
-    protected override void OnDispose()
-    {
-        try
-        {
-            Stop();
-            UnsubscribeMpvEvents();
-
-            _compositeDisposable?.Dispose();
-            _compositeDisposable = null;
-
-            Mpv?.Dispose();
-            Mpv = null;
-        }
-        catch (Exception ex)
-        {
-            _logger.Error(ex, "Error during disposal of MainVideoViewModel");
-        }
-
-        base.OnDispose();
     }
 
     private bool CanPlay()

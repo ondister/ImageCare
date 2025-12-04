@@ -166,16 +166,8 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
     /// <inheritdoc />
     public override void OnNavigatedFrom(NavigationContext navigationContext)
     {
-        OnDispose();
-    }
-
-    /// <inheritdoc />
-    /// <inheritdoc />
-    protected override void OnDispose()
-    {
         _disposable.Dispose();
         _folderSelectedCancellationTokenSource.Dispose();
-        base.OnDispose();
     }
 
     internal async Task HandleScrollAsync(double horizontalOffset, double viewportWidth)
@@ -189,12 +181,10 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
         {
             var totalContentCount = ImagePreviews.Count * MaxItemWidth;
 
-            // Используем более точные границы с запасом
             var firstVisibleIndex = (int)(horizontalOffset / MaxItemWidth);
             var lastVisibleIndex = (int)((horizontalOffset + viewportWidth) / MaxItemWidth);
 
-            // Добавляем небольшую погрешность для компенсации целочисленного деления
-            var epsilon = 2; // несколько пикселей погрешности
+            var epsilon = 2;
 
             firstVisibleIndex = Math.Max(0, firstVisibleIndex - epsilon);
             lastVisibleIndex = Math.Min(ImagePreviews.Count - 1, lastVisibleIndex + epsilon);
@@ -202,12 +192,11 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
             var loadStartIndex = Math.Max(0, firstVisibleIndex - PreloadCount);
             var loadEndIndex = Math.Min(ImagePreviews.Count - 1, lastVisibleIndex + PreloadCount);
 
-            // Всегда включаем последние несколько элементов при скролле в конец
-            var scrollToEndThreshold = viewportWidth * 0.9; // 90% от ширины viewport
+            var scrollToEndThreshold = viewportWidth * 0.9;
             if (horizontalOffset + viewportWidth >= totalContentCount - scrollToEndThreshold)
             {
                 loadEndIndex = ImagePreviews.Count - 1;
-                loadStartIndex = Math.Max(0, ImagePreviews.Count - 20); // последние 20 элементов
+                loadStartIndex = Math.Max(0, ImagePreviews.Count - 20);
             }
 
             for (var i = loadStartIndex; i <= loadEndIndex; i++)

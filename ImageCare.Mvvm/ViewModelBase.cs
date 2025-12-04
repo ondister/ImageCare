@@ -3,24 +3,8 @@ using Prism.Mvvm;
 
 namespace ImageCare.Mvvm;
 
-public abstract class ViewModelBase : BindableBase, IDisposable
+public abstract class ViewModelBase : BindableBase
 {
-	private bool _isDisposed;
-	private CancellationTokenSource _globalCts;
-
-	protected CancellationToken GlobalCancellationToken => (_globalCts ??= new CancellationTokenSource()).Token;
-
-	public virtual void Dispose()
-	{
-		if (!_isDisposed)
-		{
-			CancelGlobalOperations();
-			_globalCts?.Dispose();
-			OnDispose();
-			_isDisposed = true;
-		}
-	}
-
 	protected DelegateCommand CreateCommand(Action execute)
 	{
 		return new DelegateCommand(execute);
@@ -79,13 +63,4 @@ public abstract class ViewModelBase : BindableBase, IDisposable
 	{
 		return new AsyncDelegateCommand(execute, canExecute, exceptionHandler);
 	}
-
-	protected virtual void CancelGlobalOperations()
-	{
-		_globalCts?.Cancel();
-		_globalCts?.Dispose();
-		_globalCts = new CancellationTokenSource();
-	}
-
-	protected virtual void OnDispose() { }
 }

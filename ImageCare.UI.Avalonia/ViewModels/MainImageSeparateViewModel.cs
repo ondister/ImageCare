@@ -88,6 +88,7 @@ internal class MainImageSeparateViewModel : ViewModelBase, IDialogAware
         {
             CancelImageLoading();
             _compositeDisposable?.Dispose();
+            MainBitmap = null;
         }
         catch (Exception ex)
         {
@@ -120,27 +121,6 @@ internal class MainImageSeparateViewModel : ViewModelBase, IDialogAware
         {
             _logger.Error(ex, "Failed to initialize separate image window");
         }
-    }
-
-    protected override void OnDispose()
-    {
-        if (!_isDisposed)
-        {
-            try
-            {
-                CancelImageLoading();
-                _compositeDisposable?.Dispose();
-                MainBitmap = null;
-            }
-            catch (Exception ex)
-            {
-                _logger.Error(ex, "Error during MainImageViewModel disposal");
-            }
-
-            _isDisposed = true;
-        }
-
-        base.OnDispose();
     }
 
     private void OnImagePreviewSelected(MediaPreview imagePreview)

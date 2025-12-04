@@ -8,6 +8,7 @@
              xmlns:u="https://irihi.tech/ursa"
              xmlns:domain="clr-namespace:ImageCare.UI.Avalonia.ViewModels.Domain"
              xmlns:controls="clr-namespace:ImageCare.UI.Avalonia.Controls"
+             xmlns:behaviors="clr-namespace:ImageCare.UI.Avalonia.Behaviors"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              mvvm:ViewModelLocator.AutoWireViewModel="True"
              x:Class="ImageCare.UI.Avalonia.Views.GlancePanelView">
@@ -22,81 +23,84 @@
         <ScrollViewer Grid.Row="1"
                       HorizontalScrollBarVisibility="Disabled"
                       VerticalScrollBarVisibility="Auto">
-
+            <Interaction.Behaviors>
+                <behaviors:VerticalScrollBehavior
+                    IsScrollResetRequested="{Binding IsScrollResetRequested, Mode=TwoWay}" />
+            </Interaction.Behaviors>
             <ListBox
-                ItemsSource="{Binding ImagePreviews}">
+                ItemsSource="{Binding ImagePreviews}"
+                SelectedItem="{Binding SelectedPreview, Mode=TwoWay}"
+                SelectionMode="Single"
+                Theme ="{StaticResource PreviewsListBox}">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
-                        <controls:FixedWrapPanel ItemsPerLine="{Binding ImagesPerLine, Mode=OneWay}" />
+                        <controls:FixedWrapPanel ItemsPerLine="{Binding ImagesPerLine, Mode=OneWay}"
+                                                 AspectRatio="{Binding SelectedAspectRatio.AspectRatio, Mode=OneWay}"
+                                                 RowHeight="{Binding PanelRowHeight, Mode=OneWayToSource}"/>
                     </ItemsPanelTemplate>
                 </ItemsControl.ItemsPanel>
 
                 <ListBox.Styles>
 
-                    <Style Selector="Grid.Selected">
+					<Style Selector="ListBoxItem:selected">
                         <Setter Property="Background" Value="{DynamicResource SemiBlue5}" />
-                    </Style>
-                    <Style Selector="Grid.NotSelected">
-                        <Setter Property="Background" Value="Transparent" />
                     </Style>
 
 
                     <Style Selector="ListBoxItem">
-                        <Setter Property="Margin" Value="{StaticResource MarginHorizontal.Small}" />
+                        <Setter Property="Margin" Value="{StaticResource MarginAll.Small}" />
                         <Setter Property="Padding" Value="0" />
                     </Style>
                 </ListBox.Styles>
 
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate DataType="domain:MediaPreviewViewModel">
-                        <Border BorderThickness="2"
+				<ListBox.ItemTemplate>
+					<DataTemplate DataType="domain:MediaPreviewViewModel">
+						<Border BorderThickness="2"
                                 BorderBrush="{Binding FrameColorCode}"
                                 Padding="{StaticResource Padding.Micro}">
 
-                            <Grid RowDefinitions="Auto,*,Auto"
-                                  Classes.Selected="{Binding Selected }"
-                                  Classes.NotSelected="{Binding !Selected }">
+							<Grid RowDefinitions="Auto,*,Auto">
 
-                                <Grid Grid.Row="0"
+								<Grid Grid.Row="0"
                                       ColumnDefinitions="*,Auto">
-                                    <TextBlock Grid.Column="0"
+									<TextBlock Grid.Column="0"
                                                Margin="{StaticResource MarginHorizontal.Small}"
                                                Text="{Binding Title}"
                                                TextTrimming="CharacterEllipsis" />
-                                    <TextBlock Grid.Column="1"
+									<TextBlock Grid.Column="1"
                                                HorizontalAlignment="Right"
                                                Margin="{StaticResource MarginHorizontal.Small}"
                                                Text="{Binding DateTimeString}" />
-                                </Grid>
+								</Grid>
 
-                                <Grid Grid.Row="1"
+								<Grid Grid.Row="1"
                                       ColumnDefinitions="*,Auto"
                                       RowDefinitions="Auto,*,Auto">
 
-                                    <LayoutTransformControl Grid.Column="0"
+									<LayoutTransformControl Grid.Column="0"
                                                             Grid.Row="0"
                                                             Grid.RowSpan="3"
                                                             Grid.ColumnSpan="2"
                                                             VerticalAlignment="Center"
                                                             HorizontalAlignment="Center">
-                                        <Grid>
-                                            <iconPacks:PackIconLucide Kind="Image"
+										<Grid>
+											<iconPacks:PackIconLucide Kind="Image"
                                                                       HorizontalAlignment="Center"
                                                                       VerticalAlignment="Center"
                                                                       Height="{StaticResource Icon.Size.Giant}"
                                                                       Width="{StaticResource Icon.Size.Giant}"
                                                                       IsVisible="{Binding IsLoading}" />
 
-                                            <Image Source="{Binding PreviewBitmap}" />
+											<Image Source="{Binding PreviewBitmap}" />
 
-                                        </Grid>
+										</Grid>
 
-                                        <LayoutTransformControl.LayoutTransform>
-                                            <RotateTransform Angle="{Binding RotateAngle}" />
-                                        </LayoutTransformControl.LayoutTransform>
-                                    </LayoutTransformControl>
+										<LayoutTransformControl.LayoutTransform>
+											<RotateTransform Angle="{Binding RotateAngle}" />
+										</LayoutTransformControl.LayoutTransform>
+									</LayoutTransformControl>
 
-                                    <u:IconButton Grid.Row="0"
+									<u:IconButton Grid.Row="0"
                                                   Grid.Column="1"
                                                   Width="60"
                                                   Height="30"
@@ -104,14 +108,14 @@
                                                   Command="{CompiledBinding RemoveImagePreviewCommand}"
                                                   Theme="{DynamicResource SolidIconButton}"
                                                   Classes="Danger">
-                                        <u:IconButton.Icon>
-                                            <iconPacks:PackIconLucide Kind="Trash2"
+										<u:IconButton.Icon>
+											<iconPacks:PackIconLucide Kind="Trash2"
                                                                       Height="{StaticResource Icon.Size.Micro}"
                                                                       Width="{StaticResource Icon.Size.Micro}" />
-                                        </u:IconButton.Icon>
-                                    </u:IconButton>
+										</u:IconButton.Icon>
+									</u:IconButton>
 
-                                    <DropDownButton Grid.Row="2"
+									<DropDownButton Grid.Row="2"
                                                     Grid.Column="1"
                                                     Width="60"
                                                     Height="30"
@@ -119,38 +123,38 @@
                                                     IsVisible="{Binding UseOpenWith, Mode=OneTime}"
                                                     Theme="{DynamicResource SolidDropDownButton}">
 
-                                        <DropDownButton.Content>
-                                            <iconPacks:PackIconMaterial Kind="ApplicationExport"
+										<DropDownButton.Content>
+											<iconPacks:PackIconMaterial Kind="ApplicationExport"
                                                                         Height="{StaticResource Icon.Size.Micro}"
                                                                         Width="{StaticResource Icon.Size.Micro}" />
-                                        </DropDownButton.Content>
+										</DropDownButton.Content>
 
-                                        <DropDownButton.Flyout>
-                                            <MenuFlyout ItemsSource="{Binding OpenWithViewModels}">
-                                                <MenuFlyout.ItemContainerTheme>
-                                                    <ControlTheme TargetType="MenuItem">
-                                                        <Setter Property="Command" Value="{Binding OpenWithCommand}" />
-                                                        <Setter Property="Header" Value="{Binding Name}" />
-                                                        <Setter Property="Template">
-                                                            <ControlTemplate>
-                                                                <Border Name="border"
+										<DropDownButton.Flyout>
+											<MenuFlyout ItemsSource="{Binding OpenWithViewModels}">
+												<MenuFlyout.ItemContainerTheme>
+													<ControlTheme TargetType="MenuItem">
+														<Setter Property="Command" Value="{Binding OpenWithCommand}" />
+														<Setter Property="Header" Value="{Binding Name}" />
+														<Setter Property="Template">
+															<ControlTemplate>
+																<Border Name="border"
                                                                         Background="{TemplateBinding Background}"
                                                                         CornerRadius="{TemplateBinding CornerRadius}">
-                                                                    <ContentPresenter
+																	<ContentPresenter
                                                                         Content="{TemplateBinding Header}"
                                                                         TextBlock.Foreground="{TemplateBinding Foreground}"
                                                                         Margin="{TemplateBinding Padding}"
                                                                         VerticalAlignment="Center" />
-                                                                </Border>
-                                                            </ControlTemplate>
-                                                        </Setter>
-                                                    </ControlTheme>
-                                                </MenuFlyout.ItemContainerTheme>
-                                            </MenuFlyout>
-                                        </DropDownButton.Flyout>
-                                    </DropDownButton>
+																</Border>
+															</ControlTemplate>
+														</Setter>
+													</ControlTheme>
+												</MenuFlyout.ItemContainerTheme>
+											</MenuFlyout>
+										</DropDownButton.Flyout>
+									</DropDownButton>
 
-                                    <iconPacks:PackIconMaterial Grid.Row="0"
+									<iconPacks:PackIconMaterial Grid.Row="0"
                                                                 Grid.Column="0"
                                                                 IsVisible="{Binding HasLocation}"
                                                                 Margin="{StaticResource MarginAll.Large}"
@@ -158,55 +162,68 @@
                                                                 Height="{StaticResource Icon.Size.Medium}"
                                                                 Width="{StaticResource Icon.Size.Medium}"
                                                                 Foreground="{DynamicResource SemiRed2}" />
-                                </Grid>
+								</Grid>
 
-                                <TextBlock Grid.Row="2"
+								<TextBlock Grid.Row="2"
                                            Margin="{StaticResource MarginAll.Small}"
                                            Text="{Binding MetadataString}" />
-                            </Grid>
+							</Grid>
 
-                        </Border>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
+						</Border>
+					</DataTemplate>
+				</ListBox.ItemTemplate>
             </ListBox>
 
         </ScrollViewer>
 
         <!-- Panel Settings -->
         <Grid Grid.Row="2"
-              ColumnDefinitions="Auto,Auto,Auto"
-              MaxHeight="30"
+              ColumnDefinitions="Auto,Auto"
               Margin="{StaticResource MarginAll.Small}">
 
-			<u:IconButton Grid.Column="0"
-                          Classes="Small"
-                          Command="{Binding ZoomOutCommand}"
-                          Margin="{StaticResource MarginHorizontal.Small}"
-                          Padding="{StaticResource Padding.Inner}">
-                <u:IconButton.Icon>
-                    <iconPacks:PackIconLucide Kind="CircleMinus" />
-                </u:IconButton.Icon>
-            </u:IconButton>
+            <!-- Images per line -->
+            <Grid Grid.Row="0"
+                  ColumnDefinitions="Auto,Auto,Auto"
+                  MaxHeight="36">
+                <u:IconButton Grid.Column="0"
+                              Classes="Small"
+                              Command="{Binding ZoomOutCommand}"
+                              Margin="{StaticResource MarginAll.Small}"
+                              Padding="{StaticResource Padding.Inner}"
+                              VerticalAlignment="Center">
+                    <u:IconButton.Icon>
+                        <iconPacks:PackIconLucide Kind="CircleMinus" />
+                    </u:IconButton.Icon>
+                </u:IconButton>
 
-			<Label Grid.Column="1"
+                <Label Grid.Column="1"
                        Width="30"
-                       Margin="{StaticResource MarginHorizontal.Small}"
+                       Margin="{StaticResource MarginAll.Small}"
                        Content="{Binding ImagesPerLine}"
                        VerticalAlignment="Center"
                        HorizontalAlignment="Center"
                        HorizontalContentAlignment="Center"
-                       VerticalContentAlignment="Center"/>
+                       VerticalContentAlignment="Center" />
 
 
-			<u:IconButton Grid.Column="2"
-                          Classes="Small"
-                          Command="{Binding ZoomInCommand}"
-                          Padding="{StaticResource Padding.Inner}"
-                          Margin="{StaticResource MarginHorizontal.Small}">
-                <u:IconButton.Icon>
-                    <iconPacks:PackIconLucide Kind="CirclePlus" />
-                </u:IconButton.Icon>
-            </u:IconButton>
+                <u:IconButton Grid.Column="2"
+                              Classes="Small"
+                              Command="{Binding ZoomInCommand}"
+                              Padding="{StaticResource Padding.Inner}"
+                              Margin="{StaticResource MarginAll.Small}"
+                              VerticalAlignment="Center">
+                    <u:IconButton.Icon>
+                        <iconPacks:PackIconLucide Kind="CirclePlus" />
+                    </u:IconButton.Icon>
+                </u:IconButton>
+            </Grid>
+
+            <!-- Aspect ratio -->
+            <ComboBox Grid.Column="1"
+                      VerticalAlignment="Center"
+                      Margin="{StaticResource MarginAll.Medium}"
+                      ItemsSource="{Binding AspectRatioViewModels}"
+                      SelectedItem="{Binding SelectedAspectRatio}" />
         </Grid>
 
     </Grid>

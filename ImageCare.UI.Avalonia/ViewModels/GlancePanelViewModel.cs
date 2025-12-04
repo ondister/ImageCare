@@ -1,15 +1,4 @@
-﻿using ImageCare.Core.Domain.Folders;
-using ImageCare.Core.Services.FileSystemWatcherService;
-using ImageCare.Core.Services.FolderService;
-using ImageCare.Core.Services.FolderStatisticsService;
-using ImageCare.Core.Services.MediaPreviewOperationsService;
-using ImageCare.Core.Services.MediaPreviewService;
-using ImageCare.Mvvm;
-using ImageCare.Mvvm.Collections;
-using ImageCare.UI.Avalonia.ViewModels.Domain;
-using Prism.Dialogs;
-using Serilog;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reactive;
@@ -20,7 +9,22 @@ using System.Windows.Input;
 
 using AutoMapper;
 
+using ImageCare.Core.Domain.Folders;
 using ImageCare.Core.Domain.Media;
+using ImageCare.Core.Domain.Preview;
+using ImageCare.Core.Services.FileSystemWatcherService;
+using ImageCare.Core.Services.FolderService;
+using ImageCare.Core.Services.FolderStatisticsService;
+using ImageCare.Core.Services.MediaPreviewOperationsService;
+using ImageCare.Core.Services.MediaPreviewService;
+using ImageCare.Mvvm;
+using ImageCare.Mvvm.Collections;
+using ImageCare.UI.Avalonia.Controls;
+using ImageCare.UI.Avalonia.ViewModels.Domain;
+
+using Prism.Dialogs;
+
+using Serilog;
 
 namespace ImageCare.UI.Avalonia.ViewModels;
 
@@ -34,18 +38,22 @@ internal class GlancePanelViewModel : ViewModelBase, IDialogAware
     private readonly IMapper _mapper;
     private readonly ILogger _logger;
     private readonly SynchronizationContext _synchronizationContext;
+    private readonly object _imagePathsLock = new();
     private FileClustersStatistics? _lastClustersStatistics;
     private SortedObservableCollection<FileModel> _imagePaths;
-    private readonly object _imagePathsLock = new();
 
     private CompositeDisposable? _disposable;
     private bool _isDisposed;
     private CancellationTokenSource _imageLoadCts;
     private string _title;
-    private int _imagesPerLine = 5;
-    
+    private int _imagesPerLine = 3;
+
     private bool _filesLoading;
     private string _selectedFolderPath;
+    private AspectRatioViewModel _selectedAspectRatio;
+    private GlanceMediaPreviewViewModel? _selectedPreview;
+    private bool _isScrollResetRequested;
+    private double _panelRowHeight;
 
     public GlancePanelViewModel(IFolderStatisticsService folderStatisticsService,
                                 IMediaPreviewService imageService,
@@ -54,7 +62,7 @@ internal class GlancePanelViewModel : ViewModelBase, IDialogAware
                                 IMediaPreviewOperationsService fileOperationsService,
                                 IMapper mapper,
                                 ILogger logger,
-                                SynchronizationContext synchronizationContext)
+                                SynchronizationContext synchronizationContext, DialogCloseListener requestClose)
     {
         _folderStatisticsService = folderStatisticsService;
         _imageService = imageService;
@@ -64,9 +72,7 @@ internal class GlancePanelViewModel : ViewModelBase, IDialogAware
         _mapper = mapper;
         _logger = logger;
         _synchronizationContext = synchronizationContext;
-
-
-
+        RequestClose = requestClose;
 
         _imageLoadCts = new CancellationTokenSource();
         ImagePreviews = new SortedObservableCollection<GlanceMediaPreviewViewModel>(new CreationDateTimeDescendingComparer());
@@ -74,42 +80,28 @@ internal class GlancePanelViewModel : ViewModelBase, IDialogAware
 
         ZoomInCommand = CreateCommand(ZoomIn, CanZoomIn).ObservesProperty(() => ImagePreviews.Count);
         ZoomOutCommand = CreateCommand(ZoomOut, CanZoomOut).ObservesProperty(() => ImagePreviews.Count);
-    }
 
-    private void ZoomOut()
-    {
-        ImagesPerLine--;
-    }
-
-    private bool CanZoomOut()
-    {
-        if (ImagesPerLine <=2)
+        AspectRatioViewModels = new List<AspectRatioViewModel>
         {
-            return false;
-        }
-
-        return ImagePreviews.Count != 0;
+            new(AspectRatio.Ratio4x3, "4:3"),
+            new(AspectRatio.Ratio16x9, "16:9"),
+            new(AspectRatio.Ratio3x2, "3:2"),
+            new(AspectRatio.Ratio1x1, "1:1")
+        };
+        SelectedAspectRatio = AspectRatioViewModels[0];
     }
 
-    private bool CanZoomIn()
+    public AspectRatioViewModel SelectedAspectRatio
     {
-        if (ImagesPerLine >= 20)
-        {
-            return false;
-        }
-
-        return ImagePreviews.Count != 0;
+        get => _selectedAspectRatio;
+        set => SetProperty(ref _selectedAspectRatio, value);
     }
 
-    private void ZoomIn()
-    {
-        ImagesPerLine++;
-    }
+    public IList<AspectRatioViewModel> AspectRatioViewModels { get; }
 
     public ICommand ZoomInCommand { get; }
 
     public ICommand ZoomOutCommand { get; }
-
 
     public TimelineViewModel TimelineVm { get; }
 
@@ -133,8 +125,41 @@ internal class GlancePanelViewModel : ViewModelBase, IDialogAware
         set => SetProperty(ref _imagesPerLine, value);
     }
 
+    public GlanceMediaPreviewViewModel? SelectedPreview
+    {
+        get => _selectedPreview;
+        set
+        {
+            if (_selectedPreview != null)
+            {
+                _selectedPreview.Selected = false;
+            }
+
+            SetProperty(ref _selectedPreview, value);
+        }
+    }
+
+    public double PanelRowHeight
+    {
+        get => _panelRowHeight;
+        set => SetProperty(ref _panelRowHeight, value);
+    }
+
     /// <inheritdoc />
     public DialogCloseListener RequestClose { get; }
+
+    public string SelectedFolderPath
+    {
+        get => _selectedFolderPath;
+        set => SetProperty(ref _selectedFolderPath, value);
+    }
+
+    // Used by VerticalScrollBehavior
+    public bool IsScrollResetRequested
+    {
+        get => _isScrollResetRequested;
+        set => SetProperty(ref _isScrollResetRequested, value);
+    }
 
     /// <inheritdoc />
     public bool CanCloseDialog()
@@ -148,7 +173,7 @@ internal class GlancePanelViewModel : ViewModelBase, IDialogAware
         try
         {
             CancelImageLoading();
-            _disposable?.Dispose();
+            ClearPreviewPanel();
         }
         catch (Exception ex)
         {
@@ -187,7 +212,6 @@ internal class GlancePanelViewModel : ViewModelBase, IDialogAware
                 return;
             }
 
-
             ClearPreviewPanel();
 
             _ = LoadFolderAsync(selectedDirectory, _imageLoadCts.Token);
@@ -212,10 +236,82 @@ internal class GlancePanelViewModel : ViewModelBase, IDialogAware
         }
     }
 
-    public string SelectedFolderPath
+    public async Task HandleScrollAsync(double offsetY, double viewportHeight)
     {
-        get => _selectedFolderPath;
-        set => SetProperty(ref _selectedFolderPath, value);
+        if (ImagePreviews.Count == 0 || PanelRowHeight <= 0)
+        {
+            return;
+        }
+
+        await _imageLoadCts.CancelAsync();
+        _imageLoadCts.Dispose();
+        _imageLoadCts = new CancellationTokenSource();
+        var token = _imageLoadCts.Token;
+
+        try
+        {
+            var firstVisibleRow = (int)(offsetY / PanelRowHeight);
+            var lastVisibleRow = (int)((offsetY + viewportHeight) / PanelRowHeight);
+
+            firstVisibleRow = Math.Max(0, firstVisibleRow - 1);
+            lastVisibleRow = Math.Min(GetTotalRows() - 1, lastVisibleRow + 1);
+
+            var firstVisibleIndex = firstVisibleRow * ImagesPerLine;
+            var lastVisibleIndex = Math.Min(
+                ImagePreviews.Count - 1,
+                (lastVisibleRow + 1) * ImagesPerLine - 1);
+
+            for (var i = firstVisibleIndex; i <= lastVisibleIndex; i++)
+            {
+                if (token.IsCancellationRequested)
+                {
+                    return;
+                }
+
+                if (i >= 0 && i < ImagePreviews.Count && ImagePreviews[i].PreviewBitmap == null)
+                {
+                    await LoadImageAsync(i, token);
+                }
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Игнорируем отмену
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "Error on scroll images");
+        }
+    }
+
+    private void ZoomOut()
+    {
+        ImagesPerLine--;
+    }
+
+    private bool CanZoomOut()
+    {
+        if (ImagesPerLine <= 1)
+        {
+            return false;
+        }
+
+        return ImagePreviews.Count != 0;
+    }
+
+    private bool CanZoomIn()
+    {
+        if (ImagesPerLine >= 20)
+        {
+            return false;
+        }
+
+        return ImagePreviews.Count != 0;
+    }
+
+    private void ZoomIn()
+    {
+        ImagesPerLine++;
     }
 
     private void ClearPreviewPanel()
@@ -263,25 +359,6 @@ internal class GlancePanelViewModel : ViewModelBase, IDialogAware
         }
     }
 
-    protected override void OnDispose()
-    {
-        if (!_isDisposed)
-        {
-            try
-            {
-                _disposable?.Dispose();
-            }
-            catch (Exception ex)
-            {
-                _logger.Error(ex, "Error during MainImageViewModel disposal");
-            }
-
-            _isDisposed = true;
-        }
-
-        base.OnDispose();
-    }
-
     private async void LoadInitialImagesAsync(CancellationToken token)
     {
         try
@@ -291,7 +368,7 @@ internal class GlancePanelViewModel : ViewModelBase, IDialogAware
                 return;
             }
 
-            var initialCount = Math.Min(40 * 2, _imagePaths.Count);
+            var initialCount = Math.Min(20 * 2, _imagePaths.Count);
 
             var firstChunk = true;
             foreach (var chunk in _imagePaths.Chunk(initialCount))
@@ -391,10 +468,31 @@ internal class GlancePanelViewModel : ViewModelBase, IDialogAware
         }
     }
 
-
     private void OnClusterizationCompleted(FileClustersStatistics statistics)
     {
-        throw new NotImplementedException();
+        _lastClustersStatistics = statistics;
+
+        var count = ImagePreviews.Count;
+
+        for (var index = 0; index < count; index++)
+        {
+            if (index >= ImagePreviews.Count)
+            {
+                continue;
+            }
+
+            var preview = ImagePreviews[index];
+            if (preview.FrameColorCode.StartsWith("#"))
+            {
+                continue;
+            }
+
+            var cluster = statistics.GetClusterByFilePath(preview.Url);
+            if (cluster != null)
+            {
+                preview.FrameColorCode = cluster.ColorCode;
+            }
+        }
     }
 
     private void OnStatisticsClick(Unit unit)
@@ -409,22 +507,120 @@ internal class GlancePanelViewModel : ViewModelBase, IDialogAware
 
     private void OnFileRenamed(FileRenamedModel model)
     {
-        throw new NotImplementedException();
+        try
+        {
+            lock (_imagePathsLock)
+            {
+                _imagePaths.Remove(model.OldFileModel);
+            }
+
+            RemoveImagePreviewByPath(model.OldFileModel.FullName);
+
+            lock (_imagePathsLock)
+            {
+                _imagePaths.Add(model.NewFileModel);
+            }
+
+            CreateImagePreviewFromPathAsync(model.NewFileModel.FullName, true);
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, $"Unexpected exception during handling of file renaming: {model.OldFileModel.FullName}");
+        }
     }
 
-    private void OnFileDeleted(FileModel model)
+    private void OnFileDeleted(FileModel fileModel)
     {
-        throw new NotImplementedException();
+        try
+        {
+            lock (_imagePathsLock)
+            {
+                _imagePaths.Remove(fileModel);
+            }
+
+            RemoveImagePreviewByPath(fileModel.FullName);
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, $"Unexpected exception during handling of file deletion: {fileModel.FullName}");
+        }
     }
 
-    private void OnFileCreated(FileModel model)
+    private void OnFileCreated(FileModel fileModel)
     {
-        throw new NotImplementedException();
+        lock (_imagePathsLock)
+        {
+            _imagePaths.Add(fileModel);
+        }
+
+        CreateImagePreviewFromPathAsync(fileModel.FullName, true);
     }
 
     private void OnObservableError(Exception ex)
     {
         _logger.Error(ex, "Error in observable subscription");
+    }
+
+    private async Task CreateImagePreviewFromPathAsync(string filePath, bool loadToTimeline)
+    {
+        try
+        {
+            var imagePreview = await _imageService.GetMediaPreviewAsync(filePath);
+
+            if (imagePreview == null)
+            {
+                return;
+            }
+
+            if (ImagePreviews.Any(p => p.Url.Equals(filePath, StringComparison.OrdinalIgnoreCase)))
+            {
+                return;
+            }
+
+            await AddImagePreviewAsync(imagePreview);
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, $"Unexpected exception during Creating image preview from path: {filePath}");
+        }
+    }
+
+    private async Task AddImagePreviewAsync(MediaPreview previewImage)
+    {
+        try
+        {
+            var mediaPreviewViewModel = _mapper.Map<GlanceMediaPreviewViewModel>(previewImage);
+
+            var metadata = await _imageService.GetMediaMetadataAsync(previewImage);
+            mediaPreviewViewModel.MetadataString = metadata.GetString();
+            mediaPreviewViewModel.DateTimeString = metadata.CreationDateTime.ToString("dd.MM.yyyy HH:mm");
+            mediaPreviewViewModel.Metadata = metadata;
+
+            mediaPreviewViewModel.RotateAngle = mediaPreviewViewModel.Metadata.Orientation.ToRotationAngle();
+            _ = mediaPreviewViewModel.LoadPreviewAsync(CancellationToken.None);
+
+            _synchronizationContext.Send(d => { ImagePreviews.Add(mediaPreviewViewModel); }, null);
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, $"Error of adding image to preview: {previewImage.Url}");
+        }
+    }
+
+    private void RemoveImagePreviewByPath(string filePath)
+    {
+        try
+        {
+            var imagePreviewViewModel = ImagePreviews.FirstOrDefault(vm => vm.Url.Equals(filePath, StringComparison.OrdinalIgnoreCase));
+            if (imagePreviewViewModel != null)
+            {
+                ImagePreviews.Remove(imagePreviewViewModel);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, $"Unexpected exception during Creating image preview from path: {filePath}");
+        }
     }
 
     private void ThrowIfDisposed()
@@ -447,5 +643,15 @@ internal class GlancePanelViewModel : ViewModelBase, IDialogAware
         {
             _logger.Error(ex, "Failed to cancel image loading");
         }
+    }
+
+    private int GetTotalRows()
+    {
+        if (ImagePreviews.Count == 0 || ImagesPerLine <= 0)
+        {
+            return 0;
+        }
+
+        return (int)Math.Ceiling((double)ImagePreviews.Count / ImagesPerLine);
     }
 }

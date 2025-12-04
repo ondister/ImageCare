@@ -111,13 +111,6 @@ internal class BottomBarViewModel : NavigatedViewModelBase
 		}
 	}
 
-	/// <inheritdoc />
-	public override void Dispose()
-	{
-		SafeDispose(ref _compositeDisposable);
-		base.Dispose();
-	}
-
 	private void OpenLogWindow()
 	{
 		try

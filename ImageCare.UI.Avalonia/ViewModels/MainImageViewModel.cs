@@ -1,9 +1,19 @@
-﻿using Avalonia.Media.Imaging;
+﻿using System;
+using System.Collections.Generic;
+using System.Reactive.Disposables;
+using System.Reactive.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Windows.Input;
+
+using Avalonia.Media.Imaging;
+
 using ImageCare.Core.Domain.Media;
 using ImageCare.Core.Domain.Preview;
 using ImageCare.Core.Services.MediaPreviewOperationsService;
 using ImageCare.Core.Services.MediaPreviewService;
 using ImageCare.UI.Avalonia.Services;
+
 using Mapsui;
 using Mapsui.Extensions;
 using Mapsui.Layers;
@@ -12,16 +22,12 @@ using Mapsui.Styles;
 using Mapsui.Tiling;
 using Mapsui.Widgets;
 using Mapsui.Widgets.InfoWidgets;
+
 using Prism.Dialogs;
 using Prism.Navigation.Regions;
+
 using Serilog;
-using System;
-using System.Collections.Generic;
-using System.Reactive.Disposables;
-using System.Reactive.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Windows.Input;
+
 using Location = ImageCare.Core.Domain.Media.Metadata.Location;
 
 namespace ImageCare.UI.Avalonia.ViewModels;
@@ -44,7 +50,6 @@ internal class MainImageViewModel : NavigatedViewModelBase
     private bool _hasLocation;
     private Map _map;
     private Location _location = Location.Empty;
-    private bool _isDisposed;
     private CancellationTokenSource _imageLoadCts;
 
     public MainImageViewModel(IMediaPreviewService imageService,
@@ -130,8 +135,6 @@ internal class MainImageViewModel : NavigatedViewModelBase
 
     public override void OnNavigatedTo(NavigationContext navigationContext)
     {
-        ThrowIfDisposed();
-
         try
         {
             Map = CreateMap();
@@ -162,32 +165,12 @@ internal class MainImageViewModel : NavigatedViewModelBase
         {
             CancelImageLoading();
             _compositeDisposable?.Dispose();
+            MainBitmap = null;
         }
         catch (Exception ex)
         {
             _logger.Error(ex, "Error during MainImageViewModel cleanup");
         }
-    }
-
-    protected override void OnDispose()
-    {
-        if (!_isDisposed)
-        {
-            try
-            {
-                CancelImageLoading();
-                _compositeDisposable?.Dispose();
-                MainBitmap = null;
-            }
-            catch (Exception ex)
-            {
-                _logger.Error(ex, "Error during MainImageViewModel disposal");
-            }
-
-            _isDisposed = true;
-        }
-
-        base.OnDispose();
     }
 
     private void OpenInWindow()
@@ -405,14 +388,6 @@ internal class MainImageViewModel : NavigatedViewModelBase
     private void OnObservableError(Exception ex)
     {
         _logger.Error(ex, "Error in observable subscription");
-    }
-
-    private void ThrowIfDisposed()
-    {
-        if (_isDisposed)
-        {
-            throw new ObjectDisposedException(nameof(MainImageViewModel));
-        }
     }
 
     private void CancelImageLoading()

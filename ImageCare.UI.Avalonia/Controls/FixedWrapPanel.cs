@@ -1,27 +1,61 @@
-﻿using Avalonia;
+﻿using System;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
-using Avalonia.Utilities;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 
 namespace ImageCare.UI.Avalonia.Controls;
+
+public enum AspectRatio
+{
+    Ratio4x3,
+    Ratio3x2,
+    Ratio16x9,
+    Ratio1x1
+}
 
 public class FixedWrapPanel : Panel, INavigableContainer
 {
     public static readonly StyledProperty<int> ItemsPerLineProperty =
         AvaloniaProperty.Register<FixedWrapPanel, int>(nameof(ItemsPerLine), 3);
 
+    public static readonly StyledProperty<AspectRatio> AspectRatioProperty =
+        AvaloniaProperty.Register<FixedWrapPanel, AspectRatio>(nameof(AspectRatio));
+
+    public static readonly DirectProperty<FixedWrapPanel, double> RowHeightProperty =
+        AvaloniaProperty.RegisterDirect<FixedWrapPanel, double>(
+            nameof(RowHeight),
+            o => o.RowHeight);
+
+    private double _rowHeight;
+
     static FixedWrapPanel()
     {
-        AffectsMeasure<FixedWrapPanel>(ItemsPerLineProperty);
+        AffectsMeasure<FixedWrapPanel>(ItemsPerLineProperty, AspectRatioProperty);
+        AffectsArrange<FixedWrapPanel>(ItemsPerLineProperty, AspectRatioProperty);
+    }
+
+    public FixedWrapPanel()
+    {
+
+        _rowHeight = CalculateRowHeight(800);
     }
 
     public int ItemsPerLine
     {
         get => GetValue(ItemsPerLineProperty);
         set => SetValue(ItemsPerLineProperty, value);
+    }
+
+    public AspectRatio AspectRatio
+    {
+        get => GetValue(AspectRatioProperty);
+        set => SetValue(AspectRatioProperty, value);
+    }
+
+    public double RowHeight
+    {
+        get => _rowHeight;
+        private set => SetAndRaise(RowHeightProperty, ref _rowHeight, value);
     }
 
     IInputElement INavigableContainer.GetControl(NavigationDirection direction, IInputElement? from, bool wrap)
@@ -65,173 +99,98 @@ public class FixedWrapPanel : Panel, INavigableContainer
 
     protected override Size MeasureOverride(Size constraint)
     {
+        if (double.IsInfinity(constraint.Width) || double.IsNaN(constraint.Width))
+        {
+            // Use default
+            constraint = new Size(800, constraint.Height);
+        }
+
         var itemWidth = constraint.Width / ItemsPerLine;
-        MutableSize currentLineSize = new();
-        MutableSize panelSize = new();
-        Size lineConstraint = new(constraint.Width, constraint.Height);
-        Size childConstraint = new(itemWidth, constraint.Height);
+        var aspectRatio = GetAspectRatioValue();
+        var itemHeight = itemWidth * aspectRatio;
 
-        // Список для хранения высот элементов в текущей строке
-        List<double> lineHeights = new();
+        RowHeight = itemHeight;
 
-        for (int i = 0, count = Children.Count; i < count; i++)
+        var panelWidth = constraint.Width;
+        var totalRows = (int)Math.Ceiling((double)Children.Count / ItemsPerLine);
+        var panelHeight = totalRows * itemHeight;
+
+        var childSize = new Size(itemWidth, itemHeight);
+        foreach (var child in Children)
         {
-            var child = Children[i];
-            if (child is null)
+            if (child != null)
             {
-                continue;
-            }
-
-            child.Measure(childConstraint);
-            Size childSize = new(itemWidth, child.DesiredSize.Height);
-
-            if (MathUtilities.GreaterThan(currentLineSize.Width + childSize.Width, lineConstraint.Width))
-            {
-                // Переход на новую строку
-                if (lineHeights.Count > 0)
-                {
-                    // Высота строки = минимальная высота в строке (горизонтальные изображения)
-                    currentLineSize.Height = lineHeights.Min();
-
-                    // Обновляем высоту всех элементов в строке
-                    for (int j = i - lineHeights.Count; j < i; j++)
-                    {
-                        Children[j].Measure(new Size(itemWidth, currentLineSize.Height));
-                    }
-                }
-
-                panelSize.Width = Math.Max(currentLineSize.Width, panelSize.Width);
-                panelSize.Height += currentLineSize.Height;
-
-                // Начинаем новую строку
-                currentLineSize = new MutableSize(childSize);
-                lineHeights.Clear();
-                lineHeights.Add(childSize.Height);
-            }
-            else
-            {
-                // Продолжаем накапливать строку
-                currentLineSize.Width += childSize.Width;
-                lineHeights.Add(childSize.Height);
-
-                // Временно используем максимальную высоту для расчетов
-                currentLineSize.Height = Math.Max(childSize.Height, currentLineSize.Height);
+                child.Measure(childSize);
             }
         }
 
-        // Обработка последней строки
-        if (lineHeights.Count > 0)
-        {
-            currentLineSize.Height = lineHeights.Min();
-
-            // Обновляем высоту всех элементов в последней строке
-            int lastLineStart = Children.Count - lineHeights.Count;
-            for (int j = lastLineStart; j < Children.Count; j++)
-            {
-                Children[j].Measure(new Size(itemWidth, currentLineSize.Height));
-            }
-        }
-
-        panelSize.Width = Math.Max(currentLineSize.Width, panelSize.Width);
-        panelSize.Height += currentLineSize.Height;
-
-        return panelSize.ToSize();
+        return new Size(panelWidth, panelHeight);
     }
 
     protected override Size ArrangeOverride(Size finalSize)
     {
-        var itemWidth = finalSize.Width / ItemsPerLine;
-        var firstInLine = 0;
-        double accumulatedHeight = 0;
-        var currentLineSize = new MutableSize();
+        if (Children.Count == 0)
+        {
+            return finalSize;
+        }
 
-        // Список для хранения высот элементов в текущей строке
-        List<double> lineHeights = new();
+        var itemWidth = finalSize.Width / ItemsPerLine;
+        var aspectRatio = GetAspectRatioValue();
+        var itemHeight = itemWidth * aspectRatio;
+
+        RowHeight = itemHeight;
 
         for (var i = 0; i < Children.Count; i++)
         {
             var child = Children[i];
-            if (child == null)
-            {
-                continue;
-            }
 
-            MutableSize itemSize = new(itemWidth, child.DesiredSize.Height);
+            var row = i / ItemsPerLine;
+            var column = i % ItemsPerLine;
 
-            if (MathUtilities.GreaterThan(currentLineSize.Width + itemSize.Width, finalSize.Width))
-            {
-                // Переход на новую строку
-                if (lineHeights.Count > 0)
-                {
-                    // Высота строки = минимальная высота в строке
-                    currentLineSize.Height = lineHeights.Min();
+            var x = column * itemWidth;
+            var y = row * itemHeight;
 
-                    // Аранжируем строку с общей высотой
-                    ArrangeLine(accumulatedHeight, currentLineSize.Height, firstInLine, i, itemWidth);
-                    accumulatedHeight += currentLineSize.Height;
-                }
-
-                // Начинаем новую строку
-                currentLineSize = itemSize;
-                lineHeights.Clear();
-                lineHeights.Add(itemSize.Height);
-                firstInLine = i;
-            }
-            else
-            {
-                // Продолжаем накапливать строку
-                currentLineSize.Width += itemSize.Width;
-                lineHeights.Add(itemSize.Height);
-                currentLineSize.Height = Math.Max(itemSize.Height, currentLineSize.Height);
-            }
+            child.Arrange(new Rect(x, y, itemWidth, itemHeight));
         }
 
-        if (firstInLine < Children.Count && lineHeights.Count > 0)
-        {
-            // Аранжируем последнюю строку
-            currentLineSize.Height = lineHeights.Min();
-            ArrangeLine(accumulatedHeight, currentLineSize.Height, firstInLine, Children.Count, itemWidth);
-        }
+        var totalRows = (int)Math.Ceiling((double)Children.Count / ItemsPerLine);
+        var totalHeight = totalRows * itemHeight;
 
-        return finalSize;
+        return new Size(finalSize.Width, totalHeight);
     }
 
-    private void ArrangeLine(double y, double height, int start, int end, double width)
+    protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
     {
-        double x = 0;
-        for (var i = start; i < end; i++)
-        {
-            var child = Children[i];
-            if (child == null)
-            {
-                continue;
-            }
+        base.OnPropertyChanged(change);
 
-            child.Arrange(new Rect(x, y, width, height));
-            x += width;
+        if (change.Property == ItemsPerLineProperty || change.Property == AspectRatioProperty)
+        {
+            InvalidateMeasure();
+            InvalidateArrange();
         }
     }
 
-    private struct MutableSize
+    private double GetAspectRatioValue()
     {
-        internal MutableSize(double width, double height)
+        return AspectRatio switch
         {
-            Width = width;
-            Height = height;
+            AspectRatio.Ratio4x3 => 3.0 / 4.0,
+            AspectRatio.Ratio3x2 => 2.0 / 3.0,
+            AspectRatio.Ratio16x9 => 9.0 / 16.0,
+            AspectRatio.Ratio1x1 => 1.0,
+            _ => 3.0 / 4.0
+        };
+    }
+
+    private double CalculateRowHeight(double availableWidth)
+    {
+        if (double.IsInfinity(availableWidth) || double.IsNaN(availableWidth) || availableWidth <= 0)
+        {
+            availableWidth = 800;
         }
 
-        internal MutableSize(Size size)
-        {
-            Width = size.Width;
-            Height = size.Height;
-        }
-
-        internal double Width;
-        internal double Height;
-
-        internal Size ToSize()
-        {
-            return new Size(Width, Height);
-        }
+        var itemWidth = availableWidth / ItemsPerLine;
+        var aspectRatio = GetAspectRatioValue();
+        return itemWidth * aspectRatio;
     }
 }
