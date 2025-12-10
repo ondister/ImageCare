@@ -17,9 +17,17 @@
 
     <Grid Margin="{StaticResource MarginAll.Small}">
 
-        <TreeView ItemsSource="{Binding FileSystemItemViewModels}"
-                  SelectedItem="{Binding SelectedFileSystemItem}"
-                  SelectionMode="Single">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- Folders Panel -->
+        <TreeView Grid.Row="0"
+                  ItemsSource="{Binding FileSystemItemViewModels}"
+                  SelectedItem="{Binding SelectedFileSystemItem, Mode=TwoWay} "
+                  SelectionMode="Single"
+                  IsVisible="{Binding !IsInSearchSession}">
 
             <TreeView.Styles>
                 <Style Selector="TreeViewItem" x:DataType="domain:DirectoryViewModel">
@@ -119,12 +127,12 @@
                         </iconPacks:PackIconMaterial>
 
                         <avaloniaProgressRing:ProgressRing Width="{StaticResource Icon.Size.Small}"
-                                                            Height="{StaticResource Icon.Size.Small}"
-                                                            IsActive="True"
-                                                            HorizontalAlignment="Center"
-                                                            VerticalAlignment="Center"
-                                                            Margin="{StaticResource MarginHorizontal.Small}"
-                                                            IsVisible="{Binding IsLoaded}" />
+                                                           Height="{StaticResource Icon.Size.Small}"
+                                                           IsActive="True"
+                                                           HorizontalAlignment="Center"
+                                                           VerticalAlignment="Center"
+                                                           Margin="{StaticResource MarginHorizontal.Small}"
+                                                           IsVisible="{Binding IsLoaded}" />
                         <ContentPresenter Content="{Binding}"
                                           Classes.IsEditing="{Binding IsEditing}"
                                           Classes.IsNotEditing="{Binding !IsEditing}"
@@ -179,16 +187,120 @@
             </TreeView.DataTemplates>
         </TreeView>
 
-        <!-- Progress Ring over the content -->
-        <Border Background="{DynamicResource ThemeBackgroundBrush}"
+        <!-- Search Results Panel -->
+        <Border Grid.Row="0"
+                Background="{DynamicResource ThemeBackgroundBrush}"
+                IsVisible="{Binding IsInSearchSession}">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <!-- Search Header -->
+                <TextBlock Grid.Row="0"
+                           Text="{Binding SearchHeader}"
+                           FontWeight="Bold"
+                           Margin="{StaticResource MarginBottom.Small}" />
+
+                <!-- Search Results List -->
+                <ListBox Grid.Row="1"
+                         ItemsSource="{Binding SearchResults}"
+                         SelectedItem="{Binding SelectedSearchResult}">
+
+                    <Interaction.Behaviors>
+                        <EventTriggerBehavior EventName="DoubleTapped">
+                            <InvokeCommandAction Command="{Binding SetSearchResultCommand}" 
+                                                 CommandParameter="{Binding SelectedSearchResult}"/>
+                        </EventTriggerBehavior>
+                    </Interaction.Behaviors>
+
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="domain:DirectoryViewModel">
+                            <StackPanel Orientation="Horizontal" Margin="{StaticResource MarginVertical.Small}">
+                                <iconPacks:PackIconMaterial Kind="FolderOutline"
+                                                            Height="{StaticResource Icon.Size.Small}"
+                                                            Width="{StaticResource Icon.Size.Small}"
+                                                            Margin="{StaticResource MarginAll.Small}" />
+                                <TextBlock Text="{Binding Name}" />
+                                <TextBlock Text="{Binding Path}"
+                                           FontSize="{StaticResource Font.Size.Small}"
+                                           Opacity="0.7"
+                                           Margin="20,0,0,0" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </Grid>
+        </Border>
+
+
+        <!-- Loading Overlay -->
+        <Border Grid.Row="0" Grid.RowSpan="2"
+                Background="{DynamicResource ThemeBackgroundBrush}"
                 Opacity="0.7"
                 IsVisible="{Binding IsLoading}">
             <avaloniaProgressRing:ProgressRing Width="60"
-                                                Height="60"
-                                                IsActive="{Binding IsLoading}"
-                                                HorizontalAlignment="Center"
-                                                VerticalAlignment="Center" />
+                                               Height="60"
+                                               IsActive="{Binding IsLoading}"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center" />
         </Border>
+
+
+		<!-- Search Panel -->
+		<Border Grid.Row="1"
+				Background="{DynamicResource ThemeControlMidBrush}"
+				CornerRadius="4"
+				Margin="{StaticResource MarginBottom.Small}"
+				IsVisible="{Binding IsSearchEnabled}">
+			<Grid>
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="*" />
+					<ColumnDefinition Width="Auto" />
+				</Grid.ColumnDefinitions>
+
+				<!-- Search TextBox with Progress Overlay -->
+				<Grid Grid.Column="0">
+					<!-- TextBox -->
+					<TextBox x:Name="SearchTextBox"
+							 Watermark="{Binding SearchTarget}"
+							 IsEnabled="{Binding !IsSearching}"
+							 Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged, Delay=300}">
+						<TextBox.KeyBindings>
+							<KeyBinding Command="{Binding PerformSearchCommand}" Gesture="Enter" />
+						</TextBox.KeyBindings>
+					</TextBox>
+
+					<!-- Progress Overlay -->
+					<Border Background="{DynamicResource ThemeControlMidBrush}"
+							Opacity="0.9"
+							IsVisible="{Binding IsSearching}">
+						<StackPanel Orientation="Horizontal"
+									HorizontalAlignment="Center"
+									VerticalAlignment="Center"
+									Spacing="8">
+							<avaloniaProgressRing:ProgressRing Width="{StaticResource Icon.Size.Small}"
+															   Height="{StaticResource Icon.Size.Small}"
+															   IsActive="True" />
+							<TextBlock Text="Searching..."
+									   Foreground="{DynamicResource ThemeForegroundBrush}" />
+						</StackPanel>
+					</Border>
+				</Grid>
+
+				<!-- Cancel Search Button -->
+				<Button Grid.Column="1"
+						Command="{Binding ClearSearchCommand}"
+						IsVisible="{Binding IsInSearchSession}"
+						Margin="4"
+						Padding="4">
+					<iconPacks:PackIconMaterial Kind="Close"
+												Height="{StaticResource Icon.Size.Small}"
+												Width="{StaticResource Icon.Size.Small}" />
+				</Button>
+			</Grid>
+		</Border>
 
     </Grid>
 

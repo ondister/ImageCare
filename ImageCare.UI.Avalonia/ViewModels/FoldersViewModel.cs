@@ -1,16 +1,5 @@
-﻿using AutoMapper;
-using ImageCare.Core.Domain.Folders;
-using ImageCare.Core.Services.DrivesWatcherService;
-using ImageCare.Core.Services.FileSystemService;
-using ImageCare.Core.Services.FileSystemWatcherService;
-using ImageCare.Core.Services.FolderHistoryService;
-using ImageCare.Core.Services.FolderService;
-using ImageCare.Mvvm.Collections;
-using ImageCare.UI.Avalonia.ViewModels.Domain;
-using Prism.Navigation.Regions;
-using Serilog;
-using System;
-using System.Diagnostics;
+﻿using System;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Reactive.Disposables;
@@ -19,11 +8,27 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
 
+using AutoMapper;
+
+using ImageCare.Core.Domain.Folders;
+using ImageCare.Core.Services.DrivesWatcherService;
+using ImageCare.Core.Services.FileSystemService;
+using ImageCare.Core.Services.FileSystemWatcherService;
+using ImageCare.Core.Services.FolderService;
+using ImageCare.Mvvm.Collections;
+using ImageCare.UI.Avalonia.ViewModels.Domain;
+
+using Prism.Navigation.Regions;
+
+using Serilog;
+
 namespace ImageCare.UI.Avalonia.ViewModels;
 
 internal class FoldersViewModel : NavigatedViewModelBase
 {
+    private const string SearchTargetText = "Search folders";
     private readonly IFolderService _folderService;
+    private readonly IFileSystemService _fileSystemService;
     private readonly IMultiSourcesFileSystemWatcherService _multiSourcesFileSystemWatcherService;
     private readonly IDrivesWatcherService _drivesWatcherService;
     private readonly IMapper _mapper;
@@ -31,12 +36,21 @@ internal class FoldersViewModel : NavigatedViewModelBase
     private readonly SynchronizationContext _synchronizationContext;
 
     private DirectoryViewModel? _selectedFileSystemItem;
+    private DirectoryViewModel? _selectedSearchResult;
     private CompositeDisposable _compositeDisposable;
     private DirectoryModel? _createdSubFolder;
+    private CancellationTokenSource? _searchCancellationTokenSource;
 
+    private string? _searchText;
     private bool _isLoading;
+    private bool _isSearching;
+    private string? _searchHeader;
+    private bool _isSearchEnabled;
+    private bool _isInSearchSession;
+    private string _searchTarget = SearchTargetText;
 
     public FoldersViewModel(IFolderService folderService,
+                            IFileSystemService fileSystemService,
                             IMultiSourcesFileSystemWatcherService multiSourcesFileSystemWatcherService,
                             IDrivesWatcherService drivesWatcherService,
                             IMapper mapper,
@@ -44,6 +58,7 @@ internal class FoldersViewModel : NavigatedViewModelBase
                             SynchronizationContext synchronizationContext)
     {
         _folderService = folderService ?? throw new ArgumentNullException(nameof(folderService));
+        _fileSystemService = fileSystemService;
         _multiSourcesFileSystemWatcherService = multiSourcesFileSystemWatcherService ?? throw new ArgumentNullException(nameof(multiSourcesFileSystemWatcherService));
         _drivesWatcherService = drivesWatcherService ?? throw new ArgumentNullException(nameof(drivesWatcherService));
         _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
@@ -54,10 +69,19 @@ internal class FoldersViewModel : NavigatedViewModelBase
         DeleteFolderCommand = CreateCommand(DeleteFolder, CanDeleteFolder);
         CreateFolderCommand = CreateCommand(CreateFolder, CanCreateFolder);
 
+        PerformSearchCommand = CreateAsyncCommand(PerformSearchAsync, CanPerformSearch);
+        ClearSearchCommand = CreateCommand(ClearSearch, CanClearSearch).ObservesProperty(() => IsInSearchSession);
+        SetSearchResultCommand = CreateAsyncCommand<DirectoryViewModel>(SetSearchResultAsync);
+
         FileSystemItemViewModels = new SortedObservableCollection<DirectoryViewModel>();
+        SearchResults = new ObservableCollection<DirectoryViewModel>();
     }
 
+    public ICommand SetSearchResultCommand { get; set; }
+
     public SortedObservableCollection<DirectoryViewModel> FileSystemItemViewModels { get; }
+
+    public ObservableCollection<DirectoryViewModel> SearchResults { get; }
 
     public ICommand OnViewLoadedCommand { get; }
 
@@ -65,16 +89,64 @@ internal class FoldersViewModel : NavigatedViewModelBase
 
     public ICommand DeleteFolderCommand { get; }
 
+    public ICommand PerformSearchCommand { get; }
+
+    public ICommand ClearSearchCommand { get; }
+
+    public string SearchTarget
+    {
+        get => _searchTarget;
+        set => SetProperty(ref _searchTarget, value);
+    }
+
     public bool IsLoading
     {
         get => _isLoading;
         private set => SetProperty(ref _isLoading, value);
     }
 
+    public bool IsSearchEnabled
+    {
+        get => _isSearchEnabled;
+        set => SetProperty(ref _isSearchEnabled, value);
+    }
+
+    public bool IsSearching
+    {
+        get => _isSearching;
+        private set => SetProperty(ref _isSearching, value);
+    }
+
+    public bool IsInSearchSession
+    {
+        get => _isInSearchSession;
+        private set => SetProperty(ref _isInSearchSession, value);
+    }
+
+    public string? SearchText
+    {
+        get => _searchText;
+        set => SetProperty(ref _searchText, value);
+    }
+
+    public string? SearchHeader
+    {
+        get => _searchHeader;
+        private set => SetProperty(ref _searchHeader, value);
+    }
+
+    public bool HasSearchText => !string.IsNullOrWhiteSpace(SearchText);
+
     public DirectoryViewModel? SelectedFileSystemItem
     {
         get => _selectedFileSystemItem;
         set => SetSelectedFileSystemItem(value);
+    }
+
+    public DirectoryViewModel? SelectedSearchResult
+    {
+        get => _selectedSearchResult;
+        set => SetProperty(ref _selectedSearchResult, value);
     }
 
     public FileManagerPanel FileManagerPanel { get; private set; } = FileManagerPanel.Left;
@@ -131,6 +203,7 @@ internal class FoldersViewModel : NavigatedViewModelBase
     {
         try
         {
+            ClearSearch();
             _compositeDisposable?.Dispose();
 
             _drivesWatcherService.StopWatching();
@@ -145,6 +218,109 @@ internal class FoldersViewModel : NavigatedViewModelBase
         }
     }
 
+    private async Task SetSearchResultAsync(DirectoryViewModel directoryViewModel)
+    {
+        if (directoryViewModel == null)
+        {
+            return;
+        }
+
+        try
+        {
+            await FileSystemItemViewModels[0].GotoDirectoryFromRootAsync(directoryViewModel);
+
+            SelectedFileSystemItem = directoryViewModel;
+
+            ClearSearch();
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "Failed to open search result: {Path}", directoryViewModel.Path);
+        }
+    }
+
+    private async Task PerformSearchAsync()
+    {
+        if (string.IsNullOrWhiteSpace(SearchText) || SelectedFileSystemItem == null)
+        {
+            return;
+        }
+
+        CancelSearch(); // Cancel previous search if any
+
+        _searchCancellationTokenSource = new CancellationTokenSource();
+        var cancellationToken = _searchCancellationTokenSource.Token;
+
+        try
+        {
+            SearchResults.Clear();
+            IsSearching = true;
+            IsInSearchSession = true;
+
+            SearchHeader = $"Searching for \"{SearchText}\" in {SelectedFileSystemItem?.Name ?? "all folders"}...";
+
+            await Task.Run(
+                () =>
+                {
+                    var directories = _fileSystemService.EnumerateDirectories(SelectedFileSystemItem.Path, $"*{SearchText}*", SearchOption.AllDirectories)
+                                                        .Select(d => new DirectoryModel(Path.GetFileName(d), d));
+                    foreach (var directory in directories)
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+
+                        _synchronizationContext.Send(d => { SearchResults.Add(_mapper.Map<DirectoryViewModel>(directory)); }, null);
+                    }
+                },
+                cancellationToken);
+
+            SearchHeader = $"Found {SearchResults.Count} results for \"{SearchText}\"";
+        }
+        catch (OperationCanceledException)
+        {
+            SearchHeader = "Search cancelled";
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "Failed to perform search");
+
+            SearchHeader = "Search failed";
+        }
+        finally
+        {
+            IsSearching = false;
+            if (cancellationToken.IsCancellationRequested)
+            {
+                ClearSearch();
+            }
+        }
+    }
+
+    private void ClearSearch()
+    {
+        CancelSearch();
+        SearchText = null;
+        SearchResults.Clear();
+        IsSearching = false;
+        IsInSearchSession = false;
+    }
+
+    private void CancelSearch()
+    {
+        _searchCancellationTokenSource?.Cancel();
+        _searchCancellationTokenSource?.Dispose();
+        _searchCancellationTokenSource = null;
+    }
+
+    private bool CanPerformSearch()
+    {
+        return !IsLoading && HasSearchText && !IsSearching;
+    }
+
+    private bool CanClearSearch()
+    {
+        return IsInSearchSession;
+    }
+
     private void SetSelectedFileSystemItem(DirectoryViewModel? value)
     {
         if (SetProperty(ref _selectedFileSystemItem, value) && value != null)
@@ -153,6 +329,9 @@ internal class FoldersViewModel : NavigatedViewModelBase
             {
                 var selectedDirectory = new SelectedDirectory(value.Name, value.Path, FileManagerPanel);
                 _folderService.SetSelectedDirectory(selectedDirectory);
+
+                IsSearchEnabled = value is not (SpecialDirectoryViewModel or DriveViewModel or DeviceViewModel);
+                SearchTarget = $"{SearchTargetText} in {_selectedFileSystemItem.Name}";
             }
             catch (Exception ex)
             {

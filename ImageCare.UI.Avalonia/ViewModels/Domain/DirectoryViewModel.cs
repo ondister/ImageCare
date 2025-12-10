@@ -8,6 +8,8 @@ using System.Windows.Input;
 
 using AutoMapper;
 
+using ExCSS;
+
 using ImageCare.Core.Domain.Folders;
 using ImageCare.Core.Services.FileSystemService;
 using ImageCare.Core.Services.FolderService;
@@ -170,6 +172,67 @@ internal class DirectoryViewModel : ViewModelBase, IComparable<DirectoryViewMode
         }
     }
 
+    public async Task GotoDirectoryAsync(DirectoryViewModel targetDirectory)
+    {
+        if (targetDirectory == null)
+        {
+            throw new ArgumentNullException(nameof(targetDirectory));
+        }
+
+        try
+        {
+            // Check if we're already at the target directory
+            if (Path.Equals(targetDirectory.Path, StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            // Check if target is a descendant of current directory
+            if (!targetDirectory.Path.StartsWith(Path, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException("Target directory is not a descendant of current directory");
+            }
+
+            await NavigateToPathAsync(targetDirectory.Path);
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "Failed to navigate to directory: {TargetPath}", targetDirectory.Path);
+        }
+    }
+
+    public async Task GotoDirectoryFromRootAsync(DirectoryViewModel targetDirectory)
+    {
+        if (targetDirectory == null)
+        {
+            throw new ArgumentNullException(nameof(targetDirectory));
+        }
+
+        try
+        {
+            // Find the appropriate drive that contains the target path
+            var targetDrive = ChildFileSystemItems.OfType<DriveViewModel>()
+                                                  .FirstOrDefault(drive => targetDirectory.Path.StartsWith(drive.Path, StringComparison.OrdinalIgnoreCase));
+
+            if (targetDrive == null)
+            {
+                throw new InvalidOperationException($"No drive contains the target path: {targetDirectory.Path}");
+            }
+
+            if (!targetDrive.IsExpanded)
+            {
+                targetDrive.IsExpanded = true;
+            }
+
+            // Navigate from the drive to the target
+            await targetDrive.GotoDirectoryAsync(targetDirectory);
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "Failed to navigate from root to directory: {TargetPath}", targetDirectory.Path);
+        }
+    }
+
     private void RenameFolder()
     {
         try
@@ -307,6 +370,58 @@ internal class DirectoryViewModel : ViewModelBase, IComparable<DirectoryViewMode
         finally
         {
             IsLoaded = false;
+        }
+    }
+
+    private async Task NavigateToPathAsync(string targetPath)
+    {
+        var currentPath = Path;
+
+        // Get relative path segments
+        var relativePath = targetPath.Substring(currentPath.Length).TrimStart(System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar);
+
+        if (string.IsNullOrEmpty(relativePath))
+        {
+            return;
+        }
+
+        var pathSegments = relativePath.Split(
+            [System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar],
+            StringSplitOptions.RemoveEmptyEntries);
+
+        var currentDirectory = this;
+
+        foreach (var segment in pathSegments)
+        {
+            try
+            {
+                // Expand the current directory to show its children
+                if (!currentDirectory.IsExpanded)
+                {
+                    currentDirectory.IsExpanded = true;
+                    await Task.Delay(3000);
+                }
+
+
+                var childDirectory = currentDirectory.ChildFileSystemItems
+                                                     .FirstOrDefault(c => string.Equals(c.Name, segment, StringComparison.OrdinalIgnoreCase));
+
+                // Move to the next level
+                currentDirectory = childDirectory;
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(
+                    ex,
+                    "Failed to navigate to segment {Segment} in path {TargetPath}",
+                    segment,
+                    targetPath);
+            }
+        }
+
+        if (!currentDirectory.IsExpanded)
+        {
+            currentDirectory.IsExpanded = true;
         }
     }
 }
