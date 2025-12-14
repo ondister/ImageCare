@@ -294,6 +294,17 @@
                     </Border>
                 </Grid>
 
+                <!-- Start Search Button -->
+                <Button Grid.Column="1"
+                        Command="{Binding PerformSearchCommand}"
+                        IsVisible="{Binding !IsInSearchSession}"
+                        Margin="4"
+                        Padding="4">
+                    <iconPacks:PackIconMaterial Kind="FolderSearch"
+                                                Height="{StaticResource Icon.Size.Small}"
+                                                Width="{StaticResource Icon.Size.Small}" />
+                </Button>
+
                 <!-- Cancel Search Button -->
                 <Button Grid.Column="1"
                         Command="{Binding ClearSearchCommand}"

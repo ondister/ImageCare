@@ -68,7 +68,10 @@ internal class FoldersViewModel : NavigatedViewModelBase
         DeleteFolderCommand = CreateCommand(DeleteFolder, CanDeleteFolder);
         CreateFolderCommand = CreateCommand(CreateFolder, CanCreateFolder);
 
-        PerformSearchCommand = CreateAsyncCommand(PerformSearchAsync, CanPerformSearch);
+        PerformSearchCommand = CreateAsyncCommand(PerformSearchAsync, CanPerformSearch)
+            .ObservesProperty(()=>SearchText)
+            .ObservesProperty(()=>IsSearching)
+            .ObservesProperty(()=>IsLoading);
         ClearSearchCommand = CreateCommand(ClearSearch, CanClearSearch).ObservesProperty(() => IsInSearchSession);
         SetSearchResultCommand = CreateAsyncCommand<DirectoryViewModel>(SetSearchResultAsync);
 
@@ -134,7 +137,7 @@ internal class FoldersViewModel : NavigatedViewModelBase
         private set => SetProperty(ref _searchHeader, value);
     }
 
-    public bool HasSearchText => !string.IsNullOrWhiteSpace(SearchText);
+    public bool HasSearchText => !string.IsNullOrWhiteSpace(SearchText) && SearchText.Length>=3;
 
     public DirectoryViewModel? SelectedFileSystemItem
     {
