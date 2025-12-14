@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
 
@@ -20,6 +21,13 @@ using Serilog;
 
 namespace ImageCare.UI.Avalonia.ViewModels.Domain;
 
+public enum DirectoryLoadState
+{
+    Initial,
+    Loading,
+    Loaded 
+}
+
 [DebuggerDisplay("{Path}")]
 internal class DirectoryViewModel : ViewModelBase, IComparable<DirectoryViewModel>
 {
@@ -34,6 +42,11 @@ internal class DirectoryViewModel : ViewModelBase, IComparable<DirectoryViewMode
     private bool _hasSupportedMedia;
     private bool _isEditing;
     private string? _editableName;
+    private CancellationTokenSource? _expantionCancellationTokenSource;
+    private DirectoryLoadState _loadState;
+    private readonly SemaphoreSlim _loadingSemaphore = new SemaphoreSlim(1, 1);
+    private TaskCompletionSource<bool>? _loadingCompletionSource;
+    private bool _isSelected;
 
     public DirectoryViewModel(string? name,
                               string path,
@@ -102,6 +115,11 @@ internal class DirectoryViewModel : ViewModelBase, IComparable<DirectoryViewMode
         get => _isLoaded;
         private set => SetProperty(ref _isLoaded, value);
     }
+    public DirectoryLoadState LoadState
+    {
+        get => _loadState;
+        private set => SetProperty(ref _loadState, value);
+    }
 
     public bool IsExpanded
     {
@@ -113,6 +131,12 @@ internal class DirectoryViewModel : ViewModelBase, IComparable<DirectoryViewMode
                 HandleExpansionChange();
             }
         }
+    }
+
+    public bool IsSelected
+    {
+        get => _isSelected;
+        set => SetProperty(ref _isSelected, value);
     }
 
     public bool HasSupportedMedia
@@ -172,67 +196,6 @@ internal class DirectoryViewModel : ViewModelBase, IComparable<DirectoryViewMode
         }
     }
 
-    public async Task GotoDirectoryAsync(DirectoryViewModel targetDirectory)
-    {
-        if (targetDirectory == null)
-        {
-            throw new ArgumentNullException(nameof(targetDirectory));
-        }
-
-        try
-        {
-            // Check if we're already at the target directory
-            if (Path.Equals(targetDirectory.Path, StringComparison.OrdinalIgnoreCase))
-            {
-                return;
-            }
-
-            // Check if target is a descendant of current directory
-            if (!targetDirectory.Path.StartsWith(Path, StringComparison.OrdinalIgnoreCase))
-            {
-                throw new InvalidOperationException("Target directory is not a descendant of current directory");
-            }
-
-            await NavigateToPathAsync(targetDirectory.Path);
-        }
-        catch (Exception ex)
-        {
-            _logger.Error(ex, "Failed to navigate to directory: {TargetPath}", targetDirectory.Path);
-        }
-    }
-
-    public async Task GotoDirectoryFromRootAsync(DirectoryViewModel targetDirectory)
-    {
-        if (targetDirectory == null)
-        {
-            throw new ArgumentNullException(nameof(targetDirectory));
-        }
-
-        try
-        {
-            // Find the appropriate drive that contains the target path
-            var targetDrive = ChildFileSystemItems.OfType<DriveViewModel>()
-                                                  .FirstOrDefault(drive => targetDirectory.Path.StartsWith(drive.Path, StringComparison.OrdinalIgnoreCase));
-
-            if (targetDrive == null)
-            {
-                throw new InvalidOperationException($"No drive contains the target path: {targetDirectory.Path}");
-            }
-
-            if (!targetDrive.IsExpanded)
-            {
-                targetDrive.IsExpanded = true;
-            }
-
-            // Navigate from the drive to the target
-            await targetDrive.GotoDirectoryAsync(targetDirectory);
-        }
-        catch (Exception ex)
-        {
-            _logger.Error(ex, "Failed to navigate from root to directory: {TargetPath}", targetDirectory.Path);
-        }
-    }
-
     private void RenameFolder()
     {
         try
@@ -289,11 +252,18 @@ internal class DirectoryViewModel : ViewModelBase, IComparable<DirectoryViewMode
         {
             if (_isExpanded)
             {
+                _expantionCancellationTokenSource?.Cancel();
+                _expantionCancellationTokenSource?.Dispose();
+                _expantionCancellationTokenSource = new CancellationTokenSource();
+
                 if (this is not DeviceViewModel and not SpecialDirectoryViewModel)
                 {
-                    ChildFileSystemItems.Clear();
+                    if (LoadState == DirectoryLoadState.Initial)
+                    {
+                        ChildFileSystemItems.Clear();
+                    }
 
-                    _ = SeedFileSystemItemsAsync(); // Fire and forget. We should get subdirs anyway
+                    _ = SeedFileSystemItemsAsync(_expantionCancellationTokenSource.Token);
                 }
 
                 _folderService.AddVisitingFolder(_mapper.Map<DirectoryModel>(this), FileManagerPanel);
@@ -303,9 +273,15 @@ internal class DirectoryViewModel : ViewModelBase, IComparable<DirectoryViewMode
                 _folderService.RemoveVisitingFolder(_mapper.Map<DirectoryModel>(this), FileManagerPanel);
             }
         }
+        catch (OperationCanceledException)
+        {
+
+            LoadState = DirectoryLoadState.Initial;
+        }
         catch (Exception ex)
         {
             _logger.Error(ex, $"Failed to handle expansion change for: {Path}");
+            LoadState = DirectoryLoadState.Initial;
         }
     }
 
@@ -348,80 +324,89 @@ internal class DirectoryViewModel : ViewModelBase, IComparable<DirectoryViewMode
         }
     }
 
-    private async Task SeedFileSystemItemsAsync()
+    private async Task SeedFileSystemItemsAsync(CancellationToken cancellationToken)
     {
-        IsLoaded = true;
+        
+        await _loadingSemaphore.WaitAsync(cancellationToken);
 
         try
         {
-            var currentDirectoryModel = await _folderService.GetDirectoryModelAsync(Path);
-
-            foreach (var directoryModel in currentDirectoryModel.DirectoryModels)
+            if (LoadState == DirectoryLoadState.Loaded)
             {
-                var fileSystemItemViewModel = _mapper.Map<DirectoryViewModel>(directoryModel);
-
-                ChildFileSystemItems.Add(fileSystemItemViewModel);
+                return;
             }
-        }
-        catch (Exception exception)
-        {
-            _logger.Error(exception, $"Unexpected exception during getting files from folder: {Path}");
-        }
-        finally
-        {
-            IsLoaded = false;
-        }
-    }
 
-    private async Task NavigateToPathAsync(string targetPath)
-    {
-        var currentPath = Path;
+            LoadState = DirectoryLoadState.Loading;
 
-        // Get relative path segments
-        var relativePath = targetPath.Substring(currentPath.Length).TrimStart(System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar);
+            _loadingCompletionSource = new TaskCompletionSource<bool>();
 
-        if (string.IsNullOrEmpty(relativePath))
-        {
-            return;
-        }
-
-        var pathSegments = relativePath.Split(
-            [System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar],
-            StringSplitOptions.RemoveEmptyEntries);
-
-        var currentDirectory = this;
-
-        foreach (var segment in pathSegments)
-        {
             try
             {
-                // Expand the current directory to show its children
-                if (!currentDirectory.IsExpanded)
+                cancellationToken.ThrowIfCancellationRequested();
+
+                var currentDirectoryModel = await _folderService.GetDirectoryModelAsync(Path);
+
+                if (ChildFileSystemItems.Count == 0 ||
+                    (ChildFileSystemItems.Count > 0 && ChildFileSystemItems.All(c => c.LoadState != DirectoryLoadState.Loaded)))
                 {
-                    currentDirectory.IsExpanded = true;
-                    await Task.Delay(3000);
+                    ChildFileSystemItems.Clear();
+
+                    foreach (var directoryModel in currentDirectoryModel.DirectoryModels)
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+
+                        var fileSystemItemViewModel = _mapper.Map<DirectoryViewModel>(directoryModel);
+                        ChildFileSystemItems.Add(fileSystemItemViewModel);
+                    }
                 }
 
-
-                var childDirectory = currentDirectory.ChildFileSystemItems
-                                                     .FirstOrDefault(c => string.Equals(c.Name, segment, StringComparison.OrdinalIgnoreCase));
-
-                // Move to the next level
-                currentDirectory = childDirectory;
+                LoadState = DirectoryLoadState.Loaded;
+                _loadingCompletionSource.TrySetResult(true);
+            }
+            catch (OperationCanceledException)
+            {
+                LoadState = DirectoryLoadState.Initial;
+                _loadingCompletionSource.TrySetCanceled(cancellationToken);
+                throw;
             }
             catch (Exception ex)
             {
-                _logger.Error(
-                    ex,
-                    "Failed to navigate to segment {Segment} in path {TargetPath}",
-                    segment,
-                    targetPath);
+                LoadState = DirectoryLoadState.Initial;
+                _loadingCompletionSource.TrySetException(ex);
+                throw;
             }
         }
-
-        if (!currentDirectory.IsExpanded)
+        finally
         {
-            currentDirectory.IsExpanded = true;
+            _loadingSemaphore.Release();
+            _loadingCompletionSource = null;
         }
+    }
+
+    public Task WaitForLoadingAsync(CancellationToken cancellationToken = default)
+    {
+        if (LoadState == DirectoryLoadState.Loaded)
+        {
+            return Task.CompletedTask;
+        }
+
+        if (_loadingCompletionSource != null)
+        {
+            return _loadingCompletionSource.Task
+                                           .WaitAsync(cancellationToken);
+        }
+
+        return Task.CompletedTask;
+    }
+
+
+    public async Task EnsureLoadedAsync(CancellationToken cancellationToken = default)
+    {
+        if (LoadState == DirectoryLoadState.Initial && !IsExpanded)
+        {
+            IsExpanded = true;
+        }
+
+        await WaitForLoadingAsync(cancellationToken);
     }
 }

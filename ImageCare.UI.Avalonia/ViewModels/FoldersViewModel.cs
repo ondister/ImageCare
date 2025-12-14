@@ -36,7 +36,6 @@ internal class FoldersViewModel : NavigatedViewModelBase
     private readonly SynchronizationContext _synchronizationContext;
 
     private DirectoryViewModel? _selectedFileSystemItem;
-    private DirectoryViewModel? _selectedSearchResult;
     private CompositeDisposable _compositeDisposable;
     private DirectoryModel? _createdSubFolder;
     private CancellationTokenSource? _searchCancellationTokenSource;
@@ -143,12 +142,6 @@ internal class FoldersViewModel : NavigatedViewModelBase
         set => SetSelectedFileSystemItem(value);
     }
 
-    public DirectoryViewModel? SelectedSearchResult
-    {
-        get => _selectedSearchResult;
-        set => SetProperty(ref _selectedSearchResult, value);
-    }
-
     public FileManagerPanel FileManagerPanel { get; private set; } = FileManagerPanel.Left;
 
     public override void OnNavigatedTo(NavigationContext navigationContext)
@@ -227,11 +220,14 @@ internal class FoldersViewModel : NavigatedViewModelBase
 
         try
         {
-            await FileSystemItemViewModels[0].GotoDirectoryFromRootAsync(directoryViewModel);
-
-            SelectedFileSystemItem = directoryViewModel;
-
             ClearSearch();
+
+            if (SelectedFileSystemItem == null)
+            {
+                return;
+            }
+
+            SelectedFileSystemItem = await GoToFolderFromSelectedAsync(SelectedFileSystemItem, directoryViewModel.Path);
         }
         catch (Exception ex)
         {
@@ -323,10 +319,17 @@ internal class FoldersViewModel : NavigatedViewModelBase
 
     private void SetSelectedFileSystemItem(DirectoryViewModel? value)
     {
+        if (_selectedFileSystemItem != null)
+        {
+            _selectedFileSystemItem.IsSelected = false;
+        }
+        
+
         if (SetProperty(ref _selectedFileSystemItem, value) && value != null)
         {
             try
             {
+                _selectedFileSystemItem.IsSelected=true;
                 var selectedDirectory = new SelectedDirectory(value.Name, value.Path, FileManagerPanel);
                 _folderService.SetSelectedDirectory(selectedDirectory);
 
@@ -608,5 +611,73 @@ internal class FoldersViewModel : NavigatedViewModelBase
     private void OnObservableError(Exception ex)
     {
         _logger.Error(ex, "Error in observable subscription");
+    }
+
+    private async Task<DirectoryViewModel> GoToFolderFromSelectedAsync(DirectoryViewModel selectedFileSystemItem, string path)
+    {
+        if (selectedFileSystemItem == null)
+        {
+            throw new ArgumentNullException(nameof(selectedFileSystemItem));
+        }
+
+        if (string.IsNullOrEmpty(path))
+        {
+            throw new ArgumentNullException(nameof(path));
+        }
+
+        path = path.TrimEnd(Path.DirectorySeparatorChar);
+
+       
+        if (selectedFileSystemItem.Path.Equals(path, StringComparison.OrdinalIgnoreCase))
+        {
+            return selectedFileSystemItem;
+        }
+
+      
+        string relativePath;
+        if (path.StartsWith(selectedFileSystemItem.Path, StringComparison.OrdinalIgnoreCase))
+        {
+            relativePath = path.Substring(selectedFileSystemItem.Path.Length)
+                               .TrimStart(Path.DirectorySeparatorChar);
+        }
+        else
+        {
+            throw new InvalidOperationException("Cannot navigate to folder outside current tree");
+        }
+
+        var pathSegments = relativePath.Split(
+            [Path.DirectorySeparatorChar],
+            StringSplitOptions.RemoveEmptyEntries);
+
+        var currentFolder = selectedFileSystemItem;
+
+        foreach (var segment in pathSegments)
+        {
+           
+            if (!currentFolder.IsExpanded)
+            {
+                currentFolder.IsExpanded = true;
+
+                await currentFolder.WaitForLoadingAsync();
+            }
+            else
+            {
+                await currentFolder.EnsureLoadedAsync();
+            }
+
+            var nextFolder = currentFolder.ChildFileSystemItems
+                                          .FirstOrDefault(c =>
+                                                              string.Equals(c.Name, segment, StringComparison.OrdinalIgnoreCase) || c.Path.EndsWith(segment, StringComparison.OrdinalIgnoreCase));
+
+            currentFolder = nextFolder ?? throw new DirectoryNotFoundException($"Folder '{segment}' not found in '{currentFolder.Path}'");
+        }
+
+        if (!currentFolder.IsExpanded)
+        {
+            currentFolder.IsExpanded = true;
+            await currentFolder.WaitForLoadingAsync();
+        }
+
+        return currentFolder;
     }
 }

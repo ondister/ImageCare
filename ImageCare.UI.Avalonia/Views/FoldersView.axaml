@@ -5,6 +5,7 @@
              xmlns:domain="clr-namespace:ImageCare.UI.Avalonia.ViewModels.Domain"
              xmlns:iconPacks="https://github.com/MahApps/IconPacks.Avalonia"
              xmlns:avaloniaProgressRing="clr-namespace:AvaloniaProgressRing;assembly=AvaloniaProgressRing"
+             xmlns:u="https://irihi.tech/ursa"
              x:Class="ImageCare.UI.Avalonia.Views.FoldersView"
              prism:ViewModelLocator.AutoWireViewModel="True"
              x:DataType="viewModels:FoldersViewModel"
@@ -25,13 +26,14 @@
         <!-- Folders Panel -->
         <TreeView Grid.Row="0"
                   ItemsSource="{Binding FileSystemItemViewModels}"
-                  SelectedItem="{Binding SelectedFileSystemItem, Mode=TwoWay} "
+                  SelectedItem="{Binding SelectedFileSystemItem} "
                   SelectionMode="Single"
                   IsVisible="{Binding !IsInSearchSession}">
 
             <TreeView.Styles>
                 <Style Selector="TreeViewItem" x:DataType="domain:DirectoryViewModel">
                     <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
+                    <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}" />
                 </Style>
             </TreeView.Styles>
 
@@ -204,33 +206,36 @@
                            Margin="{StaticResource MarginBottom.Small}" />
 
                 <!-- Search Results List -->
-                <ListBox Grid.Row="1"
-                         ItemsSource="{Binding SearchResults}"
-                         SelectedItem="{Binding SelectedSearchResult}">
+                <ItemsControl Grid.Row="1"
+                         ItemsSource="{Binding SearchResults}">
 
-                    <Interaction.Behaviors>
-                        <EventTriggerBehavior EventName="DoubleTapped">
-                            <InvokeCommandAction Command="{Binding SetSearchResultCommand}" 
-                                                 CommandParameter="{Binding SelectedSearchResult}"/>
-                        </EventTriggerBehavior>
-                    </Interaction.Behaviors>
-
-                    <ListBox.ItemTemplate>
-                        <DataTemplate x:DataType="domain:DirectoryViewModel">
-                            <StackPanel Orientation="Horizontal" Margin="{StaticResource MarginVertical.Small}">
-                                <iconPacks:PackIconMaterial Kind="FolderOutline"
-                                                            Height="{StaticResource Icon.Size.Small}"
-                                                            Width="{StaticResource Icon.Size.Small}"
-                                                            Margin="{StaticResource MarginAll.Small}" />
-                                <TextBlock Text="{Binding Name}" />
-                                <TextBlock Text="{Binding Path}"
+					<ItemsControl.ItemTemplate>
+						<DataTemplate x:DataType="domain:DirectoryViewModel">
+							<StackPanel Orientation="Horizontal" 
+                                        Margin="{StaticResource MarginVertical.Small}">
+								<u:IconButton Margin="{StaticResource MarginAll.Small}"
+                                              VerticalAlignment="Center"
+                                              VerticalContentAlignment="Center"
+                                              Command="{Binding ElementName=This, Path=DataContext.SetSearchResultCommand}"
+                                              CommandParameter="{Binding }">
+									<u:IconButton.Icon>
+										<iconPacks:PackIconMaterial Kind="FolderOutline"
+                                                                    Height="{StaticResource Icon.Size.Small}"
+                                                                    Width="{StaticResource Icon.Size.Small}"
+                                                                    Margin="{StaticResource MarginAll.Small}" />
+									</u:IconButton.Icon>
+								</u:IconButton>
+								<TextBlock Text="{Binding Name}"
+                                           VerticalAlignment="Center"/>
+								<TextBlock Text="{Binding Path}"
+                                           VerticalAlignment="Center"
                                            FontSize="{StaticResource Font.Size.Small}"
                                            Opacity="0.7"
                                            Margin="20,0,0,0" />
-                            </StackPanel>
-                        </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
+							</StackPanel>
+						</DataTemplate>
+					</ItemsControl.ItemTemplate>
+                </ItemsControl>
             </Grid>
         </Border>
 
@@ -248,59 +253,59 @@
         </Border>
 
 
-		<!-- Search Panel -->
-		<Border Grid.Row="1"
-				Background="{DynamicResource ThemeControlMidBrush}"
-				CornerRadius="4"
-				Margin="{StaticResource MarginBottom.Small}"
-				IsVisible="{Binding IsSearchEnabled}">
-			<Grid>
-				<Grid.ColumnDefinitions>
-					<ColumnDefinition Width="*" />
-					<ColumnDefinition Width="Auto" />
-				</Grid.ColumnDefinitions>
+        <!-- Search Panel -->
+        <Border Grid.Row="1"
+                Background="{DynamicResource ThemeControlMidBrush}"
+                CornerRadius="4"
+                Margin="{StaticResource MarginBottom.Small}"
+                IsVisible="{Binding IsSearchEnabled}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
 
-				<!-- Search TextBox with Progress Overlay -->
-				<Grid Grid.Column="0">
-					<!-- TextBox -->
-					<TextBox x:Name="SearchTextBox"
-							 Watermark="{Binding SearchTarget}"
-							 IsEnabled="{Binding !IsSearching}"
-							 Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged, Delay=300}">
-						<TextBox.KeyBindings>
-							<KeyBinding Command="{Binding PerformSearchCommand}" Gesture="Enter" />
-						</TextBox.KeyBindings>
-					</TextBox>
+                <!-- Search TextBox with Progress Overlay -->
+                <Grid Grid.Column="0">
+                    <!-- TextBox -->
+                    <TextBox x:Name="SearchTextBox"
+                             Watermark="{Binding SearchTarget}"
+                             IsEnabled="{Binding !IsSearching}"
+                             Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged, Delay=300}">
+                        <TextBox.KeyBindings>
+                            <KeyBinding Command="{Binding PerformSearchCommand}" Gesture="Enter" />
+                        </TextBox.KeyBindings>
+                    </TextBox>
 
-					<!-- Progress Overlay -->
-					<Border Background="{DynamicResource ThemeControlMidBrush}"
-							Opacity="0.9"
-							IsVisible="{Binding IsSearching}">
-						<StackPanel Orientation="Horizontal"
-									HorizontalAlignment="Center"
-									VerticalAlignment="Center"
-									Spacing="8">
-							<avaloniaProgressRing:ProgressRing Width="{StaticResource Icon.Size.Small}"
-															   Height="{StaticResource Icon.Size.Small}"
-															   IsActive="True" />
-							<TextBlock Text="Searching..."
-									   Foreground="{DynamicResource ThemeForegroundBrush}" />
-						</StackPanel>
-					</Border>
-				</Grid>
+                    <!-- Progress Overlay -->
+                    <Border Background="{DynamicResource ThemeControlMidBrush}"
+                            Opacity="0.9"
+                            IsVisible="{Binding IsSearching}">
+                        <StackPanel Orientation="Horizontal"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    Spacing="8">
+                            <avaloniaProgressRing:ProgressRing Width="{StaticResource Icon.Size.Small}"
+                                                               Height="{StaticResource Icon.Size.Small}"
+                                                               IsActive="True" />
+                            <TextBlock Text="Searching..."
+                                       Foreground="{DynamicResource ThemeForegroundBrush}" />
+                        </StackPanel>
+                    </Border>
+                </Grid>
 
-				<!-- Cancel Search Button -->
-				<Button Grid.Column="1"
-						Command="{Binding ClearSearchCommand}"
-						IsVisible="{Binding IsInSearchSession}"
-						Margin="4"
-						Padding="4">
-					<iconPacks:PackIconMaterial Kind="Close"
-												Height="{StaticResource Icon.Size.Small}"
-												Width="{StaticResource Icon.Size.Small}" />
-				</Button>
-			</Grid>
-		</Border>
+                <!-- Cancel Search Button -->
+                <Button Grid.Column="1"
+                        Command="{Binding ClearSearchCommand}"
+                        IsVisible="{Binding IsInSearchSession}"
+                        Margin="4"
+                        Padding="4">
+                    <iconPacks:PackIconMaterial Kind="Close"
+                                                Height="{StaticResource Icon.Size.Small}"
+                                                Width="{StaticResource Icon.Size.Small}" />
+                </Button>
+            </Grid>
+        </Border>
 
     </Grid>
 

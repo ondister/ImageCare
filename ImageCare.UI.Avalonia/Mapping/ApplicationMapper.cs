@@ -38,7 +38,9 @@ internal sealed class ApplicationMapper
 			   .ForMember(dst => dst.FileManagerPanel, opt => opt.Ignore())
 			   .ForMember(dst => dst.IsEditing, opt => opt.Ignore())
 			   .ForMember(dst => dst.EditableName, opt => opt.Ignore())
-			   .ConstructUsing(src => new DirectoryViewModel(src.Name, src.Path, src.DirectoryModels.Select(m => _mapper.Map(m, m.GetType(), typeof(DirectoryViewModel)) as DirectoryViewModel), serviceLocator.Resolve<IFolderService>(), serviceLocator.Resolve<IFileSystemService>(), _mapper, serviceLocator.Resolve<ILogger>())
+               .ForMember(dst => dst.LoadState, opt => opt.Ignore())
+               .ForMember(dst => dst.IsSelected, opt => opt.Ignore())
+               .ConstructUsing(src => new DirectoryViewModel(src.Name, src.Path, src.DirectoryModels.Select(m => _mapper.Map(m, m.GetType(), typeof(DirectoryViewModel)) as DirectoryViewModel), serviceLocator.Resolve<IFolderService>(), serviceLocator.Resolve<IFileSystemService>(), _mapper, serviceLocator.Resolve<ILogger>())
 			   {
 				   HasSupportedMedia = src.HasSupportedMedia
 			   });
