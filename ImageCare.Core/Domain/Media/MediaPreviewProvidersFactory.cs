@@ -9,7 +9,8 @@ internal sealed class MediaPreviewProvidersFactory
 	{
 		{ MediaFormat.MediaFormatCr3, new Cr3MediaPreviewProvider() },
 		{ MediaFormat.MediaFormatArw, new ArwMediaPreviewProvider() },
-		{ MediaFormat.MediaFormatJpg, new JpegMediaPreviewProvider() },
+        { MediaFormat.MediaFormatNef, new NefMediaPreviewProvider() },
+        { MediaFormat.MediaFormatJpg, new JpegMediaPreviewProvider() },
 		{ MediaFormat.MediaFormatMp4, new Mp4MediaPreviewProvider() }
 	};
 
