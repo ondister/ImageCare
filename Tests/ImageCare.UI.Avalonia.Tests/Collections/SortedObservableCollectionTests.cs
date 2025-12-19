@@ -1,8 +1,8 @@
 ﻿using System.Collections.Specialized;
 
-using ImageCare.Mvvm.Collections;
+using ImageCare.UI.Avalonia.Collections;
 
-namespace ImageCare.Mvvm.Tests.Collections;
+namespace ImageCare.UI.Avalonia.Tests.Collections;
 
 [TestFixture]
 public class SortedObservableCollectionTests

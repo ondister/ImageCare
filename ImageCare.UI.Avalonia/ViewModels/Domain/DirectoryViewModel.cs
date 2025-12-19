@@ -9,13 +9,9 @@ using System.Windows.Input;
 
 using AutoMapper;
 
-using ExCSS;
-
 using ImageCare.Core.Domain.Folders;
 using ImageCare.Core.Services.FileSystemService;
 using ImageCare.Core.Services.FolderService;
-using ImageCare.Mvvm;
-using ImageCare.Mvvm.Collections;
 
 using Serilog;
 
@@ -61,7 +57,7 @@ internal class DirectoryViewModel : ViewModelBase, IComparable<DirectoryViewMode
         _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
-        ChildFileSystemItems = new SortedObservableCollection<DirectoryViewModel>(children);
+        ChildFileSystemItems = new Collections.SortedObservableCollection<DirectoryViewModel>(children);
         ChildFileSystemItems.CollectionChanged += OnChildFileSystemItemsCollectionChanged;
 
         Name = name;
@@ -108,7 +104,7 @@ internal class DirectoryViewModel : ViewModelBase, IComparable<DirectoryViewMode
 
     public FileManagerPanel FileManagerPanel { get; private set; }
 
-    public SortedObservableCollection<DirectoryViewModel> ChildFileSystemItems { get; }
+    public Collections.SortedObservableCollection<DirectoryViewModel> ChildFileSystemItems { get; }
 
     public bool IsLoaded
     {
@@ -285,7 +281,7 @@ internal class DirectoryViewModel : ViewModelBase, IComparable<DirectoryViewMode
         }
     }
 
-    private DirectoryViewModel? FindPathRecursive(SortedObservableCollection<DirectoryViewModel> directories, string pathToFind)
+    private DirectoryViewModel? FindPathRecursive(Collections.SortedObservableCollection<DirectoryViewModel> directories, string pathToFind)
     {
         foreach (var directory in directories)
         {

@@ -1,6 +1,4 @@
-﻿using ImageCare.Mvvm;
-
-namespace ImageCare.UI.Avalonia.ViewModels.Domain;
+﻿namespace ImageCare.UI.Avalonia.ViewModels.Domain;
 
 public sealed class FileApplicationAssociationViewModel : ViewModelBase
 {

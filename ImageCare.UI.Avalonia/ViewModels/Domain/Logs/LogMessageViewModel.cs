@@ -1,7 +1,5 @@
 ﻿using System;
 
-using ImageCare.Mvvm;
-
 namespace ImageCare.UI.Avalonia.ViewModels.Domain.Logs;
 
 internal abstract class LogMessageViewModel : ViewModelBase, IComparable<LogMessageViewModel>

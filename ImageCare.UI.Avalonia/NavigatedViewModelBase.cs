@@ -1,6 +1,6 @@
-﻿using ImageCare.Mvvm;
+﻿using Prism.Navigation.Regions;
 
-using Prism.Navigation.Regions;
+using ViewModelBase = ImageCare.UI.Avalonia.ViewModels.ViewModelBase;
 
 namespace ImageCare.UI.Avalonia;
 

@@ -12,7 +12,6 @@ using DynamicData;
 
 using ImageCare.Core.Domain.Folders;
 using ImageCare.Core.Services.FolderStatisticsService;
-using ImageCare.Mvvm;
 using ImageCare.UI.Avalonia.ViewModels.Domain;
 
 using Prism.Commands;

@@ -1,6 +1,8 @@
-using Prism.Commands.Ex;
+using ImageCare.UI.Avalonia.ViewModels;
 
-namespace ImageCare.Mvvm.Tests;
+using DelegateCommand = Prism.Commands.Ex.DelegateCommand;
+
+namespace ImageCare.UI.Avalonia.Tests;
 
 [TestFixture]
 public class ViewModelBaseTests
@@ -204,42 +206,42 @@ public class ViewModelBaseTests
             return base.CreateCommand(execute, canExecute, exceptionHandler);
         }
 
-        public new DelegateCommand<T> CreateCommand<T>(Action<T> execute)
+        public new Prism.Commands.Ex.DelegateCommand<T> CreateCommand<T>(Action<T> execute)
         {
             return base.CreateCommand(execute);
         }
 
-        public new DelegateCommand<T> CreateCommand<T>(Action<T> execute, Func<T, bool> canExecute)
+        public new Prism.Commands.Ex.DelegateCommand<T> CreateCommand<T>(Action<T> execute, Func<T, bool> canExecute)
         {
             return base.CreateCommand(execute, canExecute);
         }
 
-        public new AsyncDelegateCommand CreateAsyncCommand(Func<Task> execute)
+        public new Prism.Commands.Ex.AsyncDelegateCommand CreateAsyncCommand(Func<Task> execute)
         {
             return base.CreateAsyncCommand(execute);
         }
 
-        public new AsyncDelegateCommand CreateAsyncCommand(Func<Task> execute, Func<bool> canExecute)
+        public new Prism.Commands.Ex.AsyncDelegateCommand CreateAsyncCommand(Func<Task> execute, Func<bool> canExecute)
         {
             return base.CreateAsyncCommand(execute, canExecute);
         }
 
-        public new AsyncDelegateCommand CreateAsyncCommand(Func<IProgress<int>, CancellationToken, Task> execute)
+        public new Prism.Commands.Ex.AsyncDelegateCommand CreateAsyncCommand(Func<IProgress<int>, CancellationToken, Task> execute)
         {
             return base.CreateAsyncCommand(execute);
         }
 
-        public new AsyncDelegateCommand CreateAsyncCommand(Func<IProgress<int>, CancellationToken, Task> execute, Func<bool> canExecute)
+        public new Prism.Commands.Ex.AsyncDelegateCommand CreateAsyncCommand(Func<IProgress<int>, CancellationToken, Task> execute, Func<bool> canExecute)
         {
             return base.CreateAsyncCommand(execute, canExecute);
         }
 
-        public new AsyncDelegateCommand CreateAsyncCommand(Func<IProgress<int>, CancellationToken, Task> execute, Action<Exception> exceptionHandler)
+        public new Prism.Commands.Ex.AsyncDelegateCommand CreateAsyncCommand(Func<IProgress<int>, CancellationToken, Task> execute, Action<Exception> exceptionHandler)
         {
             return base.CreateAsyncCommand(execute, exceptionHandler);
         }
 
-        public new AsyncDelegateCommand CreateAsyncCommand(Func<IProgress<int>, CancellationToken, Task> execute, Func<bool> canExecute, Action<Exception> exceptionHandler)
+        public new Prism.Commands.Ex.AsyncDelegateCommand CreateAsyncCommand(Func<IProgress<int>, CancellationToken, Task> execute, Func<bool> canExecute, Action<Exception> exceptionHandler)
         {
             return base.CreateAsyncCommand(execute, canExecute, exceptionHandler);
         }

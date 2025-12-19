@@ -1,6 +1,8 @@
+using Prism.Dialogs;
+
 using Ursa.Controls;
 
-namespace ImageCare.UI.Common.Desktop.Views;
+namespace ImageCare.UI.Avalonia.Views;
 
 public partial class ChildWindow : UrsaWindow, IDialogWindow
 {

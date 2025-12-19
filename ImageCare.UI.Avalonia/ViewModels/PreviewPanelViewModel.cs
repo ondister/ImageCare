@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Reactive;
 using System.Reactive.Disposables;
@@ -20,7 +19,6 @@ using ImageCare.Core.Services.FolderStatisticsService;
 using ImageCare.Core.Services.MediaPreviewOperationsService;
 using ImageCare.Core.Services.MediaPreviewService;
 using ImageCare.Core.Services.NotificationService;
-using ImageCare.Mvvm.Collections;
 using ImageCare.UI.Avalonia.Behaviors;
 using ImageCare.UI.Avalonia.ViewModels.Domain;
 
@@ -56,7 +54,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
     private CompositeDisposable _disposable;
 
     private CancellationTokenSource _folderSelectedCancellationTokenSource;
-    private SortedObservableCollection<FileModel> _imagePaths;
+    private Collections.SortedObservableCollection<FileModel> _imagePaths;
     private CancellationTokenSource _currentScrollCancellation = new();
 
     private bool _isScrollResetRequested;
@@ -93,7 +91,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
         MoveImagePreviewCommand = CreateAsyncCommand(MoveImagePreviewAsync);
         DeleteImagePreviewCommand = CreateAsyncCommand(DeleteImagePreview);
 
-        ImagePreviews = new SortedObservableCollection<MediaPreviewViewModel>(new CreationDateTimeDescendingComparer());
+        ImagePreviews = new Collections.SortedObservableCollection<MediaPreviewViewModel>(new CreationDateTimeDescendingComparer());
 
         _folderSelectedCancellationTokenSource = new CancellationTokenSource();
 
@@ -113,7 +111,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
         set => SetProperty(ref _filesLoading, value);
     }
 
-    public SortedObservableCollection<MediaPreviewViewModel> ImagePreviews { get; }
+    public Collections.SortedObservableCollection<MediaPreviewViewModel> ImagePreviews { get; }
 
     public ImagePreviewDropHandler ImagePreviewDropHandler { get; }
 
@@ -398,7 +396,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
             lock (_imagePathsLock)
             {
                 FilesLoading = true;
-                _imagePaths = new SortedObservableCollection<FileModel>(new FileModelCreationDateTimeDescendingComparer());
+                _imagePaths = new Collections.SortedObservableCollection<FileModel>(new FileModelCreationDateTimeDescendingComparer());
             }
 
             var files = await _folderService.GetFileModelAsync(selectedFileSystemItem, "*");

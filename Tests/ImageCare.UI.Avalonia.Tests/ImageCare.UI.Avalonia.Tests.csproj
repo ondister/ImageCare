@@ -21,6 +21,11 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="NUnit3TestAdapter" Version="5.2.0" />
+    <PackageReference Include="Prism.Commands.Ex" Version="0.1.9" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\ImageCare.UI.Avalonia\ImageCare.UI.Avalonia.csproj" />
   </ItemGroup>
 
   <ItemGroup>

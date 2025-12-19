@@ -15,7 +15,6 @@ using ImageCare.Core.Services.DrivesWatcherService;
 using ImageCare.Core.Services.FileSystemService;
 using ImageCare.Core.Services.FileSystemWatcherService;
 using ImageCare.Core.Services.FolderService;
-using ImageCare.Mvvm.Collections;
 using ImageCare.UI.Avalonia.ViewModels.Domain;
 
 using Prism.Navigation.Regions;
@@ -75,13 +74,13 @@ internal class FoldersViewModel : NavigatedViewModelBase
         ClearSearchCommand = CreateCommand(ClearSearch, CanClearSearch).ObservesProperty(() => IsInSearchSession);
         SetSearchResultCommand = CreateAsyncCommand<DirectoryViewModel>(SetSearchResultAsync);
 
-        FileSystemItemViewModels = new SortedObservableCollection<DirectoryViewModel>();
+        FileSystemItemViewModels = new Collections.SortedObservableCollection<DirectoryViewModel>();
         SearchResults = new ObservableCollection<DirectoryViewModel>();
     }
 
     public ICommand SetSearchResultCommand { get; set; }
 
-    public SortedObservableCollection<DirectoryViewModel> FileSystemItemViewModels { get; }
+    public Collections.SortedObservableCollection<DirectoryViewModel> FileSystemItemViewModels { get; }
 
     public ObservableCollection<DirectoryViewModel> SearchResults { get; }
 

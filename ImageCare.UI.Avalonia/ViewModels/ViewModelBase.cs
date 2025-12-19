@@ -1,7 +1,11 @@
-﻿using Prism.Commands.Ex;
+﻿using System;
+using System.Threading;
+using System.Threading.Tasks;
+
+using Prism.Commands.Ex;
 using Prism.Mvvm;
 
-namespace ImageCare.Mvvm;
+namespace ImageCare.UI.Avalonia.ViewModels;
 
 public abstract class ViewModelBase : BindableBase
 {

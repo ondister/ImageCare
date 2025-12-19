@@ -8,7 +8,6 @@ using System.Windows.Input;
 using AutoMapper;
 
 using ImageCare.Core.Services.ConfigurationService;
-using ImageCare.Mvvm;
 using ImageCare.UI.Avalonia.Services;
 using ImageCare.UI.Avalonia.ViewModels.Domain;
 

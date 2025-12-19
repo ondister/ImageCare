@@ -2,8 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 
-using ImageCare.Mvvm;
-
 namespace ImageCare.UI.Avalonia.ViewModels.Domain;
 
 public class DateStatViewModel : ViewModelBase

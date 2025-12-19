@@ -12,7 +12,6 @@ using DynamicData;
 using DynamicData.Binding;
 using ImageCare.Core.Domain.Logs;
 using ImageCare.Core.Services.LogEventService;
-using ImageCare.Mvvm;
 using ImageCare.UI.Avalonia.ViewModels.Domain.Logs;
 
 using Prism.Dialogs;

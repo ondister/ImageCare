@@ -25,7 +25,6 @@ using ImageCare.UI.Avalonia.Mapping;
 using ImageCare.UI.Avalonia.Services;
 using ImageCare.UI.Avalonia.ViewModels;
 using ImageCare.UI.Avalonia.Views;
-using ImageCare.UI.Common.Desktop.Views;
 
 using Microsoft.Extensions.Logging;
 
@@ -38,6 +37,7 @@ using Serilog.Exceptions;
 using Serilog.Exceptions.Core;
 using Serilog.Extensions.Logging;
 
+using ChildWindow = ImageCare.UI.Avalonia.Views.ChildWindow;
 using ILogger = Serilog.ILogger;
 
 namespace ImageCare.UI.Avalonia;

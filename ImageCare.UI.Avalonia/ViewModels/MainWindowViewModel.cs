@@ -8,8 +8,6 @@ using System.Windows.Input;
 
 using AutoMapper;
 
-using CommunityToolkit.Mvvm.Input;
-
 using ImageCare.Core.Domain.Folders;
 using ImageCare.Core.Domain.MediaFormats;
 using ImageCare.Core.Domain.Preview;
@@ -17,9 +15,9 @@ using ImageCare.Core.Services.FolderHistoryService;
 using ImageCare.Core.Services.FolderService;
 using ImageCare.Core.Services.MediaPreviewOperationsService;
 using ImageCare.Core.Services.NotificationService;
-using ImageCare.Mvvm;
 using ImageCare.UI.Avalonia.Views;
 
+using Prism.Commands.Ex;
 using Prism.Navigation;
 using Prism.Navigation.Regions;
 
@@ -223,9 +221,9 @@ public class MainWindowViewModel : ViewModelBase
 	{
 		try
 		{
-			(CopySelectedPreviewCommand as AsyncRelayCommand)?.NotifyCanExecuteChanged();
-			(MoveSelectedPreviewCommand as AsyncRelayCommand)?.NotifyCanExecuteChanged();
-		}
+			(CopySelectedPreviewCommand as AsyncDelegateCommand)?.RaiseCanExecuteChanged();
+			(MoveSelectedPreviewCommand as AsyncDelegateCommand)?.RaiseCanExecuteChanged();
+        }
 		catch (Exception ex)
 		{
 			_logger.Error(ex, "Error notifying commands can execute changed");

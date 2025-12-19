@@ -11,7 +11,6 @@ using ImageCare.Core.Domain.Media;
 using ImageCare.Core.Domain.Preview;
 using ImageCare.Core.Services.MediaPreviewOperationsService;
 using ImageCare.Core.Services.MediaPreviewService;
-using ImageCare.Mvvm;
 
 using Prism.Dialogs;
 

@@ -17,8 +17,6 @@ using ImageCare.Core.Services.FolderService;
 using ImageCare.Core.Services.FolderStatisticsService;
 using ImageCare.Core.Services.MediaPreviewOperationsService;
 using ImageCare.Core.Services.MediaPreviewService;
-using ImageCare.Mvvm;
-using ImageCare.Mvvm.Collections;
 using ImageCare.UI.Avalonia.Controls;
 using ImageCare.UI.Avalonia.ViewModels.Domain;
 
@@ -41,7 +39,7 @@ internal class GlancePanelViewModel : ViewModelBase, IDialogAware
     private readonly ILogger _logger;
     private readonly SynchronizationContext _synchronizationContext;
     private readonly object _imagePathsLock = new();
-    private SortedObservableCollection<FileModel> _imagePaths;
+    private Collections.SortedObservableCollection<FileModel> _imagePaths;
 
     private CompositeDisposable? _disposable;
     private CancellationTokenSource _currentScrollCancellation = new();
@@ -78,7 +76,7 @@ internal class GlancePanelViewModel : ViewModelBase, IDialogAware
         RequestClose = requestClose;
 
         _imageLoadCts = new CancellationTokenSource();
-        ImagePreviews = new SortedObservableCollection<GlanceMediaPreviewViewModel>(new CreationDateTimeDescendingComparer());
+        ImagePreviews = new Collections.SortedObservableCollection<GlanceMediaPreviewViewModel>(new CreationDateTimeDescendingComparer());
         TimelineVm = new TimelineViewModel(_folderStatisticsService, _synchronizationContext);
 
         ZoomInCommand = CreateCommand(ZoomIn, CanZoomIn).ObservesProperty(() => ImagePreviews.Count);
@@ -120,7 +118,7 @@ internal class GlancePanelViewModel : ViewModelBase, IDialogAware
         set => SetProperty(ref _title, value);
     }
 
-    public SortedObservableCollection<GlanceMediaPreviewViewModel> ImagePreviews { get; }
+    public Collections.SortedObservableCollection<GlanceMediaPreviewViewModel> ImagePreviews { get; }
 
     public int ImagesPerLine
     {
@@ -331,7 +329,7 @@ internal class GlancePanelViewModel : ViewModelBase, IDialogAware
             lock (_imagePathsLock)
             {
                 FilesLoading = true;
-                _imagePaths = new SortedObservableCollection<FileModel>(new FileModelCreationDateTimeDescendingComparer());
+                _imagePaths = new Collections.SortedObservableCollection<FileModel>(new FileModelCreationDateTimeDescendingComparer());
             }
 
             var files = await _folderService.GetFileModelAsync(selectedFileSystemItem, "*");

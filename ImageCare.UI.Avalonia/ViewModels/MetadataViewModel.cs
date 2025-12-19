@@ -6,7 +6,6 @@ using System.Windows.Input;
 using ImageCare.Core.Domain.Preview;
 using ImageCare.Core.Services.MediaPreviewOperationsService;
 using ImageCare.Core.Services.MediaPreviewService;
-using ImageCare.Mvvm;
 using ImageCare.UI.Avalonia.ViewModels.Domain;
 
 using Prism.Commands;
