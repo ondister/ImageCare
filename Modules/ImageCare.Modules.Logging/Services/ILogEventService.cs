@@ -1,12 +1,9 @@
-﻿using System.Runtime.CompilerServices;
+﻿using ImageCare.Modules.Logging.Models;
 
-using ImageCare.Modules.Logging.Models;
-
-[assembly: InternalsVisibleTo("ImageCare.Modules.Logging.Tests")]
 
 namespace ImageCare.Modules.Logging.Services;
 
-internal interface ILogEventService
+public interface ILogEventService
 {
 	public IObservable<LogMessage> ErrorReceived { get; }
 

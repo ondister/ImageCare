@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using ImageCare.Core.Domain.Folders;
+using ImageCare.Core.Domain.Logs;
 using ImageCare.Core.Domain.Preview;
 using ImageCare.Core.Services.ConfigurationService;
 using ImageCare.Core.Services.FileAssociationsService;
@@ -8,14 +9,11 @@ using ImageCare.Core.Services.FolderService;
 using ImageCare.Core.Services.MediaPreviewOperationsService;
 using ImageCare.Core.Services.MediaPreviewService;
 using ImageCare.Core.Services.NotificationService;
-using ImageCare.Modules.Logging.Mapping;
 using ImageCare.UI.Avalonia.ViewModels.Domain;
-using Prism.Ioc;
-
-using System.Linq;
-
+using ImageCare.UI.Avalonia.ViewModels.Domain.Logs;
 using Microsoft.Extensions.Logging;
-
+using Prism.Ioc;
+using System.Linq;
 using ILogger = Serilog.ILogger;
 
 namespace ImageCare.UI.Avalonia.Mapping;
@@ -28,9 +26,10 @@ internal sealed class ApplicationMapper
 	{
 		var config = new MapperConfiguration(cfg =>
 		{
-			cfg.AddProfile(new LoggerMapper());
+            cfg.CreateMap<LogMessage, ErrorLogMessageViewModel>();
+            cfg.CreateMap<LogMessage, WarningLogMessageViewModel>();
 
-			cfg.CreateMap<DirectoryModel, DirectoryViewModel>()
+            cfg.CreateMap<DirectoryModel, DirectoryViewModel>()
 			   .ForMember(dst => dst.ChildFileSystemItems, opt => opt.Ignore())
 			   .ForMember(dst => dst.IsExpanded, opt => opt.Ignore())
 			   .ForMember(dst => dst.IsLoaded, opt => opt.Ignore())

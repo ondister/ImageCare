@@ -5,9 +5,8 @@ using System.Threading;
 using System.Windows.Input;
 
 using AutoMapper;
-
+using ImageCare.Core.Services.LogEventService;
 using ImageCare.Core.Services.NotificationService;
-using ImageCare.Modules.Logging.Services;
 using ImageCare.UI.Avalonia.ViewModels.Domain;
 
 using Prism.Commands;

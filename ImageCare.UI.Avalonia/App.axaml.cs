@@ -1,35 +1,42 @@
+using System.Threading;
+
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+
 using ImageCare.Core.Domain.Folders;
 using ImageCare.Core.Services.ConfigurationService;
 using ImageCare.Core.Services.DrivesWatcherService;
 using ImageCare.Core.Services.FileAssociationsService;
 using ImageCare.Core.Services.FileSystemService;
 using ImageCare.Core.Services.FileSystemWatcherService;
+using ImageCare.Core.Services.FolderClusterizationService;
+using ImageCare.Core.Services.FolderHistoryService;
 using ImageCare.Core.Services.FolderService;
 using ImageCare.Core.Services.FolderStatisticsService;
+using ImageCare.Core.Services.LogEventService;
 using ImageCare.Core.Services.MediaPreviewOperationsService;
 using ImageCare.Core.Services.MediaPreviewService;
 using ImageCare.Core.Services.NotificationService;
 using ImageCare.Core.Services.ProcessService;
-using ImageCare.Modules.Logging;
 using ImageCare.UI.Avalonia.Behaviors;
 using ImageCare.UI.Avalonia.Mapping;
 using ImageCare.UI.Avalonia.Services;
 using ImageCare.UI.Avalonia.ViewModels;
 using ImageCare.UI.Avalonia.Views;
 using ImageCare.UI.Common.Desktop.Views;
+
 using Microsoft.Extensions.Logging;
+
 using Prism.DryIoc;
 using Prism.Ioc;
-using Prism.Modularity;
-using Serilog;
-using System.Threading;
 
-using ImageCare.Core.Services.FolderClusterizationService;
-using ImageCare.Core.Services.FolderHistoryService;
+using Serilog;
+using Serilog.Core;
+using Serilog.Exceptions;
+using Serilog.Exceptions.Core;
+using Serilog.Extensions.Logging;
 
 using ILogger = Serilog.ILogger;
 
@@ -37,96 +44,114 @@ namespace ImageCare.UI.Avalonia;
 
 public class App : PrismApplication
 {
-	public override void Initialize()
-	{
-		AvaloniaXamlLoader.Load(this);
-		base.Initialize();
-	}
-
-	public override void OnFrameworkInitializationCompleted()
-	{
-		if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
-		{
-			desktop.ShutdownRequested += OnShutdownRequested;
-		}
-
-		base.OnFrameworkInitializationCompleted();
-	}
-
-	protected override void ConfigureModuleCatalog(IModuleCatalog moduleCatalog)
-	{
-		moduleCatalog.AddModule<LoggerModule>();
-
-		base.ConfigureModuleCatalog(moduleCatalog);
-	}
-
-	/// <inheritdoc />
-	protected override AvaloniaObject CreateShell()
-	{
-		return Container.Resolve<MainWindow>();
-	}
-
-	protected virtual void OnShutdownRequested(object? sender, ShutdownRequestedEventArgs e)
-	{
-		var configurationService = Container.Resolve<IConfigurationService>();
-		configurationService.SaveConfiguration();
-	}
-
-	protected override void RegisterTypes(IContainerRegistry containerRegistry)
+    public override void Initialize()
     {
-        var loggerFactory = new Serilog.Extensions.Logging.SerilogLoggerFactory(Log.Logger);
-        containerRegistry.RegisterSingleton<ILoggerFactory>(_=>loggerFactory);
-        containerRegistry.RegisterSingleton<ILogger>(_ => Log.Logger);
+        AvaloniaXamlLoader.Load(this);
+        base.Initialize();
+    }
 
-		containerRegistry.Register<MainWindow>();
-		containerRegistry.Register<MainWindowTitleRightView>();
-		containerRegistry.Register<MetadataView>();
+    public override void OnFrameworkInitializationCompleted()
+    {
+        if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+        {
+            desktop.ShutdownRequested += OnShutdownRequested;
+        }
+
+        base.OnFrameworkInitializationCompleted();
+    }
+
+    /// <inheritdoc />
+    protected override AvaloniaObject CreateShell()
+    {
+        return Container.Resolve<MainWindow>();
+    }
+
+    protected virtual void OnShutdownRequested(object? sender, ShutdownRequestedEventArgs e)
+    {
+        var configurationService = Container.Resolve<IConfigurationService>();
+        configurationService.SaveConfiguration();
+    }
+
+    protected override void RegisterTypes(IContainerRegistry containerRegistry)
+    {
+        var logService = new SinkLogEventService();
+        containerRegistry.RegisterInstance<ILogEventService>(logService);
+        containerRegistry.RegisterInstance<ILogNotificationService>(logService);
+
+       var serilogLogger = CreateLogger(logService);
+        containerRegistry.RegisterInstance<ILogger>(serilogLogger);
+
+        containerRegistry.RegisterDialog<LogViewerView>("logViewer");
+
+        var loggerFactory = new SerilogLoggerFactory(serilogLogger);
+        containerRegistry.RegisterSingleton<ILoggerFactory>(_ => loggerFactory);
+
+        containerRegistry.Register<MainWindow>();
+        containerRegistry.Register<MainWindowTitleRightView>();
+        containerRegistry.Register<MetadataView>();
         containerRegistry.Register<MainImageView>();
 
         containerRegistry.RegisterForNavigation<FoldersView>();
-		containerRegistry.RegisterForNavigation<MainImageView>();
-		containerRegistry.RegisterForNavigation<MainVideoView>();
-		containerRegistry.RegisterForNavigation<PreviewPanelView>();
-		containerRegistry.RegisterForNavigation<BottomBarView>();
+        containerRegistry.RegisterForNavigation<MainImageView>();
+        containerRegistry.RegisterForNavigation<MainVideoView>();
+        containerRegistry.RegisterForNavigation<PreviewPanelView>();
+        containerRegistry.RegisterForNavigation<BottomBarView>();
 
-		containerRegistry.RegisterSingleton<IFileSystemService, WindowsFileSystemService>();
-		containerRegistry.RegisterSingleton<IFolderService, LocalFileSystemFolderService>();
+        containerRegistry.RegisterSingleton<IFileSystemService, WindowsFileSystemService>();
+        containerRegistry.RegisterSingleton<IFolderService, LocalFileSystemFolderService>();
         containerRegistry.RegisterSingleton<IFolderHistoryService, LocalFolderHistoryService>();
 
         containerRegistry.RegisterSingleton<IMediaPreviewService, CommonMediaPreviewService>();
 
-		containerRegistry.RegisterSingleton<IProcessService, WindowsProcessService>();
-		containerRegistry.RegisterSingleton<IMediaPreviewOperationsService, WindowsMediaPreviewOperationsService>();
+        containerRegistry.RegisterSingleton<IProcessService, WindowsProcessService>();
+        containerRegistry.RegisterSingleton<IMediaPreviewOperationsService, WindowsMediaPreviewOperationsService>();
 
-		containerRegistry.RegisterSingleton<IManagementEventWatcher, WindowsManagementEventWatcher>();
-		containerRegistry.RegisterSingleton<IDriveInfoProvider, SystemDriveInfoProvider>();
-		containerRegistry.RegisterSingleton<IDriveModelsFactory, DriveModelsFactory>();
-		containerRegistry.RegisterSingleton<IDrivesWatcherService, WindowsDrivesWatcherService>();
+        containerRegistry.RegisterSingleton<IManagementEventWatcher, WindowsManagementEventWatcher>();
+        containerRegistry.RegisterSingleton<IDriveInfoProvider, SystemDriveInfoProvider>();
+        containerRegistry.RegisterSingleton<IDriveModelsFactory, DriveModelsFactory>();
+        containerRegistry.RegisterSingleton<IDrivesWatcherService, WindowsDrivesWatcherService>();
 
-		containerRegistry.RegisterSingleton<IConfigurationFileSource, WindowsConfigurationFileSource>();
-		containerRegistry.RegisterSingleton<IConfigurationService, JsonConfigurationService>();
+        containerRegistry.RegisterSingleton<IConfigurationFileSource, WindowsConfigurationFileSource>();
+        containerRegistry.RegisterSingleton<IConfigurationService, JsonConfigurationService>();
 
-		containerRegistry.RegisterSingleton<INotificationService, LocalNotificationService>();
-		containerRegistry.RegisterSingleton<IFileAssociationsService, ConfigurationFileAssociationsService>();
-		containerRegistry.RegisterSingleton<IClipboardService>(provider =>
-		{
-			var topLevel = TopLevel.GetTopLevel(provider.Resolve<MainWindow>());
-			return new ClipboardService(topLevel);
-		});
-		containerRegistry.RegisterSingleton<IFileDialogService, AvaloniaFileDialogService>();
+        containerRegistry.RegisterSingleton<INotificationService, LocalNotificationService>();
+        containerRegistry.RegisterSingleton<IFileAssociationsService, ConfigurationFileAssociationsService>();
+        containerRegistry.RegisterSingleton<IClipboardService>(provider =>
+        {
+            var topLevel = TopLevel.GetTopLevel(provider.Resolve<MainWindow>());
+            return new ClipboardService(topLevel);
+        });
+        containerRegistry.RegisterSingleton<IFileDialogService, AvaloniaFileDialogService>();
 
-		containerRegistry.RegisterInstance(new ApplicationMapper(Container, loggerFactory).GetMapper());
-		containerRegistry.RegisterInstance(SynchronizationContext.Current);
+        containerRegistry.RegisterInstance(new ApplicationMapper(Container, loggerFactory).GetMapper());
+        containerRegistry.RegisterInstance(SynchronizationContext.Current);
 
-		containerRegistry.Register<IFileSystemWatcherService, LocalFileSystemWatcherService>();
-		containerRegistry.Register<IMultiSourcesFileSystemWatcherService, MultiSourcesLocalFileSystemWatcherService>();
+        containerRegistry.Register<IFileSystemWatcherService, LocalFileSystemWatcherService>();
+        containerRegistry.Register<IMultiSourcesFileSystemWatcherService, MultiSourcesLocalFileSystemWatcherService>();
         containerRegistry.Register<IFolderStatisticsService, FileWatcherFolderStatisticsService>();
         containerRegistry.Register<IFolderClusterizationService, FastFolderClusterizationService>();
         containerRegistry.Register<ImagePreviewDropHandler, ImagePreviewDropHandler>();
 
-		containerRegistry.RegisterDialogWindow<ChildWindow>("childWindow");
-		containerRegistry.RegisterDialog<SettingsView>("settingsViewer");
+        containerRegistry.RegisterDialogWindow<ChildWindow>("childWindow");
+        containerRegistry.RegisterDialog<SettingsView>("settingsViewer");
         containerRegistry.RegisterDialog<MainImageSeparateView>("imageViewer");
         containerRegistry.RegisterDialog<GlancePanelView, GlancePanelViewModel>("glanceViewer");
+    }
+
+    private static Logger CreateLogger(ILogEventSink logEventSink)
+    {
+        var options = new DestructuringOptionsBuilder()
+            .WithDefaultDestructurers();
+
+        return new LoggerConfiguration()
+               .MinimumLevel.Warning()
+               .Enrich.FromLogContext()
+               .Enrich.WithExceptionDetails(options)
+               .WriteTo.File(
+                   @"Logs\Errors.log",
+                   rollingInterval: RollingInterval.Day,
+                   outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {SourceContext} {Message} {NewLine}{Exception}")
+               .WriteTo.Sink(logEventSink)
+               .CreateLogger();
     }
 }

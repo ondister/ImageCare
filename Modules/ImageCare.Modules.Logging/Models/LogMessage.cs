@@ -1,6 +1,6 @@
 ﻿namespace ImageCare.Modules.Logging.Models;
 
-internal sealed class LogMessage
+public sealed class LogMessage
 {
 	public LogMessage(DateTimeOffset timestamp, string message, string? exceptionMessage)
 	{
