@@ -9,9 +9,11 @@
              xmlns:domain="clr-namespace:ImageCare.UI.Avalonia.ViewModels.Domain"
              xmlns:controls="clr-namespace:ImageCare.UI.Avalonia.Controls"
              xmlns:behaviors="clr-namespace:ImageCare.UI.Avalonia.Behaviors"
+             xmlns:viewModels="clr-namespace:ImageCare.UI.Avalonia.ViewModels"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              mvvm:ViewModelLocator.AutoWireViewModel="True"
-             x:Class="ImageCare.UI.Avalonia.Views.GlancePanelView">
+             x:Class="ImageCare.UI.Avalonia.Views.GlancePanelView"
+             x:DataType="viewModels:GlancePanelViewModel">
 
     <Grid RowDefinitions="Auto, Auto,*,Auto"
           Margin="{StaticResource MarginAll.Small}">
@@ -57,7 +59,7 @@
                 </ListBox.Styles>
 
 				<ListBox.ItemTemplate>
-					<DataTemplate DataType="domain:MediaPreviewViewModel">
+					<DataTemplate DataType="domain:GlanceMediaPreviewViewModel">
 						<Border BorderThickness="2"
                                 BorderBrush="{Binding FrameColorCode}"
                                 Padding="{StaticResource Padding.Micro}">
@@ -135,7 +137,7 @@
 										<DropDownButton.Flyout>
 											<MenuFlyout ItemsSource="{Binding OpenWithViewModels}">
 												<MenuFlyout.ItemContainerTheme>
-													<ControlTheme TargetType="MenuItem">
+													<ControlTheme TargetType="MenuItem" x:DataType="domain:FileApplicationPairViewModel">
 														<Setter Property="Command" Value="{Binding OpenWithCommand}" />
 														<Setter Property="Header" Value="{Binding Name}" />
 														<Setter Property="Template">

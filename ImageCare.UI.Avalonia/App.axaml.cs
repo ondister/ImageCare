@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+using DryIoc;
 using ImageCare.Core.Domain.Folders;
 using ImageCare.Core.Services.ConfigurationService;
 using ImageCare.Core.Services.DrivesWatcherService;
@@ -33,9 +34,6 @@ using Serilog.Exceptions;
 using Serilog.Exceptions.Core;
 using Serilog.Extensions.Logging;
 using System.Threading;
-
-using Prism.Container.DryIoc;
-
 using ChildWindow = ImageCare.UI.Avalonia.Views.ChildWindow;
 using ILogger = Serilog.ILogger;
 
@@ -43,6 +41,13 @@ namespace ImageCare.UI.Avalonia;
 
 public class App : PrismApplication
 {
+    protected override Rules CreateContainerRules()
+    {
+
+        return base.CreateContainerRules()
+                   .WithUseInterpretation(); 
+    }
+
     public override void Initialize()
     {
         AvaloniaXamlLoader.Load(this);

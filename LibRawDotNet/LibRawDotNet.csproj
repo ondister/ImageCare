@@ -1,19 +1,20 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-  </PropertyGroup>
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<IsAotCompatible>True</IsAotCompatible>
+	</PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Quamotion.TurboJpegWrapper" Version="2.0.32" />
-  </ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="Quamotion.TurboJpegWrapper" Version="2.0.32" />
+	</ItemGroup>
 
-  <ItemGroup>
-    <None Update="libraw.dll">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
+	<ItemGroup>
+		<None Update="libraw.dll">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+	</ItemGroup>
 
 </Project>

@@ -22,8 +22,7 @@
 
             <StackPanel Grid.Column="0" Orientation="Horizontal">
                 <u:IconButton Margin="{StaticResource MarginAll.Small}"
-                              Theme="{DynamicResource SolidIconButton}"
-                              IsEnabled="{Binding !!MainBitmap}">
+                              Theme="{DynamicResource SolidIconButton}">
                     <u:IconButton.Icon>
                         <iconPacks:PackIconLucide Kind="List"
                                                   Height="{StaticResource Icon.Size.Small}"
@@ -43,8 +42,7 @@
                 <Button
                     Background="Transparent"
                     BorderBrush="Transparent"
-                    Command="{Binding PlayCommand}"
-                    IsEnabled="{Binding PlayCommand.CanExecute}">
+                    Command="{Binding PlayCommand}">
                     <iconPacks:PackIconMaterial Kind="Play"
                                                 Height="{StaticResource Icon.Size.Small}"
                                                 Width="{StaticResource Icon.Size.Small}"
@@ -54,8 +52,7 @@
                 <Button
                     Background="Transparent"
                     BorderBrush="Transparent"
-                    Command="{Binding PauseCommand}"
-                    IsEnabled="{Binding PauseCommand.CanExecute}">
+                    Command="{Binding PauseCommand}">
                     <iconPacks:PackIconMaterial Kind="Pause"
                                                 Height="{StaticResource Icon.Size.Small}"
                                                 Width="{StaticResource Icon.Size.Small}"
@@ -65,8 +62,7 @@
                 <Button
                     Background="Transparent"
                     BorderBrush="Transparent"
-                    Command="{Binding StopCommand}"
-                    IsEnabled="{Binding StopCommand.CanExecute}">
+                    Command="{Binding StopCommand}">
                     <iconPacks:PackIconMaterial Kind="Stop"
                                                 Height="{StaticResource Icon.Size.Small}"
                                                 Width="{StaticResource Icon.Size.Small}"

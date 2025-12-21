@@ -96,7 +96,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
 
         _folderSelectedCancellationTokenSource = new CancellationTokenSource();
 
-        TimelineVm = new TimelineViewModel(_folderStatisticsService, _synchronizationContext);
+        TimelineVm = new TimelineViewModel(_folderStatisticsService, _synchronizationContext){};
     }
 
     // Used by HorizontalScrollBehavior

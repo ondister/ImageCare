@@ -2,7 +2,6 @@
               xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
               xmlns:u="https://irihi.tech/ursa"
               x:Class="ImageCare.UI.Avalonia.Views.ChildWindow"
-              Title="{Binding Title}"
               WindowStartupLocation="CenterScreen"
               WindowState="Maximized">
 

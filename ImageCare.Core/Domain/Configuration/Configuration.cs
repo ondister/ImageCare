@@ -1,21 +1,20 @@
-﻿using System.Text.Json.Serialization;
-
+﻿
 namespace ImageCare.Core.Domain.Configuration;
 
 public sealed class Configuration
 {
-	[JsonInclude]
+
 	public string LastSourceDirectoryPath { get; set; } = string.Empty;
 
-	[JsonInclude]
+
 	public string LastTargetDirectoryPath { get; set; } = string.Empty;
 
-	[JsonInclude]
+
 	public List<FileApplicationAssociation> ApplicationAssociationPairs { get; set; } = new();
 
-    [JsonInclude]
+
     public List<string> RecentFolderPaths { get; set; } = new();
 
-    [JsonInclude]
+
     public List<string> SmartFolderPaths { get; set; } = new();
 }

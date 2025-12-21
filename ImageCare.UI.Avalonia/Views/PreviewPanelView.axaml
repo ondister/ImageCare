@@ -161,7 +161,7 @@
                                     <DropDownButton.Flyout>
                                         <MenuFlyout ItemsSource="{Binding OpenWithViewModels}">
                                             <MenuFlyout.ItemContainerTheme>
-                                                <ControlTheme TargetType="MenuItem">
+                                                <ControlTheme TargetType="MenuItem" x:DataType="domain:FileApplicationPairViewModel">
                                                     <Setter Property="Command" Value="{Binding OpenWithCommand}" />
                                                     <Setter Property="Header" Value="{Binding Name}" />
                                                     <Setter Property="Template">

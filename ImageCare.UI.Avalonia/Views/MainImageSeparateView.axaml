@@ -4,9 +4,11 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:u="https://irihi.tech/ursa"
              xmlns:iconPacks="https://github.com/MahApps/IconPacks.Avalonia"
+             xmlns:viewModels="clr-namespace:ImageCare.UI.Avalonia.ViewModels"
              mc:Ignorable="d"
              x:Name="This"
-             x:Class="ImageCare.UI.Avalonia.Views.MainImageSeparateView">
+             x:Class="ImageCare.UI.Avalonia.Views.MainImageSeparateView"
+             x:DataType="viewModels:MainImageSeparateViewModel">
 
     <Grid Margin="{StaticResource MarginAll.Small}"
           RowDefinitions="Auto,*,Auto">

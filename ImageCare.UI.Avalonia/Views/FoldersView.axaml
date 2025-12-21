@@ -11,11 +11,6 @@
              x:DataType="viewModels:FoldersViewModel"
              x:Name="This">
 
-    <UserControl.KeyBindings>
-        <KeyBinding Command="{Binding CreateFolderCommand}" Gesture="F7" />
-        <KeyBinding Command="{Binding DeleteFolderCommand}" Gesture="Delete" />
-    </UserControl.KeyBindings>
-
     <Grid Margin="{StaticResource MarginAll.Small}">
 
         <Grid.RowDefinitions>

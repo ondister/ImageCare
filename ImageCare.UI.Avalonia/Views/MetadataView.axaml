@@ -4,9 +4,11 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:mvvm="http://prismlibrary.com/"
              xmlns:domain="clr-namespace:ImageCare.UI.Avalonia.ViewModels.Domain"
+             xmlns:viewModels="clr-namespace:ImageCare.UI.Avalonia.ViewModels"
              mc:Ignorable="d"
              mvvm:ViewModelLocator.AutoWireViewModel="True"
-             x:Class="ImageCare.UI.Avalonia.Views.MetadataView">
+             x:Class="ImageCare.UI.Avalonia.Views.MetadataView"
+             x:DataType="viewModels:MetadataViewModel">
 
     <ListBox ItemsSource="{Binding MetadataList}"
              Grid.IsSharedSizeScope="True">

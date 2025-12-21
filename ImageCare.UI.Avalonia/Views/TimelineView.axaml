@@ -3,7 +3,9 @@
              xmlns:behaviors="clr-namespace:ImageCare.UI.Avalonia.Behaviors"
              xmlns:domain="clr-namespace:ImageCare.UI.Avalonia.ViewModels.Domain"
              xmlns:avaloniaProgressRing="clr-namespace:AvaloniaProgressRing;assembly=AvaloniaProgressRing"
-             x:Class="ImageCare.UI.Avalonia.Views.TimelineView">
+             xmlns:viewModels="clr-namespace:ImageCare.UI.Avalonia.ViewModels"
+             x:Class="ImageCare.UI.Avalonia.Views.TimelineView"
+             x:DataType="viewModels:TimelineViewModel">
 
     <Grid ColumnDefinitions="Auto,*">
 
@@ -61,7 +63,7 @@
                 </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
                     <DataTemplate DataType="domain:DateStatViewModel">
-                        <Button Command="{Binding $parent[UserControl].DataContext.ColumnClickCommand}"
+                        <Button Command="{Binding ColumnClickCommand}"
                                 CommandParameter="{Binding}"
                                 MinHeight="10"
                                 Margin="0,0,0,1"

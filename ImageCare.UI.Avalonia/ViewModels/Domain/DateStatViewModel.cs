@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Windows.Input;
 
 namespace ImageCare.UI.Avalonia.ViewModels.Domain;
 
@@ -42,6 +43,8 @@ public class DateStatViewModel : ViewModelBase
             }
         }
     }
+
+    public ICommand ColumnClickCommand { get; set; }
 
     public void UpdateMonthYearFlag(IEnumerable<DateStatViewModel> allItems)
     {
