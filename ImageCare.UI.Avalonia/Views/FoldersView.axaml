@@ -152,11 +152,11 @@
                                         <TextBlock.ContextMenu>
                                             <ContextMenu>
                                                 <MenuItem Header="Create"
-                                                          Command="{Binding DataContext.CreateFolderCommand, ElementName=This}" />
+                                                          Command="{Binding CreateFolderCommand}" />
                                                 <MenuItem Header="Rename"
                                                           Command="{Binding StartRenameFolderCommand}" />
                                                 <MenuItem Header="Delete"
-                                                          Command="{Binding DataContext.DeleteFolderCommand, ElementName=This}" />
+                                                          Command="{Binding DeleteFolderCommand}" />
                                             </ContextMenu>
                                         </TextBlock.ContextMenu>
                                     </TextBlock>
@@ -207,34 +207,34 @@
 
                 <!-- Search Results List -->
                 <ItemsControl Grid.Row="1"
-                         ItemsSource="{Binding SearchResults}">
+                              ItemsSource="{Binding SearchResults}">
 
-					<ItemsControl.ItemTemplate>
-						<DataTemplate x:DataType="domain:DirectoryViewModel">
-							<StackPanel Orientation="Horizontal" 
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="domain:DirectoryViewModel">
+                            <StackPanel Orientation="Horizontal"
                                         Margin="{StaticResource MarginVertical.Small}">
-								<u:IconButton Margin="{StaticResource MarginAll.Small}"
+                                <u:IconButton Margin="{StaticResource MarginAll.Small}"
                                               VerticalAlignment="Center"
                                               VerticalContentAlignment="Center"
                                               Command="{Binding ElementName=This, Path=DataContext.SetSearchResultCommand}"
                                               CommandParameter="{Binding }">
-									<u:IconButton.Icon>
-										<iconPacks:PackIconMaterial Kind="FolderOutline"
+                                    <u:IconButton.Icon>
+                                        <iconPacks:PackIconMaterial Kind="FolderOutline"
                                                                     Height="{StaticResource Icon.Size.Small}"
                                                                     Width="{StaticResource Icon.Size.Small}"
                                                                     Margin="{StaticResource MarginAll.Small}" />
-									</u:IconButton.Icon>
-								</u:IconButton>
-								<TextBlock Text="{Binding Name}"
-                                           VerticalAlignment="Center"/>
-								<TextBlock Text="{Binding Path}"
+                                    </u:IconButton.Icon>
+                                </u:IconButton>
+                                <TextBlock Text="{Binding Name}"
+                                           VerticalAlignment="Center" />
+                                <TextBlock Text="{Binding Path}"
                                            VerticalAlignment="Center"
                                            FontSize="{StaticResource Font.Size.Small}"
                                            Opacity="0.7"
                                            Margin="20,0,0,0" />
-							</StackPanel>
-						</DataTemplate>
-					</ItemsControl.ItemTemplate>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
                 </ItemsControl>
             </Grid>
         </Border>

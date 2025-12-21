@@ -36,7 +36,6 @@ internal class FoldersViewModel : NavigatedViewModelBase
 
     private DirectoryViewModel? _selectedFileSystemItem;
     private CompositeDisposable _compositeDisposable;
-    private DirectoryModel? _createdSubFolder;
     private CancellationTokenSource? _searchCancellationTokenSource;
 
     private string? _searchText;
@@ -64,8 +63,6 @@ internal class FoldersViewModel : NavigatedViewModelBase
         _synchronizationContext = synchronizationContext ?? throw new ArgumentNullException(nameof(synchronizationContext));
 
         OnViewLoadedCommand = CreateAsyncCommand(OnViewLoadedAsync, () => !IsLoading);
-        DeleteFolderCommand = CreateCommand(DeleteFolder, CanDeleteFolder);
-        CreateFolderCommand = CreateCommand(CreateFolder, CanCreateFolder);
 
         PerformSearchCommand = CreateAsyncCommand(PerformSearchAsync, CanPerformSearch)
             .ObservesProperty(()=>SearchText)
@@ -85,10 +82,6 @@ internal class FoldersViewModel : NavigatedViewModelBase
     public ObservableCollection<DirectoryViewModel> SearchResults { get; }
 
     public ICommand OnViewLoadedCommand { get; }
-
-    public ICommand CreateFolderCommand { get; }
-
-    public ICommand DeleteFolderCommand { get; }
 
     public ICommand PerformSearchCommand { get; }
 
@@ -387,16 +380,7 @@ internal class FoldersViewModel : NavigatedViewModelBase
             {
                 if (directoryViewModel.FindChildByPathRecursively(parent.Path) is { } parentViewModel)
                 {
-                    if (!parentViewModel.ChildFileSystemItems.Any(d => d.Path.Equals(directoryModel.Path, StringComparison.OrdinalIgnoreCase)))
-                    {
-                        var createdViewModel = _mapper.Map<DirectoryViewModel>(directoryModel);
-                        parentViewModel.ChildFileSystemItems.Add(createdViewModel);
-
-                        if (createdViewModel.Path.Equals(_createdSubFolder?.Path, StringComparison.OrdinalIgnoreCase))
-                        {
-                            createdViewModel.IsEditing = true;
-                        }
-                    }
+                    parentViewModel.IsExpanded = true;
 
                     return;
                 }
@@ -566,48 +550,6 @@ internal class FoldersViewModel : NavigatedViewModelBase
         {
             _logger.Error(ex, "Failed to stop watching directory: {Path}", directoryModel.Path);
         }
-    }
-
-    private void CreateFolder()
-    {
-        try
-        {
-            if (SelectedFileSystemItem == null)
-            {
-                return;
-            }
-
-            _createdSubFolder = _folderService.CreateSubFolder(_mapper.Map<DirectoryModel>(SelectedFileSystemItem));
-        }
-        catch (Exception ex)
-        {
-            _logger.Error(ex, "Failed to create folder for: {SelectedPath}", SelectedFileSystemItem?.Path);
-        }
-    }
-
-    private void DeleteFolder()
-    {
-        try
-        {
-            if (SelectedFileSystemItem != null && !SelectedFileSystemItem.HasSupportedMedia)
-            {
-                _folderService.RemoveFolder(_mapper.Map<DirectoryModel>(SelectedFileSystemItem));
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.Error(ex, "Failed to delete folder: {Path}", SelectedFileSystemItem?.Path);
-        }
-    }
-
-    private bool CanCreateFolder()
-    {
-        return SelectedFileSystemItem != null;
-    }
-
-    private bool CanDeleteFolder()
-    {
-        return SelectedFileSystemItem != null && !SelectedFileSystemItem.HasSupportedMedia;
     }
 
     private void OnObservableError(Exception ex)

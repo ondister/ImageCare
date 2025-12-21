@@ -66,11 +66,17 @@ internal class DirectoryViewModel : ViewModelBase, IComparable<DirectoryViewMode
         RenameFolderCommand = CreateCommand(RenameFolder, () => IsEditing);
         StartRenameFolderCommand = CreateCommand(StartRenameFolder);
         NameTextBoxLostFocusCommand = CreateCommand(NameTextBoxLostFocus);
+        DeleteFolderCommand = CreateCommand(DeleteFolder, CanDeleteFolder);
+        CreateFolderCommand = CreateCommand(CreateFolder, CanCreateFolder);
     }
 
     public ICommand StartRenameFolderCommand { get; }
 
     public ICommand RenameFolderCommand { get; }
+
+    public ICommand CreateFolderCommand { get; }
+
+    public ICommand DeleteFolderCommand { get; }
 
     public ICommand NameTextBoxLostFocusCommand { get; }
 
@@ -404,5 +410,50 @@ internal class DirectoryViewModel : ViewModelBase, IComparable<DirectoryViewMode
         }
 
         await WaitForLoadingAsync(cancellationToken);
+    }
+
+    private void CreateFolder()
+    {
+        try
+        {
+
+            var createdSubFolder = _folderService.CreateSubFolder(_mapper.Map<DirectoryModel>(this));
+            if (createdSubFolder != null)
+            {
+                var createdViewModel = _mapper.Map<DirectoryViewModel>(createdSubFolder);
+                ChildFileSystemItems.Add(createdViewModel);
+                createdViewModel.IsEditing = true;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "Failed to create folder for: {SelectedPath}", Path);
+        }
+    }
+
+    private void DeleteFolder()
+    {
+        try
+        {
+            if (!HasSupportedMedia)
+            {
+                _folderService.RemoveFolder(_mapper.Map<DirectoryModel>(this));
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "Failed to delete folder: {Path}", Path);
+        }
+    }
+
+    private bool CanCreateFolder()
+    {
+
+        return !IsEditing;
+    }
+
+    private bool CanDeleteFolder()
+    {
+        return !HasSupportedMedia;
     }
 }
