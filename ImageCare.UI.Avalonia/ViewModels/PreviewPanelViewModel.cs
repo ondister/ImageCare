@@ -7,10 +7,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
 
-using AutoMapper;
-
 using ImageCare.Core.Domain.Folders;
 using ImageCare.Core.Domain.Media;
+using ImageCare.Core.Domain.Notification;
 using ImageCare.Core.Domain.Preview;
 using ImageCare.Core.Services.FileSystemWatcherService;
 using ImageCare.Core.Services.FolderClusterizationService;
@@ -22,12 +21,14 @@ using ImageCare.Core.Services.NotificationService;
 using ImageCare.UI.Avalonia.Behaviors;
 using ImageCare.UI.Avalonia.ViewModels.Domain;
 
+using MapsterMapper;
+
 using Prism.Dialogs;
 using Prism.Navigation.Regions;
 
 using Serilog;
 
-using Notification = ImageCare.Core.Services.NotificationService.Notification;
+using Notification = ImageCare.Core.Domain.Notification.Notification;
 
 namespace ImageCare.UI.Avalonia.ViewModels;
 

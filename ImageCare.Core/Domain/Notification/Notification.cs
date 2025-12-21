@@ -1,4 +1,4 @@
-﻿namespace ImageCare.Core.Services.NotificationService;
+﻿namespace ImageCare.Core.Domain.Notification;
 
 public class Notification
 {

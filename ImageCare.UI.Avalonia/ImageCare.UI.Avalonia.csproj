@@ -32,7 +32,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="AutoMapper" Version="15.1.0" />
     <PackageReference Include="Avalonia" Version="11.3.9" />
     <PackageReference Include="Avalonia.Controls.DataGrid" Version="11.3.9" />
     <PackageReference Include="Avalonia.Desktop" Version="11.3.9" />
@@ -53,6 +52,8 @@
     <PackageReference Include="Irihi.Ursa" Version="1.14.0" />
     <PackageReference Include="Irihi.Ursa.Themes.Semi" Version="1.14.0" />
     <PackageReference Include="LibMpv.Avalonia" Version="1.0.0" />
+    <PackageReference Include="Mapster" Version="7.4.0" />
+    <PackageReference Include="Mapster.DependencyInjection" Version="1.0.1" />
     <PackageReference Include="Mapsui.Avalonia" Version="5.0.1" />
     <PackageReference Include="PanAndZoom" Version="11.3.6" />
     <PackageReference Include="Prism.Avalonia" Version="9.0.537.11130" />

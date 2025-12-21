@@ -1,6 +1,6 @@
 ﻿using System.Reactive.Linq;
 using System.Reactive.Subjects;
-
+using ImageCare.Core.Domain.Notification;
 using ImageCare.Core.Exceptions;
 
 namespace ImageCare.Core.Services.NotificationService;

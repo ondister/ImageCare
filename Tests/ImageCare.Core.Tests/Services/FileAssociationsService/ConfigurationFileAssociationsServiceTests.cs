@@ -1,6 +1,6 @@
 ﻿using System.Reactive.Linq;
 using System.Reactive.Subjects;
-
+using ImageCare.Core.Domain.Configuration;
 using ImageCare.Core.Domain.MediaFormats;
 using ImageCare.Core.Services.ConfigurationService;
 using ImageCare.Core.Services.FileAssociationsService;

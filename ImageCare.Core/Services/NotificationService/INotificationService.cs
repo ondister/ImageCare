@@ -1,4 +1,6 @@
-﻿namespace ImageCare.Core.Services.NotificationService;
+﻿using ImageCare.Core.Domain.Notification;
+
+namespace ImageCare.Core.Services.NotificationService;
 
 public interface INotificationService
 {

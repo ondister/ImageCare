@@ -2,6 +2,7 @@
 using System.Reactive.Disposables;
 
 using ImageCare.Core.Domain;
+using ImageCare.Core.Domain.Configuration;
 using ImageCare.Core.Domain.MediaFormats;
 using ImageCare.Core.Services.ConfigurationService;
 

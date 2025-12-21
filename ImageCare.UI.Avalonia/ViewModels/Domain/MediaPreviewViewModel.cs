@@ -3,18 +3,18 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
-
-using AutoMapper;
-
 using Avalonia.Media.Imaging;
 
 using ImageCare.Core.Domain.Media.Metadata;
 using ImageCare.Core.Domain.MediaFormats;
+using ImageCare.Core.Domain.Notification;
 using ImageCare.Core.Domain.Preview;
 using ImageCare.Core.Services.FileAssociationsService;
 using ImageCare.Core.Services.MediaPreviewOperationsService;
 using ImageCare.Core.Services.MediaPreviewService;
 using ImageCare.Core.Services.NotificationService;
+
+using MapsterMapper;
 
 using Serilog;
 

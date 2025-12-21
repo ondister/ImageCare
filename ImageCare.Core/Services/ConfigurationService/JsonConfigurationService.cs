@@ -1,7 +1,7 @@
 ﻿using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Text.Json;
-
+using ImageCare.Core.Domain.Configuration;
 using ImageCare.Core.Exceptions;
 
 namespace ImageCare.Core.Services.ConfigurationService;

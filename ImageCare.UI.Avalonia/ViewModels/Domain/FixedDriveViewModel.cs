@@ -1,9 +1,10 @@
 ﻿using System.Collections.Generic;
 
-using AutoMapper;
-
 using ImageCare.Core.Services.FileSystemService;
 using ImageCare.Core.Services.FolderService;
+
+using MapsterMapper;
+
 using Serilog;
 
 namespace ImageCare.UI.Avalonia.ViewModels.Domain;
@@ -16,7 +17,7 @@ internal sealed class FixedDriveViewModel : DriveViewModel
                                IEnumerable<DirectoryViewModel> children,
                                IFolderService folderService,
                                IFileSystemService fileSystemService,
-							   IMapper mapper,
+                               IMapper mapper,
                                ILogger logger)
-        : base(name, path, children, folderService,fileSystemService, mapper, logger) { }
+        : base(name, path, children, folderService, fileSystemService, mapper, logger) { }
 }

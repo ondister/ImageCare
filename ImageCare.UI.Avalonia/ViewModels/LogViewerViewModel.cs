@@ -6,13 +6,13 @@ using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Windows.Input;
 
-using AutoMapper;
-
 using DynamicData;
 using DynamicData.Binding;
 using ImageCare.Core.Domain.Logs;
 using ImageCare.Core.Services.LogEventService;
 using ImageCare.UI.Avalonia.ViewModels.Domain.Logs;
+
+using MapsterMapper;
 
 using Prism.Dialogs;
 

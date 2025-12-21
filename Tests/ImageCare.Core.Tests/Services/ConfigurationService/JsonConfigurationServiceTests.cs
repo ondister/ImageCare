@@ -1,5 +1,5 @@
 ﻿using System.Text.Json;
-
+using ImageCare.Core.Domain.Configuration;
 using ImageCare.Core.Exceptions;
 using ImageCare.Core.Services.ConfigurationService;
 

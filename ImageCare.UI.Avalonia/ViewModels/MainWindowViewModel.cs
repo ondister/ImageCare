@@ -6,16 +6,17 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
 
-using AutoMapper;
-
 using ImageCare.Core.Domain.Folders;
 using ImageCare.Core.Domain.MediaFormats;
+using ImageCare.Core.Domain.Notification;
 using ImageCare.Core.Domain.Preview;
 using ImageCare.Core.Services.FolderHistoryService;
 using ImageCare.Core.Services.FolderService;
 using ImageCare.Core.Services.MediaPreviewOperationsService;
 using ImageCare.Core.Services.NotificationService;
 using ImageCare.UI.Avalonia.Views;
+
+using MapsterMapper;
 
 using Prism.Commands.Ex;
 using Prism.Navigation;

@@ -1,4 +1,5 @@
-﻿using ImageCare.Core.Exceptions;
+﻿using ImageCare.Core.Domain.Notification;
+using ImageCare.Core.Exceptions;
 using ImageCare.Core.Services.NotificationService;
 
 namespace ImageCare.Core.Tests.Services.NotificationService;

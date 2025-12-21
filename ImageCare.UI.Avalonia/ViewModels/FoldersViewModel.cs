@@ -8,14 +8,14 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
 
-using AutoMapper;
-
 using ImageCare.Core.Domain.Folders;
 using ImageCare.Core.Services.DrivesWatcherService;
 using ImageCare.Core.Services.FileSystemService;
 using ImageCare.Core.Services.FileSystemWatcherService;
 using ImageCare.Core.Services.FolderService;
 using ImageCare.UI.Avalonia.ViewModels.Domain;
+
+using MapsterMapper;
 
 using Prism.Navigation.Regions;
 

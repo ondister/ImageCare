@@ -5,11 +5,12 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
 
-using AutoMapper;
-
+using ImageCare.Core.Domain.Configuration;
 using ImageCare.Core.Services.ConfigurationService;
 using ImageCare.UI.Avalonia.Services;
 using ImageCare.UI.Avalonia.ViewModels.Domain;
+
+using MapsterMapper;
 
 using Prism.Dialogs;
 

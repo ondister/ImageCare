@@ -1,10 +1,7 @@
-using System.Threading;
-
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
-
 using ImageCare.Core.Domain.Folders;
 using ImageCare.Core.Services.ConfigurationService;
 using ImageCare.Core.Services.DrivesWatcherService;
@@ -25,17 +22,19 @@ using ImageCare.UI.Avalonia.Mapping;
 using ImageCare.UI.Avalonia.Services;
 using ImageCare.UI.Avalonia.ViewModels;
 using ImageCare.UI.Avalonia.Views;
-
+using Mapster;
+using MapsterMapper;
 using Microsoft.Extensions.Logging;
-
 using Prism.DryIoc;
 using Prism.Ioc;
-
 using Serilog;
 using Serilog.Core;
 using Serilog.Exceptions;
 using Serilog.Exceptions.Core;
 using Serilog.Extensions.Logging;
+using System.Threading;
+
+using Prism.Container.DryIoc;
 
 using ChildWindow = ImageCare.UI.Avalonia.Views.ChildWindow;
 using ILogger = Serilog.ILogger;
@@ -78,7 +77,7 @@ public class App : PrismApplication
         containerRegistry.RegisterInstance<ILogEventService>(logService);
         containerRegistry.RegisterInstance<ILogNotificationService>(logService);
 
-       var serilogLogger = CreateLogger(logService);
+        var serilogLogger = CreateLogger(logService);
         containerRegistry.RegisterInstance<ILogger>(serilogLogger);
 
         containerRegistry.RegisterDialog<LogViewerView>("logViewer");
@@ -123,7 +122,16 @@ public class App : PrismApplication
         });
         containerRegistry.RegisterSingleton<IFileDialogService, AvaloniaFileDialogService>();
 
-        containerRegistry.RegisterInstance(new ApplicationMapper(Container, loggerFactory).GetMapper());
+        containerRegistry.RegisterSingleton<TypeAdapterConfig>(() =>
+        {
+            var config = new TypeAdapterConfig();
+
+            new RegisterMapper(Container).Register(config);
+
+            return config;
+        });
+        containerRegistry.RegisterSingleton<IMapper, ServiceMapper>();
+
         containerRegistry.RegisterInstance(SynchronizationContext.Current);
 
         containerRegistry.Register<IFileSystemWatcherService, LocalFileSystemWatcherService>();

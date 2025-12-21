@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace ImageCare.Core.Services.ConfigurationService;
+namespace ImageCare.Core.Domain.Configuration;
 
 public sealed class Configuration
 {

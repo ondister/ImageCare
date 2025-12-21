@@ -1,4 +1,6 @@
-﻿namespace ImageCare.Core.Services.ConfigurationService;
+﻿using ImageCare.Core.Domain.Configuration;
+
+namespace ImageCare.Core.Services.ConfigurationService;
 
 public interface IConfigurationService
 {

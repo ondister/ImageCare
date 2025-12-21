@@ -4,10 +4,12 @@ using System.Reactive.Linq;
 using System.Threading;
 using System.Windows.Input;
 
-using AutoMapper;
+using ImageCare.Core.Domain.Notification;
 using ImageCare.Core.Services.LogEventService;
 using ImageCare.Core.Services.NotificationService;
 using ImageCare.UI.Avalonia.ViewModels.Domain;
+
+using MapsterMapper;
 
 using Prism.Commands;
 using Prism.Dialogs;

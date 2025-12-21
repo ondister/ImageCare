@@ -1,10 +1,10 @@
-﻿using AutoMapper;
-
-using ImageCare.Core.Domain.MediaFormats;
+﻿using ImageCare.Core.Domain.MediaFormats;
 using ImageCare.Core.Services.FileAssociationsService;
 using ImageCare.Core.Services.MediaPreviewOperationsService;
 using ImageCare.Core.Services.MediaPreviewService;
 using ImageCare.Core.Services.NotificationService;
+
+using MapsterMapper;
 
 using Serilog;
 

@@ -6,8 +6,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
 
-using AutoMapper;
-
 using ImageCare.Core.Domain.Folders;
 using ImageCare.Core.Domain.Media;
 using ImageCare.Core.Domain.Preview;
@@ -19,6 +17,8 @@ using ImageCare.Core.Services.MediaPreviewOperationsService;
 using ImageCare.Core.Services.MediaPreviewService;
 using ImageCare.UI.Avalonia.Controls;
 using ImageCare.UI.Avalonia.ViewModels.Domain;
+
+using MapsterMapper;
 
 using Prism.Dialogs;
 

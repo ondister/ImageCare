@@ -7,11 +7,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
 
-using AutoMapper;
-
 using ImageCare.Core.Domain.Folders;
 using ImageCare.Core.Services.FileSystemService;
 using ImageCare.Core.Services.FolderService;
+
+using MapsterMapper;
 
 using Serilog;
 
