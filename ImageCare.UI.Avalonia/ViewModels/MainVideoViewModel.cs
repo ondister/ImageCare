@@ -32,6 +32,7 @@ internal class MainVideoViewModel : NavigatedViewModelBase
     private MpvContext? _mpv;
     private bool _isPlaying;
     private bool _hasMediaLoaded;
+    private bool _eventsSubscribed;
 
     public MainVideoViewModel(IMediaPreviewOperationsService fileOperationsService,
                               IFolderService folderService,
@@ -85,7 +86,6 @@ internal class MainVideoViewModel : NavigatedViewModelBase
         get => _mpv;
         private set
         {
-            UnsubscribeMpvEvents();
             if (SetProperty(ref _mpv, value))
             {
                 SubscribeMpvEvents();
@@ -109,7 +109,6 @@ internal class MainVideoViewModel : NavigatedViewModelBase
             }
             catch (MpvException ex)
             {
-                _logger.Debug("TimePos property unavailable: {Message}", ex.Message);
                 return TimeSpan.Zero;
             }
         }
@@ -163,6 +162,7 @@ internal class MainVideoViewModel : NavigatedViewModelBase
             {
                 // Property unavailable - ignore
             }
+
             return TimeSpan.Zero;
         }
     }
@@ -251,11 +251,9 @@ internal class MainVideoViewModel : NavigatedViewModelBase
         {
             Stop();
             UnsubscribeMpvEvents();
+
             _compositeDisposable?.Dispose();
             _compositeDisposable = null;
-
-            Mpv?.Dispose();
-            Mpv = null;
         }
         catch (Exception ex)
         {
@@ -377,7 +375,7 @@ internal class MainVideoViewModel : NavigatedViewModelBase
 
     private void SubscribeMpvEvents()
     {
-        if (Mpv == null)
+        if (Mpv == null || _eventsSubscribed)
         {
             return;
         }
@@ -391,6 +389,8 @@ internal class MainVideoViewModel : NavigatedViewModelBase
             Mpv.Volume.Changed += OnVolumeChanged;
             Mpv.Pause.Changed += OnPauseStateChanged;
             Mpv.FileLoaded += OnFileLoaded;
+
+            _eventsSubscribed = true;
         }
         catch (Exception ex)
         {
@@ -414,6 +414,8 @@ internal class MainVideoViewModel : NavigatedViewModelBase
             _mpv.Volume.Changed -= OnVolumeChanged;
             _mpv.Pause.Changed -= OnPauseStateChanged;
             _mpv.FileLoaded -= OnFileLoaded;
+
+            _eventsSubscribed = false;
         }
         catch (Exception ex)
         {
