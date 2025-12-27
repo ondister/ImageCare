@@ -1,16 +1,19 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reactive.Linq;
+using System.Reactive.Subjects;
 using System.Windows.Input;
 
 namespace ImageCare.UI.Avalonia.ViewModels.Domain;
 
-public class DateStatViewModel : ViewModelBase
+public class DateStatViewModel : ViewModelBase,IDisposable
 {
     private DateTime _date;
     private int _count;
     private double _normalizedHeight;
     private bool _isLastInMonthYear;
+    private readonly Subject<DateTime> _dateSelectedSubject;
 
     public DateTime Date
     {
@@ -44,7 +47,14 @@ public class DateStatViewModel : ViewModelBase
         }
     }
 
-    public ICommand ColumnClickCommand { get; set; }
+    public ICommand ColumnClickCommand => CreateCommand<DateStatViewModel>(item => { _dateSelectedSubject.OnNext(item.Date); });
+
+    public DateStatViewModel()
+    {
+        _dateSelectedSubject = new Subject<DateTime>();
+    }
+
+    public IObservable<DateTime> DateSelected => _dateSelectedSubject.AsObservable();
 
     public void UpdateMonthYearFlag(IEnumerable<DateStatViewModel> allItems)
     {
@@ -53,5 +63,11 @@ public class DateStatViewModel : ViewModelBase
                           .MaxBy(x => x.Date);
 
         IsLastInMonthYear = lastInMonth?.Date == Date;
+    }
+
+    /// <inheritdoc />
+    public void Dispose()
+    {
+        _dateSelectedSubject.Dispose();
     }
 }

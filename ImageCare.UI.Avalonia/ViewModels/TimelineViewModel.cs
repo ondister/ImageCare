@@ -14,8 +14,6 @@ using ImageCare.Core.Domain.Folders;
 using ImageCare.Core.Services.FolderStatisticsService;
 using ImageCare.UI.Avalonia.ViewModels.Domain;
 
-using Prism.Commands;
-
 namespace ImageCare.UI.Avalonia.ViewModels;
 
 internal class TimelineViewModel : ViewModelBase, IDisposable
@@ -24,6 +22,7 @@ internal class TimelineViewModel : ViewModelBase, IDisposable
     private readonly Subject<DateTime> _dateSelectedSubject;
     private readonly Subject<Unit> _statisticsClickSubject;
     private readonly CompositeDisposable _disposables = new();
+    private readonly CompositeDisposable _dateStatDisposables = new();
     private readonly IFolderStatisticsService _folderStatisticsService;
     private readonly SourceCache<DateStatViewModel, DateTime> _dateStatsCache;
     private int _totalFilesCount;
@@ -62,10 +61,7 @@ internal class TimelineViewModel : ViewModelBase, IDisposable
                                 .DisposeWith(_disposables);
     }
 
-    public ICommand ColumnClickCommand => new DelegateCommand<DateStatViewModel>(item => { _dateSelectedSubject.OnNext(item.Date); });
-
-    public ICommand StatisticsClickCommand => new DelegateCommand(()=>_statisticsClickSubject.OnNext(Unit.Default));
-
+    public ICommand StatisticsClickCommand => CreateCommand(() => _statisticsClickSubject.OnNext(Unit.Default));
 
     public IObservable<DateTime> DateSelected => _dateSelectedSubject.AsObservable();
 
@@ -90,7 +86,18 @@ internal class TimelineViewModel : ViewModelBase, IDisposable
         _dateSelectedSubject.Dispose();
         _statisticsClickSubject.Dispose();
         _disposables.Dispose();
+        _dateStatDisposables.Dispose();
+        DisposeDateStats();
+
         _dateStatsCache.Dispose();
+    }
+
+    private void DisposeDateStats()
+    {
+        foreach (var dateStat in _dateStatsCache.Items)
+        {
+            dateStat.Dispose();
+        }
     }
 
     public void Clear()
@@ -98,6 +105,8 @@ internal class TimelineViewModel : ViewModelBase, IDisposable
         _synchronizationContext.Post(
             _ =>
             {
+                _dateStatDisposables.Dispose();
+                DisposeDateStats();
                 _dateStatsCache.Clear();
                 TotalFilesCount = 0;
                 IsLoading = false;
@@ -139,10 +148,12 @@ internal class TimelineViewModel : ViewModelBase, IDisposable
 
                         if (dateStat.Count == 0)
                         {
+                            dateStat.Dispose();
                             innerCache.Remove(dateStat);
                         }
                         else
                         {
+                            _disposables.Add(dateStat.DateSelected.Subscribe(OnDateStatDateSelected));
                             innerCache.AddOrUpdate(dateStat);
                         }
                     }
@@ -152,6 +163,11 @@ internal class TimelineViewModel : ViewModelBase, IDisposable
                 UpdateNormalizedHeights();
             },
             null);
+    }
+
+    private void OnDateStatDateSelected(DateTime date)
+    {
+        _dateSelectedSubject.OnNext(date);
     }
 
     private void OnScanProgressChanged(ScanProgress progress)
