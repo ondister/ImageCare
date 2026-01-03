@@ -526,7 +526,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
                 }
 
                 var indexToLoad = indexToRemove + PreloadCount;
-                if (ImagePreviews.Count < indexToLoad)
+                if (ImagePreviews.Count > indexToLoad)
                 {
                     _ = LoadImageAsync(indexToLoad, _currentScrollCancellation.Token);
                 } 
