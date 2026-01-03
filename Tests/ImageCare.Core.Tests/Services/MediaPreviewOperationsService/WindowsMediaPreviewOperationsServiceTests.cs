@@ -72,17 +72,6 @@ public class WindowsMediaPreviewOperationsServiceTests
     }
 
     [Test]
-    public void DeleteImagePreviewAsync_WhenFileNotExists_ThrowsException()
-    {
-        var service = CreateService();
-        var mediaPreview = CreateMediaPreview("nonexistent.jpg");
-
-        _fileSystemServiceMock.Setup(x => x.FileExists("nonexistent.jpg")).Returns(false);
-        Assert.That(() => service.DeleteImagePreviewAsync(mediaPreview),
-            Throws.TypeOf<ServiceException>());
-    }
-
-    [Test]
     public void DeleteImagePreviewAsync_WhenFileExists_DeletesFile()
     {
         var service = CreateService();

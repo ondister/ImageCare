@@ -321,6 +321,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
             }
 
             await SelectedPreview.RemoveImagePreviewAsync();
+
         }
         catch (Exception ex)
         {
@@ -523,6 +524,12 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
                     _synchronizationContext.Post(d => { SelectedPreview = null; }, null);
                     _fileOperationsService.SetSelectedPreview(new SelectedMediaPreview(MediaPreview.Empty, FileManagerPanel));
                 }
+
+                var indexToLoad = indexToRemove + PreloadCount;
+                if (ImagePreviews.Count < indexToLoad)
+                {
+                    _ = LoadImageAsync(indexToLoad, _currentScrollCancellation.Token);
+                } 
             }
         }
         catch (Exception ex)
