@@ -102,12 +102,8 @@ public sealed class WindowsMediaPreviewOperationsService : IMediaPreviewOperatio
 	{
 		try
 		{
-			if (!_fileSystemService.FileExists(imagePreview.Url))
-			{
-				throw new ServiceException($"File does not exist: {imagePreview.Url}");
-			}
-
 			_fileSystemService.SafeDelete(imagePreview.Url);
+
 			return Task.FromResult(OperationResult.Success);
 		}
 		catch (ServiceException)

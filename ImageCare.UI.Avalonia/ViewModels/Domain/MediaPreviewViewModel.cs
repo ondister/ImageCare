@@ -41,6 +41,7 @@ internal class MediaPreviewViewModel : ViewModelBase, IComparable<MediaPreviewVi
 
     private DateTime _fileDate;
     private string _frameColorCode = "Transparent";
+    private bool _isRemoving=false;
 
     public MediaPreviewViewModel(string? title,
                                  string url,
@@ -65,9 +66,20 @@ internal class MediaPreviewViewModel : ViewModelBase, IComparable<MediaPreviewVi
         _mapper = mapper;
         _logger = logger;
 
-        RemoveImagePreviewCommand = CreateAsyncCommand(RemoveImagePreviewAsync);
+        RemoveImagePreviewCommand = CreateAsyncCommand(RemoveImagePreviewAsync, CanRemoveImagePreview).ObservesProperty(() => IsRemoving);
 
         OpenWithViewModels = CreateOpenWithItems();
+    }
+
+    private bool CanRemoveImagePreview()
+    {
+        return !IsRemoving;
+    }
+
+    public bool IsRemoving
+    {
+        get => _isRemoving;
+        set => SetProperty(ref _isRemoving, value);
     }
 
     public DateTime FileDate
@@ -196,6 +208,8 @@ internal class MediaPreviewViewModel : ViewModelBase, IComparable<MediaPreviewVi
     {
         try
         {
+            IsRemoving = true;
+
             var notificationTitle = $"Delete {Url}";
             _notificationService.SendNotification(new Notification(notificationTitle, string.Empty));
 
@@ -214,6 +228,10 @@ internal class MediaPreviewViewModel : ViewModelBase, IComparable<MediaPreviewVi
         catch (Exception exception)
         {
             _logger.Error(exception, $"Unexpected exception during preview deletion for file {Url}");
+        }
+        finally
+        {
+           IsRemoving=false;
         }
     }
 
