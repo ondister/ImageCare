@@ -110,6 +110,17 @@ public class RegisterMapper : IRegister
     {
         cfg.NewConfig<DirectoryModel, DirectoryViewModel>()
            .MapWith(src => MapPolymorphicChild(src))
+            .Map(dest => dest.HasSupportedMedia, src => src.HasSupportedMedia)
+            .Ignore(dest => dest.IsExpanded)
+            .Ignore(dest => dest.IsLoaded)
+            .Ignore(dest => dest.FileManagerPanel)
+            .Ignore(dest => dest.IsEditing)
+            .Ignore(dest => dest.EditableName)
+            .Ignore(dest => dest.LoadState)
+            .Ignore(dest => dest.IsSelected);
+
+        cfg.NewConfig<RemovableDriveModel, DriveViewModel>()
+           .MapWith(src => MapRemovableDriveViewModel(src))
            .Map(dest => dest.HasSupportedMedia, src => src.HasSupportedMedia)
            .Ignore(dest => dest.IsExpanded)
            .Ignore(dest => dest.IsLoaded)
