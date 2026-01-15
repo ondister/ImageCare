@@ -19,6 +19,7 @@ using ImageCare.Core.Services.MediaPreviewOperationsService;
 using ImageCare.Core.Services.MediaPreviewService;
 using ImageCare.Core.Services.NotificationService;
 using ImageCare.UI.Avalonia.Behaviors;
+using ImageCare.UI.Avalonia.Collections;
 using ImageCare.UI.Avalonia.ViewModels.Domain;
 
 using MapsterMapper;
@@ -55,12 +56,13 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
     private CompositeDisposable _disposable;
 
     private CancellationTokenSource _folderSelectedCancellationTokenSource;
-    private Collections.SortedObservableCollection<FileModel> _imagePaths;
+    private SortedObservableCollection<FileModel> _imagePaths;
     private CancellationTokenSource _currentScrollCancellation = new();
 
     private bool _isScrollResetRequested;
     private bool _filesLoading;
     private SelectedDirectory? _selectedDirectory;
+    private int _indexInView;
 
     public PreviewPanelViewModel(IMediaPreviewService imageService,
                                  IFolderService folderService,
@@ -92,11 +94,11 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
         MoveImagePreviewCommand = CreateAsyncCommand(MoveImagePreviewAsync);
         DeleteImagePreviewCommand = CreateAsyncCommand(DeleteImagePreview);
 
-        ImagePreviews = new Collections.SortedObservableCollection<MediaPreviewViewModel>(new CreationDateTimeDescendingComparer());
+        ImagePreviews = new SortedObservableCollection<MediaPreviewViewModel>(new CreationDateTimeDescendingComparer());
 
         _folderSelectedCancellationTokenSource = new CancellationTokenSource();
 
-        TimelineVm = new TimelineViewModel(_folderStatisticsService, _synchronizationContext){};
+        TimelineVm = new TimelineViewModel(_folderStatisticsService, _synchronizationContext);
     }
 
     // Used by HorizontalScrollBehavior
@@ -112,7 +114,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
         set => SetProperty(ref _filesLoading, value);
     }
 
-    public Collections.SortedObservableCollection<MediaPreviewViewModel> ImagePreviews { get; }
+    public SortedObservableCollection<MediaPreviewViewModel> ImagePreviews { get; }
 
     public ImagePreviewDropHandler ImagePreviewDropHandler { get; }
 
@@ -147,6 +149,16 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
     public ICommand MoveImagePreviewCommand { get; }
 
     public ICommand DeleteImagePreviewCommand { get; }
+
+    public int IndexInView
+    {
+        get => _indexInView;
+        set
+        {
+            _indexInView = value;
+            RaisePropertyChanged(nameof(IndexInView));
+        }
+    }
 
     /// <inheritdoc />
     public override void OnNavigatedTo(NavigationContext navigationContext)
@@ -321,7 +333,6 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
             }
 
             await SelectedPreview.RemoveImagePreviewAsync();
-
         }
         catch (Exception ex)
         {
@@ -343,7 +354,15 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
             mediaPreviewViewModel.RotateAngle = mediaPreviewViewModel.Metadata.Orientation.ToRotationAngle();
             _ = mediaPreviewViewModel.LoadPreviewAsync(CancellationToken.None);
 
-            _synchronizationContext.Send(d => { ImagePreviews.Add(mediaPreviewViewModel); }, null);
+            _synchronizationContext.Send(
+                d =>
+                {
+                    ImagePreviews.Add(mediaPreviewViewModel);
+                    var index = ImagePreviews.IndexOf(mediaPreviewViewModel);
+                    IndexInView = -1;
+                    IndexInView = index;
+                },
+                null);
         }
         catch (Exception ex)
         {
@@ -398,7 +417,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
             lock (_imagePathsLock)
             {
                 FilesLoading = true;
-                _imagePaths = new Collections.SortedObservableCollection<FileModel>(new FileModelCreationDateTimeDescendingComparer());
+                _imagePaths = new SortedObservableCollection<FileModel>(new FileModelCreationDateTimeDescendingComparer());
             }
 
             var files = await _folderService.GetFileModelAsync(selectedFileSystemItem, "*");
@@ -411,7 +430,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
                     token.ThrowIfCancellationRequested();
 
                     LoadInitialImagesAsync(_folderSelectedCancellationTokenSource.Token);
-                    _folderStatisticsService.StartAsync(selectedFileSystemItem.Path,  token);
+                    _folderStatisticsService.StartAsync(selectedFileSystemItem.Path, token);
                 },
                 token);
         }
@@ -472,7 +491,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
                 _imagePaths.Add(model.NewFileModel);
             }
 
-            CreateImagePreviewFromPathAsync(model.NewFileModel.FullName, true);
+            CreateImagePreviewFromPathAsync(model.NewFileModel.FullName, false);
         }
         catch (Exception ex)
         {
@@ -529,7 +548,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
                 if (ImagePreviews.Count > indexToLoad)
                 {
                     _ = LoadImageAsync(indexToLoad, _currentScrollCancellation.Token);
-                } 
+                }
             }
         }
         catch (Exception ex)

@@ -25,8 +25,8 @@
           Margin="{StaticResource MarginAll.Small}">
 
         <!--Statistics-->
-            <views:TimelineView Grid.Row="0"
-                                DataContext="{Binding TimelineVm}" />
+        <views:TimelineView Grid.Row="0"
+                            DataContext="{Binding TimelineVm}" />
 
         <!--Panel-->
         <TextBlock Grid.Row="1"
@@ -35,14 +35,14 @@
                    VerticalAlignment="Center"
                    FontSize="{StaticResource Font.Size.SectionHeader}"
                    Foreground="{DynamicResource SemiColorText0}"
-                   IsVisible="{Binding FilesLoading}"/>
+                   IsVisible="{Binding FilesLoading}" />
 
         <ScrollViewer Grid.Row="1"
                       HorizontalScrollBarVisibility="Auto"
                       VerticalScrollBarVisibility="Disabled">
             <Interaction.Behaviors>
                 <behaviors:HorizontalScrollBehavior
-                    IsScrollResetRequested="{Binding IsScrollResetRequested, Mode=TwoWay}" />
+                    IsScrollResetRequested="{Binding IsScrollResetRequested, Mode=TwoWay}"/>
             </Interaction.Behaviors>
             <controls:PreviewsListBox ItemsSource="{Binding ImagePreviews}"
                                       SelectedItem="{Binding SelectedPreview, Mode=TwoWay}"
@@ -54,6 +54,8 @@
                 <i:Interaction.Behaviors>
                     <i:BehaviorCollection>
                         <idd:ContextDropBehavior Handler="{Binding ImagePreviewDropHandler}" />
+                        <behaviors:ScrollToIndexBehavior
+                            TargetIndex="{Binding IndexInView, Mode=TwoWay}" />
                     </i:BehaviorCollection>
                 </i:Interaction.Behaviors>
 
@@ -72,7 +74,7 @@
                         <Setter Property="Background" Value="Transparent" />
                     </Style>
 
-                    
+
                     <Style Selector="ListBoxItem">
                         <Setter Property="Margin" Value="{StaticResource MarginHorizontal.Small}" />
                         <Setter Property="Padding" Value="0" />
@@ -91,119 +93,121 @@
                                   Width="300"
                                   Height="250">
 
-                            <Grid Grid.Row="0"
-                                  ColumnDefinitions="*,Auto">
-                                <TextBlock Grid.Column="0"
-                                           Margin="{StaticResource MarginHorizontal.Small}"
-                                           Text="{Binding Title}"
-                                           TextTrimming="CharacterEllipsis" />
-                                <TextBlock Grid.Column="1"
-                                           HorizontalAlignment="Right"
-                                           Margin="{StaticResource MarginHorizontal.Small}"
-                                           Text="{Binding DateTimeString}" />
-                            </Grid>
+                                <Grid Grid.Row="0"
+                                      ColumnDefinitions="*,Auto">
+                                    <TextBlock Grid.Column="0"
+                                               Margin="{StaticResource MarginHorizontal.Small}"
+                                               Text="{Binding Title}"
+                                               TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Grid.Column="1"
+                                               HorizontalAlignment="Right"
+                                               Margin="{StaticResource MarginHorizontal.Small}"
+                                               Text="{Binding DateTimeString}" />
+                                </Grid>
 
-                            <Grid Grid.Row="1"
-                                  ColumnDefinitions="*,Auto"
-                                  RowDefinitions="Auto,*,Auto">
+                                <Grid Grid.Row="1"
+                                      ColumnDefinitions="*,Auto"
+                                      RowDefinitions="Auto,*,Auto">
 
-                                <LayoutTransformControl Grid.Column="0"
-                                                        Grid.Row="0"
-                                                        Grid.RowSpan="3"
-                                                        Grid.ColumnSpan="2"
-                                                        VerticalAlignment="Center"
-                                                        HorizontalAlignment="Center"
-                                                        MaxHeight="{Binding MaxImageHeight}">
-                                    <Grid>
-                                        <iconPacks:PackIconLucide Kind="Image"
-                                                                  HorizontalAlignment="Center"
-                                                                  VerticalAlignment="Center"
-                                                                  Height="{StaticResource Icon.Size.Giant}"
-                                                                  Width="{StaticResource Icon.Size.Giant}"
-                                                                  IsVisible="{Binding IsLoading}"/>
-                                        <Image Source="{Binding PreviewBitmap}" />
-									</Grid>
+                                    <LayoutTransformControl Grid.Column="0"
+                                                            Grid.Row="0"
+                                                            Grid.RowSpan="3"
+                                                            Grid.ColumnSpan="2"
+                                                            VerticalAlignment="Center"
+                                                            HorizontalAlignment="Center"
+                                                            MaxHeight="{Binding MaxImageHeight}">
+                                        <Grid>
+                                            <iconPacks:PackIconLucide Kind="Image"
+                                                                      HorizontalAlignment="Center"
+                                                                      VerticalAlignment="Center"
+                                                                      Height="{StaticResource Icon.Size.Giant}"
+                                                                      Width="{StaticResource Icon.Size.Giant}"
+                                                                      IsVisible="{Binding IsLoading}" />
+                                            <Image Source="{Binding PreviewBitmap}" />
+                                        </Grid>
 
-									<LayoutTransformControl.LayoutTransform>
-                                        <RotateTransform Angle="{Binding RotateAngle}" />
-                                    </LayoutTransformControl.LayoutTransform>
-                                </LayoutTransformControl>
+                                        <LayoutTransformControl.LayoutTransform>
+                                            <RotateTransform Angle="{Binding RotateAngle}" />
+                                        </LayoutTransformControl.LayoutTransform>
+                                    </LayoutTransformControl>
 
-                                <u:IconButton Grid.Row="0"
-                                              Grid.Column="1"
-                                              Width="60"
-                                              Height="30"
-                                              Margin="{StaticResource MarginTop.XLarge}"
-                                              Command="{CompiledBinding RemoveImagePreviewCommand}"
-                                              Theme="{DynamicResource SolidIconButton}"
-                                              Classes="Danger">
-                                    <u:IconButton.Icon>
-                                        <iconPacks:PackIconLucide Kind="Trash2"
-                                                                  Height="{StaticResource Icon.Size.Micro}"
-                                                                  Width="{StaticResource Icon.Size.Micro}" />
-                                    </u:IconButton.Icon>
-                                </u:IconButton>
+                                    <u:IconButton Grid.Row="0"
+                                                  Grid.Column="1"
+                                                  Width="60"
+                                                  Height="30"
+                                                  Margin="{StaticResource MarginTop.XLarge}"
+                                                  Command="{CompiledBinding RemoveImagePreviewCommand}"
+                                                  Theme="{DynamicResource SolidIconButton}"
+                                                  Classes="Danger">
+                                        <u:IconButton.Icon>
+                                            <iconPacks:PackIconLucide Kind="Trash2"
+                                                                      Height="{StaticResource Icon.Size.Micro}"
+                                                                      Width="{StaticResource Icon.Size.Micro}" />
+                                        </u:IconButton.Icon>
+                                    </u:IconButton>
 
-                                <DropDownButton Grid.Row="2"
-                                                Grid.Column="1"
-                                                Width="60"
-                                                Height="30"
-                                                Margin="{StaticResource MarginBottom.XLarge}"
-                                                IsVisible="{Binding UseOpenWith, Mode=OneTime}"
-                                                Theme="{DynamicResource SolidDropDownButton}">
+                                    <DropDownButton Grid.Row="2"
+                                                    Grid.Column="1"
+                                                    Width="60"
+                                                    Height="30"
+                                                    Margin="{StaticResource MarginBottom.XLarge}"
+                                                    IsVisible="{Binding UseOpenWith, Mode=OneTime}"
+                                                    Theme="{DynamicResource SolidDropDownButton}">
 
-                                    <DropDownButton.Content>
-                                        <iconPacks:PackIconMaterial Kind="ApplicationExport"
-                                                                    Height="{StaticResource Icon.Size.Micro}"
-                                                                    Width="{StaticResource Icon.Size.Micro}" />
-                                    </DropDownButton.Content>
+                                        <DropDownButton.Content>
+                                            <iconPacks:PackIconMaterial Kind="ApplicationExport"
+                                                                        Height="{StaticResource Icon.Size.Micro}"
+                                                                        Width="{StaticResource Icon.Size.Micro}" />
+                                        </DropDownButton.Content>
 
-                                    <DropDownButton.Flyout>
-                                        <MenuFlyout ItemsSource="{Binding OpenWithViewModels}">
-                                            <MenuFlyout.ItemContainerTheme>
-                                                <ControlTheme TargetType="MenuItem" x:DataType="domain:FileApplicationPairViewModel">
-                                                    <Setter Property="Command" Value="{Binding OpenWithCommand}" />
-                                                    <Setter Property="Header" Value="{Binding Name}" />
-                                                    <Setter Property="Template">
-                                                        <ControlTemplate>
-                                                            <Border Name="border"
-                                                                    Background="{TemplateBinding Background}"
-                                                                    CornerRadius="{TemplateBinding CornerRadius}">
-                                                                <ContentPresenter Content="{TemplateBinding Header}"
+                                        <DropDownButton.Flyout>
+                                            <MenuFlyout ItemsSource="{Binding OpenWithViewModels}">
+                                                <MenuFlyout.ItemContainerTheme>
+                                                    <ControlTheme TargetType="MenuItem"
+                                                                  x:DataType="domain:FileApplicationPairViewModel">
+                                                        <Setter Property="Command" Value="{Binding OpenWithCommand}" />
+                                                        <Setter Property="Header" Value="{Binding Name}" />
+                                                        <Setter Property="Template">
+                                                            <ControlTemplate>
+                                                                <Border Name="border"
+                                                                        Background="{TemplateBinding Background}"
+                                                                        CornerRadius="{TemplateBinding CornerRadius}">
+                                                                    <ContentPresenter
+                                                                        Content="{TemplateBinding Header}"
                                                                         TextBlock.Foreground="{TemplateBinding Foreground}"
                                                                         Margin="{TemplateBinding Padding}"
                                                                         VerticalAlignment="Center" />
-                                                            </Border>
-                                                        </ControlTemplate>
-                                                    </Setter>
-                                                </ControlTheme>
-                                            </MenuFlyout.ItemContainerTheme>
-                                        </MenuFlyout>
-                                    </DropDownButton.Flyout>
-                                </DropDownButton>
+                                                                </Border>
+                                                            </ControlTemplate>
+                                                        </Setter>
+                                                    </ControlTheme>
+                                                </MenuFlyout.ItemContainerTheme>
+                                            </MenuFlyout>
+                                        </DropDownButton.Flyout>
+                                    </DropDownButton>
 
-                                <iconPacks:PackIconMaterial Grid.Row="0"
-                                                            Grid.Column="0"
-                                                            IsVisible="{Binding HasLocation}"
-                                                            Margin="{StaticResource MarginAll.Large}"
-                                                            Kind="SatelliteVariant"
-                                                            Height="{StaticResource Icon.Size.Medium}"
-                                                            Width="{StaticResource Icon.Size.Medium}"
-                                                            Foreground="{DynamicResource SemiRed2}" />
+                                    <iconPacks:PackIconMaterial Grid.Row="0"
+                                                                Grid.Column="0"
+                                                                IsVisible="{Binding HasLocation}"
+                                                                Margin="{StaticResource MarginAll.Large}"
+                                                                Kind="SatelliteVariant"
+                                                                Height="{StaticResource Icon.Size.Medium}"
+                                                                Width="{StaticResource Icon.Size.Medium}"
+                                                                Foreground="{DynamicResource SemiRed2}" />
+                                </Grid>
+
+                                <TextBlock Grid.Row="2"
+                                           Margin="{StaticResource MarginAll.Small}"
+                                           Text="{Binding MetadataString}" />
+
+
+                                <!--Behavior for dragging image-->
+                                <i:Interaction.Behaviors>
+                                    <i:BehaviorCollection>
+                                        <idd:ContextDragBehavior />
+                                    </i:BehaviorCollection>
+                                </i:Interaction.Behaviors>
                             </Grid>
-
-                            <TextBlock Grid.Row="2"
-                                       Margin="{StaticResource MarginAll.Small}"
-                                       Text="{Binding MetadataString}" />
-
-
-                            <!--Behavior for dragging image-->
-                            <i:Interaction.Behaviors>
-                                <i:BehaviorCollection>
-                                    <idd:ContextDragBehavior />
-                                </i:BehaviorCollection>
-                            </i:Interaction.Behaviors>
-                        </Grid>
 
                         </Border>
                     </DataTemplate>

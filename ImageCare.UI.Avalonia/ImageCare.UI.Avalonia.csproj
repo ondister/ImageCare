@@ -11,10 +11,6 @@
         <Platforms>AnyCPU</Platforms>
         <ApplicationIcon>Assets\imagecare-logo.ico</ApplicationIcon>
         <Version>0.1.2</Version>
-
-	    <OptimizationPreference>Speed</OptimizationPreference>
-	    <HttpActivityPropagationSupport>false</HttpActivityPropagationSupport>
-	    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
     </PropertyGroup>
 
   <ItemGroup>
