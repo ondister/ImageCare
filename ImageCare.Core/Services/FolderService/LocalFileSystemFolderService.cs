@@ -394,7 +394,7 @@ public sealed class LocalFileSystemFolderService : IFolderService, IDisposable
 
     private async Task<DirectoryModel> GetSmartFolderAsync()
     {
-        var rootFolder= new SpecialDirectoryModel("Recent", "//");
+        var rootFolder= new SpecialDirectoryModel("Recent",DirectoryModel.RootPath);
         var smartFolders = _folderHistoryService.GetSmartFolders(10);
         foreach (var smartDirectoryModel in smartFolders)
         {

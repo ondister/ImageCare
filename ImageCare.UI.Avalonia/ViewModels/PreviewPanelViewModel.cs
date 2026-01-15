@@ -372,6 +372,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
 
     private void OnFolderSelected(SelectedDirectory selectedFileSystemItem)
     {
+        
         if (selectedFileSystemItem.FileManagerPanel != FileManagerPanel)
         {
             return;
@@ -396,6 +397,11 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
         _ = LoadFolderAsync(selectedFileSystemItem, _folderSelectedCancellationTokenSource.Token);
 
         SelectedFolderPath = selectedFileSystemItem.Path;
+
+        if (SelectedFolderPath ==DirectoryModel.RootPath)
+        {
+            return;
+        }
 
         if (!string.IsNullOrWhiteSpace(SelectedFolderPath))
         {
