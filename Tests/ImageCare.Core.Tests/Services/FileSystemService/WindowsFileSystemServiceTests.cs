@@ -4,6 +4,7 @@ using ImageCare.Core.Services.FileSystemService;
 namespace ImageCare.Core.Tests.Services.FileSystemService;
 
 [TestFixture]
+[Platform("Win")]
 public class WindowsFileSystemServiceTests
 {
     [Test]

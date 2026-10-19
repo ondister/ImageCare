@@ -30,7 +30,7 @@
 	     osx-arm64, so on other hosts this is harmless, and it keeps the dylibs
 	     flowing on macOS even though RuntimeIdentifier is not propagated into the
 	     GetCopyToOutputDirectoryItems sub-build of a referenced project. -->
-	<ItemGroup Condition="'$(RuntimeIdentifier)' != 'win-x64'">
+	<ItemGroup Condition="'$(RuntimeIdentifier)' == 'osx-arm64' Or ('$(RuntimeIdentifier)' == '' And $([MSBuild]::IsOSPlatform('OSX')))">
 		<_LibRawNativeOsxArm64 Include="$(MSBuildProjectDirectory)/runtimes/osx-arm64/native/*.dylib" />
 		<None Include="@(_LibRawNativeOsxArm64)">
 			<Link>%(Filename)%(Extension)</Link>

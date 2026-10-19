@@ -1,0 +1,10 @@
+<Project>
+  <ItemGroup Condition="('$(RuntimeIdentifier)' == 'win-x64' Or ('$(RuntimeIdentifier)' == '' And $([MSBuild]::IsOSPlatform('Windows')))) And ('$(IsTestProject)' == 'true' Or '$(OutputType)' == 'Exe' Or '$(OutputType)' == 'WinExe')">
+    <Content Include="$(MSBuildThisFileDirectory)LibRawDotNet/libraw.dll">
+      <Link>libraw.dll</Link>
+      <TargetPath>libraw.dll</TargetPath>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+  </ItemGroup>
+</Project>

@@ -1,116 +1,149 @@
-name: Test and Deploy
+name: CI
 
 on:
   push:
-    branches: [dev, master]
-    tags: ['v*']
-  pull_request:
-    branches: [dev, master]
+    branches:
+      - dev
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
 
 jobs:
   test:
+    name: Tests
     runs-on: windows-latest
-    if: contains(fromJSON('["push", "pull_request"]'), github.event_name) && contains(fromJSON('["dev", "master"]'), github.ref_name)
-    
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Setup .NET 10
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: 10.0.x
-    
-    - name: Restore dependencies
-      run: dotnet restore
-    
-    - name: Build test projects
-      run: |
-        Get-ChildItem -Path Tests -Recurse -Filter *.csproj | ForEach-Object {
-          Write-Host "Building $($_.Name)..."
-          dotnet build $_.FullName --configuration Release --no-restore
-        }
-    
-    - name: Run tests
-      run: |
-        $allTestsPassed = $true
-        Get-ChildItem -Path Tests -Recurse -Filter *.csproj | ForEach-Object {
-          $projectPath = $_.FullName
-          $projectName = $_.Name
-          
-          Write-Host "Running tests in: $projectName"
-          
-          dotnet test $projectPath `
-            --configuration Release `
-            --no-build `
-            --verbosity normal `
-            --logger "trx;LogFileName=results-$projectName.trx" `
-            --results-directory TestResults
-            
-          if ($LASTEXITCODE -ne 0) {
-            Write-Host "Tests failed in $projectName"
-            $allTestsPassed = $false
-          }
-        }
-        
-        if (-not $allTestsPassed) {
-          Write-Host "Some tests failed. Failing the build."
-          exit 1
-        }
-    
-    - name: Upload test results
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: test-results
-        path: TestResults/
-        retention-days: 7
 
-  deploy:
-    runs-on: windows-latest
-    needs: test
-    if: startsWith(github.ref, 'refs/tags/v')
-    
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Extract version from tag
-      id: extract_version
-      run: |
-        $version = "${{ github.ref_name}}".Replace('v','')
-        echo "VERSION=$version" >> $env:GITHUB_ENV
-        echo "::set-output name=version::$version"
-    
-    - name: Setup .NET 10
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: 10.0.x
-    
-    - name: Publish Application
-      run: |
-        dotnet publish ImageCare.UI.Avalonia/ImageCare.UI.Avalonia.csproj `
-          -c Release `
-          --runtime win-x64 `
-          -p:Platform=AnyCPU `
-          --self-contained true `
-          -p:PublishReadyToRun=true `
-          -p:DebugType=None `
-          --output ./publish-output
-    
-    - name: Remove PDB files
-      run: |
-        Get-ChildItem -Path ./publish-output -Filter *.pdb -Recurse | Remove-Item -Force
-    
-    - name: Create Zip Archive
-      run: |
-        $zipName = "ImageCare-${{ env.VERSION }}-Windows.zip"
-        Compress-Archive -Path "./publish-output/*" -DestinationPath $zipName
-        echo "ZIP_PATH=$zipName" >> $env:GITHUB_ENV
-    
-    - name: Upload Release
-      uses: softprops/action-gh-release@v1
-      with:
-        tag_name: ${{ github.ref }}
-        name: ImageCare ${{ env.VERSION }}
-        files: ${{ env.ZIP_PATH }}
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+          cache: true
+          cache-dependency-path: '**/*.csproj'
+
+      - name: Restore dependencies
+        run: dotnet restore ImageCare.sln
+
+      - name: Run tests
+        run: >-
+          dotnet test ImageCare.sln
+          --configuration Release
+          --no-restore
+          --logger trx
+          --results-directory TestResults
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: TestResults/**/*.trx
+          if-no-files-found: warn
+          retention-days: 7
+
+  build-windows:
+    name: Build Windows x64
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: test
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+          cache: true
+          cache-dependency-path: '**/*.csproj'
+
+      - name: Restore application
+        run: >-
+          dotnet restore ImageCare.UI.Avalonia/ImageCare.UI.Avalonia.csproj
+          --runtime win-x64
+          -p:PublishReadyToRun=true
+
+      - name: Publish application
+        shell: pwsh
+        run: |
+          dotnet publish ImageCare.UI.Avalonia/ImageCare.UI.Avalonia.csproj `
+            --configuration Release `
+            --runtime win-x64 `
+            --self-contained true `
+            --no-restore `
+            -p:PublishReadyToRun=true `
+            -p:DebugType=None `
+            --output artifacts/windows-x64/publish
+
+          Get-ChildItem artifacts/windows-x64/publish -Filter *.pdb -Recurse | Remove-Item -Force
+          Get-ChildItem artifacts/windows-x64/publish -Filter *.dylib -Recurse | Remove-Item -Force
+          Compress-Archive `
+            -Path artifacts/windows-x64/publish/* `
+            -DestinationPath "artifacts/ImageCare-${{ github.ref_name }}-Windows-x64.zip"
+
+      - name: Upload Windows build
+        uses: actions/upload-artifact@v4
+        with:
+          name: ImageCare-Windows-x64
+          path: artifacts/ImageCare-*-Windows-x64.zip
+          if-no-files-found: error
+
+  build-macos:
+    name: Build macOS arm64
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: test
+    runs-on: macos-14
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+          cache: true
+          cache-dependency-path: '**/*.csproj'
+
+      - name: Publish application bundle
+        run: |
+          zsh scripts/publish-macos-arm64.sh
+          tar -czf "artifacts/ImageCare-${{ github.ref_name }}-macOS-arm64.tar.gz" \
+            -C artifacts/macos-arm64 ImageCare.app
+
+      - name: Upload macOS build
+        uses: actions/upload-artifact@v4
+        with:
+          name: ImageCare-macOS-arm64
+          path: artifacts/ImageCare-*-macOS-arm64.tar.gz
+          if-no-files-found: error
+
+  release:
+    name: Create GitHub release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs:
+      - build-windows
+      - build-macos
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download builds
+        uses: actions/download-artifact@v4
+        with:
+          pattern: ImageCare-*
+          path: release-artifacts
+          merge-multiple: true
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release-artifacts/*
+          generate_release_notes: true
