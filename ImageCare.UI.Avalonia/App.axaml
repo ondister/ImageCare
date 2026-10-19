@@ -1,40 +1,30 @@
 <prism:PrismApplication xmlns="https://github.com/avaloniaui"
                         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-                        x:Class="ImageCare.UI.Avalonia.App"
                         xmlns:prism="http://prismlibrary.com/"
-                        xmlns:semi="https://irihi.tech/semi"
-                        xmlns:u-semi="https://irihi.tech/ursa/themes/semi">
+                        x:Class="ImageCare.UI.Avalonia.App"
+                        RequestedThemeVariant="Default">
 
     <prism:PrismApplication.Styles>
-        <semi:SemiTheme Locale="ru-RU" />
-        <u-semi:SemiTheme Locale="ru-RU" />
+        <FluentTheme DensityStyle="Compact">
+            <FluentTheme.Palettes>
+                <ColorPaletteResources x:Key="Light" Accent="#0067C0" RegionColor="#F3F3F3" />
+                <ColorPaletteResources x:Key="Dark" Accent="#60CDFF" RegionColor="#202020" />
+            </FluentTheme.Palettes>
+        </FluentTheme>
 
-        <StyleInclude Source="avares://IconPacks.Avalonia.Lucide/Lucide.axaml" />
-        <StyleInclude Source="avares://IconPacks.Avalonia.Material/Material.axaml" />
-        <StyleInclude Source="avares://AvaloniaProgressRing/Styles/ProgressRing.xaml"/>
-        <StyleInclude Source="avares://ImageCare/Styles/MenuStyles.axaml"/>
-
+        <StyleInclude Source="avares://ImageCare/Styles/IconPackStyles.axaml" />
+        <StyleInclude Source="avares://AvaloniaProgressRing/Styles/ProgressRing.xaml" />
+        <StyleInclude Source="avares://ImageCare/Styles/MenuStyles.axaml" />
+        <StyleInclude Source="avares://ImageCare/Styles/ControlStyles.axaml" />
     </prism:PrismApplication.Styles>
 
     <Application.Resources>
         <ResourceDictionary>
-
-            <ResourceDictionary.ThemeDictionaries>
-                <ResourceDictionary x:Key="Dark">
-                    <SolidColorBrush x:Key="ToggleButtonPrimaryCheckedBackground"
-                                     Color="{DynamicResource SemiIndigo2Color}" />
-                </ResourceDictionary>
-            </ResourceDictionary.ThemeDictionaries>
-
             <ResourceDictionary.MergedDictionaries>
                 <MergeResourceInclude Source="/Styles/Sizes.axaml" />
                 <MergeResourceInclude Source="/Styles/Colors.axaml" />
                 <MergeResourceInclude Source="/Styles/PreviewsListBox.axaml" />
             </ResourceDictionary.MergedDictionaries>
-
         </ResourceDictionary>
-
     </Application.Resources>
-
-
 </prism:PrismApplication>

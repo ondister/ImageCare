@@ -1,25 +1,21 @@
-﻿using System.Threading.Tasks;
+using System.Threading.Tasks;
 
-using Avalonia.Controls;
+using Avalonia;
+using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Input.Platform;
 
 namespace ImageCare.UI.Avalonia.Services;
 
 internal sealed class ClipboardService : IClipboardService
 {
-	private readonly TopLevel _topLevel;
-
-	public ClipboardService(TopLevel topLevel)
-	{
-		_topLevel = topLevel;
-	}
-
-	/// <inheritdoc />
-	public async Task CopyToClipboardAsync(string text)
-	{
-		var clipboard = _topLevel.Clipboard;
-		if (clipboard != null)
-		{
-			await clipboard.SetTextAsync(text);
-		}
-	}
+    public async Task CopyToClipboardAsync(string text)
+    {
+        if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime
+            {
+                MainWindow.Clipboard: { } clipboard
+            })
+        {
+            await clipboard.SetTextAsync(text);
+        }
+    }
 }

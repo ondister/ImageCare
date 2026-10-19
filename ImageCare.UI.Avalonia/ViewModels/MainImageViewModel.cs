@@ -23,7 +23,6 @@ using Mapsui.Tiling;
 using Mapsui.Widgets;
 using Mapsui.Widgets.InfoWidgets;
 
-using Prism.Dialogs;
 using Prism.Navigation.Regions;
 
 using Serilog;
@@ -40,7 +39,7 @@ internal class MainImageViewModel : NavigatedViewModelBase
     private readonly IMediaPreviewOperationsService _fileOperationsService;
     private readonly IClipboardService _clipboardService;
     private readonly ILogger _logger;
-    private readonly IDialogService _dialogService;
+    private readonly ImageViewerWindowService _imageViewerWindowService;
     private readonly SynchronizationContext _synchronizationContext;
     private Bitmap? _mainBitmap;
 
@@ -51,22 +50,24 @@ internal class MainImageViewModel : NavigatedViewModelBase
     private Map _map;
     private Location _location = Location.Empty;
     private CancellationTokenSource _imageLoadCts;
+    private long _imageLoadGeneration;
 
     public MainImageViewModel(IMediaPreviewService imageService,
                               IMediaPreviewOperationsService fileOperationsService,
                               IClipboardService clipboardService,
                               ILogger logger,
-                              IDialogService dialogService,
+                              ImageViewerWindowService imageViewerWindowService,
                               SynchronizationContext synchronizationContext)
     {
         _imageService = imageService;
         _fileOperationsService = fileOperationsService;
         _clipboardService = clipboardService;
         _logger = logger;
-        _dialogService = dialogService;
+        _imageViewerWindowService = imageViewerWindowService;
         _synchronizationContext = synchronizationContext;
 
         _imageLoadCts = new CancellationTokenSource();
+        _map = CreateMap();
 
         CopyLocationToClipboardCommand = CreateAsyncCommand(CopyLocationToClipboardAsync);
         OpenInWindowCommand = CreateCommand(OpenInWindow);
@@ -133,6 +134,18 @@ internal class MainImageViewModel : NavigatedViewModelBase
         set => SetProperty(ref _location, value);
     }
 
+    internal void Show(MediaPreview imagePreview)
+    {
+        OnImagePreviewSelected(imagePreview);
+    }
+
+    internal void Deactivate()
+    {
+        Interlocked.Increment(ref _imageLoadGeneration);
+        CancelImageLoading();
+        ClearPreview();
+    }
+
     public override void OnNavigatedTo(NavigationContext navigationContext)
     {
         try
@@ -142,12 +155,13 @@ internal class MainImageViewModel : NavigatedViewModelBase
             _compositeDisposable = new CompositeDisposable
             {
                 _fileOperationsService.ImagePreviewSelected
-                                      .Throttle(TimeSpan.FromMilliseconds(150))
                                       .ObserveOn(_synchronizationContext)
                                       .Subscribe(OnImagePreviewSelected, OnObservableError)
             };
 
-            if (navigationContext.Parameters["imagePreview"] is SelectedMediaPreview imagePreview)
+            MediaPreview? imagePreview = navigationContext.Parameters["imagePreview"] as SelectedMediaPreview
+                                         ?? _fileOperationsService.GetLastSelectedMediaPreview();
+            if (imagePreview != null)
             {
                 OnImagePreviewSelected(imagePreview);
             }
@@ -177,15 +191,15 @@ internal class MainImageViewModel : NavigatedViewModelBase
     {
         try
         {
-            _dialogService.Show("imageViewer", null, null, "childWindow");
+            _imageViewerWindowService.Show();
         }
         catch (Exception ex)
         {
-            _logger.Error(ex, "Failed to open settings window");
+            _logger.Error(ex, "Failed to open image viewer window");
         }
     }
 
-    private void OnImagePreviewSelected(SelectedMediaPreview imagePreview)
+    private void OnImagePreviewSelected(MediaPreview imagePreview)
     {
         try
         {
@@ -195,10 +209,11 @@ internal class MainImageViewModel : NavigatedViewModelBase
                 return;
             }
 
+            var generation = Interlocked.Increment(ref _imageLoadGeneration);
             CancelImageLoading();
             ResetMatrixCommand?.Execute(null);
 
-            _ = LoadImageAsync(imagePreview);
+            _ = LoadImageAsync(imagePreview, generation);
         }
         catch (Exception ex)
         {
@@ -221,7 +236,7 @@ internal class MainImageViewModel : NavigatedViewModelBase
         }
     }
 
-    private async Task LoadImageAsync(MediaPreview imagePreview)
+    private async Task LoadImageAsync(MediaPreview imagePreview, long generation)
     {
         var cancellationToken = _imageLoadCts.Token;
 
@@ -230,14 +245,18 @@ internal class MainImageViewModel : NavigatedViewModelBase
             cancellationToken.ThrowIfCancellationRequested();
 
             await using var imageStream = await _imageService.GetJpegImageStreamAsync(imagePreview, MediaPreviewSize.Large, cancellationToken)
-                                                             .ConfigureAwait(false);
+                                                             ;
 
             cancellationToken.ThrowIfCancellationRequested();
 
             var metadata = await _imageService.GetMediaMetadataAsync(imagePreview)
-                                              .ConfigureAwait(false);
+                                              ;
 
             cancellationToken.ThrowIfCancellationRequested();
+            if (generation != Volatile.Read(ref _imageLoadGeneration))
+            {
+                return;
+            }
 
             HasLocation = metadata.Location != Location.Empty;
             Location = metadata.Location;
@@ -251,9 +270,14 @@ internal class MainImageViewModel : NavigatedViewModelBase
                                            return new Bitmap(imageStream);
                                        },
                                        cancellationToken)
-                                   .ConfigureAwait(false);
+                                   ;
 
             cancellationToken.ThrowIfCancellationRequested();
+            if (generation != Volatile.Read(ref _imageLoadGeneration))
+            {
+                bitmap.Dispose();
+                return;
+            }
 
             MainBitmap = bitmap;
             LocateMap(metadata.Location);
@@ -264,8 +288,13 @@ internal class MainImageViewModel : NavigatedViewModelBase
         }
         catch (Exception ex)
         {
-            _logger.Error(ex, "Failed to load image: {Url}", imagePreview.Url);
+            if (cancellationToken.IsCancellationRequested ||
+                generation != Volatile.Read(ref _imageLoadGeneration))
+            {
+                return;
+            }
 
+            _logger.Error(ex, "Failed to load image: {Url}", imagePreview.Url);
             ClearPreview();
         }
     }

@@ -9,7 +9,7 @@ namespace ImageCare.UI.Avalonia.Views;
 
 public partial class MainImageSeparateView : UserControl
 {
-    public static readonly StyledProperty<ICommand> ResetMatrixCommandProperty = AvaloniaProperty.Register<MainImageView, ICommand>(nameof(ResetMatrixCommand));
+    public static readonly StyledProperty<ICommand> ResetMatrixCommandProperty = AvaloniaProperty.Register<MainImageSeparateView, ICommand>(nameof(ResetMatrixCommand));
 
     public MainImageSeparateView()
     {

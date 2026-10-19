@@ -1,24 +1,22 @@
 <Styles xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-
-    <!-- Base style for MenuItem. Use for open in external app in preview -->
     <Style Selector="MenuItem">
-        <Setter Property="Background" Value="Transparent"/>
-        <Setter Property="Foreground" Value="{DynamicResource SemiColorText0}"/>
-        <Setter Property="Padding" Value="12 8"/>
-        <Setter Property="MinHeight" Value="32"/>
-        <Setter Property="CornerRadius" Value="4"/>
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Foreground" Value="{DynamicResource Brush.TextPrimary}" />
+        <Setter Property="Padding" Value="12 8" />
+        <Setter Property="MinHeight" Value="32" />
+        <Setter Property="CornerRadius" Value="4" />
     </Style>
 
     <Style Selector="MenuItem:pointerover">
-        <Setter Property="Background" Value="{DynamicResource SemiBlue5}"/>
+        <Setter Property="Background" Value="{DynamicResource Brush.Accent}" />
     </Style>
 
     <Style Selector="MenuItem:pressed">
-        <Setter Property="Background" Value="{DynamicResource SemiBlue4}"/>
+        <Setter Property="Background" Value="{DynamicResource Brush.AccentHover}" />
     </Style>
 
     <Style Selector="MenuItem > ContentPresenter">
-        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="VerticalAlignment" Value="Center" />
     </Style>
 </Styles>

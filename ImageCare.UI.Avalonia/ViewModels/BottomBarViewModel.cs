@@ -7,6 +7,7 @@ using System.Windows.Input;
 using ImageCare.Core.Domain.Notification;
 using ImageCare.Core.Services.LogEventService;
 using ImageCare.Core.Services.NotificationService;
+using ImageCare.UI.Avalonia.Services;
 using ImageCare.UI.Avalonia.ViewModels.Domain;
 
 using MapsterMapper;
@@ -22,6 +23,7 @@ namespace ImageCare.UI.Avalonia.ViewModels;
 internal class BottomBarViewModel : NavigatedViewModelBase
 {
 	private readonly IDialogService _dialogService;
+	private readonly SettingsWindowService _settingsWindowService;
 	private readonly INotificationService _notificationService;
 	private readonly ILogNotificationService _logNotificationService;
 	private readonly IMapper _mapper;
@@ -36,6 +38,7 @@ internal class BottomBarViewModel : NavigatedViewModelBase
 	private NotificationViewModel? _notificationViewModel;
 
 	public BottomBarViewModel(IDialogService dialogService,
+                              SettingsWindowService settingsWindowService,
 	                          INotificationService notificationService,
 	                          ILogNotificationService logNotificationService,
 	                          IMapper mapper,
@@ -43,6 +46,7 @@ internal class BottomBarViewModel : NavigatedViewModelBase
 	                          SynchronizationContext synchronizationContext)
 	{
 		_dialogService = dialogService ?? throw new ArgumentNullException(nameof(dialogService));
+        _settingsWindowService = settingsWindowService ?? throw new ArgumentNullException(nameof(settingsWindowService));
 		_notificationService = notificationService ?? throw new ArgumentNullException(nameof(notificationService));
 		_logNotificationService = logNotificationService ?? throw new ArgumentNullException(nameof(logNotificationService));
 		_mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
@@ -133,10 +137,7 @@ internal class BottomBarViewModel : NavigatedViewModelBase
 	{
 		try
 		{
-			var parameters = new DialogParameters();
-			_dialogService.ShowDialog(
-				"settingsViewer",
-				parameters);
+			_settingsWindowService.Show();
 		}
 		catch (Exception ex)
 		{

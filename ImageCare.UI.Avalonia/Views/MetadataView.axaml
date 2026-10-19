@@ -8,7 +8,8 @@
              mc:Ignorable="d"
              mvvm:ViewModelLocator.AutoWireViewModel="True"
              x:Class="ImageCare.UI.Avalonia.Views.MetadataView"
-             x:DataType="viewModels:MetadataViewModel">
+             x:DataType="viewModels:MetadataViewModel"
+             Loaded="OnViewLoaded">
 
     <ListBox ItemsSource="{Binding MetadataList}"
              Grid.IsSharedSizeScope="True">
@@ -65,13 +66,5 @@
             </DataTemplate>
         </ListBox.DataTemplates>
     </ListBox>
-
-
-    <!--Triggers for view loading and unloading. They use for subscribe to the production state changing-->
-    <Interaction.Behaviors>
-        <EventTriggerBehavior EventName="Loaded">
-            <InvokeCommandAction Command="{Binding OnViewLoadedCommand}" />
-        </EventTriggerBehavior>
-    </Interaction.Behaviors>
 
 </UserControl>

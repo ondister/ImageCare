@@ -1,10 +1,10 @@
-using Prism.Dialogs;
+using Avalonia.Controls;
 
-using Ursa.Controls;
+using Prism.Dialogs;
 
 namespace ImageCare.UI.Avalonia.Views;
 
-public partial class ChildWindow : UrsaWindow, IDialogWindow
+public partial class ChildWindow : Window, IDialogWindow
 {
     /// <inheritdoc />
     public IDialogResult Result { get; set; }

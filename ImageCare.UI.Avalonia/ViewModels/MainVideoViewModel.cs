@@ -316,6 +316,18 @@ internal class MainVideoViewModel : NavigatedViewModelBase
         }
     }
 
+    internal void Show(SelectedMediaPreview preview)
+    {
+        OnPreviewSelected(preview);
+    }
+
+    internal void Deactivate()
+    {
+        Stop();
+        UnsubscribeMpvEvents();
+        MediaUrl = string.Empty;
+    }
+
     public override void OnNavigatedTo(NavigationContext navigationContext)
     {
         try

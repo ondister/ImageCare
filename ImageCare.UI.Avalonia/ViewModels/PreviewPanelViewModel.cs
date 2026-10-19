@@ -53,7 +53,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
 
     private readonly object _imagePathsLock = new();
     private MediaPreviewViewModel? _selectedPreview;
-    private CompositeDisposable _disposable;
+    private CompositeDisposable? _disposable;
 
     private CancellationTokenSource _folderSelectedCancellationTokenSource;
     private SortedObservableCollection<FileModel> _imagePaths;
@@ -165,6 +165,10 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
     {
         FileManagerPanel = (FileManagerPanel)navigationContext.Parameters["panel"];
 
+        _disposable?.Dispose();
+        _folderSelectedCancellationTokenSource.Dispose();
+        _folderSelectedCancellationTokenSource = new CancellationTokenSource();
+
         _disposable = new CompositeDisposable
         {
             _fileSystemWatcherService.FileCreated.Subscribe(OnFileCreated),
@@ -181,16 +185,26 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
     /// <inheritdoc />
     public override void OnNavigatedFrom(NavigationContext navigationContext)
     {
-        _disposable.Dispose();
+        _disposable?.Dispose();
+        _folderSelectedCancellationTokenSource.Cancel();
         _folderSelectedCancellationTokenSource.Dispose();
     }
 
     internal async Task HandleScrollAsync(double horizontalOffset, double viewportWidth)
     {
-        await _currentScrollCancellation.CancelAsync();
-        _currentScrollCancellation.Dispose();
-        _currentScrollCancellation = new CancellationTokenSource();
-        var token = _currentScrollCancellation.Token;
+        var nextCancellation = new CancellationTokenSource();
+        var previousCancellation = Interlocked.Exchange(ref _currentScrollCancellation, nextCancellation);
+
+        try
+        {
+            await previousCancellation.CancelAsync();
+        }
+        finally
+        {
+            previousCancellation.Dispose();
+        }
+
+        var token = nextCancellation.Token;
 
         try
         {
@@ -428,17 +442,14 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
 
             var files = await _folderService.GetFileModelAsync(selectedFileSystemItem, "*");
 
-            await Task.Run(
-                () =>
-                {
-                    _imagePaths.AddRange(files);
-                    FilesLoading = false;
-                    token.ThrowIfCancellationRequested();
+            token.ThrowIfCancellationRequested();
+            lock (_imagePathsLock)
+            {
+                _imagePaths.AddRange(files);
+            }
 
-                    LoadInitialImagesAsync(_folderSelectedCancellationTokenSource.Token);
-                    _folderStatisticsService.StartAsync(selectedFileSystemItem.Path, token);
-                },
-                token);
+            _ = LoadInitialImagesAsync(token);
+            _ = _folderStatisticsService.StartAsync(selectedFileSystemItem.Path, token);
         }
         catch (OperationCanceledException)
         {
@@ -547,7 +558,12 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
                 if (ImagePreviews.Count == 0)
                 {
                     _synchronizationContext.Post(d => { SelectedPreview = null; }, null);
-                    _fileOperationsService.SetSelectedPreview(new SelectedMediaPreview(MediaPreview.Empty, FileManagerPanel));
+                    if (_fileOperationsService.GetLastSelectedMediaPreview() is SelectedMediaPreview current &&
+                        current.FileManagerPanel == FileManagerPanel)
+                    {
+                        _fileOperationsService.SetSelectedPreview(
+                            new SelectedMediaPreview(MediaPreview.Empty, FileManagerPanel));
+                    }
                 }
 
                 var indexToLoad = indexToRemove + PreloadCount;
@@ -579,7 +595,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
         }
     }
 
-    private async void LoadInitialImagesAsync(CancellationToken token)
+    private async Task LoadInitialImagesAsync(CancellationToken token)
     {
         try
         {
@@ -601,7 +617,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
                 if (firstChunk)
                 {
                     firstChunk = false;
-                    await LoadChunkAsync(chunk);
+                    await LoadChunkAsync(chunk, token);
                     for (var i = 0; i < initialCount; i++)
                     {
                         if (token.IsCancellationRequested)
@@ -614,11 +630,15 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
                 }
                 else
                 {
-                    await LoadChunkAsync(chunk);
+                    await LoadChunkAsync(chunk, token);
                 }
             }
 
             _folderClusterizationService.StartAsync(SelectedFolderPath, token);
+        }
+        catch (OperationCanceledException)
+        {
+            // Expected when the user selects another folder.
         }
         catch (Exception ex)
         {
@@ -626,18 +646,20 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
         }
     }
 
-    private async Task LoadChunkAsync(FileModel[] chunk)
+    private async Task LoadChunkAsync(FileModel[] chunk, CancellationToken token)
     {
         var previews = new List<MediaPreviewViewModel>(chunk.Length);
 
         foreach (var fileModel in chunk)
         {
+            token.ThrowIfCancellationRequested();
             var previewImage = await _imageService.GetMediaPreviewAsync(fileModel.FullName);
             var mediaPreviewViewModel = _mapper.Map<MediaPreviewViewModel>(previewImage);
             mediaPreviewViewModel.FileDate = fileModel.CreatedDateTime.Value;
             previews.Add(mediaPreviewViewModel);
         }
 
+        token.ThrowIfCancellationRequested();
         _synchronizationContext.Send(d => { ImagePreviews.AddRange(previews); }, null);
     }
 

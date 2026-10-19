@@ -6,11 +6,7 @@
              xmlns:viewModels="clr-namespace:ImageCare.UI.Avalonia.ViewModels"
              x:Class="ImageCare.UI.Avalonia.Views.TimelineView"
              x:DataType="viewModels:TimelineViewModel">
-
     <Grid ColumnDefinitions="Auto,*">
-
-
-        <!-- Progress Ring Overlay -->
         <avaloniaProgressRing:ProgressRing Grid.Column="0"
                                            IsVisible="{Binding IsLoading}"
                                            IsActive="{Binding IsLoading}"
@@ -18,10 +14,9 @@
                                            Height="50"
                                            HorizontalAlignment="Center"
                                            VerticalAlignment="Center"
-                                           Foreground="{DynamicResource SemiBlue5}" />
-        <!-- Total Files Count -->
+                                           Foreground="{DynamicResource Brush.Accent}" />
         <Button Grid.Column="0"
-                Background="{DynamicResource SemiBlue5}"
+                Background="{DynamicResource Brush.Accent}"
                 CornerRadius="{StaticResource BorderRadius.Small}"
                 Padding="{StaticResource Padding.Inner}"
                 Margin="{StaticResource MarginAll.ExtraLarge}"
@@ -31,15 +26,15 @@
                 IsVisible="{Binding TotalFilesCount}"
                 Content="{Binding TotalFilesCount}"
                 FontSize="{StaticResource Font.Size.Small}"
-                Foreground="{DynamicResource SemiColorText0}"
+                Foreground="White"
                 Command="{Binding StatisticsClickCommand}" />
 
-        <!-- Timeline Chart -->
         <ScrollViewer Grid.Column="1"
                       HorizontalScrollBarVisibility="Visible"
                       VerticalScrollBarVisibility="Disabled"
                       AllowAutoHide="True"
-                      Background="Transparent">
+                      Background="Transparent"
+                      behaviors:WheelScrollBehaviour.IsEnabled="True">
             <ScrollViewer.Styles>
                 <Style Selector="ScrollViewer">
                     <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Visible" />
@@ -51,10 +46,6 @@
                     <Setter Property="Margin" Value="0,0,0,-10" />
                 </Style>
             </ScrollViewer.Styles>
-            <Interaction.Behaviors>
-                <behaviors:WheelScrollBehaviour />
-            </Interaction.Behaviors>
-
             <ItemsControl ItemsSource="{Binding DateStatViewModels}">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
@@ -76,22 +67,20 @@
                                     <Setter Property="Background" Value="Transparent" />
                                 </Style>
                                 <Style Selector="Button:pointerover /template/ ContentPresenter">
-                                    <Setter Property="Background" Value="{DynamicResource SemiBlue0}" />
+                                    <Setter Property="Background" Value="{DynamicResource Brush.AccentSubtle}" />
                                 </Style>
                             </Button.Styles>
                             <Grid Height="40">
-                                <!-- Column -->
-                                <Rectangle Fill="{DynamicResource SemiBlue5}"
+                                <Rectangle Fill="{DynamicResource Brush.Accent}"
                                            VerticalAlignment="Bottom"
                                            Height="{Binding NormalizedHeight}"
                                            Width="36" />
-                                <!-- Date text -->
                                 <TextBlock Text="{Binding DisplayText}"
                                            VerticalAlignment="Bottom"
                                            HorizontalAlignment="Center"
                                            Margin="0,-10,0,0"
                                            FontSize="{StaticResource Font.Size.Small}"
-                                           Foreground="{DynamicResource SemiColorText0}" />
+                                           Foreground="{DynamicResource Brush.TextPrimary}" />
                             </Grid>
                             <ToolTip.Tip>
                                 <StackPanel>

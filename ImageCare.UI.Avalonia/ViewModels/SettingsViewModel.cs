@@ -12,19 +12,16 @@ using ImageCare.UI.Avalonia.ViewModels.Domain;
 
 using MapsterMapper;
 
-using Prism.Dialogs;
-
 using Serilog;
 
 namespace ImageCare.UI.Avalonia.ViewModels;
 
-public sealed class SettingsViewModel : ViewModelBase, IDialogAware
+public sealed class SettingsViewModel : ViewModelBase
 {
     private readonly IConfigurationService _configService;
     private readonly IFileDialogService _fileDialogService;
     private readonly IMapper _mapper;
     private readonly ILogger _logger;
-    private readonly DialogCloseListener _requestClose;
 
     private string _newExtension = string.Empty;
     private string _newName = string.Empty;
@@ -33,14 +30,12 @@ public sealed class SettingsViewModel : ViewModelBase, IDialogAware
     public SettingsViewModel(IConfigurationService configurationService,
                              IFileDialogService fileDialogService,
                              IMapper mapper,
-                             ILogger logger,
-                             DialogCloseListener requestClose)
+                             ILogger logger)
     {
         _configService = configurationService;
         _fileDialogService = fileDialogService;
         _mapper = mapper;
         _logger = logger;
-        _requestClose = requestClose;
 
         AddAssociationCommand = CreateCommand(AddAssociation, CanAddAssociation, OnCommandException)
                                 .ObservesProperty(() => NewExtension)
@@ -80,17 +75,7 @@ public sealed class SettingsViewModel : ViewModelBase, IDialogAware
 
     public ICommand EditApplicationPathCommand { get; }
 
-    /// <inheritdoc />
-    DialogCloseListener IDialogAware.RequestClose => _requestClose;
-
-    /// <inheritdoc />
-    public bool CanCloseDialog()
-    {
-        return true;
-    }
-
-    /// <inheritdoc />
-    public void OnDialogClosed()
+    public void Close()
     {
         try
         {
@@ -102,8 +87,7 @@ public sealed class SettingsViewModel : ViewModelBase, IDialogAware
         }
     }
 
-    /// <inheritdoc />
-    public void OnDialogOpened(IDialogParameters parameters)
+    public void Open()
     {
         try
         {
@@ -114,9 +98,6 @@ public sealed class SettingsViewModel : ViewModelBase, IDialogAware
             _logger.Error(ex, "Error during dialog open");
         }
     }
-
-    /// <inheritdoc />
-    public event Action<IDialogResult>? RequestClose;
 
     private void AddAssociation()
     {
@@ -325,10 +306,5 @@ public sealed class SettingsViewModel : ViewModelBase, IDialogAware
     private void OnCommandException(Exception exception)
     {
         _logger.Error(exception, "Command execution failed");
-    }
-
-    private void OnRequestClose(IDialogResult obj)
-    {
-        RequestClose?.Invoke(obj);
     }
 }

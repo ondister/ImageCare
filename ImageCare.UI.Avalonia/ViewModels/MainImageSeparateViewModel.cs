@@ -12,13 +12,11 @@ using ImageCare.Core.Domain.Preview;
 using ImageCare.Core.Services.MediaPreviewOperationsService;
 using ImageCare.Core.Services.MediaPreviewService;
 
-using Prism.Dialogs;
-
 using Serilog;
 
 namespace ImageCare.UI.Avalonia.ViewModels;
 
-internal class MainImageSeparateViewModel : ViewModelBase, IDialogAware
+internal class MainImageSeparateViewModel : ViewModelBase
 {
     private readonly IMediaPreviewService _imageService;
     private readonly IMediaPreviewOperationsService _fileOperationsService;
@@ -28,9 +26,8 @@ internal class MainImageSeparateViewModel : ViewModelBase, IDialogAware
 
     private CompositeDisposable? _compositeDisposable;
     private double _rotationAngle;
-    private bool _isDisposed;
     private CancellationTokenSource _imageLoadCts;
-    private string _title;
+    private string _title = string.Empty;
 
     public MainImageSeparateViewModel(IMediaPreviewService imageService,
                                       IMediaPreviewOperationsService fileOperationsService,
@@ -50,9 +47,6 @@ internal class MainImageSeparateViewModel : ViewModelBase, IDialogAware
         get => _title;
         set => SetProperty(ref _title, value);
     }
-
-    /// <inheritdoc />
-    public DialogCloseListener RequestClose { get; }
 
     public Bitmap? MainBitmap
     {
@@ -74,14 +68,7 @@ internal class MainImageSeparateViewModel : ViewModelBase, IDialogAware
         set => SetProperty(ref _rotationAngle, value);
     }
 
-    /// <inheritdoc />
-    public bool CanCloseDialog()
-    {
-        return true;
-    }
-
-    /// <inheritdoc />
-    public void OnDialogClosed()
+    public void Close()
     {
         try
         {
@@ -95,11 +82,8 @@ internal class MainImageSeparateViewModel : ViewModelBase, IDialogAware
         }
     }
 
-    /// <inheritdoc />
-    public void OnDialogOpened(IDialogParameters parameters)
+    public void Open()
     {
-        ThrowIfDisposed();
-
         try
         {
             _compositeDisposable = new CompositeDisposable
@@ -165,12 +149,12 @@ internal class MainImageSeparateViewModel : ViewModelBase, IDialogAware
             cancellationToken.ThrowIfCancellationRequested();
 
             await using var imageStream = await _imageService.GetJpegImageStreamAsync(imagePreview, MediaPreviewSize.Large, cancellationToken)
-                                                             .ConfigureAwait(false);
+                                                             ;
 
             cancellationToken.ThrowIfCancellationRequested();
 
             var metadata = await _imageService.GetMediaMetadataAsync(imagePreview)
-                                              .ConfigureAwait(false);
+                                              ;
 
             cancellationToken.ThrowIfCancellationRequested();
 
@@ -184,7 +168,7 @@ internal class MainImageSeparateViewModel : ViewModelBase, IDialogAware
                                            return new Bitmap(imageStream);
                                        },
                                        cancellationToken)
-                                   .ConfigureAwait(false);
+                                   ;
 
             cancellationToken.ThrowIfCancellationRequested();
 
@@ -206,14 +190,6 @@ internal class MainImageSeparateViewModel : ViewModelBase, IDialogAware
     private void OnObservableError(Exception ex)
     {
         _logger.Error(ex, "Error in observable subscription");
-    }
-
-    private void ThrowIfDisposed()
-    {
-        if (_isDisposed)
-        {
-            throw new ObjectDisposedException(nameof(MainImageViewModel));
-        }
     }
 
     private void CancelImageLoading()

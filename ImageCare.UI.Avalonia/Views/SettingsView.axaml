@@ -2,10 +2,8 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             xmlns:mvvm="http://prismlibrary.com/"
              xmlns:viewModels="clr-namespace:ImageCare.UI.Avalonia.ViewModels"
              mc:Ignorable="d"
-             mvvm:ViewModelLocator.AutoWireViewModel="True"
              x:DataType="viewModels:SettingsViewModel"
              x:Class="ImageCare.UI.Avalonia.Views.SettingsView">
 
@@ -30,13 +28,13 @@
                             <TextBox Grid.Column="0"
                                      Margin="{DynamicResource Form.HorizontalMargin}"
                                      Text="{Binding NewExtension}"
-                                     Watermark="Extension (e.g., .cr2, .jpg)"
-                                     UseFloatingWatermark="True" />
+                                     PlaceholderText="Extension (e.g., .cr2, .jpg)"
+                                     UseFloatingPlaceholder="True" />
                             <TextBox Grid.Column="1"
                                      Margin="{DynamicResource Form.HorizontalMargin}"
                                      Text="{Binding NewName}"
-                                     Watermark="Display name"
-                                     UseFloatingWatermark="True" />
+                                     PlaceholderText="Display name"
+                                     UseFloatingPlaceholder="True" />
                             <Button Grid.Column="2"
                                     Content="Add"
                                     Command="{Binding AddAssociationCommand}"
@@ -64,8 +62,8 @@
                                      Margin="{DynamicResource Form.HorizontalMargin}"
                                      Text="{Binding SelectedAssociation.ApplicationPath, Mode=TwoWay}"
                                      IsEnabled="{Binding SelectedAssociation}"
-                                     Watermark="Path to executable"
-                                     UseFloatingWatermark="True" />
+                                     PlaceholderText="Path to executable"
+                                     UseFloatingPlaceholder="True" />
                             <Button Grid.Column="1"
                                     Content="Browse..."
                                     Command="{Binding EditApplicationPathCommand}"

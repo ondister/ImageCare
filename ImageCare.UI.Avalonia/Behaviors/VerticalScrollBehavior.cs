@@ -1,102 +1,109 @@
-﻿using System;
+using System;
 using System.Linq;
 
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Xaml.Interactivity;
 
 using ImageCare.UI.Avalonia.ViewModels;
 
 namespace ImageCare.UI.Avalonia.Behaviors;
 
-public class VerticalScrollBehavior : Behavior<ScrollViewer>
+public sealed class VerticalScrollBehavior
 {
-	public static readonly StyledProperty<bool> IsScrollResetRequestedProperty =
-		AvaloniaProperty.Register<VerticalScrollBehavior, bool>(nameof(IsScrollResetRequested));
-	private ScrollViewer? _scrollViewer;
-	private double _lastOffset;
-	private bool _isProgrammaticScroll;
+    public static readonly AttachedProperty<bool> IsEnabledProperty =
+        AvaloniaProperty.RegisterAttached<VerticalScrollBehavior, ScrollViewer, bool>(
+            "IsEnabled",
+            defaultValue: false);
 
-	public bool IsScrollResetRequested
-	{
-		get => GetValue(IsScrollResetRequestedProperty);
-		set => SetValue(IsScrollResetRequestedProperty, value);
-	}
+    public static readonly AttachedProperty<bool> IsScrollResetRequestedProperty =
+        AvaloniaProperty.RegisterAttached<VerticalScrollBehavior, ScrollViewer, bool>(
+            "IsScrollResetRequested",
+            defaultValue: false);
 
-	protected override void OnAttached()
-	{
-		base.OnAttached();
-		_scrollViewer = AssociatedObject;
-		if (_scrollViewer != null)
-		{
-			_scrollViewer.ScrollChanged += OnScrollChanged;
-		}
+    private static readonly AttachedProperty<State?> StateProperty =
+        AvaloniaProperty.RegisterAttached<VerticalScrollBehavior, ScrollViewer, State?>("State");
 
-		this.GetObservable(IsScrollResetRequestedProperty)
-		    .Subscribe(
-			    isResetRequested =>
-			    {
-				    if (isResetRequested)
-				    {
-					    _isProgrammaticScroll = true;
-					    ResetLastOffset();
-					    IsScrollResetRequested = false;
-				    }
-			    });
-	}
+    static VerticalScrollBehavior()
+    {
+        IsEnabledProperty.Changed.AddClassHandler<ScrollViewer>(OnIsEnabledChanged);
+        IsScrollResetRequestedProperty.Changed.AddClassHandler<ScrollViewer>(OnResetRequestedChanged);
+    }
 
-	protected override void OnDetaching()
-	{
-		if (_scrollViewer != null)
-		{
-			_scrollViewer.ScrollChanged -= OnScrollChanged;
-		}
+    public static bool GetIsEnabled(ScrollViewer scrollViewer) => scrollViewer.GetValue(IsEnabledProperty);
 
-		base.OnDetaching();
-	}
+    public static void SetIsEnabled(ScrollViewer scrollViewer, bool value) =>
+        scrollViewer.SetValue(IsEnabledProperty, value);
 
-	private void ResetLastOffset()
-	{
-		if (_scrollViewer == null || double.IsNaN(_scrollViewer.Offset.Y))
-		{
-			_lastOffset = 0;
-			return;
-		}
-		_lastOffset = _scrollViewer.Offset.Y;
-	}
+    public static bool GetIsScrollResetRequested(ScrollViewer scrollViewer) =>
+        scrollViewer.GetValue(IsScrollResetRequestedProperty);
 
-	private async void OnScrollChanged(object? sender, ScrollChangedEventArgs e)
-	{
-		if (_scrollViewer == null)
-		{
-			return;
-		}
+    public static void SetIsScrollResetRequested(ScrollViewer scrollViewer, bool value) =>
+        scrollViewer.SetValue(IsScrollResetRequestedProperty, value);
 
-		if (_scrollViewer == null ||
-		    _scrollViewer.DataContext is not GlancePanelViewModel pvm ||
-		    !pvm.ImagePreviews.Any())
-		{
-			return;
-		}
+    private static void OnIsEnabledChanged(ScrollViewer scrollViewer, AvaloniaPropertyChangedEventArgs args)
+    {
+        scrollViewer.GetValue(StateProperty)?.Dispose();
+        scrollViewer.ClearValue(StateProperty);
 
-		// Ignore if program scroll
-		if (_isProgrammaticScroll)
-		{
-			_isProgrammaticScroll = false;
-			return;
-		}
+        if (args.NewValue is true)
+        {
+            scrollViewer.SetValue(StateProperty, new State(scrollViewer));
+        }
+    }
 
-		// Debounce
-		if (Math.Abs(_lastOffset - _scrollViewer.Offset.Y) < 324)
-		{
-			return;
-		}
+    private static void OnResetRequestedChanged(ScrollViewer scrollViewer, AvaloniaPropertyChangedEventArgs args)
+    {
+        if (args.NewValue is true)
+        {
+            scrollViewer.GetValue(StateProperty)?.ResetLastOffset();
+            SetIsScrollResetRequested(scrollViewer, false);
+        }
+    }
 
-		_lastOffset = _scrollViewer.Offset.Y;
+    private sealed class State : IDisposable
+    {
+        private readonly ScrollViewer _scrollViewer;
+        private double _lastOffset;
+        private bool _isProgrammaticScroll;
 
-		if (_scrollViewer.DataContext is GlancePanelViewModel vm)
-		{
-			await vm.HandleScrollAsync(_scrollViewer.Offset.Y, _scrollViewer.Viewport.Height);
-		}
-	}
+        public State(ScrollViewer scrollViewer)
+        {
+            _scrollViewer = scrollViewer;
+            _scrollViewer.ScrollChanged += OnScrollChanged;
+        }
+
+        public void Dispose()
+        {
+            _scrollViewer.ScrollChanged -= OnScrollChanged;
+        }
+
+        public void ResetLastOffset()
+        {
+            _isProgrammaticScroll = true;
+            _lastOffset = double.IsNaN(_scrollViewer.Offset.Y) ? 0 : _scrollViewer.Offset.Y;
+        }
+
+        private async void OnScrollChanged(object? sender, ScrollChangedEventArgs e)
+        {
+            if (_scrollViewer.DataContext is not GlancePanelViewModel viewModel ||
+                !viewModel.ImagePreviews.Any())
+            {
+                return;
+            }
+
+            if (_isProgrammaticScroll)
+            {
+                _isProgrammaticScroll = false;
+                return;
+            }
+
+            if (Math.Abs(_lastOffset - _scrollViewer.Offset.Y) < 150)
+            {
+                return;
+            }
+
+            _lastOffset = _scrollViewer.Offset.Y;
+            await viewModel.HandleScrollAsync(_scrollViewer.Offset.Y, _scrollViewer.Viewport.Height);
+        }
+    }
 }

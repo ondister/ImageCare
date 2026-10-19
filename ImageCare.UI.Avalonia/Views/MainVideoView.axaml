@@ -6,7 +6,6 @@
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="ImageCare.UI.Avalonia.Views.MainVideoView"
              xmlns:iconPacks="https://github.com/MahApps/IconPacks.Avalonia"
-             xmlns:u="https://irihi.tech/ursa"
              xmlns:views="clr-namespace:ImageCare.UI.Avalonia.Views"
              x:DataType="viewModels:MainVideoViewModel">
 
@@ -23,13 +22,13 @@
             RowDefinitions="Auto">
 
             <StackPanel Grid.Column="0" Orientation="Horizontal">
-                <u:IconButton Margin="{StaticResource MarginAll.Small}"
-                              Theme="{DynamicResource SolidIconButton}">
-                    <u:IconButton.Icon>
+                <Button Margin="{StaticResource MarginAll.Small}"
+                              >
+
                         <iconPacks:PackIconLucide Kind="List"
                                                   Height="{StaticResource Icon.Size.Small}"
                                                   Width="{StaticResource Icon.Size.Small}" />
-                    </u:IconButton.Icon>
+
 
                     <Button.Flyout>
                         <Flyout Placement="TopEdgeAlignedLeft">
@@ -39,7 +38,7 @@
                         </Flyout>
                     </Button.Flyout>
 
-                </u:IconButton>
+                </Button>
 
                 <Button
                     Background="Transparent"

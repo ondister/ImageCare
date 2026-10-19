@@ -179,6 +179,11 @@ internal class FoldersViewModel : NavigatedViewModelBase
 
             _drivesWatcherService.StartWatching();
             _multiSourcesFileSystemWatcherService.StartWatching();
+
+            if (FileSystemItemViewModels.Count == 0 && !IsLoading)
+            {
+                _ = OnViewLoadedAsync();
+            }
         }
         catch (Exception ex)
         {
@@ -344,7 +349,7 @@ internal class FoldersViewModel : NavigatedViewModelBase
 
         try
         {
-            var root = await _folderService.GetDirectoryModelAsync().ConfigureAwait(false);
+            var root = await _folderService.GetDirectoryModelAsync();
 
             var rootViewModel = _mapper.Map<DirectoryViewModel>(root);
             rootViewModel.SetFileManagerPanel(FileManagerPanel);

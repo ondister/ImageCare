@@ -93,9 +93,12 @@ public class App : PrismApplication
         containerRegistry.RegisterSingleton<ILoggerFactory>(_ => loggerFactory);
 
         containerRegistry.Register<MainWindow>();
+        containerRegistry.RegisterSingleton<MainWindowViewModel>();
         containerRegistry.Register<MainWindowTitleRightView>();
         containerRegistry.Register<MetadataView>();
         containerRegistry.Register<MainImageView>();
+        containerRegistry.RegisterSingleton<MainImageViewModel>();
+        containerRegistry.RegisterSingleton<MainVideoViewModel>();
 
         containerRegistry.RegisterForNavigation<FoldersView>();
         containerRegistry.RegisterForNavigation<MainImageView>();
@@ -115,12 +118,10 @@ public class App : PrismApplication
 
         containerRegistry.RegisterSingleton<INotificationService, LocalNotificationService>();
         containerRegistry.RegisterSingleton<IFileAssociationsService, ConfigurationFileAssociationsService>();
-        containerRegistry.RegisterSingleton<IClipboardService>(provider =>
-        {
-            var topLevel = TopLevel.GetTopLevel(provider.Resolve<MainWindow>());
-            return new ClipboardService(topLevel);
-        });
+        containerRegistry.RegisterSingleton<IClipboardService, ClipboardService>();
         containerRegistry.RegisterSingleton<IFileDialogService, AvaloniaFileDialogService>();
+        containerRegistry.RegisterSingleton<ImageViewerWindowService>();
+        containerRegistry.RegisterSingleton<SettingsWindowService>();
 
         containerRegistry.RegisterSingleton<TypeAdapterConfig>(() =>
         {
@@ -139,8 +140,6 @@ public class App : PrismApplication
         containerRegistry.Register<ImagePreviewDropHandler, ImagePreviewDropHandler>();
 
         containerRegistry.RegisterDialogWindow<ChildWindow>("childWindow");
-        containerRegistry.RegisterDialog<SettingsView>("settingsViewer");
-        containerRegistry.RegisterDialog<MainImageSeparateView>("imageViewer");
         containerRegistry.RegisterDialog<GlancePanelView, GlancePanelViewModel>("glanceViewer");
     }
 

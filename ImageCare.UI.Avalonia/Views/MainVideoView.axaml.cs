@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 
 using Avalonia;
 using Avalonia.Controls;
@@ -6,6 +7,7 @@ using Avalonia.Data;
 using Avalonia.VisualTree;
 
 using HanumanInstitute.LibMpv.Avalonia;
+using HanumanInstitute.LibMpv.Core;
 
 using ImageCare.UI.Avalonia.Platforms.MacOS;
 using ImageCare.UI.Avalonia.ViewModels;
@@ -28,6 +30,7 @@ public partial class MainVideoView : UserControl
         }
         else
         {
+            MpvApi.RootPath = Path.Combine(AppContext.BaseDirectory, "player-native");
             var mpvView = new MpvView();
             mpvView.Bind(MpvView.MpvContextProperty, new Binding(nameof(MainVideoViewModel.Mpv))
             {

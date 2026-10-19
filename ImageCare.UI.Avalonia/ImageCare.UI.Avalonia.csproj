@@ -25,32 +25,23 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Avalonia" Version="11.3.10" />
-    <PackageReference Include="Avalonia.Controls.DataGrid" Version="11.3.10" />
-    <PackageReference Include="Avalonia.Desktop" Version="11.3.10" />
-    <PackageReference Include="Avalonia.Fonts.Inter" Version="11.3.10" />
-    <PackageReference Include="Avalonia.Diagnostics" Version="11.3.10">
-      <IncludeAssets Condition="'$(Configuration)' != 'Debug'">None</IncludeAssets>
-      <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
-    </PackageReference>
-    <PackageReference Include="Avalonia.Xaml.Interactions" Version="11.3.0.6" />
-    <PackageReference Include="Avalonia.Xaml.Interactions.DragAndDrop" Version="11.3.0.6" />
-    <PackageReference Include="Avalonia.Xaml.Interactivity" Version="11.3.0.6" />
-    <PackageReference Include="Deadpikle.AvaloniaProgressRing" Version="0.10.10" />
-    <PackageReference Include="HanumanInstitute.LibMpv" Version="0.9.1" />
-    <PackageReference Include="HanumanInstitute.LibMpv.Avalonia" Version="0.9.1" />
-    <PackageReference Include="IconPacks.Avalonia.Lucide" Version="1.3.1" />
-    <PackageReference Include="IconPacks.Avalonia.Material" Version="1.3.1" />
-    <PackageReference Include="Irihi.Ursa" Version="1.14.1" />
-    <PackageReference Include="Irihi.Ursa.Themes.Semi" Version="1.14.1" />
+    <PackageReference Include="Avalonia" Version="12.1.4" />
+    <PackageReference Include="Avalonia.Controls.DataGrid" Version="12.1.2" />
+    <PackageReference Include="Avalonia.Desktop" Version="12.1.4" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="12.1.4" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.4" />
+    <PackageReference Include="Deadpikle.AvaloniaProgressRing" Version="0.11.0" />
+    <PackageReference Include="HanumanInstitute.LibMpv" Version="0.10.1" />
+    <PackageReference Include="HanumanInstitute.LibMpv.Avalonia" Version="0.10.1" />
+    <PackageReference Include="IconPacks.Avalonia.Lucide" Version="2.0.0" />
+    <PackageReference Include="IconPacks.Avalonia.Material" Version="2.0.0" />
     <PackageReference Include="Mapster" Version="7.4.0" />
     <PackageReference Include="Mapster.DependencyInjection" Version="1.0.1" />
-    <PackageReference Include="Mapsui.Avalonia" Version="5.0.2" />
-    <PackageReference Include="PanAndZoom" Version="11.3.6" />
+    <PackageReference Include="Mapsui.Avalonia12" Version="5.1.0" />
+    <PackageReference Include="PanAndZoom" Version="12.1.1" />
     <PackageReference Include="Prism.Avalonia" Version="9.0.537.11130" />
     <PackageReference Include="Prism.Commands.Ex" Version="0.1.9" />
     <PackageReference Include="Prism.DryIoc.Avalonia" Version="9.0.537.11130" />
-    <PackageReference Include="Semi.Avalonia" Version="11.3.7.2" />
     <PackageReference Include="Serilog" Version="4.3.0" />
     <PackageReference Include="Serilog.Exceptions" Version="8.4.0" />
     <PackageReference Include="Serilog.Extensions.Logging" Version="10.0.0" />
@@ -62,21 +53,28 @@
     <ProjectReference Include="..\ImageCare.Core\ImageCare.Core.csproj" />
   </ItemGroup>
 
-  <ItemGroup Condition="'$(RuntimeIdentifier)' == 'win-x64'">
-    <Content Include="win-x64\**">
-      <Link>%(Filename)%(Extension)</Link>
+  <ItemGroup Condition="'$(RuntimeIdentifier)' == 'win-x64' Or '$(RuntimeIdentifier)' == 'win-x86'">
+    <Content Include="$(MSBuildProjectDirectory)\player-native\$(RuntimeIdentifier)\libmpv-2.dll">
+      <Link>player-native\libmpv-2.dll</Link>
+      <TargetPath>player-native\libmpv-2.dll</TargetPath>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
     </Content>
   </ItemGroup>
 
-  <ItemGroup Condition="'$(RuntimeIdentifier)' == 'win-x86'">
-    <Content Include="win-x86\**">
-      <Link>%(Filename)%(Extension)</Link>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
-    </Content>
-  </ItemGroup>
+  <Target Name="RemoveRootLibMpvAfterBuild"
+          AfterTargets="Build"
+          Condition="'$(RuntimeIdentifier)' == 'win-x64' Or '$(RuntimeIdentifier)' == 'win-x86'">
+    <Delete Files="$(OutDir)libmpv-2.dll"
+            Condition="Exists('$(OutDir)libmpv-2.dll')" />
+  </Target>
+
+  <Target Name="RemoveRootLibMpvAfterPublish"
+          AfterTargets="Publish"
+          Condition="'$(RuntimeIdentifier)' == 'win-x64' Or '$(RuntimeIdentifier)' == 'win-x86'">
+    <Delete Files="$(PublishDir)libmpv-2.dll"
+            Condition="Exists('$(PublishDir)libmpv-2.dll')" />
+  </Target>
 
   <Target Name="RequireRuntimeIdentifierForPublish" BeforeTargets="Publish" Condition="'$(RuntimeIdentifier)' == ''">
     <Error Text="Publishing ImageCare requires an explicit RuntimeIdentifier: win-x64 or osx-arm64." />

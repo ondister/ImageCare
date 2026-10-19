@@ -5,7 +5,6 @@
              xmlns:domain="clr-namespace:ImageCare.UI.Avalonia.ViewModels.Domain"
              xmlns:iconPacks="https://github.com/MahApps/IconPacks.Avalonia"
              xmlns:avaloniaProgressRing="clr-namespace:AvaloniaProgressRing;assembly=AvaloniaProgressRing"
-             xmlns:u="https://irihi.tech/ursa"
              x:Class="ImageCare.UI.Avalonia.Views.FoldersView"
              prism:ViewModelLocator.AutoWireViewModel="True"
              x:DataType="viewModels:FoldersViewModel"
@@ -160,13 +159,8 @@
                                 <!-- Edit Template -->
                                 <DataTemplate x:Key="EditTemplate"
                                               x:DataType="domain:DirectoryViewModel">
-                                    <TextBox Text="{Binding EditableName, UpdateSourceTrigger=PropertyChanged}">
-                                        <Interaction.Behaviors>
-                                            <EventTriggerBehavior EventName="LostFocus">
-                                                <InvokeCommandAction Command="{Binding NameTextBoxLostFocusCommand}" />
-                                            </EventTriggerBehavior>
-                                        </Interaction.Behaviors>
-                                    </TextBox>
+                                    <TextBox Text="{Binding EditableName, UpdateSourceTrigger=PropertyChanged}"
+                                             LostFocus="OnNameTextBoxLostFocus" />
                                 </DataTemplate>
                             </ContentPresenter.Resources>
 
@@ -208,18 +202,18 @@
                         <DataTemplate x:DataType="domain:DirectoryViewModel">
                             <StackPanel Orientation="Horizontal"
                                         Margin="{StaticResource MarginVertical.Small}">
-                                <u:IconButton Margin="{StaticResource MarginAll.Small}"
+                                <Button Margin="{StaticResource MarginAll.Small}"
                                               VerticalAlignment="Center"
                                               VerticalContentAlignment="Center"
                                               Command="{Binding ElementName=This, Path=DataContext.SetSearchResultCommand}"
                                               CommandParameter="{Binding }">
-                                    <u:IconButton.Icon>
+
                                         <iconPacks:PackIconMaterial Kind="FolderOutline"
                                                                     Height="{StaticResource Icon.Size.Small}"
                                                                     Width="{StaticResource Icon.Size.Small}"
                                                                     Margin="{StaticResource MarginAll.Small}" />
-                                    </u:IconButton.Icon>
-                                </u:IconButton>
+
+                                </Button>
                                 <TextBlock Text="{Binding Name}"
                                            VerticalAlignment="Center" />
                                 <TextBlock Text="{Binding Path}"
@@ -264,7 +258,7 @@
                 <Grid Grid.Column="0">
                     <!-- TextBox -->
                     <TextBox x:Name="SearchTextBox"
-                             Watermark="{Binding SearchTarget}"
+                             PlaceholderText="{Binding SearchTarget}"
                              IsEnabled="{Binding !IsSearching}"
                              Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged, Delay=300}">
                         <TextBox.KeyBindings>
@@ -314,11 +308,4 @@
         </Border>
 
     </Grid>
-
-    <!--Triggers for view loading and unloading. They use for subscribe to the production state changing-->
-    <Interaction.Behaviors>
-        <EventTriggerBehavior EventName="Loaded">
-            <InvokeCommandAction Command="{Binding OnViewLoadedCommand}" />
-        </EventTriggerBehavior>
-    </Interaction.Behaviors>
 </UserControl>

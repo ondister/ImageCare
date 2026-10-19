@@ -1,7 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:iconPacks="https://github.com/MahApps/IconPacks.Avalonia"
-             xmlns:u="https://irihi.tech/ursa"
              xmlns:system="clr-namespace:System;assembly=System.Runtime"
              xmlns:logs="clr-namespace:ImageCare.UI.Avalonia.ViewModels.Domain.Logs"
              xmlns:viewModels="clr-namespace:ImageCare.UI.Avalonia.ViewModels"
@@ -13,8 +12,6 @@
         <Thickness x:Key="MarginBottom.Small">0,0,0,2</Thickness>
         <Thickness x:Key="MarginHorizontal.Small">2,0,2,0</Thickness>
         <system:Double x:Key="Icon.Size.Small">16</system:Double>
-        <SolidColorBrush x:Key="Brushes.Warning" Color="{DynamicResource SemiAmber4Color}" />
-        <SolidColorBrush x:Key="Brushes.Error" Color="{DynamicResource SemiRed4Color}" />
     </UserControl.Resources>
 
     <UserControl.Styles>
@@ -107,7 +104,7 @@
                                 <ColumnDefinition />
                             </Grid.ColumnDefinitions>
                             <iconPacks:PackIconLucide Grid.Column="0"
-                                                      Kind="OctagonX" Foreground="{StaticResource Brushes.Error}" />
+                                                      Kind="OctagonX" Foreground="{DynamicResource Brush.Danger}" />
                             <TextBlock Grid.Column="1"
                                        Text="{Binding Timestamp, StringFormat=G}" />
                             <TextBlock Grid.Column="2"
@@ -127,7 +124,7 @@
                             </Grid.ColumnDefinitions>
                             <iconPacks:PackIconLucide Grid.Column="0"
                                                       Kind="TriangleAlert"
-                                                      Foreground="{StaticResource Brushes.Warning}" />
+                                                      Foreground="{DynamicResource Brush.Warning}" />
                             <TextBlock Grid.Column="1"
                                        Text="{Binding Timestamp, StringFormat=G}" />
                             <TextBlock Grid.Column="2"
@@ -143,8 +140,7 @@
             </ListBox>
         </Grid>
 
-        <u:Divider Grid.Row="1"
-                   HorizontalContentAlignment="Center" />
+        <Separator Grid.Row="1" />
 
         <!--Buttons-->
         <Grid Grid.Row="2"
@@ -153,7 +149,7 @@
             <ToggleButton IsChecked="{Binding ShowErrors}">
                 <StackPanel Orientation="Horizontal">
                     <iconPacks:PackIconLucide Kind="OctagonX"
-                                              Foreground="{StaticResource Brushes.Error}" />
+                                              Foreground="{DynamicResource Brush.Danger}" />
                     <TextBlock Text="Errors" />
                     <TextBlock Text="{Binding ErrorsCount}" />
                 </StackPanel>
@@ -163,7 +159,7 @@
                           IsChecked="{Binding ShowWarnings}">
                 <StackPanel Orientation="Horizontal">
                     <iconPacks:PackIconLucide Kind="TriangleAlert"
-                                              Foreground="{StaticResource Brushes.Warning}" />
+                                              Foreground="{DynamicResource Brush.Warning}" />
                     <TextBlock Text="Warnings" />
                     <TextBlock Text="{Binding WarningsCount}" />
                 </StackPanel>

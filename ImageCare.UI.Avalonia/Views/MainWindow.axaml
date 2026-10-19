@@ -1,28 +1,24 @@
-<u:UrsaWindow xmlns="https://github.com/avaloniaui"
-              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-              xmlns:vm="using:ImageCare.UI.Avalonia.ViewModels"
-              xmlns:prism="http://prismlibrary.com/"
-              xmlns:ui="clr-namespace:ImageCare.UI.Avalonia"
-              xmlns:u="https://irihi.tech/ursa"
-              xmlns:views="clr-namespace:ImageCare.UI.Avalonia.Views"
-              xmlns:iconPacks="https://github.com/MahApps/IconPacks.Avalonia"
-              x:Class="ImageCare.UI.Avalonia.Views.MainWindow"
-              x:DataType="vm:MainWindowViewModel"
-              Icon="/Assets/imagecare-logo.ico"
-              Title="ImageCare"
-              MinHeight="600"
-              MinWidth="800"
-              WindowState="Maximized"
-              prism:ViewModelLocator.AutoWireViewModel="True">
-
-    <u:UrsaWindow.RightContent>
-        <views:MainWindowTitleRightView />
-    </u:UrsaWindow.RightContent>
-
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:ImageCare.UI.Avalonia.ViewModels"
+        xmlns:prism="http://prismlibrary.com/"
+        xmlns:ui="clr-namespace:ImageCare.UI.Avalonia"
+        xmlns:iconPacks="https://github.com/MahApps/IconPacks.Avalonia"
+        xmlns:views="clr-namespace:ImageCare.UI.Avalonia.Views"
+        x:Class="ImageCare.UI.Avalonia.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Icon="/Assets/imagecare-logo.ico"
+        Title="ImageCare"
+        MinHeight="600"
+        MinWidth="800"
+        WindowState="Maximized"
+        prism:ViewModelLocator.AutoWireViewModel="True"
+        Loaded="OnWindowLoaded"
+        Closing="OnWindowClosing">
     <Grid Margin="2">
         <Grid.RowDefinitions>
             <RowDefinition Height="*" />
-            <RowDefinition Height="Auto" /> <!--Splitter-->
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" MinHeight="330" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
@@ -30,72 +26,57 @@
         <Grid Grid.Row="0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="0.2*" MinWidth="400" />
-                <ColumnDefinition Width="Auto" /> <!--Splitter-->
+                <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" /> <!--Splitter-->
+                <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="0.2*" MinWidth="400" />
             </Grid.ColumnDefinitions>
 
             <ContentControl Grid.Column="0"
                             prism:RegionManager.RegionName="{x:Static ui:RegionNames.SourceFoldersRegion}" />
-
-            <GridSplitter Grid.Column="1"
-                          VerticalAlignment="Stretch"
-                          ShowsPreview="True" />
-
-            <ContentControl Grid.Column="2"
-                            prism:RegionManager.RegionName="{x:Static ui:RegionNames.MainImageViewRegion}" />
-
-            <GridSplitter Grid.Column="3"
-                          VerticalAlignment="Stretch"
-                          ShowsPreview="True" />
-
+            <GridSplitter Grid.Column="1" VerticalAlignment="Stretch" ShowsPreview="True" />
+            <Grid Grid.Column="2">
+                <Grid IsVisible="{Binding IsImageViewVisible}">
+                    <views:MainImageView DataContext="{Binding MainImageViewModel}" />
+                </Grid>
+                <Grid IsVisible="{Binding IsVideoViewVisible}">
+                    <views:MainVideoView DataContext="{Binding MainVideoViewModel}" />
+                </Grid>
+            </Grid>
+            <GridSplitter Grid.Column="3" VerticalAlignment="Stretch" ShowsPreview="True" />
             <ContentControl Grid.Column="4"
                             prism:RegionManager.RegionName="{x:Static ui:RegionNames.TargetFoldersRegion}" />
-
         </Grid>
 
-        <u:Divider Grid.Row="1"
-                   HorizontalAlignment="Stretch" />
+        <Separator Grid.Row="1" HorizontalAlignment="Stretch" />
 
         <Grid Grid.Row="2" ColumnDefinitions="*,Auto,*">
             <ContentControl Grid.Column="0"
                             Margin="{StaticResource MarginRight.Medium}"
                             prism:RegionManager.RegionName="{x:Static ui:RegionNames.SourcePreviewImageRegion}" />
 
-            <GridSplitter Grid.Column="1"
-                          VerticalAlignment="Stretch"
-                          ShowsPreview="True">
+            <GridSplitter Grid.Column="1" VerticalAlignment="Stretch" ShowsPreview="True">
                 <GridSplitter.Template>
                     <ControlTemplate>
-                        <Border BorderBrush="{DynamicResource SemiGrey1}"
+                        <Border BorderBrush="{DynamicResource Brush.Splitter}"
                                 BorderThickness="2,0,2,0">
-                            <StackPanel Orientation="Vertical"
-                                        VerticalAlignment="Center">
-
-                                <u:IconButton Margin="{StaticResource MarginAll.Small}"
-                                              Command="{CompiledBinding CopySelectedPreviewCommand}"
-                                              Theme="{DynamicResource SolidIconButton}">
-                                    <u:IconButton.Icon>
-                                        <iconPacks:PackIconMaterial Kind="ContentCopy"
-                                                                    Height="{StaticResource Icon.Size.Small}"
-                                                                    Width="{StaticResource Icon.Size.Small}" />
-                                    </u:IconButton.Icon>
-                                </u:IconButton>
-
-                                <u:IconButton Margin="{StaticResource MarginAll.Small}"
-                                              Command="{CompiledBinding MoveSelectedPreviewCommand}"
-                                              Theme="{DynamicResource SolidIconButton}">
-                                    <u:IconButton.Icon>
-                                        <iconPacks:PackIconMaterial Kind="FileReplaceOutline"
-                                                                    Height="{StaticResource Icon.Size.Small}"
-                                                                    Width="{StaticResource Icon.Size.Small}" />
-                                    </u:IconButton.Icon>
-                                </u:IconButton>
-
+                            <StackPanel Orientation="Vertical" VerticalAlignment="Center">
+                                <Button Margin="{StaticResource MarginAll.Small}"
+                                        Classes="IconButton"
+                                        Command="{CompiledBinding CopySelectedPreviewCommand}">
+                                    <iconPacks:PackIconMaterial Kind="ContentCopy"
+                                                                Height="{StaticResource Icon.Size.Small}"
+                                                                Width="{StaticResource Icon.Size.Small}" />
+                                </Button>
+                                <Button Margin="{StaticResource MarginAll.Small}"
+                                        Classes="IconButton"
+                                        Command="{CompiledBinding MoveSelectedPreviewCommand}">
+                                    <iconPacks:PackIconMaterial Kind="FileReplaceOutline"
+                                                                Height="{StaticResource Icon.Size.Small}"
+                                                                Width="{StaticResource Icon.Size.Small}" />
+                                </Button>
                             </StackPanel>
                         </Border>
-
                     </ControlTemplate>
                 </GridSplitter.Template>
             </GridSplitter>
@@ -107,16 +88,5 @@
 
         <ContentControl Grid.Row="3"
                         prism:RegionManager.RegionName="{x:Static ui:RegionNames.BottomBarRegion}" />
-
     </Grid>
-    <!--Triggers for view loading and unloading. They use for subscribe to the production state changing-->
-    <Interaction.Behaviors>
-        <EventTriggerBehavior EventName="Loaded">
-            <InvokeCommandAction Command="{Binding OnViewLoadedCommand}" />
-        </EventTriggerBehavior>
-        <EventTriggerBehavior EventName="Closing">
-            <InvokeCommandAction Command="{Binding OnViewUnloadedCommand}" />
-        </EventTriggerBehavior>
-    </Interaction.Behaviors>
-
-</u:UrsaWindow>
+</Window>

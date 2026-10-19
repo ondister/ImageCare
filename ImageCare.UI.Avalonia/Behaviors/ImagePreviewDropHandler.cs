@@ -3,8 +3,6 @@
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.VisualTree;
-using Avalonia.Xaml.Interactions.DragAndDrop;
-
 using ImageCare.Core.Domain.Notification;
 using ImageCare.Core.Domain.Preview;
 using ImageCare.Core.Services.MediaPreviewOperationsService;
@@ -16,7 +14,7 @@ using MapsterMapper;
 
 namespace ImageCare.UI.Avalonia.Behaviors;
 
-public class ImagePreviewDropHandler : DropHandlerBase
+public class ImagePreviewDropHandler
 {
     private readonly IMediaPreviewOperationsService _fileOperationsService;
     private readonly INotificationService _notificationService;
@@ -32,7 +30,7 @@ public class ImagePreviewDropHandler : DropHandlerBase
     }
 
     /// <inheritdoc />
-    public override bool Execute(object? sender, DragEventArgs e, object? sourceContext, object? targetContext, object? state)
+    public bool Execute(object? sender, DragEventArgs e, object? sourceContext, object? targetContext, object? state)
     {
         if (e.Source is Control && sender is ListBox listBox)
         {
@@ -43,7 +41,7 @@ public class ImagePreviewDropHandler : DropHandlerBase
     }
 
     /// <inheritdoc />
-    public override bool Validate(object? sender, DragEventArgs e, object? sourceContext, object? targetContext, object? state)
+    public bool Validate(object? sender, DragEventArgs e, object? sourceContext, object? targetContext, object? state)
     {
         if (e.Source is Control && sender is ListBox listBox)
         {

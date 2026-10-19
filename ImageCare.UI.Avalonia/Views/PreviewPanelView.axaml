@@ -3,9 +3,6 @@
              xmlns:prism="http://prismlibrary.com/"
              xmlns:viewModels="clr-namespace:ImageCare.UI.Avalonia.ViewModels"
              xmlns:domain="clr-namespace:ImageCare.UI.Avalonia.ViewModels.Domain"
-             xmlns:i="clr-namespace:Avalonia.Xaml.Interactivity;assembly=Avalonia.Xaml.Interactivity"
-             xmlns:idd="clr-namespace:Avalonia.Xaml.Interactions.DragAndDrop;assembly=Avalonia.Xaml.Interactions.DragAndDrop"
-             xmlns:u="https://irihi.tech/ursa"
              xmlns:iconPacks="https://github.com/MahApps/IconPacks.Avalonia"
              xmlns:controls="clr-namespace:ImageCare.UI.Avalonia.Controls"
              xmlns:behaviors="clr-namespace:ImageCare.UI.Avalonia.Behaviors"
@@ -34,30 +31,20 @@
                    HorizontalAlignment="Center"
                    VerticalAlignment="Center"
                    FontSize="{StaticResource Font.Size.SectionHeader}"
-                   Foreground="{DynamicResource SemiColorText0}"
+                   Foreground="{DynamicResource Brush.TextPrimary}"
                    IsVisible="{Binding FilesLoading}" />
 
         <ScrollViewer Grid.Row="1"
                       HorizontalScrollBarVisibility="Auto"
-                      VerticalScrollBarVisibility="Disabled">
-            <Interaction.Behaviors>
-                <behaviors:HorizontalScrollBehavior
-                    IsScrollResetRequested="{Binding IsScrollResetRequested, Mode=TwoWay}"/>
-            </Interaction.Behaviors>
+                      VerticalScrollBarVisibility="Disabled"
+                      behaviors:HorizontalScrollBehavior.IsEnabled="True"
+                      behaviors:HorizontalScrollBehavior.IsScrollResetRequested="{Binding IsScrollResetRequested, Mode=TwoWay}">
             <controls:PreviewsListBox ItemsSource="{Binding ImagePreviews}"
                                       SelectedItem="{Binding SelectedPreview, Mode=TwoWay}"
                                       SelectionMode="Single"
-                                      DragDrop.AllowDrop="True"
-                                      Theme="{StaticResource PreviewsListBox}">
-
-                <!--Behavior for dropping image from preview list-->
-                <i:Interaction.Behaviors>
-                    <i:BehaviorCollection>
-                        <idd:ContextDropBehavior Handler="{Binding ImagePreviewDropHandler}" />
-                        <behaviors:ScrollToIndexBehavior
-                            TargetIndex="{Binding IndexInView, Mode=TwoWay}" />
-                    </i:BehaviorCollection>
-                </i:Interaction.Behaviors>
+                                      Theme="{StaticResource PreviewsListBox}"
+                                      behaviors:PreviewDragDropBehavior.DropHandler="{Binding ImagePreviewDropHandler}"
+                                      behaviors:ScrollToIndexBehavior.TargetIndex="{Binding IndexInView, Mode=TwoWay}">
 
                 <controls:PreviewsListBox.ItemsPanel>
                     <ItemsPanelTemplate>
@@ -68,7 +55,7 @@
                 <controls:PreviewsListBox.Styles>
 
                     <Style Selector="Grid.Selected">
-                        <Setter Property="Background" Value="{DynamicResource SemiBlue5}" />
+                        <Setter Property="Background" Value="{DynamicResource Brush.Accent}" />
                     </Style>
                     <Style Selector="Grid.NotSelected">
                         <Setter Property="Background" Value="Transparent" />
@@ -90,6 +77,7 @@
                             <Grid RowDefinitions="Auto,*,Auto"
                                   Classes.Selected="{Binding Selected }"
                                   Classes.NotSelected="{Binding !Selected }"
+                                  behaviors:PreviewDragDropBehavior.IsDragSource="True"
                                   Width="300"
                                   Height="250">
 
@@ -131,20 +119,20 @@
                                         </LayoutTransformControl.LayoutTransform>
                                     </LayoutTransformControl>
 
-                                    <u:IconButton Grid.Row="0"
+                                    <Button Grid.Row="0"
                                                   Grid.Column="1"
                                                   Width="60"
                                                   Height="30"
                                                   Margin="{StaticResource MarginTop.XLarge}"
                                                   Command="{CompiledBinding RemoveImagePreviewCommand}"
-                                                  Theme="{DynamicResource SolidIconButton}"
+
                                                   Classes="Danger">
-                                        <u:IconButton.Icon>
+
                                             <iconPacks:PackIconLucide Kind="Trash2"
                                                                       Height="{StaticResource Icon.Size.Micro}"
                                                                       Width="{StaticResource Icon.Size.Micro}" />
-                                        </u:IconButton.Icon>
-                                    </u:IconButton>
+
+                                    </Button>
 
                                     <DropDownButton Grid.Row="2"
                                                     Grid.Column="1"
@@ -152,7 +140,7 @@
                                                     Height="30"
                                                     Margin="{StaticResource MarginBottom.XLarge}"
                                                     IsVisible="{Binding UseOpenWith, Mode=OneTime}"
-                                                    Theme="{DynamicResource SolidDropDownButton}">
+                                                    Classes="IconButton">
 
                                         <DropDownButton.Content>
                                             <iconPacks:PackIconMaterial Kind="ApplicationExport"
@@ -193,20 +181,13 @@
                                                                 Kind="SatelliteVariant"
                                                                 Height="{StaticResource Icon.Size.Medium}"
                                                                 Width="{StaticResource Icon.Size.Medium}"
-                                                                Foreground="{DynamicResource SemiRed2}" />
+                                                                Foreground="{DynamicResource Brush.Danger}" />
                                 </Grid>
 
                                 <TextBlock Grid.Row="2"
                                            Margin="{StaticResource MarginAll.Small}"
                                            Text="{Binding MetadataString}" />
 
-
-                                <!--Behavior for dragging image-->
-                                <i:Interaction.Behaviors>
-                                    <i:BehaviorCollection>
-                                        <idd:ContextDragBehavior />
-                                    </i:BehaviorCollection>
-                                </i:Interaction.Behaviors>
                             </Grid>
 
                         </Border>

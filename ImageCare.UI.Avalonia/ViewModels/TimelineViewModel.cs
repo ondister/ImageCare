@@ -35,30 +35,30 @@ internal class TimelineViewModel : ViewModelBase, IDisposable
 
         _dateStatsCache = new SourceCache<DateStatViewModel, DateTime>(x => x.Date);
 
-        _dateStatsCache.Connect()
-                       .Sort(new DateStatViewModelDescendingComparer())
-                       .Bind(out var dateStatViewModels)
-                       .Subscribe()
-                       .DisposeWith(_disposables);
+        _disposables.Add(
+            _dateStatsCache.Connect()
+                           .Sort(new DateStatViewModelDescendingComparer())
+                           .Bind(out var dateStatViewModels)
+                           .Subscribe());
 
         DateStatViewModels = dateStatViewModels;
         _dateSelectedSubject = new Subject<DateTime>();
         _statisticsClickSubject = new Subject<Unit>();
 
-        _folderStatisticsService.BucketChanged
-                                .Buffer(TimeSpan.FromMilliseconds(250))
-                                .Where(bufferedBuckets => bufferedBuckets.Count > 0)
-                                .Subscribe(OnBucketsChanged)
-                                .DisposeWith(_disposables);
+        _disposables.Add(
+            _folderStatisticsService.BucketChanged
+                                    .Buffer(TimeSpan.FromMilliseconds(250))
+                                    .Where(bufferedBuckets => bufferedBuckets.Count > 0)
+                                    .Subscribe(OnBucketsChanged));
 
-        _folderStatisticsService.ScanProgress
-                                .Subscribe(OnScanProgressChanged)
-                                .DisposeWith(_disposables);
-        _folderStatisticsService.TotalFilesCount
-                                .Sample(TimeSpan.FromMilliseconds(250))
-                                .ObserveOn(_synchronizationContext)
-                                .Subscribe(totalFiles => TotalFilesCount = totalFiles)
-                                .DisposeWith(_disposables);
+        _disposables.Add(
+            _folderStatisticsService.ScanProgress
+                                    .Subscribe(OnScanProgressChanged));
+        _disposables.Add(
+            _folderStatisticsService.TotalFilesCount
+                                    .Sample(TimeSpan.FromMilliseconds(250))
+                                    .ObserveOn(_synchronizationContext)
+                                    .Subscribe(totalFiles => TotalFilesCount = totalFiles));
     }
 
     public ICommand StatisticsClickCommand => CreateCommand(() => _statisticsClickSubject.OnNext(Unit.Default));

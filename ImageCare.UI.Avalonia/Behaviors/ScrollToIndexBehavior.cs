@@ -1,59 +1,32 @@
-﻿using System;
-
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Xaml.Interactivity;
+using Avalonia.Threading;
 
 namespace ImageCare.UI.Avalonia.Behaviors;
 
-internal class ScrollToIndexBehavior : Behavior<ListBox>
+internal sealed class ScrollToIndexBehavior
 {
-    public static readonly StyledProperty<int> TargetIndexProperty =
-        AvaloniaProperty.Register<ScrollToIndexBehavior, int>(
-            nameof(TargetIndex),
+    public static readonly AttachedProperty<int> TargetIndexProperty =
+        AvaloniaProperty.RegisterAttached<ScrollToIndexBehavior, ListBox, int>(
+            "TargetIndex",
             defaultValue: -1);
 
-    public int TargetIndex
+    static ScrollToIndexBehavior()
     {
-        get => GetValue(TargetIndexProperty);
-        set => SetValue(TargetIndexProperty, value);
+        TargetIndexProperty.Changed.AddClassHandler<ListBox>(OnTargetIndexChanged);
     }
 
-    protected override void OnAttached()
-    {
-        base.OnAttached();
-        TargetIndexProperty.Changed.AddClassHandler<ScrollToIndexBehavior>((x, e) => x.OnTargetIndexChanged(e));
-    }
+    public static int GetTargetIndex(ListBox listBox) => listBox.GetValue(TargetIndexProperty);
 
-    private void OnTargetIndexChanged(AvaloniaPropertyChangedEventArgs e)
-    {
-        var newValue = (int)(e.NewValue ?? -1);
+    public static void SetTargetIndex(ListBox listBox, int value) => listBox.SetValue(TargetIndexProperty, value);
 
-        if (AssociatedObject == null || newValue < 0 || newValue >= AssociatedObject.Items.Count)
+    private static void OnTargetIndexChanged(ListBox listBox, AvaloniaPropertyChangedEventArgs args)
+    {
+        if (args.NewValue is not int index || index < 0 || index >= listBox.Items.Count)
         {
             return;
         }
 
-        // Ждем отрисовки элементов
-        AssociatedObject.LayoutUpdated += OnLayoutUpdated;
-    }
-
-    private void OnLayoutUpdated(object sender, EventArgs e)
-    {
-        if (AssociatedObject == null)
-        {
-            return;
-        }
-
-        AssociatedObject.LayoutUpdated -= OnLayoutUpdated;
-
-        if (TargetIndex >= 0 && TargetIndex < AssociatedObject.Items.Count)
-        {
-            var container = AssociatedObject.ItemContainerGenerator.ContainerFromIndex(TargetIndex);
-            if (container is Control control)
-            {
-                control.BringIntoView();
-            }
-        }
+        Dispatcher.UIThread.Post(() => listBox.ScrollIntoView(index), DispatcherPriority.Loaded);
     }
 }

@@ -2,13 +2,11 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mvvm="http://prismlibrary.com/"
              xmlns:viewModels="clr-namespace:ImageCare.UI.Avalonia.ViewModels"
-             xmlns:u="https://irihi.tech/ursa"
              xmlns:iconPacks="https://github.com/MahApps/IconPacks.Avalonia"
              xmlns:domain="clr-namespace:ImageCare.UI.Avalonia.ViewModels.Domain"
              x:Class="ImageCare.UI.Avalonia.Views.BottomBarView"
              mvvm:ViewModelLocator.AutoWireViewModel="True"
              x:DataType="viewModels:BottomBarViewModel">
-
     <UserControl.Styles>
         <Style Selector="iconPacks|PackIconLucide">
             <Setter Property="Width" Value="{StaticResource Icon.Size.Small}" />
@@ -18,38 +16,32 @@
     </UserControl.Styles>
 
     <Grid RowDefinitions="Auto,*">
-        <u:Divider Grid.Row="0" HorizontalContentAlignment="Center" />
+        <Separator Grid.Row="0" />
 
         <Grid Grid.Row="1" ColumnDefinitions="Auto,Auto,*,Auto"
               Margin="{StaticResource MarginTop.Medium}">
+            <Button Grid.Column="0"
+                    Classes="ToolbarButton"
+                    Command="{Binding OpenLogWindowCommand}"
+                    Margin="{StaticResource MarginHorizontal.Small}">
+                <StackPanel Orientation="Horizontal" Spacing="4">
+                    <iconPacks:PackIconLucide Kind="List" />
+                    <Border Background="{DynamicResource Brush.Danger}"
+                            CornerRadius="8"
+                            Padding="4,2"
+                            VerticalAlignment="Center"
+                            IsVisible="{Binding !!MessagesCount}">
+                        <TextBlock Text="{Binding MessagesCount}"
+                                   Foreground="White"
+                                   FontWeight="Bold"
+                                   FontSize="{DynamicResource Font.Size.Micro}"
+                                   VerticalAlignment="Center"
+                                   HorizontalAlignment="Center" />
+                    </Border>
+                    <TextBlock Text="Messages List" VerticalAlignment="Center" />
+                </StackPanel>
+            </Button>
 
-            <!--Messages List Button with Counter-->
-            <u:IconButton Grid.Column="0"
-                          Classes="Small"
-                          Content="Messages List"
-                          IconPlacement="Left"
-                          Command="{Binding OpenLogWindowCommand}"
-                          Margin="{StaticResource MarginHorizontal.Small}">
-                <u:IconButton.Icon>
-                    <StackPanel Orientation="Horizontal" Spacing="4">
-                        <iconPacks:PackIconLucide Kind="List" />
-                        <Border Background="{DynamicResource SemiColorDanger}"
-                                CornerRadius="8"
-                                Padding="4,2"
-                                VerticalAlignment="Center"
-                                IsVisible="{Binding !!MessagesCount}">
-                            <TextBlock Text="{Binding MessagesCount}"
-                                       Foreground="White"
-                                       FontWeight="Bold"
-                                       FontSize="{DynamicResource Font.Size.Micro}"
-                                       VerticalAlignment="Center"
-                                       HorizontalAlignment="Center" />
-                        </Border>
-                    </StackPanel>
-                </u:IconButton.Icon>
-            </u:IconButton>
-
-            <!--Notification-->
             <ContentControl Grid.Column="1"
                             VerticalAlignment="Bottom"
                             Content="{Binding NotificationViewModel}">
@@ -57,7 +49,7 @@
                     <DataTemplate DataType="domain:SuccessNotificationViewModel">
                         <StackPanel Margin="{StaticResource MarginHorizontal.Small}" Orientation="Horizontal">
                             <iconPacks:PackIconMaterial Kind="CheckCircleOutline"
-                                                        Foreground="{DynamicResource SemiColorSuccess}"
+                                                        Foreground="{DynamicResource Brush.Success}"
                                                         Height="{StaticResource Icon.Size.Small}"
                                                         Width="{StaticResource Icon.Size.Small}"
                                                         Margin="{StaticResource MarginHorizontal.Small}" />
@@ -69,7 +61,7 @@
                     <DataTemplate DataType="domain:ErrorNotificationViewModel">
                         <StackPanel Margin="{StaticResource MarginHorizontal.Small}" Orientation="Horizontal">
                             <iconPacks:PackIconMaterial Kind="AlertCircleOutline"
-                                                        Foreground="{DynamicResource SemiColorDanger}"
+                                                        Foreground="{DynamicResource Brush.Danger}"
                                                         Height="{StaticResource Icon.Size.Small}"
                                                         Width="{StaticResource Icon.Size.Small}"
                                                         Margin="{StaticResource MarginHorizontal.Small}" />
@@ -87,17 +79,15 @@
                 </ContentControl.DataTemplates>
             </ContentControl>
 
-            <!--Settings-->
-            <u:IconButton Grid.Column="3"
-                          Classes="Small"
-                          Content="Settings"
-                          IconPlacement="Left"
-                          Command="{Binding OpenSettingsWindowCommand}"
-                          Margin="{StaticResource MarginHorizontal.Small}">
-                <u:IconButton.Icon>
+            <Button Grid.Column="3"
+                    Classes="ToolbarButton"
+                    Command="{Binding OpenSettingsWindowCommand}"
+                    Margin="{StaticResource MarginHorizontal.Small}">
+                <StackPanel Orientation="Horizontal" Spacing="4">
                     <iconPacks:PackIconLucide Kind="Settings" />
-                </u:IconButton.Icon>
-            </u:IconButton>
+                    <TextBlock Text="Settings" VerticalAlignment="Center" />
+                </StackPanel>
+            </Button>
         </Grid>
     </Grid>
 </UserControl>

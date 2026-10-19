@@ -21,6 +21,7 @@ internal sealed class Program
         }
         catch (Exception exception)
         {
+            Console.Error.WriteLine(exception);
             const string message = "Fatal Exception in the Application.\nApplication will be terminated.";
             Log.Fatal(exception, message);
         }

@@ -26,7 +26,7 @@ using Serilog;
 
 namespace ImageCare.UI.Avalonia.ViewModels;
 
-public class MainWindowViewModel : ViewModelBase
+internal class MainWindowViewModel : ViewModelBase
 {
 	private readonly IRegionManager _regionManager;
 	private readonly IMediaPreviewOperationsService _fileOperationsService;
@@ -36,8 +36,13 @@ public class MainWindowViewModel : ViewModelBase
     private readonly IMapper _mapper;
 	private readonly SynchronizationContext _synchronizationContext;
 	private readonly ILogger _logger;
+    private readonly MainImageViewModel _mainImageViewModel;
+    private readonly MainVideoViewModel _mainVideoViewModel;
 	private CompositeDisposable _subscriptions;
 	private SelectedMediaPreview? _currentSelectedPreview;
+    private bool _isImageViewVisible = true;
+    private bool _isVideoViewVisible;
+    private bool _isInitialized;
 
 	public MainWindowViewModel(IRegionManager regionManager,
 							   IMediaPreviewOperationsService fileOperationsService,
@@ -45,6 +50,8 @@ public class MainWindowViewModel : ViewModelBase
 							   INotificationService notificationService,
 							   IFolderHistoryService folderHistoryService,
 							   IMapper mapper,
+                               MainImageViewModel mainImageViewModel,
+                               MainVideoViewModel mainVideoViewModel,
 							   SynchronizationContext synchronizationContext,
 							   ILogger logger)
 	{
@@ -54,6 +61,8 @@ public class MainWindowViewModel : ViewModelBase
 		_notificationService = notificationService;
         _folderHistoryService = folderHistoryService;
         _mapper = mapper;
+        _mainImageViewModel = mainImageViewModel;
+        _mainVideoViewModel = mainVideoViewModel;
 		_synchronizationContext = synchronizationContext;
 		_logger = logger;
 
@@ -71,6 +80,22 @@ public class MainWindowViewModel : ViewModelBase
 	public ICommand CopySelectedPreviewCommand { get; }
 
 	public ICommand MoveSelectedPreviewCommand { get; }
+
+    public MainImageViewModel MainImageViewModel => _mainImageViewModel;
+
+    public MainVideoViewModel MainVideoViewModel => _mainVideoViewModel;
+
+    public bool IsImageViewVisible
+    {
+        get => _isImageViewVisible;
+        private set => SetProperty(ref _isImageViewVisible, value);
+    }
+
+    public bool IsVideoViewVisible
+    {
+        get => _isVideoViewVisible;
+        private set => SetProperty(ref _isVideoViewVisible, value);
+    }
 
 	private async Task CopyImagePreviewAsync()
 	{
@@ -187,15 +212,21 @@ public class MainWindowViewModel : ViewModelBase
 	{
 		try
 		{
-			if (preview.MediaFormat.MediaType == MediaType.Video && !_regionManager.Regions[RegionNames.MainImageViewRegion].ActiveViews.Any(v => v is MainVideoView))
-			{
-				_regionManager.RequestNavigate(RegionNames.MainImageViewRegion, "MainVideoView", new NavigationParameters { { "imagePreview", preview } });
-			}
-
-			if (preview.MediaFormat.MediaType == MediaType.Image && !_regionManager.Regions[RegionNames.MainImageViewRegion].ActiveViews.Any(v => v is MainImageView))
-			{
-				_regionManager.RequestNavigate(RegionNames.MainImageViewRegion, "MainImageView", new NavigationParameters { { "imagePreview", preview } });
-			}
+            switch (preview.MediaFormat.MediaType)
+            {
+                case MediaType.Video:
+                    _mainImageViewModel.Deactivate();
+                    IsImageViewVisible = false;
+                    IsVideoViewVisible = true;
+                    _mainVideoViewModel.Show(preview);
+                    break;
+                case MediaType.Image:
+                    _mainVideoViewModel.Deactivate();
+                    IsVideoViewVisible = false;
+                    IsImageViewVisible = true;
+                    _mainImageViewModel.Show(preview);
+                    break;
+            }
 
 			_currentSelectedPreview = preview;
 			NotifyFileOperationCommandsCanExecuteChanged();
@@ -233,13 +264,19 @@ public class MainWindowViewModel : ViewModelBase
 
 	private void OnViewLoaded()
 	{
+        if (_isInitialized)
+        {
+            return;
+        }
+
+        _isInitialized = true;
+
 		try
 		{
 			_folderHistoryService.LoadHistory();
 
 			_regionManager.RequestNavigate(RegionNames.SourceFoldersRegion, "FoldersView", OnNavigationResult, new NavigationParameters { { "panel", FileManagerPanel.Left } });
 			_regionManager.RequestNavigate(RegionNames.TargetFoldersRegion, "FoldersView", new NavigationParameters { { "panel", FileManagerPanel.Right } });
-			_regionManager.RequestNavigate(RegionNames.MainImageViewRegion, "MainImageView");
 			_regionManager.RequestNavigate(RegionNames.SourcePreviewImageRegion, "PreviewPanelView", new NavigationParameters { { "panel", FileManagerPanel.Left } });
 			_regionManager.RequestNavigate(RegionNames.TargetPreviewImageRegion, "PreviewPanelView", new NavigationParameters { { "panel", FileManagerPanel.Right } });
 			_regionManager.RequestNavigate(RegionNames.BottomBarRegion, "BottomBarView");
@@ -256,6 +293,7 @@ public class MainWindowViewModel : ViewModelBase
 		}
 		catch (Exception ex)
 		{
+            _isInitialized = false;
 			_logger.Error(ex, "Error during MainWindowViewModel initialization");
 		}
 	}
