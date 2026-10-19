@@ -1,15 +1,17 @@
-﻿using System;
+using System;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
+using System.Threading.Tasks;
 using System.Windows.Input;
 
 using DynamicData;
 using DynamicData.Binding;
 using ImageCare.Core.Domain.Logs;
 using ImageCare.Core.Services.LogEventService;
+using ImageCare.UI.Avalonia.Services;
 using ImageCare.UI.Avalonia.ViewModels.Domain.Logs;
 
 using MapsterMapper;
@@ -26,6 +28,7 @@ internal sealed class LogViewerViewModel : ViewModelBase, IDialogAware, IDisposa
     private readonly ILogNotificationService _logNotificationService;
     private readonly IMapper _mapper;
     private readonly ILogger _logger;
+    private readonly IClipboardService _clipboardService;
     private readonly ReadOnlyObservableCollection<LogMessageViewModel> _messageViewModels;
     private readonly SourceList<LogMessageViewModel> _sourceList = new();
     private readonly Subject<string> _filterChanged;
@@ -40,12 +43,14 @@ internal sealed class LogViewerViewModel : ViewModelBase, IDialogAware, IDisposa
     public LogViewerViewModel(ILogEventService logEventService,
                               ILogNotificationService logNotificationService,
                               IMapper mapper,
-                              ILogger logger)
+                              ILogger logger,
+                              IClipboardService clipboardService)
     {
         _logEventService = logEventService ?? throw new ArgumentNullException(nameof(logEventService));
         _logNotificationService = logNotificationService ?? throw new ArgumentNullException(nameof(logNotificationService));
         _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _clipboardService = clipboardService ?? throw new ArgumentNullException(nameof(clipboardService));
 
         _filterChanged = new Subject<string>();
 
@@ -58,6 +63,7 @@ internal sealed class LogViewerViewModel : ViewModelBase, IDialogAware, IDisposa
                    .Subscribe();
         _filterChanged.OnNext(string.Empty);
 
+        CopyMessageCommand = CreateAsyncCommand<LogMessageViewModel>(CopyMessageAsync);
         ClearMessagesCommand = CreateCommand(ClearMessages, CanClearMessages)
             .ObservesProperty(() => MessageViewModels.Count);
     }
@@ -97,6 +103,8 @@ internal sealed class LogViewerViewModel : ViewModelBase, IDialogAware, IDisposa
         get => _warningsCount;
         set => SetProperty(ref _warningsCount, value);
     }
+
+    public ICommand CopyMessageCommand { get; }
 
     public ICommand ClearMessagesCommand { get; }
 
@@ -267,6 +275,24 @@ internal sealed class LogViewerViewModel : ViewModelBase, IDialogAware, IDisposa
     private void OnWarningsCountUpdated(int warningsCount)
     {
         WarningsCount = warningsCount;
+    }
+
+    private async Task CopyMessageAsync(LogMessageViewModel message)
+    {
+        try
+        {
+            var text = $"{message.Timestamp:G}{Environment.NewLine}{message.Message}";
+            if (!string.IsNullOrWhiteSpace(message.ExceptionMessage))
+            {
+                text += Environment.NewLine + message.ExceptionMessage;
+            }
+
+            await _clipboardService.CopyToClipboardAsync(text);
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "Failed to copy log message to clipboard");
+        }
     }
 
     private bool CanClearMessages()

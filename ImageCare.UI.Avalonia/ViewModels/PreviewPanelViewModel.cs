@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reactive;
 using System.Reactive.Disposables;
+using System.Reactive.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
@@ -171,9 +172,18 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
 
         _disposable = new CompositeDisposable
         {
-            _fileSystemWatcherService.FileCreated.Subscribe(OnFileCreated),
-            _fileSystemWatcherService.FileDeleted.Subscribe(OnFileDeleted),
-            _fileSystemWatcherService.FileRenamed.Subscribe(OnFileRenamed),
+            _fileSystemWatcherService.FileCreated
+                                     .ObserveOn(_synchronizationContext)
+                                     .Subscribe(OnFileCreated),
+            _fileSystemWatcherService.FileDeleted
+                                     .ObserveOn(_synchronizationContext)
+                                     .Subscribe(OnFileDeleted),
+            _fileSystemWatcherService.FileRenamed
+                                     .ObserveOn(_synchronizationContext)
+                                     .Subscribe(OnFileRenamed),
+            _fileOperationsService.FileOperationCompleted
+                                  .ObserveOn(_synchronizationContext)
+                                  .Subscribe(OnFileOperationCompleted),
             _folderService.FileSystemItemSelected.Subscribe(OnFolderSelected),
             _fileOperationsService.ImagePreviewSelected.Subscribe(OnImagePreviewSelected),
             _folderClusterizationService.ClusterizationCompleted.Subscribe(OnClusterizationCompleted),
@@ -361,22 +371,33 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
             var mediaPreviewViewModel = _mapper.Map<MediaPreviewViewModel>(previewImage);
 
             var metadata = await _imageService.GetMediaMetadataAsync(previewImage);
+            mediaPreviewViewModel.FileDate = metadata.CreationDateTime;
             mediaPreviewViewModel.MetadataString = metadata.GetString();
             mediaPreviewViewModel.DateTimeString = metadata.CreationDateTime.ToString("dd.MM.yyyy HH:mm");
             mediaPreviewViewModel.Metadata = metadata;
+            mediaPreviewViewModel.RotateAngle = metadata.Orientation.ToRotationAngle();
 
-            mediaPreviewViewModel.RotateAngle = mediaPreviewViewModel.Metadata.Orientation.ToRotationAngle();
-            _ = mediaPreviewViewModel.LoadPreviewAsync(CancellationToken.None);
-
+            var added = false;
             _synchronizationContext.Send(
                 d =>
                 {
+                    if (ImagePreviews.Any(existing => PathsEqual(existing.Url, mediaPreviewViewModel.Url)))
+                    {
+                        return;
+                    }
+
                     ImagePreviews.Add(mediaPreviewViewModel);
+                    added = true;
                     var index = ImagePreviews.IndexOf(mediaPreviewViewModel);
                     IndexInView = -1;
                     IndexInView = index;
                 },
                 null);
+
+            if (added)
+            {
+                await mediaPreviewViewModel.LoadPreviewAsync(CancellationToken.None);
+            }
         }
         catch (Exception ex)
         {
@@ -467,28 +488,20 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
 
     private void OnFileCreated(FileModel fileModel)
     {
-        lock (_imagePathsLock)
-        {
-            _imagePaths.Add(fileModel);
-        }
-
-        CreateImagePreviewFromPathAsync(fileModel.FullName, true);
+        AddFilePath(fileModel);
+        _ = CreateImagePreviewFromPathAsync(fileModel.FullName, true);
     }
 
     private void OnFileDeleted(FileModel fileModel)
     {
         try
         {
-            lock (_imagePathsLock)
-            {
-                _imagePaths.Remove(fileModel);
-            }
-
+            RemoveFilePath(fileModel.FullName);
             RemoveImagePreviewByPath(fileModel.FullName);
         }
         catch (Exception ex)
         {
-            _logger.Error(ex, $"Unexpected exception during handling of file deletion: {fileModel.FullName}");
+            _logger.Error(ex, "Unexpected exception during handling of file deletion: {Path}", fileModel.FullName);
         }
     }
 
@@ -496,24 +509,74 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
     {
         try
         {
-            lock (_imagePathsLock)
-            {
-                _imagePaths.Remove(model.OldFileModel);
-            }
-
+            RemoveFilePath(model.OldFileModel.FullName);
             RemoveImagePreviewByPath(model.OldFileModel.FullName);
-
-            lock (_imagePathsLock)
-            {
-                _imagePaths.Add(model.NewFileModel);
-            }
-
-            CreateImagePreviewFromPathAsync(model.NewFileModel.FullName, false);
+            AddFilePath(model.NewFileModel);
+            _ = CreateImagePreviewFromPathAsync(model.NewFileModel.FullName, false);
         }
         catch (Exception ex)
         {
-            _logger.Error(ex, $"Unexpected exception during handling of file renaming: {model.OldFileModel.FullName}");
+            _logger.Error(ex, "Unexpected exception during handling of file renaming: {Path}", model.OldFileModel.FullName);
         }
+    }
+
+    private void OnFileOperationCompleted(MediaFileOperationCompleted operation)
+    {
+        var sourceDirectory = System.IO.Path.GetDirectoryName(operation.SourcePath);
+        if (operation.Kind is MediaFileOperationKind.Move or MediaFileOperationKind.Delete &&
+            PathsEqual(sourceDirectory, SelectedFolderPath))
+        {
+            RemoveFilePath(operation.SourcePath);
+            RemoveImagePreviewByPath(operation.SourcePath);
+        }
+
+        if (operation.Kind is MediaFileOperationKind.Copy or MediaFileOperationKind.Move &&
+            operation.DestinationPath is { } destinationPath &&
+            PathsEqual(System.IO.Path.GetDirectoryName(destinationPath), SelectedFolderPath))
+        {
+            var fileModel = new FileModel(System.IO.Path.GetFileName(destinationPath), destinationPath, null);
+            AddFilePath(fileModel);
+            _ = CreateImagePreviewFromPathAsync(destinationPath, true);
+        }
+    }
+
+    private void AddFilePath(FileModel fileModel)
+    {
+        lock (_imagePathsLock)
+        {
+            if (_imagePaths.All(existing => !PathsEqual(existing.FullName, fileModel.FullName)))
+            {
+                _imagePaths.Add(fileModel);
+            }
+        }
+    }
+
+    private void RemoveFilePath(string filePath)
+    {
+        lock (_imagePathsLock)
+        {
+            var existing = _imagePaths.FirstOrDefault(file => PathsEqual(file.FullName, filePath));
+            if (existing != null)
+            {
+                _imagePaths.Remove(existing);
+            }
+        }
+    }
+
+    private static bool PathsEqual(string? left, string? right)
+    {
+        if (left == null || right == null)
+        {
+            return false;
+        }
+
+        var comparison = OperatingSystem.IsWindows()
+            ? StringComparison.OrdinalIgnoreCase
+            : StringComparison.Ordinal;
+        return string.Equals(
+            System.IO.Path.TrimEndingDirectorySeparator(left),
+            System.IO.Path.TrimEndingDirectorySeparator(right),
+            comparison);
     }
 
     private async Task CreateImagePreviewFromPathAsync(string filePath, bool loadToTimeline)
@@ -544,7 +607,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
     {
         try
         {
-            var imagePreviewViewModel = ImagePreviews.FirstOrDefault(vm => vm.Url.Equals(filePath, StringComparison.OrdinalIgnoreCase));
+            var imagePreviewViewModel = ImagePreviews.FirstOrDefault(vm => PathsEqual(vm.Url, filePath));
             if (imagePreviewViewModel != null)
             {
                 var indexToRemove = ImagePreviews.IndexOf(imagePreviewViewModel);
@@ -653,9 +716,22 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
         foreach (var fileModel in chunk)
         {
             token.ThrowIfCancellationRequested();
+
             var previewImage = await _imageService.GetMediaPreviewAsync(fileModel.FullName);
+            if (previewImage == null)
+            {
+                continue;
+            }
+
+            var metadata = await _imageService.GetMediaMetadataAsync(previewImage);
+            token.ThrowIfCancellationRequested();
+
             var mediaPreviewViewModel = _mapper.Map<MediaPreviewViewModel>(previewImage);
-            mediaPreviewViewModel.FileDate = fileModel.CreatedDateTime.Value;
+            mediaPreviewViewModel.FileDate = metadata.CreationDateTime;
+            mediaPreviewViewModel.MetadataString = metadata.GetString();
+            mediaPreviewViewModel.DateTimeString = metadata.CreationDateTime.ToString("dd.MM.yyyy HH:mm");
+            mediaPreviewViewModel.Metadata = metadata;
+            mediaPreviewViewModel.RotateAngle = metadata.Orientation.ToRotationAngle();
             previews.Add(mediaPreviewViewModel);
         }
 

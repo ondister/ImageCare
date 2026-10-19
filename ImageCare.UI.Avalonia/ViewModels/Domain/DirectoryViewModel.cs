@@ -43,6 +43,8 @@ internal class DirectoryViewModel : ViewModelBase, IComparable<DirectoryViewMode
     private readonly SemaphoreSlim _loadingSemaphore = new SemaphoreSlim(1, 1);
     private TaskCompletionSource<bool>? _loadingCompletionSource;
     private bool _isSelected;
+    private bool _isRenaming;
+    private DirectoryViewModel? _parent;
 
     public DirectoryViewModel(string? name,
                               string path,
@@ -59,6 +61,10 @@ internal class DirectoryViewModel : ViewModelBase, IComparable<DirectoryViewMode
 
         ChildFileSystemItems = new Collections.SortedObservableCollection<DirectoryViewModel>(children);
         ChildFileSystemItems.CollectionChanged += OnChildFileSystemItemsCollectionChanged;
+        foreach (var child in ChildFileSystemItems)
+        {
+            child._parent = this;
+        }
 
         Name = name;
         Path = path;
@@ -181,7 +187,7 @@ internal class DirectoryViewModel : ViewModelBase, IComparable<DirectoryViewMode
         FileManagerPanel = panel;
         foreach (var child in ChildFileSystemItems)
         {
-            child.FileManagerPanel = FileManagerPanel;
+            child.SetFileManagerPanel(panel);
         }
     }
 
@@ -189,8 +195,9 @@ internal class DirectoryViewModel : ViewModelBase, IComparable<DirectoryViewMode
     {
         try
         {
+            var oldPath = Path;
             Name = newDirectoryModel.Name;
-            Path = newDirectoryModel.Path;
+            UpdatePathRecursively(oldPath, newDirectoryModel.Path);
         }
         catch (Exception ex)
         {
@@ -198,29 +205,78 @@ internal class DirectoryViewModel : ViewModelBase, IComparable<DirectoryViewMode
         }
     }
 
+    private void UpdatePathRecursively(string oldBasePath, string newBasePath)
+    {
+        Path = newBasePath;
+
+        foreach (var child in ChildFileSystemItems)
+        {
+            var relativePath = System.IO.Path.GetRelativePath(oldBasePath, child.Path);
+            child.UpdatePathRecursively(child.Path, System.IO.Path.Combine(newBasePath, relativePath));
+        }
+    }
+
     private void RenameFolder()
     {
+        if (!IsEditing || _isRenaming)
+        {
+            return;
+        }
+
+        _isRenaming = true;
         try
         {
-            if (string.IsNullOrWhiteSpace(EditableName))
+            var requestedName = EditableName?.Trim();
+            if (string.IsNullOrWhiteSpace(requestedName))
             {
                 EditableName = Name;
-                IsEditing = false;
                 return;
             }
 
-            var newName = _fileSystemService.RenameFolder(EditableName, Path);
-            if (!string.IsNullOrEmpty(newName))
+            if (string.Equals(requestedName, Name, StringComparison.Ordinal))
             {
-                Name = newName;
+                return;
             }
 
-            IsEditing = false;
+            var oldDirectory = _mapper.Map<DirectoryModel>(this);
+            var newName = _fileSystemService.RenameFolder(requestedName, oldDirectory.Path);
+            if (string.IsNullOrEmpty(newName) || string.Equals(newName, Name, StringComparison.Ordinal))
+            {
+                EditableName = Name;
+                return;
+            }
+
+            var parentPath = System.IO.Path.GetDirectoryName(oldDirectory.Path)
+                             ?? throw new InvalidOperationException($"Cannot rename root directory '{oldDirectory.Path}'");
+            var renamedDirectory = new DirectoryModel(newName, System.IO.Path.Combine(parentPath, newName));
+
+            if (IsExpanded)
+            {
+                _folderService.RemoveVisitingFolder(oldDirectory, FileManagerPanel);
+            }
+
+            UpdateDirectory(renamedDirectory);
+            _parent?.ChildFileSystemItems.RefreshSort();
+
+            if (IsExpanded)
+            {
+                _folderService.AddVisitingFolder(renamedDirectory, FileManagerPanel);
+            }
+
+            if (IsSelected)
+            {
+                _folderService.SetSelectedDirectory(new SelectedDirectory(renamedDirectory, FileManagerPanel));
+            }
         }
         catch (Exception ex)
         {
             _logger.Error(ex, "Failed to rename folder from {OldName} to {NewName}", Name, EditableName);
-            EditableName = Name; // Restore on error
+            EditableName = Name;
+        }
+        finally
+        {
+            IsEditing = false;
+            _isRenaming = false;
         }
     }
 
@@ -240,7 +296,10 @@ internal class DirectoryViewModel : ViewModelBase, IComparable<DirectoryViewMode
     {
         try
         {
-            RenameFolder();
+            if (IsEditing && !_isRenaming)
+            {
+                RenameFolder();
+            }
         }
         catch (Exception ex)
         {
@@ -316,7 +375,8 @@ internal class DirectoryViewModel : ViewModelBase, IComparable<DirectoryViewMode
             {
                 foreach (var item in eventArgs.NewItems.OfType<DirectoryViewModel>())
                 {
-                    item.FileManagerPanel = FileManagerPanel;
+                    item._parent = this;
+                    item.SetFileManagerPanel(FileManagerPanel);
                 }
             }
         }
@@ -416,14 +476,21 @@ internal class DirectoryViewModel : ViewModelBase, IComparable<DirectoryViewMode
     {
         try
         {
-
             var createdSubFolder = _folderService.CreateSubFolder(_mapper.Map<DirectoryModel>(this));
-            if (createdSubFolder != null)
+            if (createdSubFolder == null)
             {
-                var createdViewModel = _mapper.Map<DirectoryViewModel>(createdSubFolder);
-                ChildFileSystemItems.Add(createdViewModel);
-                createdViewModel.IsEditing = true;
+                return;
             }
+
+            var createdViewModel = ChildFileSystemItems.FirstOrDefault(child =>
+                child.Path.Equals(createdSubFolder.Path, StringComparison.OrdinalIgnoreCase));
+            if (createdViewModel == null)
+            {
+                createdViewModel = _mapper.Map<DirectoryViewModel>(createdSubFolder);
+                ChildFileSystemItems.Add(createdViewModel);
+            }
+
+            createdViewModel.IsEditing = true;
         }
         catch (Exception ex)
         {
@@ -435,10 +502,30 @@ internal class DirectoryViewModel : ViewModelBase, IComparable<DirectoryViewMode
     {
         try
         {
-            if (!HasSupportedMedia)
+            if (HasSupportedMedia)
             {
-                _folderService.RemoveFolder(_mapper.Map<DirectoryModel>(this));
+                return;
             }
+
+            var deletedDirectory = _mapper.Map<DirectoryModel>(this);
+            _folderService.RemoveFolder(deletedDirectory);
+            if (_fileSystemService.DirectoryExists(deletedDirectory.Path))
+            {
+                return;
+            }
+
+            if (IsExpanded)
+            {
+                _folderService.RemoveVisitingFolder(deletedDirectory, FileManagerPanel);
+            }
+
+            if (IsSelected)
+            {
+                _folderService.SetSelectedDirectory(new SelectedDirectory(DirectoryModel.Empty, FileManagerPanel));
+            }
+
+            _parent?.ChildFileSystemItems.Remove(this);
+            _parent = null;
         }
         catch (Exception ex)
         {

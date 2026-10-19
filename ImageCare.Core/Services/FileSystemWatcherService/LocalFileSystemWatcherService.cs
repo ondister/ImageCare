@@ -21,6 +21,7 @@ public sealed class LocalFileSystemWatcherService : IFileSystemWatcherService, I
     private readonly Subject<DirectoryRenamedModel> _directoryRenamedSubject;
 
     private readonly CompositeDisposable _subscriptions = new();
+    private readonly object _watcherRestartLock = new();
     private bool _disposed;
 
     public LocalFileSystemWatcherService()
@@ -142,6 +143,43 @@ public sealed class LocalFileSystemWatcherService : IFileSystemWatcherService, I
     {
         SubscribeToFileEvents();
         SubscribeToDirectoryEvents();
+
+        var filesErrorSubscription = Observable
+                                     .FromEventPattern<ErrorEventHandler, ErrorEventArgs>(
+                                         h => _filesWatcher.Error += h,
+                                         h => _filesWatcher.Error -= h)
+                                     .Subscribe(_ => RestartWatchers());
+        var directoriesErrorSubscription = Observable
+                                           .FromEventPattern<ErrorEventHandler, ErrorEventArgs>(
+                                               h => _directoriesWatcher.Error += h,
+                                               h => _directoriesWatcher.Error -= h)
+                                           .Subscribe(_ => RestartWatchers());
+
+        _subscriptions.Add(filesErrorSubscription);
+        _subscriptions.Add(directoriesErrorSubscription);
+    }
+
+    private void RestartWatchers()
+    {
+        lock (_watcherRestartLock)
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            if (!string.IsNullOrWhiteSpace(_filesWatcher.Path) && Directory.Exists(_filesWatcher.Path))
+            {
+                _filesWatcher.EnableRaisingEvents = false;
+                _filesWatcher.EnableRaisingEvents = true;
+            }
+
+            if (!string.IsNullOrWhiteSpace(_directoriesWatcher.Path) && Directory.Exists(_directoriesWatcher.Path))
+            {
+                _directoriesWatcher.EnableRaisingEvents = false;
+                _directoriesWatcher.EnableRaisingEvents = true;
+            }
+        }
     }
 
     private void SubscribeToFileEvents()
@@ -162,7 +200,8 @@ public sealed class LocalFileSystemWatcherService : IFileSystemWatcherService, I
                                           h => _filesWatcher.Deleted += h,
                                           h => _filesWatcher.Deleted -= h)
                                       .Select(e => CreateFileModel(e.EventArgs))
-                                      .Throttle(TimeSpan.FromMilliseconds(100))
+                                      .GroupBy(file => file.FullName)
+                                      .SelectMany(group => group.Throttle(TimeSpan.FromMilliseconds(100)))
                                       .Subscribe(_fileDeletedSubject);
 
         _subscriptions.Add(fileDeletedSubscription);
@@ -186,7 +225,8 @@ public sealed class LocalFileSystemWatcherService : IFileSystemWatcherService, I
                                                h => _directoriesWatcher.Created += h,
                                                h => _directoriesWatcher.Created -= h)
                                            .Select(e => CreateDirectoryModel(e.EventArgs.FullPath))
-                                           .Throttle(TimeSpan.FromMilliseconds(100))
+                                           .GroupBy(directory => directory.Path)
+                                           .SelectMany(group => group.Throttle(TimeSpan.FromMilliseconds(100)))
                                            .Subscribe(_directoryCreatedSubject);
 
         _subscriptions.Add(directoryCreatedSubscription);
@@ -196,7 +236,8 @@ public sealed class LocalFileSystemWatcherService : IFileSystemWatcherService, I
                                                h => _directoriesWatcher.Deleted += h,
                                                h => _directoriesWatcher.Deleted -= h)
                                            .Select(e => CreateDirectoryModel(e.EventArgs.FullPath))
-                                           .Throttle(TimeSpan.FromMilliseconds(100))
+                                           .GroupBy(directory => directory.Path)
+                                           .SelectMany(group => group.Throttle(TimeSpan.FromMilliseconds(100)))
                                            .Subscribe(_directoryDeletedSubject);
 
         _subscriptions.Add(directoryDeletedSubscription);

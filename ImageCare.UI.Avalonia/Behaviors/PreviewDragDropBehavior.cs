@@ -2,7 +2,12 @@ using System;
 
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Input;
+using Avalonia.Interactivity;
+using Avalonia.Media;
+
+using ImageCare.UI.Avalonia.ViewModels.Domain;
 
 namespace ImageCare.UI.Avalonia.Behaviors;
 
@@ -22,6 +27,7 @@ public sealed class PreviewDragDropBehavior
             "DragSourceState");
 
     private static object? _sourceContext;
+    private static DragPreviewState? _dragPreview;
 
     static PreviewDragDropBehavior()
     {
@@ -99,9 +105,10 @@ public sealed class PreviewDragDropBehavior
 
         state.IsDragging = true;
         _sourceContext = state.SourceContext;
+        ShowDragPreview(control, state.SourceContext, e);
 
         var item = new DataTransferItem();
-        item.SetText(state.SourceContext?.ToString() ?? string.Empty);
+        item.SetText((state.SourceContext as MediaPreviewViewModel)?.Url ?? string.Empty);
         var data = new DataTransfer();
         data.Add(item);
 
@@ -114,6 +121,7 @@ public sealed class PreviewDragDropBehavior
         }
         finally
         {
+            HideDragPreview();
             _sourceContext = null;
             control.ClearValue(DragSourceStateProperty);
         }
@@ -144,7 +152,7 @@ public sealed class PreviewDragDropBehavior
         e.Handled = true;
     }
 
-    private static void OnDrop(object? sender, DragEventArgs e)
+    private static async void OnDrop(object? sender, DragEventArgs e)
     {
         if (sender is not ListBox listBox || GetDropHandler(listBox) is not { } handler)
         {
@@ -152,8 +160,93 @@ public sealed class PreviewDragDropBehavior
         }
 
         e.DragEffects = GetRequestedEffect(e.KeyModifiers);
-        handler.Execute(listBox, e, _sourceContext, listBox.DataContext, null);
         e.Handled = true;
+        await handler.ExecuteAsync(listBox, e, _sourceContext, listBox.DataContext, null);
+    }
+
+    private static void ShowDragPreview(Control source, object? sourceContext, PointerEventArgs pointerEventArgs)
+    {
+        HideDragPreview();
+
+        if (sourceContext is not MediaPreviewViewModel { PreviewBitmap: { } bitmap } ||
+            TopLevel.GetTopLevel(source) is not { } topLevel ||
+            OverlayLayer.GetOverlayLayer(source) is not { } overlayLayer)
+        {
+            return;
+        }
+
+        var previewImage = new Image
+        {
+            Source = bitmap,
+            Stretch = Stretch.Uniform
+        };
+        var previewFrame = new Border
+        {
+            Width = 180,
+            Height = 130,
+            Padding = new Thickness(6),
+            CornerRadius = new CornerRadius(6),
+            Background = new SolidColorBrush(Color.FromArgb(180, 24, 24, 24)),
+            BorderBrush = new SolidColorBrush(Color.FromArgb(210, 255, 255, 255)),
+            BorderThickness = new Thickness(1),
+            Opacity = 0.62,
+            IsHitTestVisible = false,
+            Child = previewImage
+        };
+        var overlay = new Canvas
+        {
+            IsHitTestVisible = false
+        };
+        overlay.Children.Add(previewFrame);
+        overlayLayer.Children.Add(overlay);
+
+        var previousAllowDrop = DragDrop.GetAllowDrop(topLevel);
+        DragDrop.SetAllowDrop(topLevel, true);
+        topLevel.AddHandler(
+            DragDrop.DragOverEvent,
+            OnTopLevelDragOver,
+            RoutingStrategies.Tunnel | RoutingStrategies.Bubble,
+            handledEventsToo: true);
+
+        _dragPreview = new DragPreviewState(
+            topLevel,
+            overlayLayer,
+            overlay,
+            previewFrame,
+            previousAllowDrop);
+        UpdateDragPreview(pointerEventArgs.GetPosition(topLevel));
+    }
+
+    private static void OnTopLevelDragOver(object? sender, DragEventArgs e)
+    {
+        if (_dragPreview is { TopLevel: var topLevel })
+        {
+            UpdateDragPreview(e.GetPosition(topLevel));
+        }
+    }
+
+    private static void UpdateDragPreview(Point pointerPosition)
+    {
+        if (_dragPreview is not { PreviewFrame: var previewFrame })
+        {
+            return;
+        }
+
+        Canvas.SetLeft(previewFrame, pointerPosition.X + 16);
+        Canvas.SetTop(previewFrame, pointerPosition.Y + 16);
+    }
+
+    private static void HideDragPreview()
+    {
+        if (_dragPreview is not { } preview)
+        {
+            return;
+        }
+
+        preview.TopLevel.RemoveHandler(DragDrop.DragOverEvent, OnTopLevelDragOver);
+        DragDrop.SetAllowDrop(preview.TopLevel, preview.PreviousAllowDrop);
+        preview.OverlayLayer.Children.Remove(preview.Overlay);
+        _dragPreview = null;
     }
 
     private static DragDropEffects GetRequestedEffect(KeyModifiers modifiers) =>
@@ -171,4 +264,11 @@ public sealed class PreviewDragDropBehavior
         public object? SourceContext { get; } = sourceContext;
         public bool IsDragging { get; set; }
     }
+
+    private sealed record DragPreviewState(
+        TopLevel TopLevel,
+        OverlayLayer OverlayLayer,
+        Canvas Overlay,
+        Border PreviewFrame,
+        bool PreviousAllowDrop);
 }

@@ -13,6 +13,7 @@ namespace ImageCare.Core.Services.MediaPreviewOperationsService;
 public sealed class WindowsMediaPreviewOperationsService : IMediaPreviewOperationsService, IDisposable
 {
 	private readonly Subject<SelectedMediaPreview> _selectedImagePreviewSubject;
+	private readonly Subject<MediaFileOperationCompleted> _fileOperationCompletedSubject;
 	private readonly IFileSystemService _fileSystemService;
 	private readonly IProcessService _processService;
 	private readonly ConcurrentDictionary<FileManagerPanel, MediaPreview> _selectedImagePreviews = new();
@@ -23,13 +24,18 @@ public sealed class WindowsMediaPreviewOperationsService : IMediaPreviewOperatio
 		_fileSystemService = fileSystemService ?? throw new ArgumentNullException(nameof(fileSystemService));
 		_processService = processService ?? throw new ArgumentNullException(nameof(processService));
 		_selectedImagePreviewSubject = new Subject<SelectedMediaPreview>();
+		_fileOperationCompletedSubject = new Subject<MediaFileOperationCompleted>();
 	}
 
 	public IObservable<SelectedMediaPreview> ImagePreviewSelected => _selectedImagePreviewSubject.AsObservable();
 
+	public IObservable<MediaFileOperationCompleted> FileOperationCompleted =>
+		_fileOperationCompletedSubject.AsObservable();
+
 	public void Dispose()
 	{
 		_selectedImagePreviewSubject.Dispose();
+		_fileOperationCompletedSubject.Dispose();
 	}
 
 	public Task<OperationResult> CopyImagePreviewToDirectoryAsync(MediaPreview imagePreview,
@@ -52,6 +58,8 @@ public sealed class WindowsMediaPreviewOperationsService : IMediaPreviewOperatio
 			var destinationFilePath = Path.Combine(selectedFolderPath, fileName);
 
 			_fileSystemService.CopyFile(imagePreview.Url, destinationFilePath);
+			_fileOperationCompletedSubject.OnNext(
+				new MediaFileOperationCompleted(MediaFileOperationKind.Copy, imagePreview.Url, destinationFilePath));
 
 			return Task.FromResult(OperationResult.Success);
 		}
@@ -85,6 +93,8 @@ public sealed class WindowsMediaPreviewOperationsService : IMediaPreviewOperatio
 			var destinationFilePath = Path.Combine(selectedFolderPath, fileName);
 
 			_fileSystemService.MoveFile(imagePreview.Url, destinationFilePath);
+			_fileOperationCompletedSubject.OnNext(
+				new MediaFileOperationCompleted(MediaFileOperationKind.Move, imagePreview.Url, destinationFilePath));
 
 			return Task.FromResult(OperationResult.Success);
 		}
@@ -103,6 +113,8 @@ public sealed class WindowsMediaPreviewOperationsService : IMediaPreviewOperatio
 		try
 		{
 			_fileSystemService.SafeDelete(imagePreview.Url);
+			_fileOperationCompletedSubject.OnNext(
+				new MediaFileOperationCompleted(MediaFileOperationKind.Delete, imagePreview.Url));
 
 			return Task.FromResult(OperationResult.Success);
 		}

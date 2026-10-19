@@ -398,15 +398,22 @@ public sealed class LocalFileSystemFolderService : IFolderService, IDisposable
 
     private async Task<DirectoryModel> GetSmartFolderAsync()
     {
-        var rootFolder= new SpecialDirectoryModel("Recent",DirectoryModel.RootPath);
-        var smartFolders = _folderHistoryService.GetSmartFolders(10);
-        foreach (var smartDirectoryModel in smartFolders)
+        var rootFolder = new SpecialDirectoryModel("Recent", DirectoryModel.RootPath);
+        var cachedSmartFolders = _folderHistoryService.GetSmartFolders(10);
+
+        foreach (var cachedSmartFolder in cachedSmartFolders)
         {
-           
-            var firstDirectoryTier = await GetCustomDirectoriesLevelAsync(smartDirectoryModel, true);
-            smartDirectoryModel.AddDirectories(firstDirectoryTier.DirectoryModels);
+            // History entries are cached and shared by both file-manager panels.
+            // Build a panel-specific model so preview loading never mutates the cache concurrently.
+            var smartFolder = new SmartDirectoryModel(
+                cachedSmartFolder.Name,
+                cachedSmartFolder.Path,
+                cachedSmartFolder.MatchCount);
+
+            await GetCustomDirectoriesLevelAsync(smartFolder, true);
+            rootFolder.AddDirectory(smartFolder);
         }
-        rootFolder.AddDirectories(smartFolders);
+
         return rootFolder;
     }
 

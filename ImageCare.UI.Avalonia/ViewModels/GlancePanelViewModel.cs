@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reactive.Disposables;
+using System.Reactive.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
@@ -195,9 +196,18 @@ internal class GlancePanelViewModel : ViewModelBase, IDialogAware
         {
             _disposable = new CompositeDisposable
             {
-                _fileSystemWatcherService.FileCreated.Subscribe(OnFileCreated, onError: OnObservableError),
-                _fileSystemWatcherService.FileDeleted.Subscribe(OnFileDeleted, onError: OnObservableError),
-                _fileSystemWatcherService.FileRenamed.Subscribe(OnFileRenamed, onError: OnObservableError),
+                _fileSystemWatcherService.FileCreated
+                                         .ObserveOn(_synchronizationContext)
+                                         .Subscribe(OnFileCreated, onError: OnObservableError),
+                _fileSystemWatcherService.FileDeleted
+                                         .ObserveOn(_synchronizationContext)
+                                         .Subscribe(OnFileDeleted, onError: OnObservableError),
+                _fileSystemWatcherService.FileRenamed
+                                         .ObserveOn(_synchronizationContext)
+                                         .Subscribe(OnFileRenamed, onError: OnObservableError),
+                _fileOperationsService.FileOperationCompleted
+                                      .ObserveOn(_synchronizationContext)
+                                      .Subscribe(OnFileOperationCompleted, onError: OnObservableError),
                 _folderClusterizationService.ClusterizationCompleted.Subscribe(OnClusterizationCompleted, onError: OnObservableError),
                 TimelineVm.DateSelected.Subscribe(OnTimelineDateSelected, onError: OnObservableError)
             };
@@ -383,7 +393,7 @@ internal class GlancePanelViewModel : ViewModelBase, IDialogAware
                 if (firstChunk)
                 {
                     firstChunk = false;
-                    await LoadChunkAsync(chunk);
+                    await LoadChunkAsync(chunk, token);
                     for (var i = 0; i < initialCount; i++)
                     {
                         if (token.IsCancellationRequested)
@@ -396,7 +406,7 @@ internal class GlancePanelViewModel : ViewModelBase, IDialogAware
                 }
                 else
                 {
-                    await LoadChunkAsync(chunk);
+                    await LoadChunkAsync(chunk, token);
                 }
             }
 
@@ -408,18 +418,33 @@ internal class GlancePanelViewModel : ViewModelBase, IDialogAware
         }
     }
 
-    private async Task LoadChunkAsync(FileModel[] chunk)
+    private async Task LoadChunkAsync(FileModel[] chunk, CancellationToken token)
     {
         var previews = new List<GlanceMediaPreviewViewModel>(chunk.Length);
 
         foreach (var fileModel in chunk)
         {
+            token.ThrowIfCancellationRequested();
+
             var previewImage = await _imageService.GetMediaPreviewAsync(fileModel.FullName);
+            if (previewImage == null)
+            {
+                continue;
+            }
+
+            var metadata = await _imageService.GetMediaMetadataAsync(previewImage);
+            token.ThrowIfCancellationRequested();
+
             var mediaPreviewViewModel = _mapper.Map<GlanceMediaPreviewViewModel>(previewImage);
-            mediaPreviewViewModel.FileDate = fileModel.CreatedDateTime.Value;
+            mediaPreviewViewModel.FileDate = metadata.CreationDateTime;
+            mediaPreviewViewModel.MetadataString = metadata.GetString();
+            mediaPreviewViewModel.DateTimeString = metadata.CreationDateTime.ToString("dd.MM.yyyy HH:mm");
+            mediaPreviewViewModel.Metadata = metadata;
+            mediaPreviewViewModel.RotateAngle = metadata.Orientation.ToRotationAngle();
             previews.Add(mediaPreviewViewModel);
         }
 
+        token.ThrowIfCancellationRequested();
         _synchronizationContext.Send(d => { ImagePreviews.AddRange(previews); }, null);
     }
 
@@ -558,23 +583,14 @@ internal class GlancePanelViewModel : ViewModelBase, IDialogAware
     {
         try
         {
-            lock (_imagePathsLock)
-            {
-                _imagePaths.Remove(model.OldFileModel);
-            }
-
+            RemoveFilePath(model.OldFileModel.FullName);
             RemoveImagePreviewByPath(model.OldFileModel.FullName);
-
-            lock (_imagePathsLock)
-            {
-                _imagePaths.Add(model.NewFileModel);
-            }
-
-            CreateImagePreviewFromPathAsync(model.NewFileModel.FullName, true);
+            AddFilePath(model.NewFileModel);
+            _ = CreateImagePreviewFromPathAsync(model.NewFileModel.FullName, true);
         }
         catch (Exception ex)
         {
-            _logger.Error(ex, $"Unexpected exception during handling of file renaming: {model.OldFileModel.FullName}");
+            _logger.Error(ex, "Unexpected exception during handling of file renaming: {Path}", model.OldFileModel.FullName);
         }
     }
 
@@ -582,27 +598,76 @@ internal class GlancePanelViewModel : ViewModelBase, IDialogAware
     {
         try
         {
-            lock (_imagePathsLock)
-            {
-                _imagePaths.Remove(fileModel);
-            }
-
+            RemoveFilePath(fileModel.FullName);
             RemoveImagePreviewByPath(fileModel.FullName);
         }
         catch (Exception ex)
         {
-            _logger.Error(ex, $"Unexpected exception during handling of file deletion: {fileModel.FullName}");
+            _logger.Error(ex, "Unexpected exception during handling of file deletion: {Path}", fileModel.FullName);
         }
     }
 
     private void OnFileCreated(FileModel fileModel)
     {
-        lock (_imagePathsLock)
+        AddFilePath(fileModel);
+        _ = CreateImagePreviewFromPathAsync(fileModel.FullName, true);
+    }
+
+    private void OnFileOperationCompleted(MediaFileOperationCompleted operation)
+    {
+        if (operation.Kind is MediaFileOperationKind.Move or MediaFileOperationKind.Delete &&
+            PathsEqual(System.IO.Path.GetDirectoryName(operation.SourcePath), SelectedFolderPath))
         {
-            _imagePaths.Add(fileModel);
+            RemoveFilePath(operation.SourcePath);
+            RemoveImagePreviewByPath(operation.SourcePath);
         }
 
-        CreateImagePreviewFromPathAsync(fileModel.FullName, true);
+        if (operation.Kind is MediaFileOperationKind.Copy or MediaFileOperationKind.Move &&
+            operation.DestinationPath is { } destinationPath &&
+            PathsEqual(System.IO.Path.GetDirectoryName(destinationPath), SelectedFolderPath))
+        {
+            AddFilePath(new FileModel(System.IO.Path.GetFileName(destinationPath), destinationPath, null));
+            _ = CreateImagePreviewFromPathAsync(destinationPath, true);
+        }
+    }
+
+    private void AddFilePath(FileModel fileModel)
+    {
+        lock (_imagePathsLock)
+        {
+            if (_imagePaths.All(existing => !PathsEqual(existing.FullName, fileModel.FullName)))
+            {
+                _imagePaths.Add(fileModel);
+            }
+        }
+    }
+
+    private void RemoveFilePath(string filePath)
+    {
+        lock (_imagePathsLock)
+        {
+            var existing = _imagePaths.FirstOrDefault(file => PathsEqual(file.FullName, filePath));
+            if (existing != null)
+            {
+                _imagePaths.Remove(existing);
+            }
+        }
+    }
+
+    private static bool PathsEqual(string? left, string? right)
+    {
+        if (left == null || right == null)
+        {
+            return false;
+        }
+
+        var comparison = OperatingSystem.IsWindows()
+            ? StringComparison.OrdinalIgnoreCase
+            : StringComparison.Ordinal;
+        return string.Equals(
+            System.IO.Path.TrimEndingDirectorySeparator(left),
+            System.IO.Path.TrimEndingDirectorySeparator(right),
+            comparison);
     }
 
     private void OnObservableError(Exception ex)
@@ -641,14 +706,28 @@ internal class GlancePanelViewModel : ViewModelBase, IDialogAware
             var mediaPreviewViewModel = _mapper.Map<GlanceMediaPreviewViewModel>(previewImage);
 
             var metadata = await _imageService.GetMediaMetadataAsync(previewImage);
+            mediaPreviewViewModel.FileDate = metadata.CreationDateTime;
             mediaPreviewViewModel.MetadataString = metadata.GetString();
             mediaPreviewViewModel.DateTimeString = metadata.CreationDateTime.ToString("dd.MM.yyyy HH:mm");
             mediaPreviewViewModel.Metadata = metadata;
+            mediaPreviewViewModel.RotateAngle = metadata.Orientation.ToRotationAngle();
 
-            mediaPreviewViewModel.RotateAngle = mediaPreviewViewModel.Metadata.Orientation.ToRotationAngle();
-            _ = mediaPreviewViewModel.LoadPreviewAsync(CancellationToken.None);
+            var added = false;
+            _synchronizationContext.Send(
+                d =>
+                {
+                    if (ImagePreviews.All(existing => !PathsEqual(existing.Url, mediaPreviewViewModel.Url)))
+                    {
+                        ImagePreviews.Add(mediaPreviewViewModel);
+                        added = true;
+                    }
+                },
+                null);
 
-            _synchronizationContext.Send(d => { ImagePreviews.Add(mediaPreviewViewModel); }, null);
+            if (added)
+            {
+                await mediaPreviewViewModel.LoadPreviewAsync(CancellationToken.None);
+            }
         }
         catch (Exception ex)
         {
@@ -660,12 +739,12 @@ internal class GlancePanelViewModel : ViewModelBase, IDialogAware
     {
         try
         {
-            var imagePreviewViewModel = ImagePreviews.FirstOrDefault(vm => vm.Url.Equals(filePath, StringComparison.OrdinalIgnoreCase));
+            var imagePreviewViewModel = ImagePreviews.FirstOrDefault(vm => PathsEqual(vm.Url, filePath));
             if (imagePreviewViewModel != null)
             {
+                var indexToRemove = ImagePreviews.IndexOf(imagePreviewViewModel);
                 ImagePreviews.Remove(imagePreviewViewModel);
 
-                var indexToRemove = ImagePreviews.IndexOf(imagePreviewViewModel);
                 var indexToLoad = indexToRemove + PreloadRowsCount * ImagesPerLine;
                 if (ImagePreviews.Count > indexToLoad)
                 {

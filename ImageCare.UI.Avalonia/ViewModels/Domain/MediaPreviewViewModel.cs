@@ -165,7 +165,6 @@ internal class MediaPreviewViewModel : ViewModelBase, IComparable<MediaPreviewVi
         {
             SetProperty(ref _metadata, value);
             HasLocation = _metadata != null && _metadata.Location != Location.Empty;
-            FileDate = _metadata.CreationDateTime;
         }
     }
 

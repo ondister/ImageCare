@@ -31,7 +31,7 @@ public sealed class LocalFolderHistoryService : IFolderHistoryService
             return;
         }
 
-        var normalizedPath = Path.GetFullPath(folderPath).TrimEnd(Path.DirectorySeparatorChar);
+        var normalizedPath = Path.TrimEndingDirectorySeparator(Path.GetFullPath(folderPath));
 
         lock (_syncRoot)
         {
@@ -185,8 +185,26 @@ public sealed class LocalFolderHistoryService : IFolderHistoryService
     {
         pathBuilder.Clear();
 
-        var dirs1 = path1.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-        var dirs2 = path2.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        if (string.IsNullOrWhiteSpace(path1) || string.IsNullOrWhiteSpace(path2))
+        {
+            return;
+        }
+
+        var normalizedPath1 = Path.GetFullPath(path1);
+        var normalizedPath2 = Path.GetFullPath(path2);
+        var root1 = Path.GetPathRoot(normalizedPath1) ?? string.Empty;
+        var root2 = Path.GetPathRoot(normalizedPath2) ?? string.Empty;
+
+        if (!string.Equals(root1, root2, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        var separators = new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar };
+        var dirs1 = normalizedPath1[root1.Length..].Split(separators, StringSplitOptions.RemoveEmptyEntries);
+        var dirs2 = normalizedPath2[root2.Length..].Split(separators, StringSplitOptions.RemoveEmptyEntries);
+
+        pathBuilder.Append(root1);
 
         var minLength = Math.Min(dirs1.Length, dirs2.Length);
 
@@ -197,7 +215,9 @@ public sealed class LocalFolderHistoryService : IFolderHistoryService
                 break;
             }
 
-            if (pathBuilder.Length > 0)
+            if (pathBuilder.Length > 0 &&
+                pathBuilder[pathBuilder.Length - 1] != Path.DirectorySeparatorChar &&
+                pathBuilder[pathBuilder.Length - 1] != Path.AltDirectorySeparatorChar)
             {
                 pathBuilder.Append(Path.DirectorySeparatorChar);
             }
@@ -205,7 +225,7 @@ public sealed class LocalFolderHistoryService : IFolderHistoryService
             pathBuilder.Append(dirs1[i]);
 
             var currentPath = pathBuilder.ToString();
-            var rootPath = Path.GetPathRoot(currentPath);
+            var rootPath = root1;
 
             // Skip root paths like "C:\" or empty paths
             if (!string.IsNullOrEmpty(currentPath) && currentPath != rootPath)

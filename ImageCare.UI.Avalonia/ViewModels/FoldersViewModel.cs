@@ -406,12 +406,23 @@ internal class FoldersViewModel : NavigatedViewModelBase
 
             foreach (var directoryViewModel in FileSystemItemViewModels)
             {
-                if (directoryViewModel.FindChildByPathRecursively(parent.Path) is { } parentViewModel)
+                if (directoryViewModel.FindChildByPathRecursively(parent.Path) is not { } parentViewModel)
                 {
-                    parentViewModel.IsExpanded = true;
-
-                    return;
+                    continue;
                 }
+
+                var existing = parentViewModel.ChildFileSystemItems.FirstOrDefault(child =>
+                    child.Path.Equals(directoryModel.Path, StringComparison.OrdinalIgnoreCase));
+                if (existing == null)
+                {
+                    parentViewModel.ChildFileSystemItems.Add(_mapper.Map<DirectoryViewModel>(directoryModel));
+                }
+                else
+                {
+                    existing.UpdateDirectory(directoryModel);
+                }
+
+                return;
             }
         }
         catch (Exception ex)
@@ -470,21 +481,36 @@ internal class FoldersViewModel : NavigatedViewModelBase
 
             foreach (var directoryViewModel in FileSystemItemViewModels)
             {
-                if (directoryViewModel.FindChildByPathRecursively(parent.Path) is { } parentViewModel)
+                if (directoryViewModel.FindChildByPathRecursively(parent.Path) is not { } parentViewModel)
                 {
-                    if (parentViewModel.ChildFileSystemItems.FirstOrDefault(d => d.Path.Equals(directoryRenamedModel.OldDirectoryModel.Path, StringComparison.OrdinalIgnoreCase)) is { } directoryViewModelForRename)
-                    {
-                        directoryViewModelForRename.UpdateDirectory(directoryRenamedModel.NewDirectoryModel);
-                        parentViewModel.ChildFileSystemItems.RefreshSort();
-                        if (directoryRenamedModel.OldDirectoryModel.Path == SelectedFileSystemItem?.Path)
-                        {
-                            SelectedFileSystemItem = null;
-                            SelectedFileSystemItem = directoryViewModelForRename;
-                        }
-                    }
+                    continue;
+                }
 
+                var renamedViewModel = parentViewModel.ChildFileSystemItems.FirstOrDefault(child =>
+                    child.Path.Equals(directoryRenamedModel.OldDirectoryModel.Path, StringComparison.OrdinalIgnoreCase));
+                renamedViewModel ??= parentViewModel.ChildFileSystemItems.FirstOrDefault(child =>
+                    child.Path.Equals(directoryRenamedModel.NewDirectoryModel.Path, StringComparison.OrdinalIgnoreCase));
+                if (renamedViewModel == null)
+                {
                     return;
                 }
+
+                var selectedItem = SelectedFileSystemItem;
+                var selectedWasAffected = selectedItem != null &&
+                    (selectedItem.Path.Equals(directoryRenamedModel.OldDirectoryModel.Path, StringComparison.OrdinalIgnoreCase) ||
+                     selectedItem.Path.StartsWith(directoryRenamedModel.OldDirectoryModel.Path + System.IO.Path.DirectorySeparatorChar,
+                                                  StringComparison.OrdinalIgnoreCase));
+
+                renamedViewModel.UpdateDirectory(directoryRenamedModel.NewDirectoryModel);
+                parentViewModel.ChildFileSystemItems.RefreshSort();
+
+                if (selectedWasAffected && selectedItem != null)
+                {
+                    SelectedFileSystemItem = null;
+                    SelectedFileSystemItem = selectedItem;
+                }
+
+                return;
             }
         }
         catch (Exception ex)

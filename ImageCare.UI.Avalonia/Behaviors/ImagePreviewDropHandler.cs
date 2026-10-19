@@ -1,8 +1,10 @@
-﻿using System;
+using System;
+using System.IO;
+using System.Threading.Tasks;
 
 using Avalonia.Controls;
 using Avalonia.Input;
-using Avalonia.VisualTree;
+
 using ImageCare.Core.Domain.Notification;
 using ImageCare.Core.Domain.Preview;
 using ImageCare.Core.Services.MediaPreviewOperationsService;
@@ -12,6 +14,10 @@ using ImageCare.UI.Avalonia.ViewModels.Domain;
 
 using MapsterMapper;
 
+using Serilog;
+
+using Notification = ImageCare.Core.Domain.Notification.Notification;
+
 namespace ImageCare.UI.Avalonia.Behaviors;
 
 public class ImagePreviewDropHandler
@@ -19,120 +25,114 @@ public class ImagePreviewDropHandler
     private readonly IMediaPreviewOperationsService _fileOperationsService;
     private readonly INotificationService _notificationService;
     private readonly IMapper _mapper;
+    private readonly ILogger _logger;
 
     public ImagePreviewDropHandler(IMediaPreviewOperationsService fileOperationsService,
                                    INotificationService notificationService,
-                                   IMapper mapper)
+                                   IMapper mapper,
+                                   ILogger logger)
     {
         _fileOperationsService = fileOperationsService;
         _notificationService = notificationService;
         _mapper = mapper;
+        _logger = logger;
     }
 
-    /// <inheritdoc />
-    public bool Execute(object? sender, DragEventArgs e, object? sourceContext, object? targetContext, object? state)
+    public async Task<bool> ExecuteAsync(
+        object? sender,
+        DragEventArgs e,
+        object? sourceContext,
+        object? targetContext,
+        object? state)
     {
-        if (e.Source is Control && sender is ListBox listBox)
-        {
-            return Validate<MediaPreviewViewModel>(listBox, e, sourceContext, targetContext, true);
-        }
-
-        return false;
-    }
-
-    /// <inheritdoc />
-    public bool Validate(object? sender, DragEventArgs e, object? sourceContext, object? targetContext, object? state)
-    {
-        if (e.Source is Control && sender is ListBox listBox)
-        {
-            return Validate<MediaPreviewViewModel>(listBox, e, sourceContext, targetContext, false);
-        }
-
-        return false;
-    }
-
-    private bool Validate<T>(ListBox listBox, DragEventArgs e, object? sourceContext, object? targetContext, bool bExecute) where T : MediaPreviewViewModel
-    {
-        if (sourceContext is not T sourceImagePreview
-         || targetContext is not PreviewPanelViewModel previewImageViewModel
-         || listBox.GetVisualAt(e.GetPosition(listBox)) is not Control targetControl)
-        {
-            return true;
-        }
-
-        if (string.IsNullOrEmpty(previewImageViewModel.SelectedFolderPath))
+        if (!Validate(sender, e, sourceContext, targetContext, state) ||
+            sourceContext is not MediaPreviewViewModel sourceImagePreview ||
+            targetContext is not PreviewPanelViewModel targetPanel)
         {
             return false;
         }
 
-        switch (e.DragEffects)
+        var notificationTitle = $"{sourceImagePreview.Url} => {targetPanel.SelectedFolderPath}";
+        _notificationService.SendNotification(new Notification(notificationTitle, string.Empty));
+        var progress = new Progress<OperationInfo>();
+        progress.ProgressChanged += (_, info) =>
+            _notificationService.SendNotification(
+                new Notification(notificationTitle, info.Percentage.ToString("F1")));
+
+        try
         {
-            case DragDropEffects.Copy:
+            var sourcePreview = _mapper.Map<MediaPreview>(sourceImagePreview);
+            var result = e.DragEffects switch
             {
-                if (bExecute && !previewImageViewModel.ImagePreviews.Contains(sourceImagePreview))
-                {
-                    var notificationTitle = $"{sourceImagePreview.Url} => {previewImageViewModel.SelectedFolderPath}";
-                    _notificationService.SendNotification(new Notification(notificationTitle, string.Empty));
+                DragDropEffects.Copy => await _fileOperationsService.CopyImagePreviewToDirectoryAsync(
+                    sourcePreview,
+                    targetPanel.SelectedFolderPath,
+                    progress),
+                DragDropEffects.Move => await _fileOperationsService.MoveImagePreviewToDirectoryAsync(
+                    sourcePreview,
+                    targetPanel.SelectedFolderPath,
+                    progress),
+                _ => OperationResult.Cancelled
+            };
 
-                    var progress = new Progress<OperationInfo>();
-
-                    progress.ProgressChanged += (o, info) => { _notificationService.SendNotification(new Notification(notificationTitle, info.Percentage.ToString("F1"))); };
-
-                    _fileOperationsService.CopyImagePreviewToDirectoryAsync(
-                                              _mapper.Map<MediaPreview>(sourceImagePreview),
-                                              previewImageViewModel.SelectedFolderPath,
-                                              progress)
-                                          .ContinueWith(
-                                              task =>
-                                              {
-                                                  switch (task.Result)
-                                                  {
-                                                      case OperationResult.Success:
-                                                          _notificationService.SendNotification(new SuccessNotification(notificationTitle, ""));
-                                                          break;
-                                                      case OperationResult.Failed:
-                                                          _notificationService.SendNotification(new ErrorNotification(notificationTitle, ""));
-                                                          break;
-                                                  }
-                                              });
-                }
-
-                break;
-            }
-            case DragDropEffects.Move:
+            if (result == OperationResult.Success)
             {
-                if (bExecute && !previewImageViewModel.ImagePreviews.Contains(sourceImagePreview))
-                {
-                    var notificationTitle = $"{sourceImagePreview.Url} => {previewImageViewModel.SelectedFolderPath}";
-                    _notificationService.SendNotification(new Notification(notificationTitle, string.Empty));
-
-                    var progress = new Progress<OperationInfo>();
-
-                    progress.ProgressChanged += (o, info) => { _notificationService.SendNotification(new Notification(notificationTitle, info.Percentage.ToString("F1"))); };
-
-                    _fileOperationsService.MoveImagePreviewToDirectoryAsync(
-                                              _mapper.Map<MediaPreview>(sourceImagePreview),
-                                              previewImageViewModel.SelectedFolderPath,
-                                              progress)
-                                          .ContinueWith(
-                                              task =>
-                                              {
-                                                  switch (task.Result)
-                                                  {
-                                                      case OperationResult.Success:
-                                                          _notificationService.SendNotification(new SuccessNotification(notificationTitle, ""));
-                                                          break;
-                                                      case OperationResult.Failed:
-                                                          _notificationService.SendNotification(new ErrorNotification(notificationTitle, ""));
-                                                          break;
-                                                  }
-                                              });
-                }
-
-                break;
+                _notificationService.SendNotification(new SuccessNotification(notificationTitle, string.Empty));
+                return true;
             }
+
+            if (result == OperationResult.Failed)
+            {
+                _notificationService.SendNotification(new ErrorNotification(notificationTitle, string.Empty));
+            }
+
+            return false;
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(
+                ex,
+                "Failed to drop media preview from {Source} to {Target}",
+                sourceImagePreview.Url,
+                targetPanel.SelectedFolderPath);
+            _notificationService.SendNotification(new ErrorNotification(notificationTitle, string.Empty));
+            return false;
+        }
+    }
+
+    public bool Validate(
+        object? sender,
+        DragEventArgs e,
+        object? sourceContext,
+        object? targetContext,
+        object? state)
+    {
+        if (sender is not ListBox ||
+            sourceContext is not MediaPreviewViewModel sourceImagePreview ||
+            targetContext is not PreviewPanelViewModel targetPanel ||
+            string.IsNullOrWhiteSpace(targetPanel.SelectedFolderPath))
+        {
+            return false;
         }
 
-        return true;
+        var sourceDirectory = Path.GetDirectoryName(sourceImagePreview.Url);
+        return !PathsEqual(sourceDirectory, targetPanel.SelectedFolderPath) &&
+               e.DragEffects is DragDropEffects.Copy or DragDropEffects.Move;
+    }
+
+    private static bool PathsEqual(string? left, string? right)
+    {
+        if (left == null || right == null)
+        {
+            return false;
+        }
+
+        var comparison = OperatingSystem.IsWindows()
+            ? StringComparison.OrdinalIgnoreCase
+            : StringComparison.Ordinal;
+        return string.Equals(
+            Path.TrimEndingDirectorySeparator(left),
+            Path.TrimEndingDirectorySeparator(right),
+            comparison);
     }
 }
