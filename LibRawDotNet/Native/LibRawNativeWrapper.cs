@@ -5,6 +5,63 @@ namespace LibRawDotNet.Native;
 internal class LibRawNativeWrapper
 {
     private const string LibraryName = @"libraw";
+    private const string CRuntimeLibraryName = @"msvcrt";
+
+    static LibRawNativeWrapper()
+    {
+        NativeLibrary.SetDllImportResolver(typeof(LibRawNativeWrapper).Assembly, ResolveNativeLibrary);
+    }
+
+    /// <summary>
+    ///     Resolves the platform specific native library backing the <see cref="LibraryName" /> and
+    ///     <see cref="CRuntimeLibraryName" /> import names. .NET maps the bare "libraw" name to
+    ///     different file names per OS (libraw.dll on Windows, libraw.dylib on macOS, libraw.so on
+    ///     Linux); we probe the known candidates next to the assembly so the same managed code works
+    ///     on every platform. The Windows C runtime import (msvcrt) is only used on Windows, so on
+    ///     other platforms we hand it the local C runtime instead of letting the load fail.
+    /// </summary>
+    private static IntPtr ResolveNativeLibrary(string libraryName, System.Reflection.Assembly assembly, DllImportSearchPath? searchPath)
+    {
+        if (string.Equals(libraryName, LibraryName, StringComparison.Ordinal))
+        {
+            string[] candidates;
+
+            if (OperatingSystem.IsWindows())
+            {
+                candidates = new[] { "libraw.dll", "libraw" };
+            }
+            else if (OperatingSystem.IsMacOS())
+            {
+                candidates = new[] { "libraw.dylib", "libraw.25.dylib", "liblibraw.dylib", "libraw" };
+            }
+            else
+            {
+                candidates = new[] { "libraw.so", "libraw.so.25", "liblibraw.so", "libraw" };
+            }
+
+            foreach (var candidate in candidates)
+            {
+                if (NativeLibrary.TryLoad(candidate, assembly, searchPath, out var handle))
+                {
+                    return handle;
+                }
+            }
+        }
+
+        if (string.Equals(libraryName, CRuntimeLibraryName, StringComparison.Ordinal) && !OperatingSystem.IsWindows())
+        {
+            foreach (var candidate in new[] { "libc", "libSystem.B.dylib", "libSystem.dylib" })
+            {
+                if (NativeLibrary.TryLoad(candidate, assembly, searchPath, out var handle))
+                {
+                    return handle;
+                }
+            }
+        }
+
+        // Fall back to the default resolver for anything we do not handle explicitly.
+        return IntPtr.Zero;
+    }
 
     // callback functions
     [UnmanagedFunctionPointer(CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
@@ -201,7 +258,7 @@ internal class LibRawNativeWrapper
     public static extern void libraw_dcraw_clear_mem(nint img);
 
     // Microsoft Visual C runtime functions
-    [DllImport("msvcrt", CharSet = CharSet.Ansi)]
+    [DllImport(CRuntimeLibraryName, CharSet = CharSet.Ansi)]
     public static extern nint strerror(int errc);
 
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi /*, Pack = 1 */)]

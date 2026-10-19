@@ -1,5 +1,4 @@
-﻿using System;
-using System.IO;
+using System;
 using System.Threading.Tasks;
 
 using Avalonia;
@@ -16,19 +15,26 @@ internal sealed class Program
         try
         {
             TaskScheduler.UnobservedTaskException += TaskScheduler_UnobservedTaskException;
-            AppBuilder.Configure<App>()
-                      .UsePlatformDetect()
-                      .StartWithClassicDesktopLifetime(args);
+
+            BuildAvaloniaApp()
+                .StartWithClassicDesktopLifetime(args);
         }
         catch (Exception exception)
         {
-            var message = "Fatal Exception in the Application.\nApplication will be terminated.";
+            const string message = "Fatal Exception in the Application.\nApplication will be terminated.";
             Log.Fatal(exception, message);
         }
         finally
         {
             await Log.CloseAndFlushAsync();
         }
+    }
+
+    // Exposed so the Avalonia tooling and designer can discover the app configuration.
+    public static AppBuilder BuildAvaloniaApp()
+    {
+        return AppBuilder.Configure<App>()
+                         .UsePlatformDetect();
     }
 
     private static void TaskScheduler_UnobservedTaskException(object? sender, UnobservedTaskExceptionEventArgs e)

@@ -5,14 +5,16 @@
              xmlns:viewModels="clr-namespace:ImageCare.UI.Avalonia.ViewModels"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="ImageCare.UI.Avalonia.Views.MainVideoView"
-             xmlns:mpv="clr-namespace:HanumanInstitute.LibMpv.Avalonia;assembly=HanumanInstitute.LibMpv.Avalonia"
              xmlns:iconPacks="https://github.com/MahApps/IconPacks.Avalonia"
              xmlns:u="https://irihi.tech/ursa"
              xmlns:views="clr-namespace:ImageCare.UI.Avalonia.Views"
              x:DataType="viewModels:MainVideoViewModel">
 
     <Grid RowDefinitions="*,Auto">
-        <mpv:MpvView MpvContext="{Binding Mpv}" Grid.Row="0" />
+        <ContentControl x:Name="VideoHost"
+                        Grid.Row="0"
+                        HorizontalContentAlignment="Stretch"
+                        VerticalContentAlignment="Stretch" />
 
         <Grid
             Grid.Row="1"

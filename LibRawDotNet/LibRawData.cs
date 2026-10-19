@@ -46,7 +46,11 @@ public class LibRawData : IDisposable
             throw new InvalidOperationException("LibRaw native library was not initialized.");
         }
 
-        var result = libraw_open_wfile(handler, fileName);
+        // libraw_open_wfile (wide-char path API) only exists in the Windows build of LibRaw.
+        // On macOS/Linux the native library exposes the UTF-8 libraw_open_file instead.
+        var result = OperatingSystem.IsWindows()
+            ? libraw_open_wfile(handler, fileName)
+            : libraw_open_file(handler, fileName);
 
         if (result == LibRawErrors.LibRawFileUnsupported)
         {

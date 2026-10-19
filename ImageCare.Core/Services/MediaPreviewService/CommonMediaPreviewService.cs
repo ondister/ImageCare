@@ -1,4 +1,4 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 
 using ImageCare.Core.Domain.Folders;
 using ImageCare.Core.Domain.Media;
@@ -22,15 +22,15 @@ public sealed class CommonMediaPreviewService : IMediaPreviewService, IDisposabl
     private readonly ConcurrentDictionary<string, IMediaMetadata> _cachedMetadata;
     private readonly CancellationTokenSource _disposalTokenSource = new();
 
-    public CommonMediaPreviewService()
+    public CommonMediaPreviewService(MediaPreviewCapabilities? capabilities = null)
     {
-        _previewProvidersFactory = new MediaPreviewProvidersFactory();
+        _previewProvidersFactory = new MediaPreviewProvidersFactory(capabilities);
         _cachedMetadata = new ConcurrentDictionary<string, IMediaMetadata>();
 
         _fileOperationsRetryPolicy = Policy
                                      .Handle<Exception>()
                                      .WaitAndRetryAsync(
-                                         retryCount: 6, // Exponential backoff: 1s, 2s, 4s, 8s, 16s, 32s
+                                         retryCount: 6,
                                          sleepDurationProvider: retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt - 1)));
     }
 
@@ -101,7 +101,6 @@ public sealed class CommonMediaPreviewService : IMediaPreviewService, IDisposabl
                                },
                                _disposalTokenSource.Token);
 
-            // Limit cache size
             if (_cachedMetadata.Count >= MaxMetadataCacheSize)
             {
                 var firstKey = _cachedMetadata.Keys.First();
@@ -134,8 +133,11 @@ public sealed class CommonMediaPreviewService : IMediaPreviewService, IDisposabl
     {
         return await Task.Run(() =>
         {
-            var mediaFormat = MediaFormat.Create(fileModel);
-            return new MediaPreview(fileModel.Name, fileModel.FullName, mediaFormat, 200);
+            var detectedFormat = MediaFormat.Create(fileModel);
+            var enabledFormat = _previewProvidersFactory.Capabilities.Supports(detectedFormat)
+                                    ? detectedFormat
+                                    : MediaFormat.MediaFormatUnknown;
+            return new MediaPreview(fileModel.Name, fileModel.FullName, enabledFormat, 200);
         });
     }
 }

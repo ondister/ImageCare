@@ -38,10 +38,10 @@
     </ItemGroup>
 
     <ItemGroup>
-        <None Update="Resources\Jpeg\IMG_0529.jpg">
+        <None Update="Resources/Jpeg/IMG_0529.jpg">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </None>
-        <None Update="Resources\Raws\CanonCr3\IMG_0529.CR3">
+        <None Update="Resources/Raws/CanonCr3/IMG_0529.CR3">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </None>
     </ItemGroup>

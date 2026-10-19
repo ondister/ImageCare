@@ -262,10 +262,13 @@ public class CommonMediaPreviewServiceTests
 
     private string GetTestImagesPath()
     {
+        // The TestImages folder is copied next to the test assembly on build
+        // (CopyToOutputDirectory). Resolving it relative to the assembly works
+        // regardless of whether the output has a runtime-identifier subfolder
+        // (e.g. bin/Release/net10.0/osx-arm64) or not.
         var assemblyLocation = Assembly.GetExecutingAssembly().Location;
-        var assemblyDirectory = Path.GetDirectoryName(assemblyLocation);
-        var projectDirectory = Directory.GetParent(assemblyDirectory).Parent.Parent.FullName;
-        return Path.Combine(projectDirectory, "TestImages");
+        var assemblyDirectory = Path.GetDirectoryName(assemblyLocation)!;
+        return Path.Combine(assemblyDirectory, "TestImages");
     }
 
     private string GetTestImagePath(string fileName)

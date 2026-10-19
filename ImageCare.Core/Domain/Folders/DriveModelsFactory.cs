@@ -1,16 +1,64 @@
-﻿namespace ImageCare.Core.Domain.Folders;
+namespace ImageCare.Core.Domain.Folders;
 
 public sealed class DriveModelsFactory : IDriveModelsFactory
 {
-	private static readonly Dictionary<DriveType, Func<DriveInfo, DriveModel>> _driveModelFactoryMethods = new()
-	{
-		{ DriveType.Fixed, drive => new FixedDriveModel(drive.Name, drive.RootDirectory.FullName) { RootDirectory = new DirectoryModel(drive.RootDirectory.Name, drive.RootDirectory.FullName) } },
-		{ DriveType.Removable, drive => new RemovableDriveModel(drive.Name, drive.RootDirectory.FullName, drive.TotalSize, drive.AvailableFreeSpace) { RootDirectory = new DirectoryModel(drive.RootDirectory.Name, drive.RootDirectory.FullName) } },
-		{ DriveType.Network, drive => new NetworkDriveModel(drive.Name, drive.RootDirectory.FullName) { RootDirectory = new DirectoryModel(drive.RootDirectory.Name, drive.RootDirectory.FullName) } }
-	};
+    private static readonly Dictionary<DriveType, Func<DriveInfo, DriveModel>> DriveModelFactoryMethods = new()
+    {
+        {
+            DriveType.Fixed,
+            drive => new FixedDriveModel(drive.Name, drive.RootDirectory.FullName)
+            {
+                RootDirectory = CreateRootDirectory(drive)
+            }
+        },
+        {
+            DriveType.Removable,
+            drive => new RemovableDriveModel(
+                drive.Name,
+                drive.RootDirectory.FullName,
+                drive.TotalSize,
+                drive.AvailableFreeSpace)
+            {
+                RootDirectory = CreateRootDirectory(drive)
+            }
+        },
+        {
+            DriveType.Network,
+            drive => new NetworkDriveModel(drive.Name, drive.RootDirectory.FullName)
+            {
+                RootDirectory = CreateRootDirectory(drive)
+            }
+        }
+    };
 
-	public DriveModel? CreateDriveModel(DriveInfo driveInfo)
-	{
-		return !_driveModelFactoryMethods.TryGetValue(driveInfo.DriveType, out var factoryFunc) ? null : factoryFunc.Invoke(driveInfo);
-	}
+    public DriveModel? CreateDriveModel(DriveInfo driveInfo)
+    {
+        try
+        {
+            if (DriveModelFactoryMethods.TryGetValue(driveInfo.DriveType, out var factory))
+            {
+                return factory(driveInfo);
+            }
+
+            return new DriveModel(driveInfo.Name, driveInfo.RootDirectory.FullName)
+            {
+                RootDirectory = CreateRootDirectory(driveInfo)
+            };
+        }
+        catch (IOException)
+        {
+            return null;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return null;
+        }
+    }
+
+    private static DirectoryModel CreateRootDirectory(DriveInfo drive)
+    {
+        var root = drive.RootDirectory;
+        var name = string.IsNullOrWhiteSpace(root.Name) ? drive.Name : root.Name;
+        return new DirectoryModel(name, root.FullName);
+    }
 }

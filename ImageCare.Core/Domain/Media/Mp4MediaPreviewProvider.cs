@@ -11,7 +11,6 @@ namespace ImageCare.Core.Domain.Media;
 
 internal sealed class Mp4MediaPreviewProvider : IMediaPreviewProvider
 {
-	private const string _mp4MediaPreview = @"Domain\Media\Assets\mp4_media_preview.jpg";
 
 	public IMediaMetadata GetMediaMetadata(string url)
 	{
@@ -44,7 +43,12 @@ internal sealed class Mp4MediaPreviewProvider : IMediaPreviewProvider
 	{
 		try
 		{
-			var previewPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, _mp4MediaPreview);
+			var previewPath = Path.Combine(
+				AppContext.BaseDirectory,
+				"Domain",
+				"Media",
+				"Assets",
+				"mp4_media_preview.jpg");
 			return File.OpenRead(previewPath);
 		}
 		catch (Exception ex)

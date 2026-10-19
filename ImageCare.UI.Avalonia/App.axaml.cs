@@ -1,9 +1,14 @@
+using System;
+using System.IO;
+using System.Threading;
+
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using DryIoc;
 using ImageCare.Core.Domain.Folders;
+using ImageCare.Core.Domain.Media;
 using ImageCare.Core.Services.ConfigurationService;
 using ImageCare.Core.Services.DrivesWatcherService;
 using ImageCare.Core.Services.FileAssociationsService;
@@ -33,7 +38,6 @@ using Serilog.Core;
 using Serilog.Exceptions;
 using Serilog.Exceptions.Core;
 using Serilog.Extensions.Logging;
-using System.Threading;
 using ChildWindow = ImageCare.UI.Avalonia.Views.ChildWindow;
 using ILogger = Serilog.ILogger;
 
@@ -43,9 +47,8 @@ public class App : PrismApplication
 {
     protected override Rules CreateContainerRules()
     {
-
         return base.CreateContainerRules()
-                   .WithUseInterpretation(); 
+                   .WithUseInterpretation();
     }
 
     public override void Initialize()
@@ -64,7 +67,6 @@ public class App : PrismApplication
         base.OnFrameworkInitializationCompleted();
     }
 
-    /// <inheritdoc />
     protected override AvaloniaObject CreateShell()
     {
         return Container.Resolve<MainWindow>();
@@ -101,19 +103,12 @@ public class App : PrismApplication
         containerRegistry.RegisterForNavigation<PreviewPanelView>();
         containerRegistry.RegisterForNavigation<BottomBarView>();
 
-        containerRegistry.RegisterSingleton<IFileSystemService, WindowsFileSystemService>();
+        containerRegistry.RegisterSingleton<IDriveModelsFactory, DriveModelsFactory>();
+        RegisterPlatformTypes(containerRegistry);
+
         containerRegistry.RegisterSingleton<IFolderService, LocalFileSystemFolderService>();
         containerRegistry.RegisterSingleton<IFolderHistoryService, LocalFolderHistoryService>();
-
-        containerRegistry.RegisterSingleton<IMediaPreviewService, CommonMediaPreviewService>();
-
-        containerRegistry.RegisterSingleton<IProcessService, WindowsProcessService>();
         containerRegistry.RegisterSingleton<IMediaPreviewOperationsService, WindowsMediaPreviewOperationsService>();
-
-        containerRegistry.RegisterSingleton<IManagementEventWatcher, WindowsManagementEventWatcher>();
-        containerRegistry.RegisterSingleton<IDriveInfoProvider, SystemDriveInfoProvider>();
-        containerRegistry.RegisterSingleton<IDriveModelsFactory, DriveModelsFactory>();
-        containerRegistry.RegisterSingleton<IDrivesWatcherService, WindowsDrivesWatcherService>();
 
         containerRegistry.RegisterSingleton<IConfigurationFileSource, WindowsConfigurationFileSource>();
         containerRegistry.RegisterSingleton<IConfigurationService, JsonConfigurationService>();
@@ -130,9 +125,7 @@ public class App : PrismApplication
         containerRegistry.RegisterSingleton<TypeAdapterConfig>(() =>
         {
             var config = new TypeAdapterConfig();
-
             new RegisterMapper(Container).Register(config);
-
             return config;
         });
         containerRegistry.RegisterSingleton<IMapper, ServiceMapper>();
@@ -151,17 +144,49 @@ public class App : PrismApplication
         containerRegistry.RegisterDialog<GlancePanelView, GlancePanelViewModel>("glanceViewer");
     }
 
+    private static void RegisterPlatformTypes(IContainerRegistry containerRegistry)
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            containerRegistry.RegisterSingleton<IFileSystemService, WindowsFileSystemService>();
+            containerRegistry.RegisterSingleton<IProcessService, WindowsProcessService>();
+            containerRegistry.RegisterSingleton<IManagementEventWatcher, WindowsManagementEventWatcher>();
+            containerRegistry.RegisterSingleton<IDriveInfoProvider, SystemDriveInfoProvider>();
+            containerRegistry.RegisterSingleton<IDrivesWatcherService, WindowsDrivesWatcherService>();
+            containerRegistry.RegisterSingleton<IMediaPreviewService, CommonMediaPreviewService>();
+            return;
+        }
+
+        if (OperatingSystem.IsMacOS())
+        {
+            containerRegistry.RegisterSingleton<IFileSystemService, MacOsFileSystemService>();
+            containerRegistry.RegisterSingleton<IProcessService, SystemProcessService>();
+            containerRegistry.RegisterSingleton<IDriveInfoProvider, MacOsDriveInfoProvider>();
+            containerRegistry.RegisterSingleton<IDrivesWatcherService, StaticDrivesWatcherService>();
+            containerRegistry.RegisterSingleton<IMediaPreviewService>(
+                _ => new CommonMediaPreviewService(MediaPreviewCapabilities.Full));
+            return;
+        }
+
+        throw new PlatformNotSupportedException("ImageCare currently supports Windows and macOS only.");
+    }
+
     private static Logger CreateLogger(ILogEventSink logEventSink)
     {
         var options = new DestructuringOptionsBuilder()
             .WithDefaultDestructurers();
+        var logDirectory = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "ImageCare",
+            "Logs");
+        Directory.CreateDirectory(logDirectory);
 
         return new LoggerConfiguration()
                .MinimumLevel.Warning()
                .Enrich.FromLogContext()
                .Enrich.WithExceptionDetails(options)
                .WriteTo.File(
-                   @"Logs\Errors.log",
+                   Path.Combine(logDirectory, "Errors.log"),
                    rollingInterval: RollingInterval.Day,
                    outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {SourceContext} {Message} {NewLine}{Exception}")
                .WriteTo.Sink(logEventSink)

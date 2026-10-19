@@ -2,8 +2,8 @@ namespace LibRawDotNet.Tests;
 
 public class LibRawDataTests
 {
-	private const string _jpegFilePath = @"Resources\Jpeg\IMG_0529.jpg";
-	private const string _canonCr3FilePath = @"Resources\Raws\CanonCr3\IMG_0529.CR3";
+	private static readonly string _jpegFilePath = Path.Combine("Resources", "Jpeg", "IMG_0529.jpg");
+	private static readonly string _canonCr3FilePath = Path.Combine("Resources", "Raws", "CanonCr3", "IMG_0529.CR3");
 
 	[SetUp]
 	public void Setup() { }

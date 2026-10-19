@@ -5,6 +5,7 @@ using System.Reactive.Subjects;
 using ImageCare.Core.Domain.Folders;
 using ImageCare.Core.Domain.MediaFormats;
 using ImageCare.Core.Exceptions;
+using ImageCare.Core.Services.DrivesWatcherService;
 using ImageCare.Core.Services.FileSystemService;
 using ImageCare.Core.Services.FolderHistoryService;
 
@@ -16,6 +17,7 @@ public sealed class LocalFileSystemFolderService : IFolderService, IDisposable
     private readonly Subject<SelectedDirectory> _folderVisitingSubject;
     private readonly Subject<SelectedDirectory> _folderLeftSubject;
     private readonly IFileSystemService _fileSystemService;
+    private readonly IDriveInfoProvider _driveInfoProvider;
     private readonly IDriveModelsFactory _driveModelsFactory;
     private readonly IFolderHistoryService _folderHistoryService;
 
@@ -24,10 +26,12 @@ public sealed class LocalFileSystemFolderService : IFolderService, IDisposable
     private bool _disposed;
 
     public LocalFileSystemFolderService(IFileSystemService fileSystemService,
+                                        IDriveInfoProvider driveInfoProvider,
                                         IDriveModelsFactory driveModelsFactory,
                                         IFolderHistoryService folderHistoryService)
     {
         _fileSystemService = fileSystemService ?? throw new ArgumentNullException(nameof(fileSystemService));
+        _driveInfoProvider = driveInfoProvider ?? throw new ArgumentNullException(nameof(driveInfoProvider));
         _driveModelsFactory = driveModelsFactory ?? throw new ArgumentNullException(nameof(driveModelsFactory));
         _folderHistoryService = folderHistoryService ?? throw new ArgumentNullException(nameof(folderHistoryService));
 
@@ -357,7 +361,7 @@ public sealed class LocalFileSystemFolderService : IFolderService, IDisposable
 
             rootModel.AddDirectory(smartFolder);
 
-            var drives = DriveInfo.GetDrives();
+            var drives = _driveInfoProvider.GetDrives();
 
             var driveTasks = drives
                              .Select(async driveInfo =>

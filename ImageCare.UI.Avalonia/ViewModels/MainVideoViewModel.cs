@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Threading;
@@ -10,6 +10,7 @@ using ImageCare.Core.Domain.Folders;
 using ImageCare.Core.Domain.Preview;
 using ImageCare.Core.Services.FolderService;
 using ImageCare.Core.Services.MediaPreviewOperationsService;
+using ImageCare.UI.Avalonia.Platforms.MacOS;
 
 using Prism.Commands;
 using Prism.Navigation.Regions;
@@ -30,9 +31,10 @@ internal class MainVideoViewModel : NavigatedViewModelBase
     private string _mediaUrl = string.Empty;
     private CompositeDisposable? _compositeDisposable;
     private MpvContext? _mpv;
+    private MacVideoPlayerView? _macPlayer;
     private bool _isPlaying;
     private bool _hasMediaLoaded;
-    private bool _eventsSubscribed;
+    private bool _mpvEventsSubscribed;
 
     public MainVideoViewModel(IMediaPreviewOperationsService fileOperationsService,
                               IFolderService folderService,
@@ -47,8 +49,6 @@ internal class MainVideoViewModel : NavigatedViewModelBase
         PlayCommand = new DelegateCommand(Play, CanPlay);
         PauseCommand = new DelegateCommand(Pause, CanPause);
         StopCommand = new DelegateCommand(Stop, CanStop);
-
-        InitializeMpvContext();
     }
 
     public ICommand PauseCommand { get; }
@@ -84,11 +84,40 @@ internal class MainVideoViewModel : NavigatedViewModelBase
     public MpvContext? Mpv
     {
         get => _mpv;
-        private set
+        set
         {
+            if (ReferenceEquals(_mpv, value))
+            {
+                return;
+            }
+
+            UnsubscribeMpvEvents();
+
             if (SetProperty(ref _mpv, value))
             {
                 SubscribeMpvEvents();
+            }
+        }
+    }
+
+    public MacVideoPlayerView? MacPlayer
+    {
+        get => _macPlayer;
+        set
+        {
+            if (ReferenceEquals(_macPlayer, value))
+            {
+                return;
+            }
+
+            UnsubscribeMacPlayerEvents();
+            _macPlayer = value;
+            SubscribeMacPlayerEvents();
+
+            if (_macPlayer != null)
+            {
+                _macPlayer.Source = MediaUrl;
+                SyncMacPlayerState();
             }
         }
     }
@@ -97,6 +126,11 @@ internal class MainVideoViewModel : NavigatedViewModelBase
     {
         get
         {
+            if (OperatingSystem.IsMacOS())
+            {
+                return MacPlayer?.Position ?? TimeSpan.Zero;
+            }
+
             if (Mpv == null)
             {
                 return TimeSpan.Zero;
@@ -107,7 +141,7 @@ internal class MainVideoViewModel : NavigatedViewModelBase
                 var seconds = Mpv.TimePos?.Get();
                 return seconds.HasValue && seconds.Value >= 0 ? TimeSpan.FromSeconds(seconds.Value) : TimeSpan.Zero;
             }
-            catch (MpvException ex)
+            catch (MpvException)
             {
                 return TimeSpan.Zero;
             }
@@ -116,7 +150,16 @@ internal class MainVideoViewModel : NavigatedViewModelBase
         {
             try
             {
-                if (Mpv != null && value >= TimeSpan.Zero)
+                if (value < TimeSpan.Zero)
+                {
+                    return;
+                }
+
+                if (OperatingSystem.IsMacOS())
+                {
+                    MacPlayer?.Seek(value);
+                }
+                else if (Mpv != null)
                 {
                     Mpv.TimePos.Set(value.TotalSeconds);
                 }
@@ -130,12 +173,26 @@ internal class MainVideoViewModel : NavigatedViewModelBase
 
     public double Volume
     {
-        get => Mpv?.Volume.Get() ?? 0.0;
+        get => OperatingSystem.IsMacOS()
+            ? MacPlayer?.Volume ?? 100
+            : Mpv?.Volume.Get() ?? 0;
         set
         {
             try
             {
-                if (Mpv != null && value is >= 0 and <= 100)
+                if (value is < 0 or > 100)
+                {
+                    return;
+                }
+
+                if (OperatingSystem.IsMacOS())
+                {
+                    if (MacPlayer != null)
+                    {
+                        MacPlayer.Volume = value;
+                    }
+                }
+                else if (Mpv != null)
                 {
                     Mpv.Volume.Set(value);
                 }
@@ -151,6 +208,12 @@ internal class MainVideoViewModel : NavigatedViewModelBase
     {
         get
         {
+            if (OperatingSystem.IsMacOS())
+            {
+                var remaining = (MacPlayer?.Duration ?? TimeSpan.Zero) - TimePosition;
+                return remaining > TimeSpan.Zero ? remaining : TimeSpan.Zero;
+            }
+
             try
             {
                 if (Mpv?.TimeRemaining?.Get() is double seconds && seconds >= 0)
@@ -160,7 +223,7 @@ internal class MainVideoViewModel : NavigatedViewModelBase
             }
             catch (MpvException)
             {
-                // Property unavailable - ignore
+                // The property is not available until MPV has loaded media.
             }
 
             return TimeSpan.Zero;
@@ -169,12 +232,36 @@ internal class MainVideoViewModel : NavigatedViewModelBase
 
     public double? PercentPos
     {
-        get => GetMpvProperty(() => Mpv?.PercentPos?.Get(), 0.0);
+        get
+        {
+            if (OperatingSystem.IsMacOS())
+            {
+                var duration = MacPlayer?.Duration ?? TimeSpan.Zero;
+                return duration > TimeSpan.Zero
+                    ? Math.Clamp(TimePosition.TotalMilliseconds / duration.TotalMilliseconds * 100, 0, 100)
+                    : 0;
+            }
+
+            return GetMpvProperty(() => Mpv?.PercentPos?.Get(), 0.0);
+        }
         set
         {
             try
             {
-                if (Mpv != null && value is >= 0 and <= 100)
+                if (value is not >= 0 or not <= 100)
+                {
+                    return;
+                }
+
+                if (OperatingSystem.IsMacOS())
+                {
+                    var duration = MacPlayer?.Duration ?? TimeSpan.Zero;
+                    if (duration > TimeSpan.Zero)
+                    {
+                        MacPlayer?.Seek(TimeSpan.FromMilliseconds(duration.TotalMilliseconds * value.Value / 100));
+                    }
+                }
+                else if (Mpv != null)
                 {
                     Mpv.PercentPos.Set(value.Value);
                 }
@@ -190,6 +277,11 @@ internal class MainVideoViewModel : NavigatedViewModelBase
     {
         get
         {
+            if (OperatingSystem.IsMacOS())
+            {
+                return MacPlayer?.IsSeekable ?? false;
+            }
+
             try
             {
                 return Mpv?.Seekable?.Get() ?? false;
@@ -206,16 +298,21 @@ internal class MainVideoViewModel : NavigatedViewModelBase
         get => _mediaUrl;
         set
         {
-            if (SetProperty(ref _mediaUrl, value ?? string.Empty))
+            if (!SetProperty(ref _mediaUrl, value ?? string.Empty))
             {
-                UpdateCommandsState();
-
-                if (!string.IsNullOrEmpty(value))
-                {
-                    HasMediaLoaded = false;
-                    IsPlaying = false;
-                }
+                return;
             }
+
+            HasMediaLoaded = false;
+            IsPlaying = false;
+
+            if (OperatingSystem.IsMacOS() && MacPlayer != null)
+            {
+                MacPlayer.Source = _mediaUrl;
+                SyncMacPlayerState();
+            }
+
+            UpdateCommandsState();
         }
     }
 
@@ -265,12 +362,25 @@ internal class MainVideoViewModel : NavigatedViewModelBase
     {
         try
         {
-            if (Mpv == null || string.IsNullOrEmpty(MediaUrl))
+            if (string.IsNullOrEmpty(MediaUrl))
             {
                 return;
             }
 
-            if (HasMediaLoaded && IsPlaying)
+            if (OperatingSystem.IsMacOS())
+            {
+                if (MacPlayer == null)
+                {
+                    return;
+                }
+
+                MacPlayer.Source = MediaUrl;
+                MacPlayer.Play();
+                SyncMacPlayerState();
+                return;
+            }
+
+            if (Mpv == null || HasMediaLoaded && IsPlaying)
             {
                 return;
             }
@@ -291,7 +401,6 @@ internal class MainVideoViewModel : NavigatedViewModelBase
         catch (Exception ex)
         {
             _logger.Error(ex, "Error playing media: {MediaUrl}", MediaUrl);
-
             IsPlaying = false;
             HasMediaLoaded = false;
         }
@@ -301,23 +410,40 @@ internal class MainVideoViewModel : NavigatedViewModelBase
     {
         try
         {
+            if (OperatingSystem.IsMacOS())
+            {
+                if (MacPlayer == null || !MacPlayer.HasMediaLoaded)
+                {
+                    return;
+                }
+
+                if (MacPlayer.IsPlaying)
+                {
+                    MacPlayer.Pause();
+                }
+                else
+                {
+                    MacPlayer.Play();
+                }
+
+                SyncMacPlayerState();
+                return;
+            }
+
             if (Mpv == null || !HasMediaLoaded)
             {
                 return;
             }
 
             var isPaused = Mpv.Pause.Get();
-            if (!isPaused.HasValue)
+            if (isPaused.HasValue)
             {
-                return;
+                Mpv.Pause.Set(!isPaused.Value);
             }
-
-            Mpv.Pause.Set(!isPaused.Value);
         }
         catch (Exception ex)
         {
             _logger.Error(ex, "Error pausing/resuming media");
-
             IsPlaying = false;
         }
     }
@@ -326,6 +452,13 @@ internal class MainVideoViewModel : NavigatedViewModelBase
     {
         try
         {
+            if (OperatingSystem.IsMacOS())
+            {
+                MacPlayer?.Stop();
+                SyncMacPlayerState();
+                return;
+            }
+
             if (Mpv == null || !HasMediaLoaded)
             {
                 return;
@@ -338,7 +471,6 @@ internal class MainVideoViewModel : NavigatedViewModelBase
         catch (Exception ex)
         {
             _logger.Error(ex, "Error stopping media");
-
             IsPlaying = false;
             HasMediaLoaded = false;
         }
@@ -346,51 +478,36 @@ internal class MainVideoViewModel : NavigatedViewModelBase
 
     private bool CanPlay()
     {
-        return !string.IsNullOrEmpty(MediaUrl) && (!IsPlaying || !HasMediaLoaded);
+        return !string.IsNullOrEmpty(MediaUrl) && !IsPlaying;
     }
 
     private bool CanPause()
     {
-        return HasMediaLoaded && IsPlaying;
+        return HasMediaLoaded;
     }
 
     private bool CanStop()
     {
-        return HasMediaLoaded && IsPlaying;
-    }
-
-    private void InitializeMpvContext()
-    {
-        try
-        {
-            Mpv = new MpvContext();
-        }
-        catch (Exception ex)
-        {
-            _logger.Error(ex, "Error initializing MPV context");
-
-            Mpv = null;
-        }
+        return HasMediaLoaded;
     }
 
     private void SubscribeMpvEvents()
     {
-        if (Mpv == null || _eventsSubscribed)
+        if (Mpv == null || _mpvEventsSubscribed)
         {
             return;
         }
 
         try
         {
-            Mpv.TimePos.Changed += OnTimePosChanged;
-            Mpv.TimeRemaining.Changed += OnTimeRemainingChanged;
-            Mpv.Seekable.Changed += OnSeekableChanged;
-            Mpv.PercentPos.Changed += OnPercentPosChanged;
-            Mpv.Volume.Changed += OnVolumeChanged;
-            Mpv.Pause.Changed += OnPauseStateChanged;
-            Mpv.FileLoaded += OnFileLoaded;
-
-            _eventsSubscribed = true;
+            Mpv.TimePos.Changed += OnMpvPositionChanged;
+            Mpv.TimeRemaining.Changed += OnMpvPositionChanged;
+            Mpv.Seekable.Changed += OnMpvSeekableChanged;
+            Mpv.PercentPos.Changed += OnMpvPercentChanged;
+            Mpv.Volume.Changed += OnMpvVolumeChanged;
+            Mpv.Pause.Changed += OnMpvPauseStateChanged;
+            Mpv.FileLoaded += OnMpvFileLoaded;
+            _mpvEventsSubscribed = true;
         }
         catch (Exception ex)
         {
@@ -400,22 +517,21 @@ internal class MainVideoViewModel : NavigatedViewModelBase
 
     private void UnsubscribeMpvEvents()
     {
-        if (_mpv == null)
+        if (_mpv == null || !_mpvEventsSubscribed)
         {
             return;
         }
 
         try
         {
-            _mpv.TimePos.Changed -= OnTimePosChanged;
-            _mpv.TimeRemaining.Changed -= OnTimeRemainingChanged;
-            _mpv.Seekable.Changed -= OnSeekableChanged;
-            _mpv.PercentPos.Changed -= OnPercentPosChanged;
-            _mpv.Volume.Changed -= OnVolumeChanged;
-            _mpv.Pause.Changed -= OnPauseStateChanged;
-            _mpv.FileLoaded -= OnFileLoaded;
-
-            _eventsSubscribed = false;
+            _mpv.TimePos.Changed -= OnMpvPositionChanged;
+            _mpv.TimeRemaining.Changed -= OnMpvPositionChanged;
+            _mpv.Seekable.Changed -= OnMpvSeekableChanged;
+            _mpv.PercentPos.Changed -= OnMpvPercentChanged;
+            _mpv.Volume.Changed -= OnMpvVolumeChanged;
+            _mpv.Pause.Changed -= OnMpvPauseStateChanged;
+            _mpv.FileLoaded -= OnMpvFileLoaded;
+            _mpvEventsSubscribed = false;
         }
         catch (Exception ex)
         {
@@ -423,34 +539,104 @@ internal class MainVideoViewModel : NavigatedViewModelBase
         }
     }
 
-    private void OnFileLoaded(object? sender, EventArgs e)
+    private void SubscribeMacPlayerEvents()
     {
-        try
+        if (_macPlayer == null)
+        {
+            return;
+        }
+
+        _macPlayer.PlaybackStateChanged += OnMacPlaybackStateChanged;
+        _macPlayer.PositionChanged += OnMacPositionChanged;
+        _macPlayer.PlaybackFailed += OnMacPlaybackFailed;
+    }
+
+    private void UnsubscribeMacPlayerEvents()
+    {
+        if (_macPlayer == null)
+        {
+            return;
+        }
+
+        _macPlayer.PlaybackStateChanged -= OnMacPlaybackStateChanged;
+        _macPlayer.PositionChanged -= OnMacPositionChanged;
+        _macPlayer.PlaybackFailed -= OnMacPlaybackFailed;
+    }
+
+    private void OnMpvFileLoaded(object? sender, EventArgs e)
+    {
+        RunOnUiThread(() =>
         {
             HasMediaLoaded = true;
             IsPlaying = true;
-        }
-        catch (Exception ex)
-        {
-            _logger.Error(ex, "Error handling file loaded event");
-        }
+        });
     }
 
-    private void OnPauseStateChanged(object? sender, MpvValueChangedEventArgs<bool, bool> e)
+    private void OnMpvPauseStateChanged(object? sender, MpvValueChangedEventArgs<bool, bool> e)
     {
-        try
+        if (!e.NewValue.HasValue)
         {
-            if (!e.NewValue.HasValue)
-            {
-                return;
-            }
+            return;
+        }
 
-            IsPlaying = !e.NewValue.Value && HasMediaLoaded;
-        }
-        catch (Exception ex)
+        RunOnUiThread(() => IsPlaying = !e.NewValue.Value && HasMediaLoaded);
+    }
+
+    private void OnMpvVolumeChanged(object? sender, MpvValueChangedEventArgs<double, double> e)
+    {
+        RunOnUiThread(() => RaisePropertyChanged(nameof(Volume)));
+    }
+
+    private void OnMpvPercentChanged(object? sender, MpvValueChangedEventArgs<double, double> e)
+    {
+        RunOnUiThread(() => RaisePropertyChanged(nameof(PercentPos)));
+    }
+
+    private void OnMpvSeekableChanged(object? sender, MpvValueChangedEventArgs<bool, bool> e)
+    {
+        RunOnUiThread(() => RaisePropertyChanged(nameof(IsSeekable)));
+    }
+
+    private void OnMpvPositionChanged(object? sender, EventArgs e)
+    {
+        RunOnUiThread(RaisePositionPropertiesChanged);
+    }
+
+    private void OnMacPlaybackStateChanged(object? sender, EventArgs e)
+    {
+        RunOnUiThread(SyncMacPlayerState);
+    }
+
+    private void OnMacPositionChanged(object? sender, EventArgs e)
+    {
+        RunOnUiThread(RaisePositionPropertiesChanged);
+    }
+
+    private void OnMacPlaybackFailed(Exception exception)
+    {
+        _logger.Error(exception, "AVPlayer failed to play media: {MediaUrl}", MediaUrl);
+        RunOnUiThread(() =>
         {
-            _logger.Error(ex, "Error handling pause state change");
-        }
+            IsPlaying = false;
+            HasMediaLoaded = false;
+        });
+    }
+
+    private void SyncMacPlayerState()
+    {
+        HasMediaLoaded = MacPlayer?.HasMediaLoaded ?? false;
+        IsPlaying = MacPlayer?.IsPlaying ?? false;
+        RaisePropertyChanged(nameof(Volume));
+        RaisePropertyChanged(nameof(IsSeekable));
+        RaisePositionPropertiesChanged();
+    }
+
+    private void RaisePositionPropertiesChanged()
+    {
+        RaisePropertyChanged(nameof(TimePosition));
+        RaisePropertyChanged(nameof(TimeRemaining));
+        RaisePropertyChanged(nameof(PercentPos));
+        RaisePropertyChanged(nameof(IsSeekable));
     }
 
     private void OnFolderSelected(SelectedDirectory directory)
@@ -493,29 +679,15 @@ internal class MainVideoViewModel : NavigatedViewModelBase
         }
     }
 
-    private void OnVolumeChanged(object? sender, MpvValueChangedEventArgs<double, double> e)
+    private void RunOnUiThread(Action action)
     {
-        RaisePropertyChanged(nameof(Volume));
-    }
+        if (SynchronizationContext.Current == _synchronizationContext)
+        {
+            action();
+            return;
+        }
 
-    private void OnPercentPosChanged(object? sender, MpvValueChangedEventArgs<double, double> e)
-    {
-        RaisePropertyChanged(nameof(PercentPos));
-    }
-
-    private void OnSeekableChanged(object? sender, MpvValueChangedEventArgs<bool, bool> e)
-    {
-        RaisePropertyChanged(nameof(IsSeekable));
-    }
-
-    private void OnTimePosChanged(object? sender, MpvValueChangedEventArgs<double, double> e)
-    {
-        RaisePropertyChanged(nameof(TimePosition));
-    }
-
-    private void OnTimeRemainingChanged(object? sender, MpvValueChangedEventArgs<double, double> e)
-    {
-        RaisePropertyChanged(nameof(TimeRemaining));
+        _synchronizationContext.Post(_ => action(), null);
     }
 
     private void OnError(Exception exception)

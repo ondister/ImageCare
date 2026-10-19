@@ -19,6 +19,11 @@ public class FileModel
 	{
 		try
 		{
+			if (!File.Exists(filePath))
+			{
+				return null;
+			}
+
 			var fileInfo = new FileInfo(filePath);
 			return fileInfo.LastWriteTime;
 		}

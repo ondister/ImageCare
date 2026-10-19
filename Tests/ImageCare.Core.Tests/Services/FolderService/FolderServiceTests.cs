@@ -1,4 +1,5 @@
 ﻿using ImageCare.Core.Domain.Folders;
+using ImageCare.Core.Services.DrivesWatcherService;
 using ImageCare.Core.Services.FileSystemService;
 using ImageCare.Core.Services.FolderHistoryService;
 using ImageCare.Core.Services.FolderService;
@@ -11,6 +12,7 @@ namespace ImageCare.Core.Tests.Services.FolderService;
 public class LocalFileSystemFolderServiceTests
 {
     private Mock<IFileSystemService> _fileSystemServiceMock;
+    private Mock<IDriveInfoProvider> _driveInfoProviderMock;
     private Mock<IDriveModelsFactory> _driveModelsFactoryMock;
     private Mock<IFolderHistoryService> _folderHistoryServiceMock;
     private LocalFileSystemFolderService _service;
@@ -19,10 +21,16 @@ public class LocalFileSystemFolderServiceTests
     public void Setup()
     {
         _fileSystemServiceMock = new Mock<IFileSystemService>();
+        _driveInfoProviderMock = new Mock<IDriveInfoProvider>();
+        _driveInfoProviderMock.Setup(provider => provider.GetDrives()).Returns([]);
         _driveModelsFactoryMock = new Mock<IDriveModelsFactory>();
         _folderHistoryServiceMock = new Mock<IFolderHistoryService>();
         _folderHistoryServiceMock.Setup(f => f.GetSmartFolders(10)).Returns(new List<SmartDirectoryModel>());
-        _service = new LocalFileSystemFolderService(_fileSystemServiceMock.Object, _driveModelsFactoryMock.Object, _folderHistoryServiceMock.Object);
+        _service = new LocalFileSystemFolderService(
+            _fileSystemServiceMock.Object,
+            _driveInfoProviderMock.Object,
+            _driveModelsFactoryMock.Object,
+            _folderHistoryServiceMock.Object);
     }
 
     [TearDown]
@@ -35,14 +43,22 @@ public class LocalFileSystemFolderServiceTests
     public void Constructor_WithNullFileSystemService_ThrowsArgumentNullException()
     {
         Assert.Throws<ArgumentNullException>(() =>
-                                                 new LocalFileSystemFolderService(null, _driveModelsFactoryMock.Object, _folderHistoryServiceMock.Object));
+            new LocalFileSystemFolderService(
+                null,
+                _driveInfoProviderMock.Object,
+                _driveModelsFactoryMock.Object,
+                _folderHistoryServiceMock.Object));
     }
 
     [Test]
     public void Constructor_WithNullDriveModelsFactory_ThrowsArgumentNullException()
     {
         Assert.Throws<ArgumentNullException>(() =>
-                                                 new LocalFileSystemFolderService(_fileSystemServiceMock.Object, null, _folderHistoryServiceMock.Object));
+            new LocalFileSystemFolderService(
+                _fileSystemServiceMock.Object,
+                _driveInfoProviderMock.Object,
+                null,
+                _folderHistoryServiceMock.Object));
     }
 
     [Test]
