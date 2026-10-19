@@ -466,7 +466,13 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
             token.ThrowIfCancellationRequested();
             lock (_imagePathsLock)
             {
-                _imagePaths.AddRange(files);
+                foreach (var file in files)
+                {
+                    if (_imagePaths.All(existing => !PathsEqual(existing.FullName, file.FullName)))
+                    {
+                        _imagePaths.Add(file);
+                    }
+                }
             }
 
             _ = LoadInitialImagesAsync(token);
@@ -736,7 +742,18 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
         }
 
         token.ThrowIfCancellationRequested();
-        _synchronizationContext.Send(d => { ImagePreviews.AddRange(previews); }, null);
+        _synchronizationContext.Send(
+            _ =>
+            {
+                foreach (var preview in previews)
+                {
+                    if (ImagePreviews.All(existing => !PathsEqual(existing.Url, preview.Url)))
+                    {
+                        ImagePreviews.Add(preview);
+                    }
+                }
+            },
+            null);
     }
 
     private async Task LoadImageAsync(int indexInPreviews, CancellationToken token = default)

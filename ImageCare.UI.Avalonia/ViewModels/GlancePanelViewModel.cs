@@ -345,17 +345,21 @@ internal class GlancePanelViewModel : ViewModelBase, IDialogAware
 
             var files = await _folderService.GetFileModelAsync(selectedFileSystemItem, "*");
 
-            await Task.Run(
-                () =>
+            token.ThrowIfCancellationRequested();
+            lock (_imagePathsLock)
+            {
+                foreach (var file in files)
                 {
-                    _imagePaths.AddRange(files);
-                    FilesLoading = false;
-                    token.ThrowIfCancellationRequested();
+                    if (_imagePaths.All(existing => !PathsEqual(existing.FullName, file.FullName)))
+                    {
+                        _imagePaths.Add(file);
+                    }
+                }
+            }
 
-                    LoadInitialImagesAsync(_imageLoadCts.Token);
-                    _folderStatisticsService.StartAsync(selectedFileSystemItem.Path, token);
-                },
-                token);
+            FilesLoading = false;
+            _ = LoadInitialImagesAsync(_imageLoadCts.Token);
+            _ = _folderStatisticsService.StartAsync(selectedFileSystemItem.Path, token);
         }
         catch (OperationCanceledException)
         {
@@ -371,7 +375,7 @@ internal class GlancePanelViewModel : ViewModelBase, IDialogAware
         }
     }
 
-    private async void LoadInitialImagesAsync(CancellationToken token)
+    private async Task LoadInitialImagesAsync(CancellationToken token)
     {
         try
         {
@@ -445,7 +449,18 @@ internal class GlancePanelViewModel : ViewModelBase, IDialogAware
         }
 
         token.ThrowIfCancellationRequested();
-        _synchronizationContext.Send(d => { ImagePreviews.AddRange(previews); }, null);
+        _synchronizationContext.Send(
+            _ =>
+            {
+                foreach (var preview in previews)
+                {
+                    if (ImagePreviews.All(existing => !PathsEqual(existing.Url, preview.Url)))
+                    {
+                        ImagePreviews.Add(preview);
+                    }
+                }
+            },
+            null);
     }
 
     private async Task LoadImageAsync(int indexInPreviews, CancellationToken token = default)
