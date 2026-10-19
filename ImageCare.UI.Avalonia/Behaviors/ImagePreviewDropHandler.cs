@@ -9,6 +9,7 @@ using ImageCare.Core.Domain.Notification;
 using ImageCare.Core.Domain.Preview;
 using ImageCare.Core.Services.MediaPreviewOperationsService;
 using ImageCare.Core.Services.NotificationService;
+using ImageCare.UI.Avalonia.Services;
 using ImageCare.UI.Avalonia.ViewModels;
 using ImageCare.UI.Avalonia.ViewModels.Domain;
 
@@ -22,30 +23,48 @@ namespace ImageCare.UI.Avalonia.Behaviors;
 
 public class ImagePreviewDropHandler
 {
-    private readonly IMediaPreviewOperationsService _fileOperationsService;
+    private readonly FileTransferOperationState _operationState;
+    private readonly FileTransferCoordinator _fileTransferCoordinator;
     private readonly INotificationService _notificationService;
     private readonly IMapper _mapper;
     private readonly ILogger _logger;
 
-    public ImagePreviewDropHandler(IMediaPreviewOperationsService fileOperationsService,
-                                   INotificationService notificationService,
-                                   IMapper mapper,
-                                   ILogger logger)
+    public ImagePreviewDropHandler(
+        FileTransferOperationState operationState,
+        FileTransferCoordinator fileTransferCoordinator,
+        INotificationService notificationService,
+        IMapper mapper,
+        ILogger logger)
     {
-        _fileOperationsService = fileOperationsService;
+        _operationState = operationState;
+        _fileTransferCoordinator = fileTransferCoordinator;
         _notificationService = notificationService;
         _mapper = mapper;
         _logger = logger;
     }
 
+    public FileTransferOperation CurrentOperation => _operationState.CurrentStatus.Operation;
+
+    public IObservable<FileTransferOperationStatus> OperationStatusChanged =>
+        _operationState.StatusChanged;
+
+    public void BeginDrag(KeyModifiers modifiers) => _operationState.BeginDrag(modifiers);
+
+    public FileTransferOperation UpdateOperation(KeyModifiers modifiers)
+    {
+        _operationState.UpdateFromDrag(modifiers);
+        return CurrentOperation;
+    }
+
+    public void EndDrag() => _operationState.EndDrag();
+
     public async Task<bool> ExecuteAsync(
         object? sender,
-        DragEventArgs e,
         object? sourceContext,
         object? targetContext,
-        object? state)
+        FileTransferOperation operation)
     {
-        if (!Validate(sender, e, sourceContext, targetContext, state) ||
+        if (!Validate(sender, sourceContext, targetContext) ||
             sourceContext is not MediaPreviewViewModel sourceImagePreview ||
             targetContext is not PreviewPanelViewModel targetPanel)
         {
@@ -62,13 +81,13 @@ public class ImagePreviewDropHandler
         try
         {
             var sourcePreview = _mapper.Map<MediaPreview>(sourceImagePreview);
-            var result = e.DragEffects switch
+            var result = operation switch
             {
-                DragDropEffects.Copy => await _fileOperationsService.CopyImagePreviewToDirectoryAsync(
+                FileTransferOperation.Copy => await _fileTransferCoordinator.CopyAsync(
                     sourcePreview,
                     targetPanel.SelectedFolderPath,
                     progress),
-                DragDropEffects.Move => await _fileOperationsService.MoveImagePreviewToDirectoryAsync(
+                FileTransferOperation.Move => await _fileTransferCoordinator.MoveAsync(
                     sourcePreview,
                     targetPanel.SelectedFolderPath,
                     progress),
@@ -102,10 +121,8 @@ public class ImagePreviewDropHandler
 
     public bool Validate(
         object? sender,
-        DragEventArgs e,
         object? sourceContext,
-        object? targetContext,
-        object? state)
+        object? targetContext)
     {
         if (sender is not ListBox ||
             sourceContext is not MediaPreviewViewModel sourceImagePreview ||
@@ -116,8 +133,8 @@ public class ImagePreviewDropHandler
         }
 
         var sourceDirectory = Path.GetDirectoryName(sourceImagePreview.Url);
-        return !PathsEqual(sourceDirectory, targetPanel.SelectedFolderPath) &&
-               e.DragEffects is DragDropEffects.Copy or DragDropEffects.Move;
+        return _fileTransferCoordinator.RenameEnabled ||
+               !PathsEqual(sourceDirectory, targetPanel.SelectedFolderPath);
     }
 
     private static bool PathsEqual(string? left, string? right)

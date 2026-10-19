@@ -6,6 +6,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
 
+using Avalonia.Input;
+
 using ImageCare.Core.Domain.Folders;
 using ImageCare.Core.Domain.MediaFormats;
 using ImageCare.Core.Domain.Notification;
@@ -14,6 +16,7 @@ using ImageCare.Core.Services.FolderHistoryService;
 using ImageCare.Core.Services.FolderService;
 using ImageCare.Core.Services.MediaPreviewOperationsService;
 using ImageCare.Core.Services.NotificationService;
+using ImageCare.UI.Avalonia.Services;
 using ImageCare.UI.Avalonia.Views;
 
 using MapsterMapper;
@@ -33,6 +36,8 @@ internal class MainWindowViewModel : ViewModelBase
 	private readonly IFolderService _folderService;
 	private readonly INotificationService _notificationService;
     private readonly IFolderHistoryService _folderHistoryService;
+    private readonly FileTransferCoordinator _fileTransferCoordinator;
+    private readonly FileTransferOperationState _fileTransferOperationState;
     private readonly IMapper _mapper;
 	private readonly SynchronizationContext _synchronizationContext;
 	private readonly ILogger _logger;
@@ -49,6 +54,8 @@ internal class MainWindowViewModel : ViewModelBase
 							   IFolderService folderService,
 							   INotificationService notificationService,
 							   IFolderHistoryService folderHistoryService,
+                               FileTransferCoordinator fileTransferCoordinator,
+                               FileTransferOperationState fileTransferOperationState,
 							   IMapper mapper,
                                MainImageViewModel mainImageViewModel,
                                MainVideoViewModel mainVideoViewModel,
@@ -60,6 +67,8 @@ internal class MainWindowViewModel : ViewModelBase
 		_folderService = folderService;
 		_notificationService = notificationService;
         _folderHistoryService = folderHistoryService;
+        _fileTransferCoordinator = fileTransferCoordinator;
+        _fileTransferOperationState = fileTransferOperationState;
         _mapper = mapper;
         _mainImageViewModel = mainImageViewModel;
         _mainVideoViewModel = mainVideoViewModel;
@@ -80,6 +89,33 @@ internal class MainWindowViewModel : ViewModelBase
 	public ICommand CopySelectedPreviewCommand { get; }
 
 	public ICommand MoveSelectedPreviewCommand { get; }
+
+    public bool RenameFileOnTransfer
+    {
+        get => _fileTransferCoordinator.RenameEnabled;
+        set
+        {
+            if (_fileTransferCoordinator.RenameEnabled == value)
+            {
+                return;
+            }
+
+            _fileTransferCoordinator.RenameEnabled = value;
+            RaisePropertyChanged();
+        }
+    }
+
+    public void HandleKeyDown(KeyEventArgs args) =>
+        _fileTransferOperationState.HandleKeyDown(args.Key, args.KeyModifiers);
+
+    public void HandleKeyUp(KeyEventArgs args) =>
+        _fileTransferOperationState.HandleKeyUp(args.Key, args.KeyModifiers);
+
+    public void ClearWindowFileTransferModifiers() =>
+        _fileTransferOperationState.ClearWindowModifiers();
+
+    public void ResetFileTransferModifiers() =>
+        _fileTransferOperationState.ResetModifiers();
 
     public MainImageViewModel MainImageViewModel => _mainImageViewModel;
 
@@ -119,7 +155,7 @@ internal class MainWindowViewModel : ViewModelBase
 
 			progress.ProgressChanged += (o, info) => { _notificationService.SendNotification(new Notification(notificationTitle, info.Percentage.ToString("F1"))); };
 
-			var result = await _fileOperationsService.CopyImagePreviewToDirectoryAsync(
+			var result = await _fileTransferCoordinator.CopyAsync(
 							 _mapper.Map<MediaPreview>(_currentSelectedPreview),
 							 targetDirectory.Path,
 							 progress);
@@ -163,7 +199,7 @@ internal class MainWindowViewModel : ViewModelBase
 
 			progress.ProgressChanged += (o, info) => { _notificationService.SendNotification(new Notification(notificationTitle, info.Percentage.ToString("F1"))); };
 
-			var result = await _fileOperationsService.MoveImagePreviewToDirectoryAsync(
+			var result = await _fileTransferCoordinator.MoveAsync(
 							 _mapper.Map<MediaPreview>(_currentSelectedPreview),
 							 targetDirectory.Path,
 							 progress);

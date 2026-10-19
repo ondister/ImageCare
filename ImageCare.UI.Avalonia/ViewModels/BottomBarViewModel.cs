@@ -31,6 +31,7 @@ internal class BottomBarViewModel : NavigatedViewModelBase
     private readonly INotificationService _notificationService;
     private readonly ILogNotificationService _logNotificationService;
     private readonly IMediaPreviewOperationsService _mediaPreviewOperationsService;
+    private readonly FileTransferOperationState _fileTransferOperationState;
     private readonly LocalizationManager _localization;
     private readonly IMapper _mapper;
     private readonly ILogger _logger;
@@ -39,6 +40,8 @@ internal class BottomBarViewModel : NavigatedViewModelBase
     private int? _messagesCount;
     private bool _isDisposed;
     private bool _canUndoDelete;
+    private FileTransferOperation _currentFileTransferOperation;
+    private bool _isFileTransferModifierActive;
 
     private int _errorsCount;
     private int _warningsCount;
@@ -50,6 +53,7 @@ internal class BottomBarViewModel : NavigatedViewModelBase
         INotificationService notificationService,
         ILogNotificationService logNotificationService,
         IMediaPreviewOperationsService mediaPreviewOperationsService,
+        FileTransferOperationState fileTransferOperationState,
         LocalizationManager localization,
         IMapper mapper,
         ILogger logger,
@@ -61,11 +65,14 @@ internal class BottomBarViewModel : NavigatedViewModelBase
         _logNotificationService = logNotificationService ?? throw new ArgumentNullException(nameof(logNotificationService));
         _mediaPreviewOperationsService = mediaPreviewOperationsService ??
             throw new ArgumentNullException(nameof(mediaPreviewOperationsService));
+        _fileTransferOperationState = fileTransferOperationState ??
+            throw new ArgumentNullException(nameof(fileTransferOperationState));
         _localization = localization ?? throw new ArgumentNullException(nameof(localization));
         _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _synchronizationContext = synchronizationContext ?? throw new ArgumentNullException(nameof(synchronizationContext));
 
+        ApplyFileTransferStatus(_fileTransferOperationState.CurrentStatus);
         OpenLogWindowCommand = new DelegateCommand(OpenLogWindow, CanOpenLogWindow)
             .ObservesProperty(() => MessagesCount);
         OpenSettingsWindowCommand = new DelegateCommand(OpenSettingsWindow);
@@ -89,6 +96,18 @@ internal class BottomBarViewModel : NavigatedViewModelBase
     {
         get => _canUndoDelete;
         private set => SetProperty(ref _canUndoDelete, value);
+    }
+
+    public bool IsCopyFileTransferOperation =>
+        _currentFileTransferOperation == FileTransferOperation.Copy;
+
+    public bool IsMoveFileTransferOperation =>
+        _currentFileTransferOperation == FileTransferOperation.Move;
+
+    public bool IsFileTransferModifierActive
+    {
+        get => _isFileTransferModifierActive;
+        private set => SetProperty(ref _isFileTransferModifierActive, value);
     }
 
     public ICommand OpenLogWindowCommand { get; }
@@ -121,7 +140,10 @@ internal class BottomBarViewModel : NavigatedViewModelBase
                     .Subscribe(OnNotificationReceived, OnError),
                 _mediaPreviewOperationsService.FileOperationCompleted
                     .ObserveOn(_synchronizationContext)
-                    .Subscribe(OnFileOperationCompleted, OnError)
+                    .Subscribe(OnFileOperationCompleted, OnError),
+                _fileTransferOperationState.StatusChanged
+                    .ObserveOn(_synchronizationContext)
+                    .Subscribe(ApplyFileTransferStatus, OnError)
             };
         }
         catch (Exception ex)
@@ -262,6 +284,18 @@ internal class BottomBarViewModel : NavigatedViewModelBase
         {
             _logger.Error(ex, "Failed to process notification");
         }
+    }
+
+    private void ApplyFileTransferStatus(FileTransferOperationStatus status)
+    {
+        if (_currentFileTransferOperation != status.Operation)
+        {
+            _currentFileTransferOperation = status.Operation;
+            RaisePropertyChanged(nameof(IsCopyFileTransferOperation));
+            RaisePropertyChanged(nameof(IsMoveFileTransferOperation));
+        }
+
+        IsFileTransferModifierActive = status.IsModifierActive;
     }
 
     private void OnFileOperationCompleted(MediaFileOperationCompleted operation)

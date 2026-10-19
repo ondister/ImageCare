@@ -1,6 +1,7 @@
 using System;
 
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Interactivity;
 
 using ImageCare.UI.Avalonia.ViewModels;
@@ -16,6 +17,16 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         DataContextChanged += OnDataContextChanged;
+        AddHandler(
+            KeyDownEvent,
+            OnWindowKeyDown,
+            RoutingStrategies.Tunnel,
+            handledEventsToo: true);
+        AddHandler(
+            KeyUpEvent,
+            OnWindowKeyUp,
+            RoutingStrategies.Tunnel,
+            handledEventsToo: true);
     }
 
     private void OnWindowLoaded(object? sender, RoutedEventArgs e)
@@ -27,6 +38,22 @@ public partial class MainWindow : Window
     private void OnDataContextChanged(object? sender, EventArgs e)
     {
         TryInitializeViewModel();
+    }
+
+    private void OnWindowKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (DataContext is MainWindowViewModel viewModel)
+        {
+            viewModel.HandleKeyDown(e);
+        }
+    }
+
+    private void OnWindowKeyUp(object? sender, KeyEventArgs e)
+    {
+        if (DataContext is MainWindowViewModel viewModel)
+        {
+            viewModel.HandleKeyUp(e);
+        }
     }
 
     private void TryInitializeViewModel()
@@ -45,10 +72,13 @@ public partial class MainWindow : Window
 
     private void OnWindowClosing(object? sender, WindowClosingEventArgs e)
     {
-        if (DataContext is MainWindowViewModel viewModel &&
-            viewModel.OnViewUnloadedCommand.CanExecute(null))
+        if (DataContext is MainWindowViewModel viewModel)
         {
-            viewModel.OnViewUnloadedCommand.Execute(null);
+            viewModel.ResetFileTransferModifiers();
+            if (viewModel.OnViewUnloadedCommand.CanExecute(null))
+            {
+                viewModel.OnViewUnloadedCommand.Execute(null);
+            }
         }
     }
 }

@@ -20,6 +20,12 @@ public sealed class Configuration
     public bool RestoreLastFoldersOnStartup { get; set; } = true;
 
 
+    public DragDropModifierKey DragDropModifier { get; set; } = DragDropModifierKey.Control;
+
+
+    public bool CopyOnDragDropByDefault { get; set; }
+
+
     public bool SafeDeletionEnabled { get; set; } = true;
 
 

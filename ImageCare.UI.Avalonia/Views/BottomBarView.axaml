@@ -7,101 +7,168 @@
              xmlns:localization="clr-namespace:ImageCare.UI.Avalonia.Localization"
              x:Class="ImageCare.UI.Avalonia.Views.BottomBarView"
              mvvm:ViewModelLocator.AutoWireViewModel="True"
-             x:DataType="viewModels:BottomBarViewModel">
+             x:DataType="viewModels:BottomBarViewModel"
+             Height="24"
+             MinHeight="24"
+             MaxHeight="24">
     <UserControl.Styles>
         <Style Selector="iconPacks|PackIconLucide">
-            <Setter Property="Width" Value="{StaticResource Icon.Size.Small}" />
-            <Setter Property="Height" Value="{StaticResource Icon.Size.Small}" />
+            <Setter Property="Width" Value="{StaticResource Icon.Size.Micro}" />
+            <Setter Property="Height" Value="{StaticResource Icon.Size.Micro}" />
             <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style Selector="Button.StatusBarButton">
+            <Setter Property="MinHeight" Value="22" />
+            <Setter Property="Height" Value="22" />
+            <Setter Property="Padding" Value="6,0" />
+            <Setter Property="CornerRadius" Value="2" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="FontSize" Value="{StaticResource Font.Size.Small}" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+        <Style Selector="TextBlock.StatusText">
+            <Setter Property="FontSize" Value="{StaticResource Font.Size.Small}" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="TextWrapping" Value="NoWrap" />
         </Style>
     </UserControl.Styles>
 
-    <Grid RowDefinitions="Auto,*">
-        <Separator Grid.Row="0" />
+    <Border Height="24"
+            BorderBrush="{DynamicResource Brush.Splitter}"
+            BorderThickness="0,1,0,0"
+            Background="{DynamicResource ThemeBackgroundBrush}">
+        <Grid Height="23" ColumnDefinitions="Auto,Auto,*,Auto,Auto">
+            <Border Grid.Column="0"
+                    Height="22"
+                    Padding="6,0"
+                    Background="{DynamicResource Brush.AccentSubtle}"
+                    VerticalAlignment="Center"
+                    ToolTip.Tip="{localization:Loc FileOperation_CurrentDescription}">
+                <StackPanel Orientation="Horizontal" Spacing="3">
+                    <TextBlock Classes="StatusText"
+                               Text="{localization:Loc FileOperation_Current}" />
+                    <TextBlock Classes="StatusText"
+                               Text="{localization:Loc Action_Copy}"
+                               FontWeight="Bold"
+                               Foreground="{DynamicResource Brush.Accent}"
+                               IsVisible="{Binding IsCopyFileTransferOperation}" />
+                    <TextBlock Classes="StatusText"
+                               Text="{localization:Loc Action_Move}"
+                               FontWeight="Bold"
+                               Foreground="{DynamicResource Brush.Accent}"
+                               IsVisible="{Binding IsMoveFileTransferOperation}" />
+                    <TextBlock Classes="StatusText"
+                               Text="{localization:Loc FileOperation_DefaultMarker}"
+                               Opacity="0.7"
+                               IsVisible="{Binding !IsFileTransferModifierActive}" />
+                    <TextBlock Classes="StatusText"
+                               Text="{localization:Loc FileOperation_HotkeyMarker}"
+                               FontWeight="Bold"
+                               Foreground="{DynamicResource Brush.Accent}"
+                               IsVisible="{Binding IsFileTransferModifierActive}" />
+                </StackPanel>
+            </Border>
 
-        <Grid Grid.Row="1" ColumnDefinitions="Auto,Auto,*,Auto"
-              Margin="{StaticResource MarginTop.Medium}">
-            <Button Grid.Column="0"
-                    Classes="ToolbarButton"
-                    Command="{Binding OpenLogWindowCommand}"
-                    Margin="{StaticResource MarginHorizontal.Small}">
-                <StackPanel Orientation="Horizontal" Spacing="4">
+            <Button Grid.Column="1"
+                    Classes="StatusBarButton"
+                    Command="{Binding UndoDeleteCommand}"
+                    IsVisible="{Binding CanUndoDelete}"
+                    ToolTip.Tip="{localization:Loc Action_UndoDelete}">
+                <StackPanel Orientation="Horizontal" Spacing="3">
+                    <iconPacks:PackIconLucide Kind="Undo2" />
+                    <TextBlock Classes="StatusText" Text="{localization:Loc Common_Undo}" />
+                </StackPanel>
+            </Button>
+
+            <ContentControl Grid.Column="2"
+                            Margin="6,0"
+                            VerticalAlignment="Center"
+                            HorizontalContentAlignment="Stretch"
+                            ClipToBounds="True"
+                            Content="{Binding NotificationViewModel}">
+                <ContentControl.DataTemplates>
+                    <DataTemplate DataType="domain:SuccessNotificationViewModel">
+                        <Grid ColumnDefinitions="Auto,*,Auto">
+                            <iconPacks:PackIconMaterial Grid.Column="0"
+                                                        Kind="CheckCircleOutline"
+                                                        Foreground="{DynamicResource Brush.Success}"
+                                                        Height="{StaticResource Icon.Size.Micro}"
+                                                        Width="{StaticResource Icon.Size.Micro}"
+                                                        Margin="0,0,4,0" />
+                            <TextBlock Grid.Column="1"
+                                       Classes="StatusText"
+                                       Text="{Binding Title}"
+                                       TextTrimming="CharacterEllipsis" />
+                            <TextBlock Grid.Column="2"
+                                       Classes="StatusText"
+                                       Margin="4,0,0,0"
+                                       Text="{Binding Description}" />
+                        </Grid>
+                    </DataTemplate>
+
+                    <DataTemplate DataType="domain:ErrorNotificationViewModel">
+                        <Grid ColumnDefinitions="Auto,*,Auto">
+                            <iconPacks:PackIconMaterial Grid.Column="0"
+                                                        Kind="AlertCircleOutline"
+                                                        Foreground="{DynamicResource Brush.Danger}"
+                                                        Height="{StaticResource Icon.Size.Micro}"
+                                                        Width="{StaticResource Icon.Size.Micro}"
+                                                        Margin="0,0,4,0" />
+                            <TextBlock Grid.Column="1"
+                                       Classes="StatusText"
+                                       Text="{Binding Title}"
+                                       TextTrimming="CharacterEllipsis" />
+                            <TextBlock Grid.Column="2"
+                                       Classes="StatusText"
+                                       Margin="4,0,0,0"
+                                       Text="{Binding Description}" />
+                        </Grid>
+                    </DataTemplate>
+
+                    <DataTemplate DataType="domain:NotificationViewModel">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Grid.Column="0"
+                                       Classes="StatusText"
+                                       Text="{Binding Title}"
+                                       TextTrimming="CharacterEllipsis" />
+                            <TextBlock Grid.Column="1"
+                                       Classes="StatusText"
+                                       Margin="4,0,0,0"
+                                       Text="{Binding Description}" />
+                        </Grid>
+                    </DataTemplate>
+                </ContentControl.DataTemplates>
+            </ContentControl>
+
+            <Button Grid.Column="3"
+                    Classes="StatusBarButton"
+                    Command="{Binding OpenSettingsWindowCommand}">
+                <StackPanel Orientation="Horizontal" Spacing="3">
+                    <iconPacks:PackIconLucide Kind="Settings" />
+                    <TextBlock Classes="StatusText" Text="{localization:Loc Bottom_Settings}" />
+                </StackPanel>
+            </Button>
+
+            <Button Grid.Column="4"
+                    Classes="StatusBarButton"
+                    Command="{Binding OpenLogWindowCommand}">
+                <StackPanel Orientation="Horizontal" Spacing="3">
                     <iconPacks:PackIconLucide Kind="List" />
                     <Border Background="{DynamicResource Brush.Danger}"
-                            CornerRadius="8"
-                            Padding="4,2"
+                            CornerRadius="6"
+                            Padding="3,0"
+                            Height="14"
                             VerticalAlignment="Center"
                             IsVisible="{Binding !!MessagesCount}">
                         <TextBlock Text="{Binding MessagesCount}"
                                    Foreground="White"
                                    FontWeight="Bold"
-                                   FontSize="{DynamicResource Font.Size.Micro}"
-                                   VerticalAlignment="Center"
-                                   HorizontalAlignment="Center" />
+                                   FontSize="{StaticResource Font.Size.Micro}"
+                                   VerticalAlignment="Center" />
                     </Border>
-                    <TextBlock Text="{localization:Loc Bottom_MessagesList}" VerticalAlignment="Center" />
-                </StackPanel>
-            </Button>
-
-            <ContentControl Grid.Column="1"
-                            VerticalAlignment="Bottom"
-                            Content="{Binding NotificationViewModel}">
-                <ContentControl.DataTemplates>
-                    <DataTemplate DataType="domain:SuccessNotificationViewModel">
-                        <StackPanel Margin="{StaticResource MarginHorizontal.Small}" Orientation="Horizontal">
-                            <iconPacks:PackIconMaterial Kind="CheckCircleOutline"
-                                                        Foreground="{DynamicResource Brush.Success}"
-                                                        Height="{StaticResource Icon.Size.Small}"
-                                                        Width="{StaticResource Icon.Size.Small}"
-                                                        Margin="{StaticResource MarginHorizontal.Small}" />
-                            <TextBlock Margin="{StaticResource MarginHorizontal.Small}" Text="{Binding Title}" />
-                            <TextBlock Margin="{StaticResource MarginHorizontal.Small}" Text="{Binding Description}" />
-                        </StackPanel>
-                    </DataTemplate>
-
-                    <DataTemplate DataType="domain:ErrorNotificationViewModel">
-                        <StackPanel Margin="{StaticResource MarginHorizontal.Small}" Orientation="Horizontal">
-                            <iconPacks:PackIconMaterial Kind="AlertCircleOutline"
-                                                        Foreground="{DynamicResource Brush.Danger}"
-                                                        Height="{StaticResource Icon.Size.Small}"
-                                                        Width="{StaticResource Icon.Size.Small}"
-                                                        Margin="{StaticResource MarginHorizontal.Small}" />
-                            <TextBlock Margin="{StaticResource MarginHorizontal.Small}" Text="{Binding Title}" />
-                            <TextBlock Margin="{StaticResource MarginHorizontal.Small}" Text="{Binding Description}" />
-                        </StackPanel>
-                    </DataTemplate>
-
-                    <DataTemplate DataType="domain:NotificationViewModel">
-                        <StackPanel Margin="{StaticResource MarginHorizontal.Small}" Orientation="Horizontal">
-                            <TextBlock Margin="{StaticResource MarginHorizontal.Small}" Text="{Binding Title}" />
-                            <TextBlock Margin="{StaticResource MarginHorizontal.Small}" Text="{Binding Description}" />
-                        </StackPanel>
-                    </DataTemplate>
-                </ContentControl.DataTemplates>
-            </ContentControl>
-
-            <Button Grid.Column="2"
-                    Classes="ToolbarButton"
-                    Command="{Binding UndoDeleteCommand}"
-                    IsVisible="{Binding CanUndoDelete}"
-                    HorizontalAlignment="Left"
-                    Margin="{StaticResource MarginHorizontal.Small}"
-                    ToolTip.Tip="{localization:Loc Action_UndoDelete}">
-                <StackPanel Orientation="Horizontal" Spacing="4">
-                    <iconPacks:PackIconLucide Kind="Undo2" />
-                    <TextBlock Text="{localization:Loc Common_Undo}" VerticalAlignment="Center" />
-                </StackPanel>
-            </Button>
-
-            <Button Grid.Column="3"
-                    Classes="ToolbarButton"
-                    Command="{Binding OpenSettingsWindowCommand}"
-                    Margin="{StaticResource MarginHorizontal.Small}">
-                <StackPanel Orientation="Horizontal" Spacing="4">
-                    <iconPacks:PackIconLucide Kind="Settings" />
-                    <TextBlock Text="{localization:Loc Bottom_Settings}" VerticalAlignment="Center" />
+                    <TextBlock Classes="StatusText" Text="{localization:Loc Bottom_MessagesList}" />
                 </StackPanel>
             </Button>
         </Grid>
-    </Grid>
+    </Border>
 </UserControl>

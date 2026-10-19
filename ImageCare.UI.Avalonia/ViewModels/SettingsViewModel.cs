@@ -33,6 +33,8 @@ public sealed class SettingsViewModel : ViewModelBase
     private FileApplicationAssociationViewModel? _selectedAssociation;
     private ApplicationChoiceViewModel? _selectedApplicationChoice;
     private LanguageOption? _selectedLanguage;
+    private DragDropModifierOption? _selectedDragDropModifier;
+    private bool _copyOnDragDropByDefault;
     private bool _restoreLastFoldersOnStartup;
     private bool _safeDeletionEnabled;
     private string _safeDeletionDirectoryPath = string.Empty;
@@ -78,6 +80,7 @@ public sealed class SettingsViewModel : ViewModelBase
             extension.Equals(".jpg", StringComparison.OrdinalIgnoreCase))
             ?? SupportedExtensions.FirstOrDefault()
             ?? string.Empty;
+        RebuildDragDropModifierOptions(DragDropModifierKey.Control);
         RebuildApplicationChoices();
     }
 
@@ -86,6 +89,8 @@ public sealed class SettingsViewModel : ViewModelBase
     public IReadOnlyList<LanguageOption> AvailableLanguages => _localization.SupportedLanguages;
 
     public IReadOnlyList<string> SupportedExtensions { get; }
+
+    public ObservableCollection<DragDropModifierOption> DragDropModifierOptions { get; } = new();
 
     public ObservableCollection<ApplicationChoiceViewModel> ApplicationChoices { get; } = new();
 
@@ -102,6 +107,36 @@ public sealed class SettingsViewModel : ViewModelBase
             }
 
             _configService.Configuration.Value.RestoreLastFoldersOnStartup = value;
+            SaveConfiguration();
+        }
+    }
+
+    public DragDropModifierOption? SelectedDragDropModifier
+    {
+        get => _selectedDragDropModifier;
+        set
+        {
+            if (!SetProperty(ref _selectedDragDropModifier, value) || value == null)
+            {
+                return;
+            }
+
+            _configService.Configuration.Value.DragDropModifier = value.Modifier;
+            SaveConfiguration();
+        }
+    }
+
+    public bool CopyOnDragDropByDefault
+    {
+        get => _copyOnDragDropByDefault;
+        set
+        {
+            if (!SetProperty(ref _copyOnDragDropByDefault, value))
+            {
+                return;
+            }
+
+            _configService.Configuration.Value.CopyOnDragDropByDefault = value;
             SaveConfiguration();
         }
     }
@@ -166,6 +201,7 @@ public sealed class SettingsViewModel : ViewModelBase
             _localization.SetCulture(value.Name);
             _configService.Configuration.Value.UiCultureName = value.Name;
             SaveConfiguration();
+            RebuildDragDropModifierOptions(_configService.Configuration.Value.DragDropModifier);
             RebuildApplicationChoices();
             RaisePropertyChanged(nameof(Title));
         }
@@ -244,21 +280,28 @@ public sealed class SettingsViewModel : ViewModelBase
     {
         try
         {
+            var configuration = _configService.Configuration.Value;
+
             _selectedLanguage = AvailableLanguages.FirstOrDefault(language =>
                 string.Equals(language.Name, _localization.Culture.Name, StringComparison.OrdinalIgnoreCase));
             RaisePropertyChanged(nameof(SelectedLanguage));
 
-            _restoreLastFoldersOnStartup = _configService.Configuration.Value.RestoreLastFoldersOnStartup;
+            _restoreLastFoldersOnStartup = configuration.RestoreLastFoldersOnStartup;
             RaisePropertyChanged(nameof(RestoreLastFoldersOnStartup));
 
-            _safeDeletionEnabled = _configService.Configuration.Value.SafeDeletionEnabled;
+            RebuildDragDropModifierOptions(configuration.DragDropModifier);
+
+            _copyOnDragDropByDefault = configuration.CopyOnDragDropByDefault;
+            RaisePropertyChanged(nameof(CopyOnDragDropByDefault));
+
+            _safeDeletionEnabled = configuration.SafeDeletionEnabled;
             RaisePropertyChanged(nameof(SafeDeletionEnabled));
 
-            _safeDeletionDirectoryPath = _configService.Configuration.Value.SafeDeletionDirectoryPath;
+            _safeDeletionDirectoryPath = configuration.SafeDeletionDirectoryPath;
             RaisePropertyChanged(nameof(SafeDeletionDirectoryPath));
 
             _safeDeletionMaxFileCount = Math.Clamp(
-                _configService.Configuration.Value.SafeDeletionMaxFileCount,
+                configuration.SafeDeletionMaxFileCount,
                 1,
                 10_000);
             RaisePropertyChanged(nameof(SafeDeletionMaxFileCount));
@@ -418,6 +461,24 @@ public sealed class SettingsViewModel : ViewModelBase
 
         SaveConfiguration();
         LoadAssociations();
+    }
+
+    private void RebuildDragDropModifierOptions(DragDropModifierKey selectedModifier)
+    {
+        DragDropModifierOptions.Clear();
+        DragDropModifierOptions.Add(
+            new DragDropModifierOption(_localization["Settings_ModifierControl"], DragDropModifierKey.Control));
+        DragDropModifierOptions.Add(
+            new DragDropModifierOption(_localization["Settings_ModifierAlt"], DragDropModifierKey.Alt));
+        DragDropModifierOptions.Add(
+            new DragDropModifierOption(_localization["Settings_ModifierShift"], DragDropModifierKey.Shift));
+        DragDropModifierOptions.Add(
+            new DragDropModifierOption(_localization["Settings_ModifierMeta"], DragDropModifierKey.Meta));
+
+        _selectedDragDropModifier = DragDropModifierOptions.FirstOrDefault(option =>
+            option.Modifier == selectedModifier)
+            ?? DragDropModifierOptions[0];
+        RaisePropertyChanged(nameof(SelectedDragDropModifier));
     }
 
     private void RebuildApplicationChoices()

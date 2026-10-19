@@ -7,6 +7,17 @@
   <data name="Common_Create" xml:space="preserve"><value>Create</value></data>
   <data name="Common_Rename" xml:space="preserve"><value>Rename</value></data>
   <data name="Common_Delete" xml:space="preserve"><value>Delete</value></data>
+  <data name="Common_Confirm" xml:space="preserve"><value>Confirm</value></data>
+  <data name="Common_Cancel" xml:space="preserve"><value>Cancel</value></data>
+  <data name="FileOperation_Current" xml:space="preserve"><value>Operation:</value></data>
+  <data name="FileOperation_CurrentDescription" xml:space="preserve"><value>Current drag-and-drop operation</value></data>
+  <data name="FileOperation_DefaultMarker" xml:space="preserve"><value>(default)</value></data>
+  <data name="FileOperation_HotkeyMarker" xml:space="preserve"><value>(hotkey)</value></data>
+  <data name="FileOperation_RenameMode" xml:space="preserve"><value>Request a new file name before copying or moving</value></data>
+  <data name="RenameFile_Title" xml:space="preserve"><value>Rename during file operation</value></data>
+  <data name="RenameFile_Prompt" xml:space="preserve"><value>Enter the destination file name.</value></data>
+  <data name="RenameFile_InvalidName" xml:space="preserve"><value>Enter a valid file name for Windows and macOS.</value></data>
+  <data name="RenameFile_AlreadyExists" xml:space="preserve"><value>A file with this name already exists in the destination folder.</value></data>
   <data name="Bottom_MessagesList" xml:space="preserve"><value>Messages</value></data>
   <data name="Bottom_Settings" xml:space="preserve"><value>Settings</value></data>
   <data name="Folders_SearchFolders" xml:space="preserve"><value>Search folders</value></data>
@@ -33,6 +44,14 @@
   <data name="Settings_LanguageDescription" xml:space="preserve"><value>The language changes immediately and is saved automatically.</value></data>
   <data name="Settings_RestoreLastFolders" xml:space="preserve"><value>Restore last opened folders at startup</value></data>
   <data name="Settings_RestoreLastFoldersDescription" xml:space="preserve"><value>Each panel restores its last folder asynchronously. Unavailable folders are skipped.</value></data>
+  <data name="Settings_DragDropBehavior" xml:space="preserve"><value>File drag and drop</value></data>
+  <data name="Settings_DragDropModifier" xml:space="preserve"><value>Key for switching the file operation</value></data>
+  <data name="Settings_CopyOnDragDropByDefault" xml:space="preserve"><value>Copy files by default</value></data>
+  <data name="Settings_DragDropDescription" xml:space="preserve"><value>Without the key, ImageCare uses the default operation. Hold the selected key to switch temporarily between copying and moving.</value></data>
+  <data name="Settings_ModifierControl" xml:space="preserve"><value>Ctrl</value></data>
+  <data name="Settings_ModifierAlt" xml:space="preserve"><value>Alt / Option</value></data>
+  <data name="Settings_ModifierShift" xml:space="preserve"><value>Shift</value></data>
+  <data name="Settings_ModifierMeta" xml:space="preserve"><value>Command / Windows</value></data>
   <data name="Settings_FileAssociations" xml:space="preserve"><value>File associations</value></data>
   <data name="Settings_AddNewAssociation" xml:space="preserve"><value>Add new file association</value></data>
   <data name="Settings_ExtensionPlaceholder" xml:space="preserve"><value>Extension (e.g. .cr2, .jpg)</value></data>

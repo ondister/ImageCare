@@ -1,12 +1,14 @@
 using System;
+using System.Reactive.Linq;
 
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Input;
-using Avalonia.Interactivity;
 using Avalonia.Media;
+using Avalonia.VisualTree;
 
+using ImageCare.UI.Avalonia.Services;
 using ImageCare.UI.Avalonia.ViewModels.Domain;
 
 namespace ImageCare.UI.Avalonia.Behaviors;
@@ -26,7 +28,6 @@ public sealed class PreviewDragDropBehavior
         AvaloniaProperty.RegisterAttached<PreviewDragDropBehavior, Control, DragSourceState?>(
             "DragSourceState");
 
-    private static object? _sourceContext;
     private static DragPreviewState? _dragPreview;
 
     static PreviewDragDropBehavior()
@@ -62,109 +63,135 @@ public sealed class PreviewDragDropBehavior
 
     private static void OnDropHandlerChanged(ListBox listBox, AvaloniaPropertyChangedEventArgs args)
     {
-        listBox.RemoveHandler(DragDrop.DragOverEvent, OnDragOver);
-        listBox.RemoveHandler(DragDrop.DropEvent, OnDrop);
-
-        if (args.NewValue is ImagePreviewDropHandler)
-        {
-            DragDrop.SetAllowDrop(listBox, true);
-            listBox.AddHandler(DragDrop.DragOverEvent, OnDragOver);
-            listBox.AddHandler(DragDrop.DropEvent, OnDrop);
-        }
+        DragDrop.SetAllowDrop(listBox, args.NewValue is ImagePreviewDropHandler);
     }
 
     private static void OnPointerPressed(object? sender, PointerPressedEventArgs e)
     {
-        if (sender is not Control control ||
-            !e.GetCurrentPoint(control).Properties.IsLeftButtonPressed)
+        if (sender is not Control control)
         {
             return;
         }
 
+        var point = e.GetCurrentPoint(control);
+        var modifiers = PlatformModifierKeys.GetCurrent(e.KeyModifiers);
+        var isMacControlClick = OperatingSystem.IsMacOS() &&
+                                modifiers.HasFlag(KeyModifiers.Control) &&
+                                point.Properties.IsRightButtonPressed;
+        if (!point.Properties.IsLeftButtonPressed && !isMacControlClick)
+        {
+            return;
+        }
+
+        var sourceListBox = control.FindAncestorOfType<ListBox>();
+        var dropHandler = sourceListBox == null ? null : GetDropHandler(sourceListBox);
         control.SetValue(
             DragSourceStateProperty,
-            new DragSourceState(e, e.GetPosition(control), control.DataContext));
+            new DragSourceState(
+                e.GetPosition(control),
+                control.DataContext,
+                isMacControlClick,
+                dropHandler));
     }
 
-    private static async void OnPointerMoved(object? sender, PointerEventArgs e)
+    private static void OnPointerMoved(object? sender, PointerEventArgs e)
     {
         if (sender is not Control control ||
-            control.GetValue(DragSourceStateProperty) is not { } state ||
-            state.IsDragging ||
-            !e.GetCurrentPoint(control).Properties.IsLeftButtonPressed)
+            control.GetValue(DragSourceStateProperty) is not { } state)
         {
             return;
         }
 
-        var currentPosition = e.GetPosition(control);
-        if (Math.Abs(currentPosition.X - state.StartPosition.X) < 4 &&
-            Math.Abs(currentPosition.Y - state.StartPosition.Y) < 4)
+        if (!state.IsDragging)
+        {
+            var point = e.GetCurrentPoint(control);
+            var dragButtonPressed = point.Properties.IsLeftButtonPressed ||
+                                    (state.IsMacControlClick && point.Properties.IsRightButtonPressed);
+            if (!dragButtonPressed)
+            {
+                return;
+            }
+
+            var currentPosition = e.GetPosition(control);
+            if (Math.Abs(currentPosition.X - state.StartPosition.X) < 4 &&
+                Math.Abs(currentPosition.Y - state.StartPosition.Y) < 4)
+            {
+                return;
+            }
+
+            state.IsDragging = true;
+            e.Pointer.Capture(control);
+            state.DropHandler?.BeginDrag(e.KeyModifiers);
+            ShowDragPreview(control, state.SourceContext, e, state.DropHandler);
+        }
+
+        state.DropHandler?.UpdateOperation(e.KeyModifiers);
+        if (TopLevel.GetTopLevel(control) is { } topLevel)
+        {
+            UpdateDragPreview(e.GetPosition(topLevel));
+        }
+
+        e.Handled = true;
+    }
+
+    private static async void OnPointerReleased(object? sender, PointerReleasedEventArgs e)
+    {
+        if (sender is not Control control ||
+            control.GetValue(DragSourceStateProperty) is not { } state)
         {
             return;
         }
 
-        state.IsDragging = true;
-        _sourceContext = state.SourceContext;
-        ShowDragPreview(control, state.SourceContext, e);
+        control.ClearValue(DragSourceStateProperty);
+        e.Pointer.Capture(null);
+        if (!state.IsDragging)
+        {
+            return;
+        }
 
-        var item = new DataTransferItem();
-        item.SetText((state.SourceContext as MediaPreviewViewModel)?.Url ?? string.Empty);
-        var data = new DataTransfer();
-        data.Add(item);
+        e.Handled = true;
+        var operation = state.DropHandler?.UpdateOperation(e.KeyModifiers)
+                        ?? FileTransferOperation.Move;
+        var topLevel = TopLevel.GetTopLevel(control);
+        var targetListBox = topLevel == null
+            ? null
+            : FindDropTarget(topLevel, e.GetPosition(topLevel));
+        var targetHandler = targetListBox == null ? null : GetDropHandler(targetListBox);
 
+        HideDragPreview();
         try
         {
-            await DragDrop.DoDragDropAsync(
-                state.PointerPressedEventArgs,
-                data,
-                DragDropEffects.Copy | DragDropEffects.Move);
+            if (targetListBox != null && targetHandler != null)
+            {
+                await targetHandler.ExecuteAsync(
+                    targetListBox,
+                    state.SourceContext,
+                    targetListBox.DataContext,
+                    operation);
+            }
         }
         finally
         {
-            HideDragPreview();
-            _sourceContext = null;
-            control.ClearValue(DragSourceStateProperty);
+            state.DropHandler?.EndDrag();
         }
     }
 
-    private static void OnPointerReleased(object? sender, PointerReleasedEventArgs e)
+    private static ListBox? FindDropTarget(TopLevel topLevel, Point position)
     {
-        if (sender is Control control &&
-            control.GetValue(DragSourceStateProperty) is { IsDragging: false })
+        if (topLevel.InputHitTest(position) is not Visual hit)
         {
-            control.ClearValue(DragSourceStateProperty);
+            return null;
         }
+
+        var listBox = hit as ListBox ?? hit.FindAncestorOfType<ListBox>();
+        return listBox != null && GetDropHandler(listBox) != null ? listBox : null;
     }
 
-    private static void OnDragOver(object? sender, DragEventArgs e)
-    {
-        if (sender is not ListBox listBox || GetDropHandler(listBox) is not { } handler)
-        {
-            return;
-        }
-
-        e.DragEffects = GetRequestedEffect(e.KeyModifiers);
-        if (!handler.Validate(listBox, e, _sourceContext, listBox.DataContext, null))
-        {
-            e.DragEffects = DragDropEffects.None;
-        }
-
-        e.Handled = true;
-    }
-
-    private static async void OnDrop(object? sender, DragEventArgs e)
-    {
-        if (sender is not ListBox listBox || GetDropHandler(listBox) is not { } handler)
-        {
-            return;
-        }
-
-        e.DragEffects = GetRequestedEffect(e.KeyModifiers);
-        e.Handled = true;
-        await handler.ExecuteAsync(listBox, e, _sourceContext, listBox.DataContext, null);
-    }
-
-    private static void ShowDragPreview(Control source, object? sourceContext, PointerEventArgs pointerEventArgs)
+    private static void ShowDragPreview(
+        Control source,
+        object? sourceContext,
+        PointerEventArgs pointerEventArgs,
+        ImagePreviewDropHandler? dropHandler)
     {
         HideDragPreview();
 
@@ -193,47 +220,59 @@ public sealed class PreviewDragDropBehavior
             IsHitTestVisible = false,
             Child = previewImage
         };
+        var copyBadge = new Border
+        {
+            Width = 28,
+            Height = 28,
+            CornerRadius = new CornerRadius(14),
+            Background = new SolidColorBrush(Color.FromRgb(22, 163, 74)),
+            BorderBrush = Brushes.White,
+            BorderThickness = new Thickness(2),
+            IsHitTestVisible = false,
+            IsVisible = dropHandler?.CurrentOperation == FileTransferOperation.Copy,
+            Child = new TextBlock
+            {
+                Text = "+",
+                FontSize = 22,
+                FontWeight = FontWeight.Bold,
+                Foreground = Brushes.White,
+                HorizontalAlignment = global::Avalonia.Layout.HorizontalAlignment.Center,
+                VerticalAlignment = global::Avalonia.Layout.VerticalAlignment.Center
+            }
+        };
+        var operationSubscription = dropHandler?.OperationStatusChanged.Subscribe(status =>
+        {
+            copyBadge.IsVisible = status.Operation == FileTransferOperation.Copy;
+        });
         var overlay = new Canvas
         {
             IsHitTestVisible = false
         };
         overlay.Children.Add(previewFrame);
+        overlay.Children.Add(copyBadge);
         overlayLayer.Children.Add(overlay);
 
-        var previousAllowDrop = DragDrop.GetAllowDrop(topLevel);
-        DragDrop.SetAllowDrop(topLevel, true);
-        topLevel.AddHandler(
-            DragDrop.DragOverEvent,
-            OnTopLevelDragOver,
-            RoutingStrategies.Tunnel | RoutingStrategies.Bubble,
-            handledEventsToo: true);
-
         _dragPreview = new DragPreviewState(
-            topLevel,
             overlayLayer,
             overlay,
             previewFrame,
-            previousAllowDrop);
+            copyBadge,
+            operationSubscription);
         UpdateDragPreview(pointerEventArgs.GetPosition(topLevel));
-    }
-
-    private static void OnTopLevelDragOver(object? sender, DragEventArgs e)
-    {
-        if (_dragPreview is { TopLevel: var topLevel })
-        {
-            UpdateDragPreview(e.GetPosition(topLevel));
-        }
     }
 
     private static void UpdateDragPreview(Point pointerPosition)
     {
-        if (_dragPreview is not { PreviewFrame: var previewFrame })
+        if (_dragPreview is not { PreviewFrame: var previewFrame, CopyBadge: var copyBadge })
         {
             return;
         }
 
-        Canvas.SetLeft(previewFrame, pointerPosition.X + 16);
-        Canvas.SetTop(previewFrame, pointerPosition.Y + 16);
+        const double offset = 16;
+        Canvas.SetLeft(previewFrame, pointerPosition.X + offset);
+        Canvas.SetTop(previewFrame, pointerPosition.Y + offset);
+        Canvas.SetLeft(copyBadge, pointerPosition.X + offset + previewFrame.Width - 18);
+        Canvas.SetTop(copyBadge, pointerPosition.Y + offset + previewFrame.Height - 18);
     }
 
     private static void HideDragPreview()
@@ -243,32 +282,28 @@ public sealed class PreviewDragDropBehavior
             return;
         }
 
-        preview.TopLevel.RemoveHandler(DragDrop.DragOverEvent, OnTopLevelDragOver);
-        DragDrop.SetAllowDrop(preview.TopLevel, preview.PreviousAllowDrop);
+        preview.OperationSubscription?.Dispose();
         preview.OverlayLayer.Children.Remove(preview.Overlay);
         _dragPreview = null;
     }
 
-    private static DragDropEffects GetRequestedEffect(KeyModifiers modifiers) =>
-        modifiers.HasFlag(KeyModifiers.Control) || modifiers.HasFlag(KeyModifiers.Alt)
-            ? DragDropEffects.Copy
-            : DragDropEffects.Move;
-
     private sealed class DragSourceState(
-        PointerPressedEventArgs pointerPressedEventArgs,
         Point startPosition,
-        object? sourceContext)
+        object? sourceContext,
+        bool isMacControlClick,
+        ImagePreviewDropHandler? dropHandler)
     {
-        public PointerPressedEventArgs PointerPressedEventArgs { get; } = pointerPressedEventArgs;
         public Point StartPosition { get; } = startPosition;
         public object? SourceContext { get; } = sourceContext;
+        public bool IsMacControlClick { get; } = isMacControlClick;
+        public ImagePreviewDropHandler? DropHandler { get; } = dropHandler;
         public bool IsDragging { get; set; }
     }
 
     private sealed record DragPreviewState(
-        TopLevel TopLevel,
         OverlayLayer OverlayLayer,
         Canvas Overlay,
         Border PreviewFrame,
-        bool PreviousAllowDrop);
+        Border CopyBadge,
+        IDisposable? OperationSubscription);
 }

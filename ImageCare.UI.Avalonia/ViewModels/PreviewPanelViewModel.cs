@@ -14,6 +14,7 @@ using ImageCare.Core.Domain.Media;
 using ImageCare.Core.Domain.Notification;
 using ImageCare.Core.Domain.Preview;
 using ImageCare.Core.Services.ConfigurationService;
+using ImageCare.Core.Services.FileSystemService;
 using ImageCare.Core.Services.FileSystemWatcherService;
 using ImageCare.Core.Services.FolderClusterizationService;
 using ImageCare.Core.Services.FolderService;
@@ -23,6 +24,7 @@ using ImageCare.Core.Services.MediaPreviewService;
 using ImageCare.Core.Services.NotificationService;
 using ImageCare.UI.Avalonia.Behaviors;
 using ImageCare.UI.Avalonia.Collections;
+using ImageCare.UI.Avalonia.Services;
 using ImageCare.UI.Avalonia.ViewModels.Domain;
 
 using MapsterMapper;
@@ -44,8 +46,10 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
 
     private readonly IMediaPreviewService _imageService;
     private readonly IFolderService _folderService;
+    private readonly IFileSystemService _fileSystemService;
     private readonly IFileSystemWatcherService _fileSystemWatcherService;
     private readonly IMediaPreviewOperationsService _fileOperationsService;
+    private readonly FileTransferCoordinator _fileTransferCoordinator;
     private readonly IFolderStatisticsService _folderStatisticsService;
     private readonly IFolderClusterizationService _folderClusterizationService;
     private readonly INotificationService _notificationService;
@@ -69,8 +73,10 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
 
     public PreviewPanelViewModel(IMediaPreviewService imageService,
                                  IFolderService folderService,
+                                 IFileSystemService fileSystemService,
                                  IFileSystemWatcherService fileSystemWatcherService,
                                  IMediaPreviewOperationsService fileOperationsService,
+                                 FileTransferCoordinator fileTransferCoordinator,
                                  IFolderStatisticsService folderStatisticsService,
                                  IFolderClusterizationService folderClusterizationService,
                                  INotificationService notificationService,
@@ -83,8 +89,10 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
     {
         _imageService = imageService;
         _folderService = folderService;
+        _fileSystemService = fileSystemService;
         _fileSystemWatcherService = fileSystemWatcherService;
         _fileOperationsService = fileOperationsService;
+        _fileTransferCoordinator = fileTransferCoordinator;
         _folderStatisticsService = folderStatisticsService;
         _folderClusterizationService = folderClusterizationService;
         _notificationService = notificationService;
@@ -290,7 +298,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
 
             progress.ProgressChanged += (o, info) => { _notificationService.SendNotification(new Notification(notificationTitle, info.Percentage.ToString("F1"))); };
 
-            var result = await _fileOperationsService.CopyImagePreviewToDirectoryAsync(
+            var result = await _fileTransferCoordinator.CopyAsync(
                              _mapper.Map<MediaPreview>(SelectedPreview),
                              targetDirectory.Path,
                              progress);
@@ -333,7 +341,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
 
             progress.ProgressChanged += (o, info) => { _notificationService.SendNotification(new Notification(notificationTitle, info.Percentage.ToString("F1"))); };
 
-            var result = await _fileOperationsService.MoveImagePreviewToDirectoryAsync(
+            var result = await _fileTransferCoordinator.MoveAsync(
                              _mapper.Map<MediaPreview>(SelectedPreview),
                              targetDirectory.Path,
                              progress);
@@ -388,7 +396,8 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
             _synchronizationContext.Send(
                 d =>
                 {
-                    if (ImagePreviews.Any(existing => PathsEqual(existing.Url, mediaPreviewViewModel.Url)))
+                    if (!_fileSystemService.FileExists(mediaPreviewViewModel.Url) ||
+                        ImagePreviews.Any(existing => PathsEqual(existing.Url, mediaPreviewViewModel.Url)))
                     {
                         return;
                     }
@@ -505,7 +514,9 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
             ? StringComparer.OrdinalIgnoreCase
             : StringComparer.Ordinal;
         var newFiles = files
-            .Where(file => PathsEqual(System.IO.Path.GetDirectoryName(file.FullName), SelectedFolderPath))
+            .Where(file =>
+                PathsEqual(System.IO.Path.GetDirectoryName(file.FullName), SelectedFolderPath) &&
+                _fileSystemService.FileExists(file.FullName))
             .GroupBy(file => file.FullName, pathComparer)
             .Select(group => group.Last())
             .ToArray();
@@ -541,11 +552,9 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
                 _imagePaths.RemoveWhere(file => deletedPaths.Contains(file.FullName));
             }
 
-            var selectedWasDeleted = SelectedPreview != null && deletedPaths.Contains(SelectedPreview.Url);
-            ImagePreviews.RemoveWhere(preview => deletedPaths.Contains(preview.Url));
-            if (selectedWasDeleted)
+            foreach (var deletedPath in deletedPaths)
             {
-                SelectedPreview = ImagePreviews.FirstOrDefault();
+                RemoveImagePreviewByPath(deletedPath);
             }
         }
         catch (Exception ex)
@@ -632,9 +641,14 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
     {
         try
         {
+            if (!_fileSystemService.FileExists(filePath))
+            {
+                return;
+            }
+
             var imagePreview = await _imageService.GetMediaPreviewAsync(filePath);
 
-            if (imagePreview == null)
+            if (imagePreview == null || !_fileSystemService.FileExists(filePath))
             {
                 return;
             }
@@ -657,37 +671,39 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
         try
         {
             var imagePreviewViewModel = ImagePreviews.FirstOrDefault(vm => PathsEqual(vm.Url, filePath));
-            if (imagePreviewViewModel != null)
+            if (imagePreviewViewModel == null)
             {
-                var indexToRemove = ImagePreviews.IndexOf(imagePreviewViewModel);
-                ImagePreviews.Remove(imagePreviewViewModel);
+                return;
+            }
 
-                if (ImagePreviews.Count != 0 && ImagePreviews.Count > indexToRemove)
-                {
-                    _synchronizationContext.Post(d => { SelectedPreview = ImagePreviews[indexToRemove]; }, null);
-                }
+            var indexToRemove = ImagePreviews.IndexOf(imagePreviewViewModel);
+            var wasSelected = ReferenceEquals(SelectedPreview, imagePreviewViewModel);
+            ImagePreviews.Remove(imagePreviewViewModel);
 
-                if (ImagePreviews.Count == 0)
-                {
-                    _synchronizationContext.Post(d => { SelectedPreview = null; }, null);
-                    if (_fileOperationsService.GetLastSelectedMediaPreview() is SelectedMediaPreview current &&
-                        current.FileManagerPanel == FileManagerPanel)
-                    {
-                        _fileOperationsService.SetSelectedPreview(
-                            new SelectedMediaPreview(MediaPreview.Empty, FileManagerPanel));
-                    }
-                }
+            if (wasSelected)
+            {
+                SelectedPreview = ImagePreviews.Count == 0
+                    ? null
+                    : ImagePreviews[Math.Min(indexToRemove, ImagePreviews.Count - 1)];
+            }
 
-                var indexToLoad = indexToRemove + PreloadCount;
-                if (ImagePreviews.Count > indexToLoad)
-                {
-                    _ = LoadImageAsync(indexToLoad, _currentScrollCancellation.Token);
-                }
+            if (ImagePreviews.Count == 0 &&
+                _fileOperationsService.GetLastSelectedMediaPreview() is SelectedMediaPreview current &&
+                current.FileManagerPanel == FileManagerPanel)
+            {
+                _fileOperationsService.SetSelectedPreview(
+                    new SelectedMediaPreview(MediaPreview.Empty, FileManagerPanel));
+            }
+
+            var indexToLoad = indexToRemove + PreloadCount;
+            if (ImagePreviews.Count > indexToLoad)
+            {
+                _ = LoadImageAsync(indexToLoad, _currentScrollCancellation.Token);
             }
         }
         catch (Exception ex)
         {
-            _logger.Error(ex, $"Unexpected exception during Creating image preview from path: {filePath}");
+            _logger.Error(ex, $"Unexpected exception during removing image preview: {filePath}");
         }
     }
 

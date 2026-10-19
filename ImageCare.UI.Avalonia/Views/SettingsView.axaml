@@ -40,6 +40,28 @@
 
                 <Separator Margin="{DynamicResource MarginVertical.Small}" />
 
+                <TextBlock Text="{localization:Loc Settings_DragDropBehavior}"
+                           FontWeight="Bold"
+                           FontSize="{DynamicResource Font.Size.SectionHeader}" />
+                <TextBlock Text="{localization:Loc Settings_DragDropModifier}" />
+                <ComboBox ItemsSource="{Binding DragDropModifierOptions}"
+                          SelectedItem="{Binding SelectedDragDropModifier, Mode=TwoWay}"
+                          MinWidth="240"
+                          HorizontalAlignment="Left">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate x:DataType="domain:DragDropModifierOption">
+                            <TextBlock Text="{Binding DisplayName}" />
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+                <CheckBox Content="{localization:Loc Settings_CopyOnDragDropByDefault}"
+                          IsChecked="{Binding CopyOnDragDropByDefault, Mode=TwoWay}" />
+                <TextBlock Text="{localization:Loc Settings_DragDropDescription}"
+                           Opacity="0.7"
+                           TextWrapping="Wrap" />
+
+                <Separator Margin="{DynamicResource MarginVertical.Small}" />
+
                 <ToggleSwitch Content="{localization:Loc Settings_SafeDeletion}"
                               IsChecked="{Binding SafeDeletionEnabled, Mode=TwoWay}" />
                 <TextBlock Text="{localization:Loc Settings_SafeDeletionDescription}"

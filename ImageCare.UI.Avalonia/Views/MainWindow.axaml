@@ -56,33 +56,45 @@
                             Margin="{StaticResource MarginRight.Medium}"
                             prism:RegionManager.RegionName="{x:Static ui:RegionNames.SourcePreviewImageRegion}" />
 
-            <GridSplitter Grid.Column="1" VerticalAlignment="Stretch" ShowsPreview="True">
-                <GridSplitter.Template>
-                    <ControlTemplate>
-                        <Border BorderBrush="{DynamicResource Brush.Splitter}"
-                                BorderThickness="2,0,2,0">
-                            <StackPanel Orientation="Vertical" VerticalAlignment="Center">
-                                <Button Margin="{StaticResource MarginAll.Small}"
-                                        Classes="IconButton"
-                                        Command="{CompiledBinding CopySelectedPreviewCommand}"
-                                        ToolTip.Tip="{localization:Loc Action_Copy}">
-                                    <iconPacks:PackIconMaterial Kind="ContentCopy"
-                                                                Height="{StaticResource Icon.Size.Small}"
-                                                                Width="{StaticResource Icon.Size.Small}" />
-                                </Button>
-                                <Button Margin="{StaticResource MarginAll.Small}"
-                                        Classes="IconButton"
-                                        Command="{CompiledBinding MoveSelectedPreviewCommand}"
-                                        ToolTip.Tip="{localization:Loc Action_Move}">
-                                    <iconPacks:PackIconMaterial Kind="FileReplaceOutline"
-                                                                Height="{StaticResource Icon.Size.Small}"
-                                                                Width="{StaticResource Icon.Size.Small}" />
-                                </Button>
-                            </StackPanel>
-                        </Border>
-                    </ControlTemplate>
-                </GridSplitter.Template>
-            </GridSplitter>
+            <GridSplitter Grid.Column="1"
+                          VerticalAlignment="Stretch"
+                          ShowsPreview="True" />
+
+            <StackPanel Grid.Column="1"
+                        Panel.ZIndex="1"
+                        Orientation="Vertical"
+                        VerticalAlignment="Center"
+                        Cursor="Arrow">
+                <Button Margin="{StaticResource MarginAll.Small}"
+                        Classes="IconButton"
+                        Cursor="Arrow"
+                        Command="{CompiledBinding CopySelectedPreviewCommand}"
+                        ToolTip.Tip="{localization:Loc Action_Copy}">
+                    <iconPacks:PackIconMaterial Kind="ContentCopy"
+                                                Height="{StaticResource Icon.Size.Small}"
+                                                Width="{StaticResource Icon.Size.Small}" />
+                </Button>
+                <Button Margin="{StaticResource MarginAll.Small}"
+                        Classes="IconButton"
+                        Cursor="Arrow"
+                        Command="{CompiledBinding MoveSelectedPreviewCommand}"
+                        ToolTip.Tip="{localization:Loc Action_Move}">
+                    <iconPacks:PackIconMaterial Kind="FileReplaceOutline"
+                                                Height="{StaticResource Icon.Size.Small}"
+                                                Width="{StaticResource Icon.Size.Small}" />
+                </Button>
+                <ToggleButton Margin="{StaticResource MarginAll.Small}"
+                              MinWidth="32"
+                              MinHeight="32"
+                              Padding="6"
+                              Cursor="Arrow"
+                              IsChecked="{CompiledBinding RenameFileOnTransfer, Mode=TwoWay}"
+                              ToolTip.Tip="{localization:Loc FileOperation_RenameMode}">
+                    <iconPacks:PackIconMaterial Kind="RenameBox"
+                                                Height="{StaticResource Icon.Size.Small}"
+                                                Width="{StaticResource Icon.Size.Small}" />
+                </ToggleButton>
+            </StackPanel>
 
             <ContentControl Grid.Column="2"
                             Margin="{StaticResource MarginLeft.Medium}"

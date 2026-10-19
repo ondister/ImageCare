@@ -7,6 +7,17 @@
   <data name="Common_Create" xml:space="preserve"><value>Создать</value></data>
   <data name="Common_Rename" xml:space="preserve"><value>Переименовать</value></data>
   <data name="Common_Delete" xml:space="preserve"><value>Удалить</value></data>
+  <data name="Common_Confirm" xml:space="preserve"><value>Подтвердить</value></data>
+  <data name="Common_Cancel" xml:space="preserve"><value>Отмена</value></data>
+  <data name="FileOperation_Current" xml:space="preserve"><value>Операция:</value></data>
+  <data name="FileOperation_CurrentDescription" xml:space="preserve"><value>Текущая операция перетаскивания</value></data>
+  <data name="FileOperation_DefaultMarker" xml:space="preserve"><value>(по умолчанию)</value></data>
+  <data name="FileOperation_HotkeyMarker" xml:space="preserve"><value>(горячая клавиша)</value></data>
+  <data name="FileOperation_RenameMode" xml:space="preserve"><value>Запрашивать новое имя файла перед копированием или перемещением</value></data>
+  <data name="RenameFile_Title" xml:space="preserve"><value>Переименование при файловой операции</value></data>
+  <data name="RenameFile_Prompt" xml:space="preserve"><value>Введите имя файла в целевой папке.</value></data>
+  <data name="RenameFile_InvalidName" xml:space="preserve"><value>Введите имя, допустимое в Windows и macOS.</value></data>
+  <data name="RenameFile_AlreadyExists" xml:space="preserve"><value>Файл с таким именем уже существует в целевой папке.</value></data>
   <data name="Bottom_MessagesList" xml:space="preserve"><value>Сообщения</value></data>
   <data name="Bottom_Settings" xml:space="preserve"><value>Настройки</value></data>
   <data name="Folders_SearchFolders" xml:space="preserve"><value>Поиск папок</value></data>
@@ -33,6 +44,14 @@
   <data name="Settings_LanguageDescription" xml:space="preserve"><value>Язык изменяется сразу и сохраняется автоматически.</value></data>
   <data name="Settings_RestoreLastFolders" xml:space="preserve"><value>Восстанавливать последние открытые папки при запуске</value></data>
   <data name="Settings_RestoreLastFoldersDescription" xml:space="preserve"><value>Каждая панель восстанавливает свою последнюю папку асинхронно. Недоступные папки пропускаются.</value></data>
+  <data name="Settings_DragDropBehavior" xml:space="preserve"><value>Перетаскивание файлов</value></data>
+  <data name="Settings_DragDropModifier" xml:space="preserve"><value>Клавиша смены файловой операции</value></data>
+  <data name="Settings_CopyOnDragDropByDefault" xml:space="preserve"><value>Копировать файлы по умолчанию</value></data>
+  <data name="Settings_DragDropDescription" xml:space="preserve"><value>Без клавиши ImageCare выполняет выбранную по умолчанию операцию. Удерживайте выбранную клавишу, чтобы временно переключаться между копированием и перемещением.</value></data>
+  <data name="Settings_ModifierControl" xml:space="preserve"><value>Ctrl</value></data>
+  <data name="Settings_ModifierAlt" xml:space="preserve"><value>Alt / Option</value></data>
+  <data name="Settings_ModifierShift" xml:space="preserve"><value>Shift</value></data>
+  <data name="Settings_ModifierMeta" xml:space="preserve"><value>Command / Windows</value></data>
   <data name="Settings_FileAssociations" xml:space="preserve"><value>Ассоциации файлов</value></data>
   <data name="Settings_AddNewAssociation" xml:space="preserve"><value>Добавить ассоциацию файла</value></data>
   <data name="Settings_ExtensionPlaceholder" xml:space="preserve"><value>Расширение (например, .cr2 или .jpg)</value></data>

@@ -85,7 +85,25 @@ public sealed class WindowsMediaPreviewOperationsService : IMediaPreviewOperatio
     public Task<OperationResult> CopyImagePreviewToDirectoryAsync(
         MediaPreview imagePreview,
         string selectedFolderPath,
-        Progress<OperationInfo> progress)
+        Progress<OperationInfo> progress) =>
+        CopyImagePreviewToDirectoryInternalAsync(imagePreview, selectedFolderPath, progress, null);
+
+    public Task<OperationResult> CopyImagePreviewToDirectoryAsync(
+        MediaPreview imagePreview,
+        string selectedFolderPath,
+        Progress<OperationInfo> progress,
+        string destinationFileName) =>
+        CopyImagePreviewToDirectoryInternalAsync(
+            imagePreview,
+            selectedFolderPath,
+            progress,
+            destinationFileName);
+
+    private Task<OperationResult> CopyImagePreviewToDirectoryInternalAsync(
+        MediaPreview imagePreview,
+        string selectedFolderPath,
+        Progress<OperationInfo> progress,
+        string? destinationFileName)
     {
         try
         {
@@ -99,7 +117,10 @@ public sealed class WindowsMediaPreviewOperationsService : IMediaPreviewOperatio
                 throw new ServiceException($"Source file does not exist: {imagePreview.Url}");
             }
 
-            var fileName = GetUniqueFileName(selectedFolderPath, Path.GetFileName(imagePreview.Url));
+            var fileName = GetDestinationFileName(
+                selectedFolderPath,
+                Path.GetFileName(imagePreview.Url),
+                destinationFileName);
             var destinationFilePath = Path.Combine(selectedFolderPath, fileName);
 
             _fileSystemService.CopyFile(imagePreview.Url, destinationFilePath);
@@ -121,7 +142,25 @@ public sealed class WindowsMediaPreviewOperationsService : IMediaPreviewOperatio
     public Task<OperationResult> MoveImagePreviewToDirectoryAsync(
         MediaPreview imagePreview,
         string selectedFolderPath,
-        Progress<OperationInfo> progress)
+        Progress<OperationInfo> progress) =>
+        MoveImagePreviewToDirectoryInternalAsync(imagePreview, selectedFolderPath, progress, null);
+
+    public Task<OperationResult> MoveImagePreviewToDirectoryAsync(
+        MediaPreview imagePreview,
+        string selectedFolderPath,
+        Progress<OperationInfo> progress,
+        string destinationFileName) =>
+        MoveImagePreviewToDirectoryInternalAsync(
+            imagePreview,
+            selectedFolderPath,
+            progress,
+            destinationFileName);
+
+    private Task<OperationResult> MoveImagePreviewToDirectoryInternalAsync(
+        MediaPreview imagePreview,
+        string selectedFolderPath,
+        Progress<OperationInfo> progress,
+        string? destinationFileName)
     {
         try
         {
@@ -135,7 +174,10 @@ public sealed class WindowsMediaPreviewOperationsService : IMediaPreviewOperatio
                 throw new ServiceException($"Source file does not exist: {imagePreview.Url}");
             }
 
-            var fileName = GetUniqueFileName(selectedFolderPath, Path.GetFileName(imagePreview.Url));
+            var fileName = GetDestinationFileName(
+                selectedFolderPath,
+                Path.GetFileName(imagePreview.Url),
+                destinationFileName);
             var destinationFilePath = Path.Combine(selectedFolderPath, fileName);
 
             _fileSystemService.MoveFile(imagePreview.Url, destinationFilePath);
@@ -152,6 +194,30 @@ public sealed class WindowsMediaPreviewOperationsService : IMediaPreviewOperatio
         {
             throw new ServiceException("Failed to move image preview", ex);
         }
+    }
+
+    private string GetDestinationFileName(
+        string selectedFolderPath,
+        string sourceFileName,
+        string? requestedFileName)
+    {
+        if (requestedFileName == null)
+        {
+            return GetUniqueFileName(selectedFolderPath, sourceFileName);
+        }
+
+        if (!PortableFileNameValidator.IsValid(requestedFileName))
+        {
+            throw new ServiceException($"Invalid destination file name: {requestedFileName}");
+        }
+
+        var destinationFilePath = Path.Combine(selectedFolderPath, requestedFileName);
+        if (_fileSystemService.FileExists(destinationFilePath))
+        {
+            throw new ServiceException($"Destination file already exists: {destinationFilePath}");
+        }
+
+        return requestedFileName;
     }
 
     public Task<OperationResult> DeleteImagePreviewAsync(MediaPreview imagePreview)
