@@ -6,6 +6,9 @@ public sealed class Configuration
     public string UiCultureName { get; set; } = string.Empty;
 
 
+    public bool RestoreLastFoldersOnStartup { get; set; } = true;
+
+
 	public string LastSourceDirectoryPath { get; set; } = string.Empty;
 
 

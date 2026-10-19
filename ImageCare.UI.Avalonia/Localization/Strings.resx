@@ -31,6 +31,8 @@
   <data name="Settings_General" xml:space="preserve"><value>General</value></data>
   <data name="Settings_InterfaceLanguage" xml:space="preserve"><value>Interface language</value></data>
   <data name="Settings_LanguageDescription" xml:space="preserve"><value>The language changes immediately and is saved automatically.</value></data>
+  <data name="Settings_RestoreLastFolders" xml:space="preserve"><value>Restore last opened folders at startup</value></data>
+  <data name="Settings_RestoreLastFoldersDescription" xml:space="preserve"><value>Each panel restores its last folder asynchronously. Unavailable folders are skipped.</value></data>
   <data name="Settings_FileAssociations" xml:space="preserve"><value>File associations</value></data>
   <data name="Settings_AddNewAssociation" xml:space="preserve"><value>Add new file association</value></data>
   <data name="Settings_ExtensionPlaceholder" xml:space="preserve"><value>Extension (e.g. .cr2, .jpg)</value></data>

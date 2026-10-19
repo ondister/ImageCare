@@ -28,6 +28,14 @@
                 <TextBlock Text="{localization:Loc Settings_LanguageDescription}"
                            Opacity="0.7"
                            TextWrapping="Wrap" />
+
+                <Separator Margin="{DynamicResource MarginVertical.Small}" />
+
+                <ToggleSwitch Content="{localization:Loc Settings_RestoreLastFolders}"
+                              IsChecked="{Binding RestoreLastFoldersOnStartup, Mode=TwoWay}" />
+                <TextBlock Text="{localization:Loc Settings_RestoreLastFoldersDescription}"
+                           Opacity="0.7"
+                           TextWrapping="Wrap" />
             </StackPanel>
         </TabItem>
 

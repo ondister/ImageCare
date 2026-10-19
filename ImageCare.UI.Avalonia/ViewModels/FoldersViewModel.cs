@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using System.Windows.Input;
 
 using ImageCare.Core.Domain.Folders;
+using ImageCare.Core.Services.ConfigurationService;
 using ImageCare.Core.Services.DrivesWatcherService;
 using ImageCare.Core.Services.FileSystemService;
 using ImageCare.Core.Services.FileSystemWatcherService;
@@ -26,9 +27,12 @@ namespace ImageCare.UI.Avalonia.ViewModels;
 
 internal class FoldersViewModel : NavigatedViewModelBase
 {
+    private static readonly TimeSpan RestoreTimeout = TimeSpan.FromSeconds(10);
+
     private readonly LocalizationManager _localization;
     private readonly IFolderService _folderService;
     private readonly IFileSystemService _fileSystemService;
+    private readonly IConfigurationService _configurationService;
     private readonly IMultiSourcesFileSystemWatcherService _multiSourcesFileSystemWatcherService;
     private readonly IDrivesWatcherService _drivesWatcherService;
     private readonly IMapper _mapper;
@@ -49,6 +53,7 @@ internal class FoldersViewModel : NavigatedViewModelBase
 
     public FoldersViewModel(IFolderService folderService,
                             IFileSystemService fileSystemService,
+                            IConfigurationService configurationService,
                             IMultiSourcesFileSystemWatcherService multiSourcesFileSystemWatcherService,
                             IDrivesWatcherService drivesWatcherService,
                             IMapper mapper,
@@ -57,7 +62,8 @@ internal class FoldersViewModel : NavigatedViewModelBase
                             SynchronizationContext synchronizationContext)
     {
         _folderService = folderService ?? throw new ArgumentNullException(nameof(folderService));
-        _fileSystemService = fileSystemService;
+        _fileSystemService = fileSystemService ?? throw new ArgumentNullException(nameof(fileSystemService));
+        _configurationService = configurationService ?? throw new ArgumentNullException(nameof(configurationService));
         _multiSourcesFileSystemWatcherService = multiSourcesFileSystemWatcherService ?? throw new ArgumentNullException(nameof(multiSourcesFileSystemWatcherService));
         _drivesWatcherService = drivesWatcherService ?? throw new ArgumentNullException(nameof(drivesWatcherService));
         _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
@@ -337,9 +343,10 @@ internal class FoldersViewModel : NavigatedViewModelBase
         {
             try
             {
-                _selectedFileSystemItem.IsSelected=true;
+                value.IsSelected = true;
                 var selectedDirectory = new SelectedDirectory(value.Name, value.Path, FileManagerPanel);
                 _folderService.SetSelectedDirectory(selectedDirectory);
+                SaveLastDirectoryPath(value);
 
                 IsSearchEnabled = value is not (SpecialDirectoryViewModel or DriveViewModel or DeviceViewModel);
                 SearchTarget = _localization.Get("Folders_SearchFoldersIn", _selectedFileSystemItem.Name);
@@ -379,6 +386,8 @@ internal class FoldersViewModel : NavigatedViewModelBase
             rootViewModel.IsExpanded = true;
 
             FileSystemItemViewModels.Add(rootViewModel);
+
+            await RestoreLastFolderAsync(rootViewModel);
         }
         catch (OperationCanceledException)
         {
@@ -611,71 +620,161 @@ internal class FoldersViewModel : NavigatedViewModelBase
         _logger.Error(ex, "Error in observable subscription");
     }
 
-    private async Task<DirectoryViewModel> GoToFolderFromSelectedAsync(DirectoryViewModel selectedFileSystemItem, string path)
+    private async Task<DirectoryViewModel> GoToFolderFromSelectedAsync(
+        DirectoryViewModel selectedFileSystemItem,
+        string path,
+        CancellationToken cancellationToken = default)
     {
-        if (selectedFileSystemItem == null)
-        {
-            throw new ArgumentNullException(nameof(selectedFileSystemItem));
-        }
+        ArgumentNullException.ThrowIfNull(selectedFileSystemItem);
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
 
-        if (string.IsNullOrEmpty(path))
-        {
-            throw new ArgumentNullException(nameof(path));
-        }
-
-        path = path.TrimEnd(Path.DirectorySeparatorChar);
-
-       
-        if (selectedFileSystemItem.Path.Equals(path, StringComparison.OrdinalIgnoreCase))
-        {
-            return selectedFileSystemItem;
-        }
-
-      
-        string relativePath;
-        if (path.StartsWith(selectedFileSystemItem.Path, StringComparison.OrdinalIgnoreCase))
-        {
-            relativePath = path.Substring(selectedFileSystemItem.Path.Length)
-                               .TrimStart(Path.DirectorySeparatorChar);
-        }
-        else
+        var targetPath = NormalizePath(path);
+        if (!IsSamePathOrDescendant(selectedFileSystemItem.Path, targetPath))
         {
             throw new InvalidOperationException("Cannot navigate to folder outside current tree");
         }
 
+        var relativePath = Path.GetRelativePath(NormalizePath(selectedFileSystemItem.Path), targetPath);
         var pathSegments = relativePath.Split(
-            [Path.DirectorySeparatorChar],
+            [Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar],
             StringSplitOptions.RemoveEmptyEntries);
-
         var currentFolder = selectedFileSystemItem;
 
         foreach (var segment in pathSegments)
         {
-           
-            if (!currentFolder.IsExpanded)
-            {
-                currentFolder.IsExpanded = true;
+            cancellationToken.ThrowIfCancellationRequested();
+            await currentFolder.EnsureLoadedAsync(cancellationToken);
 
-                await currentFolder.WaitForLoadingAsync();
-            }
-            else
-            {
-                await currentFolder.EnsureLoadedAsync();
-            }
-
-            var nextFolder = currentFolder.ChildFileSystemItems
-                                          .FirstOrDefault(c =>
-                                                              string.Equals(c.Name, segment, StringComparison.OrdinalIgnoreCase) || c.Path.EndsWith(segment, StringComparison.OrdinalIgnoreCase));
-
-            currentFolder = nextFolder ?? throw new DirectoryNotFoundException($"Folder '{segment}' not found in '{currentFolder.Path}'");
+            var expectedPath = NormalizePath(Path.Combine(currentFolder.Path, segment));
+            currentFolder = currentFolder.ChildFileSystemItems.FirstOrDefault(child => PathsEqual(child.Path, expectedPath))
+                            ?? throw new DirectoryNotFoundException(
+                                $"Folder '{segment}' not found in '{currentFolder.Path}'");
         }
 
-        if (!currentFolder.IsExpanded)
-        {
-            currentFolder.IsExpanded = true;
-            await currentFolder.WaitForLoadingAsync();
-        }
-
+        await currentFolder.EnsureLoadedAsync(cancellationToken);
         return currentFolder;
+    }
+
+    private async Task RestoreLastFolderAsync(DirectoryViewModel rootViewModel)
+    {
+        var configuration = _configurationService.Configuration.Value;
+        if (!configuration.RestoreLastFoldersOnStartup)
+        {
+            return;
+        }
+
+        var path = FileManagerPanel switch
+        {
+            FileManagerPanel.Left => configuration.LastSourceDirectoryPath,
+            FileManagerPanel.Right => configuration.LastTargetDirectoryPath,
+            _ => string.Empty
+        };
+
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return;
+        }
+
+        using var timeoutCancellationTokenSource = new CancellationTokenSource(RestoreTimeout);
+        var cancellationToken = timeoutCancellationTokenSource.Token;
+
+        try
+        {
+            var directoryExistsTask = Task.Run(() => _fileSystemService.DirectoryExists(path));
+            if (!await directoryExistsTask.WaitAsync(cancellationToken))
+            {
+                return;
+            }
+
+            var targetPath = NormalizePath(path);
+            var drive = rootViewModel.ChildFileSystemItems
+                                     .OfType<DriveViewModel>()
+                                     .Where(item => item is not SpecialDirectoryViewModel)
+                                     .Where(item => IsSamePathOrDescendant(item.Path, targetPath))
+                                     .OrderByDescending(item => NormalizePath(item.Path).Length)
+                                     .FirstOrDefault();
+            if (drive == null)
+            {
+                _logger.Warning(
+                    "Cannot restore folder because its drive is unavailable: {Path}, panel: {Panel}",
+                    path,
+                    FileManagerPanel);
+                return;
+            }
+
+            SelectedFileSystemItem = await GoToFolderFromSelectedAsync(drive, targetPath, cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.Warning(
+                "Timed out restoring folder: {Path}, panel: {Panel}",
+                path,
+                FileManagerPanel);
+        }
+        catch (Exception ex)
+        {
+            _logger.Warning(
+                ex,
+                "Failed to restore folder: {Path}, panel: {Panel}",
+                path,
+                FileManagerPanel);
+        }
+    }
+
+    private void SaveLastDirectoryPath(DirectoryViewModel directory)
+    {
+        if (directory is DeviceViewModel or SpecialDirectoryViewModel || string.IsNullOrWhiteSpace(directory.Path))
+        {
+            return;
+        }
+
+        var configuration = _configurationService.Configuration.Value;
+        switch (FileManagerPanel)
+        {
+            case FileManagerPanel.Left:
+                configuration.LastSourceDirectoryPath = directory.Path;
+                break;
+            case FileManagerPanel.Right:
+                configuration.LastTargetDirectoryPath = directory.Path;
+                break;
+        }
+    }
+
+    private static bool PathsEqual(string firstPath, string secondPath)
+    {
+        return string.Equals(NormalizePath(firstPath), NormalizePath(secondPath), GetPathComparison());
+    }
+
+    private static bool IsSamePathOrDescendant(string parentPath, string path)
+    {
+        try
+        {
+            var normalizedParentPath = NormalizePath(parentPath);
+            var normalizedPath = NormalizePath(path);
+            if (string.Equals(normalizedParentPath, normalizedPath, GetPathComparison()))
+            {
+                return true;
+            }
+
+            var relativePath = Path.GetRelativePath(normalizedParentPath, normalizedPath);
+            return !Path.IsPathRooted(relativePath)
+                   && !string.Equals(relativePath, "..", GetPathComparison())
+                   && !relativePath.StartsWith($"..{Path.DirectorySeparatorChar}", GetPathComparison())
+                   && !relativePath.StartsWith($"..{Path.AltDirectorySeparatorChar}", GetPathComparison());
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+    }
+
+    private static string NormalizePath(string path)
+    {
+        return Path.TrimEndingDirectorySeparator(Path.GetFullPath(path));
+    }
+
+    private static StringComparison GetPathComparison()
+    {
+        return OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
     }
 }

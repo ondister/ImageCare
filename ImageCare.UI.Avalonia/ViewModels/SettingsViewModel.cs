@@ -30,6 +30,7 @@ public sealed class SettingsViewModel : ViewModelBase
     private string _newName = string.Empty;
     private FileApplicationAssociationViewModel? _selectedAssociation;
     private LanguageOption? _selectedLanguage;
+    private bool _restoreLastFoldersOnStartup;
 
     public SettingsViewModel(IConfigurationService configurationService,
                              IFileDialogService fileDialogService,
@@ -55,6 +56,21 @@ public sealed class SettingsViewModel : ViewModelBase
     public string Title => _localization["Settings_Title"];
 
     public IReadOnlyList<LanguageOption> AvailableLanguages => _localization.SupportedLanguages;
+
+    public bool RestoreLastFoldersOnStartup
+    {
+        get => _restoreLastFoldersOnStartup;
+        set
+        {
+            if (!SetProperty(ref _restoreLastFoldersOnStartup, value))
+            {
+                return;
+            }
+
+            _configService.Configuration.Value.RestoreLastFoldersOnStartup = value;
+            SaveConfiguration();
+        }
+    }
 
     public LanguageOption? SelectedLanguage
     {
@@ -118,6 +134,10 @@ public sealed class SettingsViewModel : ViewModelBase
             _selectedLanguage = AvailableLanguages.FirstOrDefault(language =>
                 string.Equals(language.Name, _localization.Culture.Name, StringComparison.OrdinalIgnoreCase));
             RaisePropertyChanged(nameof(SelectedLanguage));
+
+            _restoreLastFoldersOnStartup = _configService.Configuration.Value.RestoreLastFoldersOnStartup;
+            RaisePropertyChanged(nameof(RestoreLastFoldersOnStartup));
+
             LoadAssociations();
         }
         catch (Exception ex)

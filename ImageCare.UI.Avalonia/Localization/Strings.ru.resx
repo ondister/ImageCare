@@ -31,6 +31,8 @@
   <data name="Settings_General" xml:space="preserve"><value>Общие</value></data>
   <data name="Settings_InterfaceLanguage" xml:space="preserve"><value>Язык интерфейса</value></data>
   <data name="Settings_LanguageDescription" xml:space="preserve"><value>Язык изменяется сразу и сохраняется автоматически.</value></data>
+  <data name="Settings_RestoreLastFolders" xml:space="preserve"><value>Восстанавливать последние открытые папки при запуске</value></data>
+  <data name="Settings_RestoreLastFoldersDescription" xml:space="preserve"><value>Каждая панель восстанавливает свою последнюю папку асинхронно. Недоступные папки пропускаются.</value></data>
   <data name="Settings_FileAssociations" xml:space="preserve"><value>Ассоциации файлов</value></data>
   <data name="Settings_AddNewAssociation" xml:space="preserve"><value>Добавить ассоциацию файла</value></data>
   <data name="Settings_ExtensionPlaceholder" xml:space="preserve"><value>Расширение (например, .cr2 или .jpg)</value></data>

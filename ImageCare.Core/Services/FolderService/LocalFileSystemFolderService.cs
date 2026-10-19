@@ -83,13 +83,12 @@ public sealed class LocalFileSystemFolderService : IFolderService, IDisposable
             throw new ServiceException("Directory path cannot be null or empty");
         }
 
-        if (!_fileSystemService.DirectoryExists(directoryPath))
+        if (!await Task.Run(() => _fileSystemService.DirectoryExists(directoryPath)))
         {
             return new DirectoryModel("Invalid folder", string.Empty);
         }
 
         var directoryModel = new DirectoryModel(Path.GetFileName(directoryPath), directoryPath);
-
         return await GetCustomDirectoriesLevelAsync(directoryModel);
     }
 
@@ -371,13 +370,14 @@ public sealed class LocalFileSystemFolderService : IFolderService, IDisposable
                                      using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
                                      return await ProcessDriveAsync(driveInfo, cts.Token);
                                  }
-                                 catch (OperationCanceledException ex)
+                                 catch (OperationCanceledException)
                                  {
-                                     throw new ServiceException($"Drive processing timeout: {driveInfo.Name}", ex);
+                                     return null;
                                  }
-                                 catch (Exception ex)
+                                 catch (Exception)
                                  {
-                                     throw new ServiceException($"Failed to process drive: {driveInfo.Name}", ex);
+                                     // A disconnected or inaccessible drive must not prevent the remaining drives from loading.
+                                     return null;
                                  }
                              })
                              .ToList();
