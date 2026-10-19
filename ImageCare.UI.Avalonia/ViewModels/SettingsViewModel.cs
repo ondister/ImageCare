@@ -1,12 +1,14 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
 
 using ImageCare.Core.Domain.Configuration;
+using ImageCare.Core.Domain.MediaFormats;
 using ImageCare.Core.Services.ConfigurationService;
 using ImageCare.UI.Avalonia.Localization;
 using ImageCare.UI.Avalonia.Services;
@@ -27,16 +29,18 @@ public sealed class SettingsViewModel : ViewModelBase
     private readonly LocalizationManager _localization;
 
     private string _newExtension = string.Empty;
-    private string _newName = string.Empty;
+    private string _newApplicationPath = string.Empty;
     private FileApplicationAssociationViewModel? _selectedAssociation;
+    private ApplicationChoiceViewModel? _selectedApplicationChoice;
     private LanguageOption? _selectedLanguage;
     private bool _restoreLastFoldersOnStartup;
 
-    public SettingsViewModel(IConfigurationService configurationService,
-                             IFileDialogService fileDialogService,
-                             IMapper mapper,
-                             ILogger logger,
-                             LocalizationManager localization)
+    public SettingsViewModel(
+        IConfigurationService configurationService,
+        IFileDialogService fileDialogService,
+        IMapper mapper,
+        ILogger logger,
+        LocalizationManager localization)
     {
         _configService = configurationService;
         _fileDialogService = fileDialogService;
@@ -44,18 +48,42 @@ public sealed class SettingsViewModel : ViewModelBase
         _logger = logger;
         _localization = localization;
 
+        SupportedExtensions = MediaFormat.GetSupportedExtensions()
+            .OrderBy(extension => extension, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
         AddAssociationCommand = CreateCommand(AddAssociation, CanAddAssociation, OnCommandException)
-                                .ObservesProperty(() => NewExtension)
-                                .ObservesProperty(() => NewName);
+            .ObservesProperty(() => NewExtension)
+            .ObservesProperty(() => SelectedApplicationChoice)
+            .ObservesProperty(() => NewApplicationPath);
         RemoveAssociationCommand = CreateCommand(RemoveAssociation, CanRemoveAssociation, OnCommandException)
             .ObservesProperty(() => SelectedAssociation);
-        EditApplicationPathCommand = CreateAsyncCommand(EditApplicationPathAsync, CanEditApplicationPath, OnCommandException)
-            .ObservesProperty(() => SelectedAssociation);
+        ChooseApplicationCommand = CreateAsyncCommand(
+                ChooseApplicationAsync,
+                () => IsCustomApplicationSelected,
+                OnCommandException)
+            .ObservesProperty(() => IsCustomApplicationSelected);
+        RestoreRecommendedApplicationsCommand = CreateCommand(
+            RestoreRecommendedApplications,
+            () => true,
+            OnCommandException);
+
+        _newExtension = SupportedExtensions.FirstOrDefault(extension =>
+            extension.Equals(".jpg", StringComparison.OrdinalIgnoreCase))
+            ?? SupportedExtensions.FirstOrDefault()
+            ?? string.Empty;
+        RebuildApplicationChoices();
     }
 
     public string Title => _localization["Settings_Title"];
 
     public IReadOnlyList<LanguageOption> AvailableLanguages => _localization.SupportedLanguages;
+
+    public IReadOnlyList<string> SupportedExtensions { get; }
+
+    public ObservableCollection<ApplicationChoiceViewModel> ApplicationChoices { get; } = new();
+
+    public ObservableCollection<FileApplicationAssociationViewModel> Associations { get; } = new();
 
     public bool RestoreLastFoldersOnStartup
     {
@@ -85,23 +113,51 @@ public sealed class SettingsViewModel : ViewModelBase
             _localization.SetCulture(value.Name);
             _configService.Configuration.Value.UiCultureName = value.Name;
             SaveConfiguration();
+            RebuildApplicationChoices();
             RaisePropertyChanged(nameof(Title));
         }
     }
 
-    public ObservableCollection<FileApplicationAssociationViewModel> Associations { get; } = new();
-
     public string NewExtension
     {
         get => _newExtension;
-        set => SetProperty(ref _newExtension, value?.Trim() ?? string.Empty);
+        set
+        {
+            if (!SetProperty(ref _newExtension, value ?? string.Empty))
+            {
+                return;
+            }
+
+            RebuildApplicationChoices();
+        }
     }
 
-    public string NewName
+    public string NewApplicationPath
     {
-        get => _newName;
-        set => SetProperty(ref _newName, value?.Trim() ?? string.Empty);
+        get => _newApplicationPath;
+        private set => SetProperty(ref _newApplicationPath, value);
     }
+
+    public ApplicationChoiceViewModel? SelectedApplicationChoice
+    {
+        get => _selectedApplicationChoice;
+        set
+        {
+            if (!SetProperty(ref _selectedApplicationChoice, value))
+            {
+                return;
+            }
+
+            if (value?.IsCustom != true)
+            {
+                NewApplicationPath = string.Empty;
+            }
+
+            RaisePropertyChanged(nameof(IsCustomApplicationSelected));
+        }
+    }
+
+    public bool IsCustomApplicationSelected => SelectedApplicationChoice?.IsCustom == true;
 
     public FileApplicationAssociationViewModel? SelectedAssociation
     {
@@ -113,7 +169,9 @@ public sealed class SettingsViewModel : ViewModelBase
 
     public ICommand RemoveAssociationCommand { get; }
 
-    public ICommand EditApplicationPathCommand { get; }
+    public ICommand ChooseApplicationCommand { get; }
+
+    public ICommand RestoreRecommendedApplicationsCommand { get; }
 
     public void Close()
     {
@@ -148,49 +206,51 @@ public sealed class SettingsViewModel : ViewModelBase
 
     private void AddAssociation()
     {
-        if (string.IsNullOrWhiteSpace(NewExtension) || string.IsNullOrWhiteSpace(NewName))
+        var choice = SelectedApplicationChoice;
+        if (choice == null)
         {
             return;
         }
 
-        var trimmedExtension = NewExtension.Trim();
-        var trimmedName = NewName.Trim();
+        var applicationPath = choice.IsCustom ? NewApplicationPath : choice.ApplicationPath;
+        var name = choice.IsCustom
+            ? Path.GetFileNameWithoutExtension(applicationPath)
+            : choice.DisplayName;
 
-        if (_configService.Configuration.Value.ApplicationAssociationPairs
-                          .Any(a => a.FileExtension.Equals(trimmedExtension, StringComparison.OrdinalIgnoreCase)
-                                 && a.Name.Equals(trimmedName, StringComparison.OrdinalIgnoreCase)))
+        if (string.IsNullOrWhiteSpace(name))
         {
             return;
         }
 
-        var association = new FileApplicationAssociation
+        var associations = _configService.Configuration.Value.ApplicationAssociationPairs;
+        if (associations.Any(association =>
+                association.FileExtension.Equals(NewExtension, StringComparison.OrdinalIgnoreCase)
+                && association.LaunchMode == choice.LaunchMode
+                && association.ApplicationPath.Equals(applicationPath, StringComparison.OrdinalIgnoreCase)))
         {
-            FileExtension = trimmedExtension,
-            Name = trimmedName,
-            ApplicationPath = string.Empty
-        };
+            return;
+        }
 
-        _configService.Configuration.Value.ApplicationAssociationPairs.Add(association);
+        associations.Add(
+            new FileApplicationAssociation
+            {
+                FileExtension = NewExtension,
+                Name = name,
+                ApplicationPath = applicationPath,
+                LaunchMode = choice.LaunchMode
+            });
+
         SaveConfiguration();
-
-        NewExtension = string.Empty;
-        NewName = string.Empty;
-
+        NewApplicationPath = string.Empty;
         LoadAssociations();
     }
 
     private bool CanAddAssociation()
     {
-        try
-        {
-            return !string.IsNullOrWhiteSpace(NewExtension) && !string.IsNullOrWhiteSpace(NewName);
-        }
-        catch (Exception ex)
-        {
-            _logger.Error(ex, "Error in CanAddAssociation");
-
-            return false;
-        }
+        var choice = SelectedApplicationChoice;
+        return !string.IsNullOrWhiteSpace(NewExtension)
+            && choice != null
+            && (!choice.IsCustom || !string.IsNullOrWhiteSpace(NewApplicationPath));
     }
 
     private void RemoveAssociation()
@@ -203,8 +263,13 @@ public sealed class SettingsViewModel : ViewModelBase
             }
 
             var associationToRemove = _configService.Configuration.Value.ApplicationAssociationPairs
-                                                    .FirstOrDefault(a => a.FileExtension == SelectedAssociation.FileExtension
-                                                                      && a.Name == SelectedAssociation.Name);
+                .FirstOrDefault(association =>
+                    association.FileExtension.Equals(SelectedAssociation.FileExtension, StringComparison.OrdinalIgnoreCase)
+                    && association.Name.Equals(SelectedAssociation.Name, StringComparison.OrdinalIgnoreCase)
+                    && association.LaunchMode == SelectedAssociation.LaunchMode
+                    && association.ApplicationPath.Equals(
+                        SelectedAssociation.ApplicationPath,
+                        StringComparison.OrdinalIgnoreCase));
 
             if (associationToRemove == null)
             {
@@ -213,98 +278,99 @@ public sealed class SettingsViewModel : ViewModelBase
 
             _configService.Configuration.Value.ApplicationAssociationPairs.Remove(associationToRemove);
             SaveConfiguration();
-
             LoadAssociations();
             SelectedAssociation = null;
         }
         catch (Exception ex)
         {
-            _logger.Error(
-                ex,
-                "Failed to remove association: {Extension} - {Name}",
-                SelectedAssociation?.FileExtension,
-                SelectedAssociation?.Name);
+            _logger.Error(ex, "Failed to remove file association");
         }
     }
 
     private bool CanRemoveAssociation()
     {
-        try
-        {
-            return SelectedAssociation != null;
-        }
-        catch (Exception ex)
-        {
-            _logger.Error(ex, "Error in CanRemoveAssociation");
-
-            return false;
-        }
+        return SelectedAssociation != null;
     }
 
-    private async Task EditApplicationPathAsync(IProgress<int> progress, CancellationToken cancellationToken = default)
+    private async Task ChooseApplicationAsync(
+        IProgress<int> progress,
+        CancellationToken cancellationToken = default)
     {
         try
         {
-            if (SelectedAssociation == null)
+            var filePath = await _fileDialogService.ShowOpenApplicationDialogAsync(
+                _localization["Settings_SelectApplication"]);
+
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!string.IsNullOrWhiteSpace(filePath))
             {
-                _logger.Warning("Attempted to edit application path for null association");
-                return;
+                NewApplicationPath = filePath;
             }
-
-            var filePath = await _fileDialogService.ShowOpenFileDialogAsync(
-                               _localization["Settings_SelectApplication"],
-                               (_localization["Settings_Executable"], new[] { "*.exe", "*.bat" }),
-                               (_localization["Settings_AllFiles"], new[] { "*.*" }));
-
-            if (string.IsNullOrEmpty(filePath))
-            {
-                _logger.Debug(
-                    "User cancelled file selection for association: {Extension} - {Name}",
-                    SelectedAssociation.FileExtension,
-                    SelectedAssociation.Name);
-                return;
-            }
-
-            var associationToEdit = _configService.Configuration.Value.ApplicationAssociationPairs
-                                                  .FirstOrDefault(a => a.FileExtension == SelectedAssociation.FileExtension
-                                                                    && a.Name == SelectedAssociation.Name);
-
-            if (associationToEdit == null)
-            {
-                return;
-            }
-
-            SelectedAssociation.ApplicationPath = filePath;
-            associationToEdit.ApplicationPath = filePath;
-
-            SaveConfiguration();
         }
         catch (OperationCanceledException)
         {
-            // Ignored
+            // The application picker was cancelled.
         }
         catch (Exception ex)
         {
-            _logger.Error(
-                ex,
-                "Failed to edit application path for: {Extension} - {Name}",
-                SelectedAssociation?.FileExtension,
-                SelectedAssociation?.Name);
+            _logger.Error(ex, "Failed to select an external application");
         }
     }
 
-    private bool CanEditApplicationPath()
+    private void RestoreRecommendedApplications()
     {
-        try
+        if (!DefaultFileApplicationAssociations.AddMissing(_configService.Configuration.Value))
         {
-            return SelectedAssociation != null;
+            return;
         }
-        catch (Exception ex)
-        {
-            _logger.Error(ex, "Error in CanEditApplicationPath");
 
-            return false;
+        SaveConfiguration();
+        LoadAssociations();
+    }
+
+    private void RebuildApplicationChoices()
+    {
+        var previousMode = SelectedApplicationChoice?.LaunchMode;
+        var wasCustom = SelectedApplicationChoice?.IsCustom == true;
+
+        ApplicationChoices.Clear();
+        ApplicationChoices.Add(
+            new ApplicationChoiceViewModel(
+                _localization["Settings_SystemDefaultApplication"],
+                ApplicationLaunchMode.SystemDefault));
+        ApplicationChoices.Add(
+            new ApplicationChoiceViewModel(
+                OperatingSystem.IsMacOS()
+                    ? _localization["Settings_ShowInFinder"]
+                    : _localization["Settings_ShowInFileExplorer"],
+                ApplicationLaunchMode.FileManager));
+
+        if (OperatingSystem.IsMacOS())
+        {
+            var isVideo = NewExtension.Equals(".mp4", StringComparison.OrdinalIgnoreCase);
+            ApplicationChoices.Add(
+                isVideo
+                    ? new ApplicationChoiceViewModel(
+                        "QuickTime Player",
+                        ApplicationLaunchMode.MacApplication,
+                        "/System/Applications/QuickTime Player.app")
+                    : new ApplicationChoiceViewModel(
+                        "Preview",
+                        ApplicationLaunchMode.MacApplication,
+                        "/System/Applications/Preview.app"));
         }
+
+        ApplicationChoices.Add(
+            new ApplicationChoiceViewModel(
+                _localization["Settings_CustomApplication"],
+                OperatingSystem.IsMacOS()
+                    ? ApplicationLaunchMode.MacApplication
+                    : ApplicationLaunchMode.Executable,
+                isCustom: true));
+
+        SelectedApplicationChoice = ApplicationChoices.FirstOrDefault(choice =>
+            choice.LaunchMode == previousMode && choice.IsCustom == wasCustom)
+            ?? ApplicationChoices.FirstOrDefault();
     }
 
     private void LoadAssociations()
@@ -313,8 +379,8 @@ public sealed class SettingsViewModel : ViewModelBase
         {
             Associations.Clear();
             var orderedList = _configService.Configuration.Value.ApplicationAssociationPairs
-                                            .OrderBy(p => p.FileExtension)
-                                            .ThenBy(p => p.Name);
+                .OrderBy(pair => pair.FileExtension, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(pair => pair.Name, StringComparer.OrdinalIgnoreCase);
 
             foreach (var association in orderedList)
             {

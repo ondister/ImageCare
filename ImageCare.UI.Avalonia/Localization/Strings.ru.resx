@@ -47,6 +47,15 @@
   <data name="Settings_SelectApplication" xml:space="preserve"><value>Выберите приложение</value></data>
   <data name="Settings_Executable" xml:space="preserve"><value>Приложение</value></data>
   <data name="Settings_AllFiles" xml:space="preserve"><value>Все файлы</value></data>
+  <data name="Settings_AddAssociationDescription" xml:space="preserve"><value>Выберите поддерживаемый тип файла и способ его открытия из ImageCare.</value></data>
+  <data name="Settings_SelectFileType" xml:space="preserve"><value>Тип файла</value></data>
+  <data name="Settings_SelectAction" xml:space="preserve"><value>Приложение или действие</value></data>
+  <data name="Settings_ChooseApplication" xml:space="preserve"><value>Выбрать приложение…</value></data>
+  <data name="Settings_SystemDefaultApplication" xml:space="preserve"><value>Приложение по умолчанию</value></data>
+  <data name="Settings_ShowInFinder" xml:space="preserve"><value>Показать в Finder</value></data>
+  <data name="Settings_ShowInFileExplorer" xml:space="preserve"><value>Показать в Проводнике</value></data>
+  <data name="Settings_CustomApplication" xml:space="preserve"><value>Другое приложение…</value></data>
+  <data name="Settings_RestoreRecommended" xml:space="preserve"><value>Восстановить рекомендуемые</value></data>
   <data name="ImageViewer_Title" xml:space="preserve"><value>ImageCare — просмотр изображения</value></data>
   <data name="Action_Copy" xml:space="preserve"><value>Копировать</value></data>
   <data name="Action_Move" xml:space="preserve"><value>Переместить</value></data>

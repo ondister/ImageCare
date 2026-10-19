@@ -18,6 +18,9 @@ public sealed class Configuration
 	public List<FileApplicationAssociation> ApplicationAssociationPairs { get; set; } = new();
 
 
+    public int ApplicationAssociationsDefaultsVersion { get; set; }
+
+
     public List<string> RecentFolderPaths { get; set; } = new();
 
 

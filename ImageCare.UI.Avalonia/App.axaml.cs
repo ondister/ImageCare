@@ -7,6 +7,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using DryIoc;
+using ImageCare.Core.Domain.Configuration;
 using ImageCare.Core.Domain.Folders;
 using ImageCare.Core.Domain.Media;
 using ImageCare.Core.Services.ConfigurationService;
@@ -70,7 +71,13 @@ public class App : PrismApplication
 
     protected override AvaloniaObject CreateShell()
     {
-        var configuration = Container.Resolve<IConfigurationService>().Configuration.Value;
+        var configurationService = Container.Resolve<IConfigurationService>();
+        var configuration = configurationService.Configuration.Value;
+        if (DefaultFileApplicationAssociations.EnsureInitialized(configuration))
+        {
+            configurationService.SaveConfiguration();
+        }
+
         LocalizationManager.Instance.SetCulture(configuration.UiCultureName);
         return Container.Resolve<MainWindow>();
     }

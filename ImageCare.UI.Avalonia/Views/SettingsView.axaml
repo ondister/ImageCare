@@ -3,6 +3,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:viewModels="clr-namespace:ImageCare.UI.Avalonia.ViewModels"
+             xmlns:domain="clr-namespace:ImageCare.UI.Avalonia.ViewModels.Domain"
              xmlns:localization="clr-namespace:ImageCare.UI.Avalonia.Localization"
              mc:Ignorable="d"
              x:DataType="viewModels:SettingsViewModel"
@@ -40,68 +41,55 @@
         </TabItem>
 
         <TabItem Header="{localization:Loc Settings_FileAssociations}">
-            <Grid RowDefinitions="Auto,Auto,*,Auto" Margin="0" VerticalAlignment="Top">
+            <Grid RowDefinitions="Auto,*,Auto" Margin="0" VerticalAlignment="Stretch">
                 <Border Grid.Row="0"
                         Background="{DynamicResource ThemeBackgroundBrush}"
                         CornerRadius="{DynamicResource BorderRadius.Small}"
                         Padding="{DynamicResource Padding.Medium}"
                         Margin="{DynamicResource MarginBottom.Medium}">
-                    <StackPanel>
+                    <StackPanel Spacing="8">
                         <TextBlock Text="{localization:Loc Settings_AddNewAssociation}"
                                    FontWeight="Bold"
-                                   FontSize="{DynamicResource Font.Size.SectionHeader}"
-                                   Margin="{DynamicResource MarginBottom.Medium}" />
+                                   FontSize="{DynamicResource Font.Size.SectionHeader}" />
+                        <TextBlock Text="{localization:Loc Settings_AddAssociationDescription}"
+                                   Opacity="0.7"
+                                   TextWrapping="Wrap" />
 
-                        <Grid ColumnDefinitions="*,*,Auto"
+                        <Grid ColumnDefinitions="160,*,Auto,Auto"
+                              ColumnSpacing="8"
                               Margin="{DynamicResource MarginVertical.Small}">
-                            <TextBox Grid.Column="0"
-                                     Margin="{DynamicResource Form.HorizontalMargin}"
-                                     Text="{Binding NewExtension}"
-                                     PlaceholderText="{localization:Loc Settings_ExtensionPlaceholder}"
-                                     UseFloatingPlaceholder="True" />
-                            <TextBox Grid.Column="1"
-                                     Margin="{DynamicResource Form.HorizontalMargin}"
-                                     Text="{Binding NewName}"
-                                     PlaceholderText="{localization:Loc Settings_DisplayNamePlaceholder}"
-                                     UseFloatingPlaceholder="True" />
+                            <ComboBox Grid.Column="0"
+                                      ItemsSource="{Binding SupportedExtensions}"
+                                      SelectedItem="{Binding NewExtension, Mode=TwoWay}" />
+                            <ComboBox Grid.Column="1"
+                                      ItemsSource="{Binding ApplicationChoices}"
+                                      SelectedItem="{Binding SelectedApplicationChoice, Mode=TwoWay}">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate x:DataType="domain:ApplicationChoiceViewModel">
+                                        <TextBlock Text="{Binding DisplayName}" />
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
                             <Button Grid.Column="2"
+                                    Content="{localization:Loc Settings_ChooseApplication}"
+                                    Command="{Binding ChooseApplicationCommand}"
+                                    IsVisible="{Binding IsCustomApplicationSelected}"
+                                    MinWidth="140" />
+                            <Button Grid.Column="3"
                                     Content="{localization:Loc Settings_Add}"
                                     Command="{Binding AddAssociationCommand}"
                                     MinWidth="{DynamicResource Control.MinWidth.Medium}"
                                     Background="{DynamicResource ThemeAccentBrush}" />
                         </Grid>
+
+                        <TextBlock Text="{Binding NewApplicationPath}"
+                                   IsVisible="{Binding IsCustomApplicationSelected}"
+                                   TextTrimming="CharacterEllipsis"
+                                   Opacity="0.7" />
                     </StackPanel>
                 </Border>
 
                 <Border Grid.Row="1"
-                        Background="{DynamicResource ThemeBackgroundBrush}"
-                        CornerRadius="{DynamicResource BorderRadius.Small}"
-                        Padding="{DynamicResource Padding.Medium}"
-                        Margin="{DynamicResource MarginBottom.Medium}">
-                    <StackPanel>
-                        <TextBlock Text="{localization:Loc Settings_EditSelectedAssociation}"
-                                   FontWeight="Bold"
-                                   FontSize="{DynamicResource Font.Size.SectionHeader}"
-                                   Margin="{DynamicResource MarginBottom.Medium}" />
-
-                        <Grid ColumnDefinitions="*,Auto"
-                              Margin="{DynamicResource MarginVertical.Small}">
-                            <TextBox Grid.Column="0"
-                                     Margin="{DynamicResource Form.HorizontalMargin}"
-                                     Text="{Binding SelectedAssociation.ApplicationPath, Mode=TwoWay}"
-                                     IsEnabled="{Binding SelectedAssociation}"
-                                     PlaceholderText="{localization:Loc Settings_PathPlaceholder}"
-                                     UseFloatingPlaceholder="True" />
-                            <Button Grid.Column="1"
-                                    Content="{localization:Loc Settings_Browse}"
-                                    Command="{Binding EditApplicationPathCommand}"
-                                    IsEnabled="{Binding SelectedAssociation}"
-                                    MinWidth="{DynamicResource Control.MinWidth.Medium}" />
-                        </Grid>
-                    </StackPanel>
-                </Border>
-
-                <Border Grid.Row="2"
                         Background="{DynamicResource ThemeBackgroundBrush}"
                         CornerRadius="{DynamicResource BorderRadius.Small}"
                         Padding="{DynamicResource Padding.Medium}"
@@ -119,8 +107,8 @@
                                  ScrollViewer.VerticalScrollBarVisibility="Auto"
                                  Margin="{DynamicResource MarginVertical.Small}">
                             <ListBox.ItemTemplate>
-                                <DataTemplate>
-                                    <Grid ColumnDefinitions="100,*,*"
+                                <DataTemplate x:DataType="domain:FileApplicationAssociationViewModel">
+                                    <Grid ColumnDefinitions="100,220,*"
                                           Margin="{DynamicResource MarginAll.Small}">
                                         <TextBlock Grid.Column="0"
                                                    Text="{Binding FileExtension}"
@@ -148,18 +136,24 @@
                             </ListBox.Styles>
                         </ListBox>
 
-                        <Button Grid.Row="2"
-                                Content="{localization:Loc Settings_RemoveSelected}"
-                                Command="{Binding RemoveAssociationCommand}"
-                                HorizontalAlignment="Right"
-                                Margin="{DynamicResource MarginTop.Medium}"
-                                MinWidth="{DynamicResource Control.MinWidth.Large}"
-                                IsEnabled="{Binding SelectedAssociation}"
-                                Background="{DynamicResource ThemeDangerBrush}" />
+                        <StackPanel Grid.Row="2"
+                                    Orientation="Horizontal"
+                                    HorizontalAlignment="Right"
+                                    Spacing="8"
+                                    Margin="{DynamicResource MarginTop.Medium}">
+                            <Button Content="{localization:Loc Settings_RestoreRecommended}"
+                                    Command="{Binding RestoreRecommendedApplicationsCommand}"
+                                    MinWidth="{DynamicResource Control.MinWidth.Large}" />
+                            <Button Content="{localization:Loc Settings_RemoveSelected}"
+                                    Command="{Binding RemoveAssociationCommand}"
+                                    MinWidth="{DynamicResource Control.MinWidth.Large}"
+                                    IsEnabled="{Binding SelectedAssociation}"
+                                    Background="{DynamicResource ThemeDangerBrush}" />
+                        </StackPanel>
                     </Grid>
                 </Border>
 
-                <TextBlock Grid.Row="3"
+                <TextBlock Grid.Row="2"
                            Text="{localization:Loc Settings_AssociationDescription}"
                            FontStyle="Italic"
                            FontSize="{DynamicResource Font.Size.Small}"

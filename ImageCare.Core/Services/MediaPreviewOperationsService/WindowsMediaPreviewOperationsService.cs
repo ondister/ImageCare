@@ -2,6 +2,9 @@
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 
+using ImageCare.Core.Domain;
+using ImageCare.Core.Domain.Configuration;
+
 using ImageCare.Core.Domain.Folders;
 using ImageCare.Core.Domain.Preview;
 using ImageCare.Core.Exceptions;
@@ -164,6 +167,37 @@ public sealed class WindowsMediaPreviewOperationsService : IMediaPreviewOperatio
 			throw new ServiceException("Failed to open in external process", ex);
 		}
 	}
+
+	public void OpenInExternalProcess(MediaPreview mediaPreview, FileApplicationInfo application)
+    {
+        try
+        {
+            ArgumentNullException.ThrowIfNull(application);
+
+            if (!_fileSystemService.FileExists(mediaPreview.Url))
+            {
+                throw new ServiceException($"Media file not found: {mediaPreview.Url}");
+            }
+
+            switch (application.LaunchMode)
+            {
+                case ApplicationLaunchMode.Executable when !_fileSystemService.FileExists(application.ApplicationPath):
+                    throw new ServiceException($"Executable not found: {application.ApplicationPath}");
+                case ApplicationLaunchMode.MacApplication when !_fileSystemService.DirectoryExists(application.ApplicationPath):
+                    throw new ServiceException($"Application not found: {application.ApplicationPath}");
+            }
+
+            _processService.OpenFile(mediaPreview.Url, application.LaunchMode, application.ApplicationPath);
+        }
+        catch (ServiceException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            throw new ServiceException("Failed to open in external application", ex);
+        }
+    }
 
 	public MediaPreview? GetLastSelectedMediaPreview()
 	{

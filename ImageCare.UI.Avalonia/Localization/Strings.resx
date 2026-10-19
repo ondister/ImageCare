@@ -47,6 +47,15 @@
   <data name="Settings_SelectApplication" xml:space="preserve"><value>Select application</value></data>
   <data name="Settings_Executable" xml:space="preserve"><value>Executable</value></data>
   <data name="Settings_AllFiles" xml:space="preserve"><value>All files</value></data>
+  <data name="Settings_AddAssociationDescription" xml:space="preserve"><value>Choose a supported file type and how ImageCare should open it.</value></data>
+  <data name="Settings_SelectFileType" xml:space="preserve"><value>File type</value></data>
+  <data name="Settings_SelectAction" xml:space="preserve"><value>Application or action</value></data>
+  <data name="Settings_ChooseApplication" xml:space="preserve"><value>Choose application…</value></data>
+  <data name="Settings_SystemDefaultApplication" xml:space="preserve"><value>Default application</value></data>
+  <data name="Settings_ShowInFinder" xml:space="preserve"><value>Show in Finder</value></data>
+  <data name="Settings_ShowInFileExplorer" xml:space="preserve"><value>Show in File Explorer</value></data>
+  <data name="Settings_CustomApplication" xml:space="preserve"><value>Other application…</value></data>
+  <data name="Settings_RestoreRecommended" xml:space="preserve"><value>Restore recommended</value></data>
   <data name="ImageViewer_Title" xml:space="preserve"><value>ImageCare — Image Viewer</value></data>
   <data name="Action_Copy" xml:space="preserve"><value>Copy</value></data>
   <data name="Action_Move" xml:space="preserve"><value>Move</value></data>

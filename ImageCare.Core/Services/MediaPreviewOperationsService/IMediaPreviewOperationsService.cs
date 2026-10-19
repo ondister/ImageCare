@@ -1,4 +1,5 @@
-﻿using ImageCare.Core.Domain.Preview;
+﻿using ImageCare.Core.Domain;
+using ImageCare.Core.Domain.Preview;
 
 namespace ImageCare.Core.Services.MediaPreviewOperationsService;
 
@@ -17,6 +18,8 @@ public interface IMediaPreviewOperationsService
 	void SetSelectedPreview(SelectedMediaPreview selectedImagePreview);
 
 	void OpenInExternalProcess(MediaPreview mediaPreview, string pathToExecutable);
+
+    void OpenInExternalProcess(MediaPreview mediaPreview, FileApplicationInfo application);
 
 	MediaPreview? GetLastSelectedMediaPreview();
 }

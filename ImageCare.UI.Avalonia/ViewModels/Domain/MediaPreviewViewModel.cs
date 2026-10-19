@@ -245,8 +245,7 @@ internal class MediaPreviewViewModel : ViewModelBase, IComparable<MediaPreviewVi
             {
                 openWithItems.Add(
                     new FileApplicationPairViewModel(
-                        association.Name,
-                        association.ApplicationPath,
+                        association,
                         _mapper.Map<MediaPreview>(this),
                         _fileOperationsService,
                         _logger));

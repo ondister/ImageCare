@@ -63,7 +63,7 @@ public sealed class ConfigurationFileAssociationsService : IFileAssociationsServ
 			foreach (var pair in pairs.Where(a =>
 				                                 a.FileExtension.Equals(fileExtension, StringComparison.OrdinalIgnoreCase)))
 			{
-				associationsSet.Add(new FileApplicationInfo(pair.Name, pair.ApplicationPath));
+				associationsSet.Add(new FileApplicationInfo(pair.Name, pair.ApplicationPath, pair.LaunchMode));
 			}
 		}
 

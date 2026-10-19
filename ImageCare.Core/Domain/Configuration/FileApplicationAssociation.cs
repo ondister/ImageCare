@@ -12,4 +12,7 @@ public sealed class FileApplicationAssociation
 
 
 	public string ApplicationPath { get; set; } = string.Empty;
+
+
+    public ApplicationLaunchMode LaunchMode { get; set; } = ApplicationLaunchMode.Executable;
 }
