@@ -1,0 +1,197 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:avaloniaProgressRing="clr-namespace:AvaloniaProgressRing;assembly=AvaloniaProgressRing"
+             xmlns:behaviors="clr-namespace:ImageCare.UI.Avalonia.Behaviors"
+             xmlns:domain="clr-namespace:ImageCare.UI.Avalonia.ViewModels.Domain"
+             xmlns:iconPacks="https://github.com/MahApps/IconPacks.Avalonia"
+             xmlns:localization="clr-namespace:ImageCare.UI.Avalonia.Localization"
+             x:Class="ImageCare.UI.Avalonia.Controls.MediaPreviewCard"
+             x:DataType="domain:MediaPreviewViewModel"
+             HorizontalContentAlignment="Stretch"
+             VerticalContentAlignment="Stretch">
+    <UserControl.Styles>
+        <Style Selector="Border.CardSurface">
+            <Setter Property="Background" Value="{DynamicResource Brush.PreviewCard}" />
+        </Style>
+        <Style Selector="Border.CardSurface.Selected">
+            <Setter Property="Background" Value="{DynamicResource Brush.AccentSubtle}" />
+        </Style>
+        <Style Selector="Border.ActionBar">
+            <Setter Property="Opacity" Value="0" />
+            <Setter Property="IsHitTestVisible" Value="False" />
+        </Style>
+        <Style Selector="Border.CardSurface:pointerover Border.ActionBar">
+            <Setter Property="Opacity" Value="1" />
+            <Setter Property="IsHitTestVisible" Value="True" />
+        </Style>
+        <Style Selector="Border.CardSurface.Selected Border.ActionBar">
+            <Setter Property="Opacity" Value="1" />
+            <Setter Property="IsHitTestVisible" Value="True" />
+        </Style>
+        <Style Selector="Button.CardAction">
+            <Setter Property="Width" Value="30" />
+            <Setter Property="Height" Value="30" />
+            <Setter Property="MinWidth" Value="30" />
+            <Setter Property="MinHeight" Value="30" />
+            <Setter Property="Padding" Value="6" />
+            <Setter Property="CornerRadius" Value="4" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+        <Style Selector="Button.CardAction:pointerover">
+            <Setter Property="Background" Value="{DynamicResource Brush.AccentSubtle}" />
+        </Style>
+    </UserControl.Styles>
+
+    <Border BorderThickness="2"
+            BorderBrush="{Binding FrameColorCode}"
+            CornerRadius="{StaticResource BorderRadius.Medium}"
+            Padding="2"
+            Background="Transparent"
+            behaviors:PreviewDragDropBehavior.IsDragSource="True">
+        <!-- The outer border is the time-cluster indicator. Selection is rendered inside the card. -->
+        <Border Classes="CardSurface"
+                Classes.Selected="{Binding Selected}"
+                CornerRadius="4"
+                ClipToBounds="True">
+            <Grid RowDefinitions="*,Auto">
+                <Grid Grid.Row="0"
+                      MinHeight="96"
+                      Background="{DynamicResource Brush.PreviewSurface}"
+                      ClipToBounds="True">
+                    <LayoutTransformControl Margin="8"
+                                            HorizontalAlignment="Center"
+                                            VerticalAlignment="Center">
+                        <Image Source="{Binding PreviewBitmap}"
+                               Stretch="Uniform" />
+                        <LayoutTransformControl.LayoutTransform>
+                            <RotateTransform Angle="{Binding RotateAngle}" />
+                        </LayoutTransformControl.LayoutTransform>
+                    </LayoutTransformControl>
+
+                    <avaloniaProgressRing:ProgressRing Width="28"
+                                                       Height="28"
+                                                       HorizontalAlignment="Center"
+                                                       VerticalAlignment="Center"
+                                                       Foreground="{DynamicResource Brush.Accent}"
+                                                       IsActive="{Binding IsLoading}"
+                                                       IsVisible="{Binding IsLoading}" />
+
+                    <Border Classes="ActionBar"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Top"
+                            Margin="6"
+                            Padding="3"
+                            CornerRadius="6"
+                            Background="{DynamicResource Brush.PreviewOverlay}">
+                        <StackPanel Orientation="Horizontal" Spacing="2">
+                            <Button Classes="CardAction"
+                                    IsVisible="{Binding UseOpenWith, Mode=OneTime}"
+                                    ToolTip.Tip="{localization:Loc Action_OpenWith}">
+                                <Button.Content>
+                                    <iconPacks:PackIconMaterial Kind="ApplicationExport"
+                                                                Width="{StaticResource Icon.Size.Small}"
+                                                                Height="{StaticResource Icon.Size.Small}" />
+                                </Button.Content>
+                                <Button.Flyout>
+                                    <MenuFlyout ItemsSource="{Binding OpenWithViewModels}">
+                                        <MenuFlyout.ItemContainerTheme>
+                                            <ControlTheme TargetType="MenuItem"
+                                                          x:DataType="domain:FileApplicationPairViewModel">
+                                                <Setter Property="Command" Value="{Binding OpenWithCommand}" />
+                                                <Setter Property="Header" Value="{Binding Name}" />
+                                                <Setter Property="Template">
+                                                    <ControlTemplate>
+                                                        <Border Name="border"
+                                                                Background="{TemplateBinding Background}"
+                                                                CornerRadius="{TemplateBinding CornerRadius}">
+                                                            <ContentPresenter Content="{TemplateBinding Header}"
+                                                                              TextBlock.Foreground="{TemplateBinding Foreground}"
+                                                                              Margin="{TemplateBinding Padding}"
+                                                                              VerticalAlignment="Center" />
+                                                        </Border>
+                                                    </ControlTemplate>
+                                                </Setter>
+                                            </ControlTheme>
+                                        </MenuFlyout.ItemContainerTheme>
+                                    </MenuFlyout>
+                                </Button.Flyout>
+                            </Button>
+
+                            <Button Classes="CardAction"
+                                    Command="{CompiledBinding RemoveImagePreviewCommand}"
+                                    Foreground="{DynamicResource Brush.Danger}"
+                                    ToolTip.Tip="{localization:Loc Action_Delete}">
+                                <iconPacks:PackIconLucide Kind="Trash2"
+                                                          Width="{StaticResource Icon.Size.Small}"
+                                                          Height="{StaticResource Icon.Size.Small}" />
+                            </Button>
+                        </StackPanel>
+                    </Border>
+
+                    <Border HorizontalAlignment="Left"
+                            VerticalAlignment="Top"
+                            Margin="6"
+                            Width="28"
+                            Height="28"
+                            CornerRadius="4"
+                            Background="{DynamicResource Brush.PreviewOverlay}"
+                            IsVisible="{Binding Selected}"
+                            ToolTip.Tip="{localization:Loc Preview_Selected}">
+                        <iconPacks:PackIconMaterial Kind="CheckboxMarked"
+                                                    Width="22"
+                                                    Height="22"
+                                                    Foreground="{DynamicResource Brush.Accent}"
+                                                    HorizontalAlignment="Center"
+                                                    VerticalAlignment="Center" />
+                    </Border>
+
+                    <Border HorizontalAlignment="Left"
+                            VerticalAlignment="Bottom"
+                            Margin="6"
+                            Width="24"
+                            Height="24"
+                            CornerRadius="12"
+                            Background="{DynamicResource Brush.PreviewOverlay}"
+                            IsVisible="{Binding HasLocation}"
+                            ToolTip.Tip="{localization:Loc Preview_HasLocation}">
+                        <iconPacks:PackIconLucide Kind="MapPin"
+                                                  Width="14"
+                                                  Height="14"
+                                                  Foreground="{DynamicResource Brush.Accent}"
+                                                  HorizontalAlignment="Center"
+                                                  VerticalAlignment="Center" />
+                    </Border>
+                </Grid>
+
+                <Grid Grid.Row="1"
+                      RowDefinitions="Auto,Auto"
+                      Margin="8,6">
+                    <TextBlock Grid.Row="0"
+                               Text="{Binding Title}"
+                               FontWeight="SemiBold"
+                               TextTrimming="CharacterEllipsis"
+                               TextWrapping="NoWrap" />
+                    <Grid Grid.Row="1"
+                          Margin="0,3,0,0"
+                          ColumnDefinitions="Auto,*">
+                        <TextBlock Grid.Column="0"
+                                   Text="{Binding DateTimeString}"
+                                   FontSize="{StaticResource Font.Size.Micro}"
+                                   Opacity="0.72"
+                                   VerticalAlignment="Center" />
+                        <TextBlock Grid.Column="1"
+                                   Margin="8,0,0,0"
+                                   Text="{Binding MetadataString}"
+                                   FontSize="{StaticResource Font.Size.Micro}"
+                                   Opacity="0.72"
+                                   TextTrimming="CharacterEllipsis"
+                                   TextWrapping="NoWrap"
+                                   VerticalAlignment="Center" />
+                    </Grid>
+                </Grid>
+            </Grid>
+        </Border>
+    </Border>
+</UserControl>

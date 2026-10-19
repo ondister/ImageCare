@@ -99,4 +99,6 @@
   <data name="Overview_DeletePermanently" xml:space="preserve"><value>Delete permanently</value></data>
   <data name="Overview_OriginalFolder" xml:space="preserve"><value>Original folder</value></data>
   <data name="Overview_DeletedAt" xml:space="preserve"><value>Deleted</value></data>
+  <data name="Preview_HasLocation" xml:space="preserve"><value>Location metadata is available</value></data>
+  <data name="Preview_Selected" xml:space="preserve"><value>Selected image</value></data>
 </root>

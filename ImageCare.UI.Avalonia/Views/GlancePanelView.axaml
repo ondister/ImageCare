@@ -33,6 +33,9 @@
                         <ListBox ItemsSource="{Binding ImagePreviews}"
                                  SelectedItem="{Binding SelectedPreview, Mode=TwoWay}"
                                  SelectionMode="Single"
+                                 ItemContainerTheme="{StaticResource PreviewListBoxItem}"
+                                 Padding="0"
+                                 BorderThickness="0"
                                  Theme="{StaticResource PreviewsListBox}">
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate>
@@ -42,112 +45,21 @@
                                 </ItemsPanelTemplate>
                             </ItemsControl.ItemsPanel>
                             <ListBox.Styles>
-                                <Style Selector="ListBoxItem:selected">
-                                    <Setter Property="Background" Value="{DynamicResource Brush.Accent}" />
-                                </Style>
                                 <Style Selector="ListBoxItem">
-                                    <Setter Property="Margin" Value="{StaticResource MarginAll.Small}" />
+                                    <Setter Property="Margin" Value="1" />
                                     <Setter Property="Padding" Value="0" />
+                                    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                    <Setter Property="VerticalContentAlignment" Value="Stretch" />
+                                    <Setter Property="Background" Value="Transparent" />
+                                </Style>
+                                <Style Selector="ListBoxItem:selected">
+                                    <Setter Property="Background" Value="Transparent" />
                                 </Style>
                             </ListBox.Styles>
                             <ListBox.ItemTemplate>
                                 <DataTemplate DataType="domain:GlanceMediaPreviewViewModel">
-                                    <Border BorderThickness="2"
-                                            BorderBrush="{Binding FrameColorCode}"
-                                            Padding="{StaticResource Padding.Micro}">
-                                        <Grid RowDefinitions="Auto,*,Auto">
-                                            <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
-                                                <TextBlock Grid.Column="0"
-                                                           Margin="{StaticResource MarginHorizontal.Small}"
-                                                           Text="{Binding Title}"
-                                                           TextTrimming="CharacterEllipsis" />
-                                                <TextBlock Grid.Column="1"
-                                                           Margin="{StaticResource MarginHorizontal.Small}"
-                                                           Text="{Binding DateTimeString}" />
-                                            </Grid>
-                                            <Grid Grid.Row="1"
-                                                  ColumnDefinitions="*,Auto"
-                                                  RowDefinitions="Auto,*,Auto">
-                                                <LayoutTransformControl Grid.RowSpan="3"
-                                                                        Grid.ColumnSpan="2"
-                                                                        HorizontalAlignment="Center"
-                                                                        VerticalAlignment="Center">
-                                                    <Grid>
-                                                        <iconPacks:PackIconLucide Kind="Image"
-                                                                                  Width="{StaticResource Icon.Size.Giant}"
-                                                                                  Height="{StaticResource Icon.Size.Giant}"
-                                                                                  HorizontalAlignment="Center"
-                                                                                  VerticalAlignment="Center"
-                                                                                  IsVisible="{Binding IsLoading}" />
-                                                        <Image Source="{Binding PreviewBitmap}" />
-                                                    </Grid>
-                                                    <LayoutTransformControl.LayoutTransform>
-                                                        <RotateTransform Angle="{Binding RotateAngle}" />
-                                                    </LayoutTransformControl.LayoutTransform>
-                                                </LayoutTransformControl>
-                                                <Button Grid.Row="0"
-                                                        Grid.Column="1"
-                                                        Width="44"
-                                                        Height="30"
-                                                        Margin="{StaticResource MarginTop.XLarge}"
-                                                        Command="{CompiledBinding RemoveImagePreviewCommand}"
-                                                        Classes="Danger"
-                                                        ToolTip.Tip="{localization:Loc Action_Delete}">
-                                                    <iconPacks:PackIconLucide Kind="Trash2"
-                                                                              Height="{StaticResource Icon.Size.Micro}"
-                                                                              Width="{StaticResource Icon.Size.Micro}" />
-                                                </Button>
-                                                <DropDownButton Grid.Row="2"
-                                                                Grid.Column="1"
-                                                                Width="44"
-                                                                Height="30"
-                                                                Margin="{StaticResource MarginBottom.XLarge}"
-                                                                IsVisible="{Binding UseOpenWith, Mode=OneTime}"
-                                                                Classes="IconButton"
-                                                                ToolTip.Tip="{localization:Loc Action_OpenWith}">
-                                                    <DropDownButton.Content>
-                                                        <iconPacks:PackIconMaterial Kind="ApplicationExport"
-                                                                                    Height="{StaticResource Icon.Size.Micro}"
-                                                                                    Width="{StaticResource Icon.Size.Micro}" />
-                                                    </DropDownButton.Content>
-                                                    <DropDownButton.Flyout>
-                                                        <MenuFlyout ItemsSource="{Binding OpenWithViewModels}">
-                                                            <MenuFlyout.ItemContainerTheme>
-                                                                <ControlTheme TargetType="MenuItem"
-                                                                              x:DataType="domain:FileApplicationPairViewModel">
-                                                                    <Setter Property="Command" Value="{Binding OpenWithCommand}" />
-                                                                    <Setter Property="Header" Value="{Binding Name}" />
-                                                                    <Setter Property="Template">
-                                                                        <ControlTemplate>
-                                                                            <Border Name="border"
-                                                                                    Background="{TemplateBinding Background}"
-                                                                                    CornerRadius="{TemplateBinding CornerRadius}">
-                                                                                <ContentPresenter Content="{TemplateBinding Header}"
-                                                                                                  TextBlock.Foreground="{TemplateBinding Foreground}"
-                                                                                                  Margin="{TemplateBinding Padding}"
-                                                                                                  VerticalAlignment="Center" />
-                                                                            </Border>
-                                                                        </ControlTemplate>
-                                                                    </Setter>
-                                                                </ControlTheme>
-                                                            </MenuFlyout.ItemContainerTheme>
-                                                        </MenuFlyout>
-                                                    </DropDownButton.Flyout>
-                                                </DropDownButton>
-                                                <iconPacks:PackIconMaterial Grid.Row="0"
-                                                                            Grid.Column="0"
-                                                                            IsVisible="{Binding HasLocation}"
-                                                                            Margin="{StaticResource MarginAll.Large}"
-                                                                            Kind="SatelliteVariant"
-                                                                            Height="{StaticResource Icon.Size.Medium}"
-                                                                            Width="{StaticResource Icon.Size.Medium}"
-                                                                            Foreground="{DynamicResource Brush.Danger}" />
-                                            </Grid>
-                                            <TextBlock Grid.Row="2"
-                                                       Margin="{StaticResource MarginAll.Small}"
-                                                       Text="{Binding MetadataString}" />
-                                        </Grid>
-                                    </Border>
+                                    <controls:MediaPreviewCard HorizontalAlignment="Stretch"
+                                                               VerticalAlignment="Stretch" />
                                 </DataTemplate>
                             </ListBox.ItemTemplate>
                         </ListBox>
@@ -156,7 +68,9 @@
                     <Grid Grid.Row="1"
                           ColumnDefinitions="Auto,Auto"
                           Margin="{StaticResource MarginAll.Small}">
-                        <Grid Grid.Column="0" ColumnDefinitions="Auto,Auto,Auto" MaxHeight="36">
+                        <Grid Grid.Column="0"
+                              ColumnDefinitions="Auto,Auto,Auto"
+                              MaxHeight="36">
                             <Button Grid.Column="0"
                                     Classes="Small"
                                     Command="{Binding ZoomOutCommand}"

@@ -175,6 +175,10 @@ internal class GlancePanelViewModel : ViewModelBase, IDialogAware
             }
 
             SetProperty(ref _selectedPreview, value);
+            if (_selectedPreview != null)
+            {
+                _selectedPreview.Selected = true;
+            }
         }
     }
 

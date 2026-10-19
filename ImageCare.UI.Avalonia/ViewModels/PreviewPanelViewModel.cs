@@ -39,7 +39,7 @@ namespace ImageCare.UI.Avalonia.ViewModels;
 internal class PreviewPanelViewModel : NavigatedViewModelBase
 {
     // Desired size of item
-    private const int MaxItemWidth = 316;
+    private const int MaxItemWidth = 286;
     private const int PreloadCount = 20;
 
     private readonly IMediaPreviewService _imageService;

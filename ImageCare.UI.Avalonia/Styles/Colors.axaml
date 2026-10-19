@@ -11,6 +11,9 @@
             <SolidColorBrush x:Key="Brush.Warning" Color="#9D5D00" />
             <SolidColorBrush x:Key="Brush.Splitter" Color="#D1D1D1" />
             <SolidColorBrush x:Key="Brush.TextPrimary" Color="#1A1A1A" />
+            <SolidColorBrush x:Key="Brush.PreviewCard" Color="#FFFFFF" />
+            <SolidColorBrush x:Key="Brush.PreviewSurface" Color="#F0F1F2" />
+            <SolidColorBrush x:Key="Brush.PreviewOverlay" Color="#E8FFFFFF" />
         </ResourceDictionary>
         <ResourceDictionary x:Key="Dark">
             <SolidColorBrush x:Key="Brush.Accent" Color="#60CDFF" />
@@ -22,6 +25,9 @@
             <SolidColorBrush x:Key="Brush.Warning" Color="#FCE100" />
             <SolidColorBrush x:Key="Brush.Splitter" Color="#454545" />
             <SolidColorBrush x:Key="Brush.TextPrimary" Color="#F5F5F5" />
+            <SolidColorBrush x:Key="Brush.PreviewCard" Color="#242424" />
+            <SolidColorBrush x:Key="Brush.PreviewSurface" Color="#171717" />
+            <SolidColorBrush x:Key="Brush.PreviewOverlay" Color="#E82A2A2A" />
         </ResourceDictionary>
     </ResourceDictionary.ThemeDictionaries>
 </ResourceDictionary>
