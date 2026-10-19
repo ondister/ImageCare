@@ -17,7 +17,15 @@ public interface IMediaPreviewOperationsService
 
     bool CanUndoDelete { get; }
 
+    IObservable<IReadOnlyList<DeletedMediaFile>> DeletedFilesChanged { get; }
+
+    IReadOnlyList<DeletedMediaFile> GetDeletedFiles();
+
     Task<OperationResult> UndoLastDeleteAsync();
+
+    Task<OperationResult> RestoreDeletedFileAsync(string bufferPath);
+
+    Task<OperationResult> PermanentlyDeleteAsync(string bufferPath);
 
 	void SetSelectedPreview(SelectedMediaPreview selectedImagePreview);
 

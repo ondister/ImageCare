@@ -11,6 +11,7 @@ using System.Windows.Input;
 using DynamicData;
 
 using ImageCare.Core.Domain.Folders;
+using ImageCare.Core.Services.ConfigurationService;
 using ImageCare.Core.Services.FolderStatisticsService;
 using ImageCare.UI.Avalonia.ViewModels.Domain;
 
@@ -24,14 +25,21 @@ internal class TimelineViewModel : ViewModelBase, IDisposable
     private readonly CompositeDisposable _disposables = new();
     private readonly CompositeDisposable _dateStatDisposables = new();
     private readonly IFolderStatisticsService _folderStatisticsService;
+    private readonly IConfigurationService _configurationService;
     private readonly SourceCache<DateStatViewModel, DateTime> _dateStatsCache;
     private int _totalFilesCount;
     private bool _isLoading;
+    private bool _isExpanded;
 
-    public TimelineViewModel(IFolderStatisticsService folderStatisticsService, SynchronizationContext synchronizationContext)
+    public TimelineViewModel(
+        IFolderStatisticsService folderStatisticsService,
+        IConfigurationService configurationService,
+        SynchronizationContext synchronizationContext)
     {
         _folderStatisticsService = folderStatisticsService ?? throw new ArgumentNullException(nameof(folderStatisticsService));
+        _configurationService = configurationService ?? throw new ArgumentNullException(nameof(configurationService));
         _synchronizationContext = synchronizationContext ?? throw new ArgumentNullException(nameof(synchronizationContext));
+        _isExpanded = _configurationService.Configuration.Value.TimelineExpanded;
 
         _dateStatsCache = new SourceCache<DateStatViewModel, DateTime>(x => x.Date);
 
@@ -62,6 +70,14 @@ internal class TimelineViewModel : ViewModelBase, IDisposable
     }
 
     public ICommand StatisticsClickCommand => CreateCommand(() => _statisticsClickSubject.OnNext(Unit.Default));
+
+    public ICommand ToggleExpandedCommand => CreateCommand(ToggleExpanded);
+
+    public bool IsExpanded
+    {
+        get => _isExpanded;
+        private set => SetProperty(ref _isExpanded, value);
+    }
 
     public IObservable<DateTime> DateSelected => _dateSelectedSubject.AsObservable();
 
@@ -133,29 +149,43 @@ internal class TimelineViewModel : ViewModelBase, IDisposable
 
     private void OnBucketsChanged(IList<FilesBucket> bufferedBuckets)
     {
+        var latestBuckets = bufferedBuckets
+            .GroupBy(bucket => bucket.Date)
+            .Select(group => group.Last())
+            .ToArray();
+
         _synchronizationContext.Post(
             _ =>
             {
                 _dateStatsCache.Edit(innerCache =>
                 {
-                    foreach (var bucket in bufferedBuckets)
+                    foreach (var bucket in latestBuckets)
                     {
+                        var existing = innerCache.Lookup(bucket.Date);
+                        if (bucket.FilesCount == 0)
+                        {
+                            if (existing.HasValue)
+                            {
+                                existing.Value.Dispose();
+                                innerCache.RemoveKey(bucket.Date);
+                            }
+
+                            continue;
+                        }
+
+                        if (existing.HasValue)
+                        {
+                            existing.Value.Count = bucket.FilesCount;
+                            continue;
+                        }
+
                         var dateStat = new DateStatViewModel
                         {
                             Date = bucket.Date,
                             Count = bucket.FilesCount
                         };
-
-                        if (dateStat.Count == 0)
-                        {
-                            dateStat.Dispose();
-                            innerCache.Remove(dateStat);
-                        }
-                        else
-                        {
-                            _disposables.Add(dateStat.DateSelected.Subscribe(OnDateStatDateSelected));
-                            innerCache.AddOrUpdate(dateStat);
-                        }
+                        _disposables.Add(dateStat.DateSelected.Subscribe(OnDateStatDateSelected));
+                        innerCache.AddOrUpdate(dateStat);
                     }
                 });
 
@@ -191,12 +221,23 @@ internal class TimelineViewModel : ViewModelBase, IDisposable
             null);
     }
 
+    private void ToggleExpanded()
+    {
+        IsExpanded = !IsExpanded;
+        _configurationService.Configuration.Value.TimelineExpanded = IsExpanded;
+        _configurationService.SaveConfiguration();
+    }
+
     private void UpdateDateFlags()
     {
         var allItems = _dateStatsCache.Items.ToList();
+        var lastDatesByMonth = allItems
+            .GroupBy(item => (item.Date.Year, item.Date.Month))
+            .ToDictionary(group => group.Key, group => group.Max(item => item.Date));
+
         foreach (var item in allItems)
         {
-            item.UpdateMonthYearFlag(allItems);
+            item.IsLastInMonthYear = lastDatesByMonth[(item.Date.Year, item.Date.Month)] == item.Date;
         }
     }
 

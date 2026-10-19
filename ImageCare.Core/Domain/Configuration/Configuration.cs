@@ -14,6 +14,9 @@ public sealed class Configuration
     public string UiCultureName { get; set; } = string.Empty;
 
 
+    public bool TimelineExpanded { get; set; } = true;
+
+
     public bool RestoreLastFoldersOnStartup { get; set; } = true;
 
 

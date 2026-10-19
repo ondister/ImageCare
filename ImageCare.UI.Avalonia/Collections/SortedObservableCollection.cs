@@ -23,15 +23,74 @@ public class SortedObservableCollection<T> : ObservableCollection<T>
 
 	public void AddRange(IEnumerable<T> items)
 	{
-		if (items == null)
+		ArgumentNullException.ThrowIfNull(items);
+
+		var incoming = items.OrderBy(item => item, _comparer).ToArray();
+		if (incoming.Length == 0)
 		{
-			throw new ArgumentNullException(nameof(items));
+			return;
 		}
 
-		foreach (var item in items)
+		var merged = new List<T>(Items.Count + incoming.Length);
+		var existingIndex = 0;
+		var incomingIndex = 0;
+		while (existingIndex < Items.Count && incomingIndex < incoming.Length)
 		{
-			Add(item);
+			if (_comparer.Compare(Items[existingIndex], incoming[incomingIndex]) <= 0)
+			{
+				merged.Add(Items[existingIndex++]);
+			}
+			else
+			{
+				merged.Add(incoming[incomingIndex++]);
+			}
 		}
+
+		while (existingIndex < Items.Count)
+		{
+			merged.Add(Items[existingIndex++]);
+		}
+
+		while (incomingIndex < incoming.Length)
+		{
+			merged.Add(incoming[incomingIndex++]);
+		}
+
+		Items.Clear();
+		foreach (var item in merged)
+		{
+			Items.Add(item);
+		}
+
+		OnPropertyChanged(new System.ComponentModel.PropertyChangedEventArgs(nameof(Count)));
+		OnPropertyChanged(new System.ComponentModel.PropertyChangedEventArgs("Item[]"));
+		OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
+	}
+
+	public int RemoveWhere(Func<T, bool> predicate)
+	{
+		ArgumentNullException.ThrowIfNull(predicate);
+
+		var removedCount = 0;
+		for (var index = Items.Count - 1; index >= 0; index--)
+		{
+			if (!predicate(Items[index]))
+			{
+				continue;
+			}
+
+			Items.RemoveAt(index);
+			removedCount++;
+		}
+
+		if (removedCount > 0)
+		{
+			OnPropertyChanged(new System.ComponentModel.PropertyChangedEventArgs(nameof(Count)));
+			OnPropertyChanged(new System.ComponentModel.PropertyChangedEventArgs("Item[]"));
+			OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
+		}
+
+		return removedCount;
 	}
 
 	public void RefreshSort()

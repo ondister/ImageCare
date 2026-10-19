@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Globalization;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
+using System.Text.Json;
 
 using ImageCare.Core.Domain;
 using ImageCare.Core.Domain.Configuration;
@@ -17,15 +18,17 @@ namespace ImageCare.Core.Services.MediaPreviewOperationsService;
 public sealed class WindowsMediaPreviewOperationsService : IMediaPreviewOperationsService, IDisposable
 {
     private const string SafeDeleteFilePrefix = "ImageCare_Deleted_";
+    private const string DeletionManifestFileName = "deletion-manifest.json";
 
     private readonly Subject<SelectedMediaPreview> _selectedImagePreviewSubject;
     private readonly Subject<MediaFileOperationCompleted> _fileOperationCompletedSubject;
+    private readonly BehaviorSubject<IReadOnlyList<DeletedMediaFile>> _deletedFilesSubject;
     private readonly IFileSystemService _fileSystemService;
     private readonly IProcessService _processService;
     private readonly IConfigurationService? _configurationService;
     private readonly Configuration _fallbackConfiguration = new() { SafeDeletionEnabled = false };
     private readonly ConcurrentDictionary<FileManagerPanel, MediaPreview> _selectedImagePreviews = new();
-    private readonly ConcurrentStack<PendingDeletion> _pendingDeletions = new();
+    private readonly List<DeletedMediaFile> _deletedFiles = new();
     private readonly object _safeDeleteLock = new();
     private SelectedMediaPreview? _lastSelectedMediaPreview;
 
@@ -39,6 +42,8 @@ public sealed class WindowsMediaPreviewOperationsService : IMediaPreviewOperatio
         _configurationService = configurationService;
         _selectedImagePreviewSubject = new Subject<SelectedMediaPreview>();
         _fileOperationCompletedSubject = new Subject<MediaFileOperationCompleted>();
+        LoadDeletionManifest();
+        _deletedFilesSubject = new BehaviorSubject<IReadOnlyList<DeletedMediaFile>>(CreateDeletedFilesSnapshot());
     }
 
     public IObservable<SelectedMediaPreview> ImagePreviewSelected => _selectedImagePreviewSubject.AsObservable();
@@ -46,14 +51,26 @@ public sealed class WindowsMediaPreviewOperationsService : IMediaPreviewOperatio
     public IObservable<MediaFileOperationCompleted> FileOperationCompleted =>
         _fileOperationCompletedSubject.AsObservable();
 
+    public IObservable<IReadOnlyList<DeletedMediaFile>> DeletedFilesChanged =>
+        _deletedFilesSubject.AsObservable();
+
+    public IReadOnlyList<DeletedMediaFile> GetDeletedFiles()
+    {
+        lock (_safeDeleteLock)
+        {
+            RemoveMissingDeletedFiles();
+            return CreateDeletedFilesSnapshot();
+        }
+    }
+
     public bool CanUndoDelete
     {
         get
         {
             lock (_safeDeleteLock)
             {
-                RemoveMissingPendingDeletions();
-                return !_pendingDeletions.IsEmpty;
+                RemoveMissingDeletedFiles();
+                return _deletedFiles.Count > 0;
             }
         }
     }
@@ -62,6 +79,7 @@ public sealed class WindowsMediaPreviewOperationsService : IMediaPreviewOperatio
     {
         _selectedImagePreviewSubject.Dispose();
         _fileOperationCompletedSubject.Dispose();
+        _deletedFilesSubject.Dispose();
     }
 
     public Task<OperationResult> CopyImagePreviewToDirectoryAsync(
@@ -172,44 +190,95 @@ public sealed class WindowsMediaPreviewOperationsService : IMediaPreviewOperatio
 
     public Task<OperationResult> UndoLastDeleteAsync()
     {
+        DeletedMediaFile? deletedFile;
+        lock (_safeDeleteLock)
+        {
+            RemoveMissingDeletedFiles();
+            deletedFile = _deletedFiles.MaxBy(file => file.DeletedAtUtc);
+        }
+
+        return deletedFile == null
+            ? Task.FromResult(OperationResult.Failed)
+            : RestoreDeletedFileAsync(deletedFile.BufferPath);
+    }
+
+    public Task<OperationResult> RestoreDeletedFileAsync(string bufferPath)
+    {
         try
         {
-            PendingDeletion pendingDeletion;
+            DeletedMediaFile? deletedFile;
+            string destinationPath;
             lock (_safeDeleteLock)
             {
-                RemoveMissingPendingDeletions();
-                if (!_pendingDeletions.TryPeek(out pendingDeletion!))
+                RemoveMissingDeletedFiles();
+                deletedFile = _deletedFiles.FirstOrDefault(file => PathsEqual(file.BufferPath, bufferPath));
+                if (deletedFile == null || !_fileSystemService.FileExists(deletedFile.BufferPath))
                 {
                     return Task.FromResult(OperationResult.Failed);
                 }
 
-                if (_fileSystemService.FileExists(pendingDeletion.OriginalPath))
-                {
-                    return Task.FromResult(OperationResult.Failed);
-                }
-
-                var originalDirectory = Path.GetDirectoryName(pendingDeletion.OriginalPath);
+                var originalDirectory = Path.GetDirectoryName(deletedFile.OriginalPath);
                 if (string.IsNullOrWhiteSpace(originalDirectory) ||
                     !_fileSystemService.DirectoryExists(originalDirectory))
                 {
                     return Task.FromResult(OperationResult.Failed);
                 }
 
-                MoveFileReliably(pendingDeletion.BufferPath, pendingDeletion.OriginalPath);
-                _pendingDeletions.TryPop(out _);
+                destinationPath = deletedFile.OriginalPath;
+                if (_fileSystemService.FileExists(destinationPath))
+                {
+                    destinationPath = Path.Combine(
+                        originalDirectory,
+                        GetUniqueFileName(originalDirectory, Path.GetFileName(deletedFile.OriginalPath)));
+                }
+
+                MoveFileReliably(deletedFile.BufferPath, destinationPath);
+                _deletedFiles.Remove(deletedFile);
+                SaveDeletionManifest();
+                PublishDeletedFiles();
             }
 
             _fileOperationCompletedSubject.OnNext(
                 new MediaFileOperationCompleted(
                     MediaFileOperationKind.Restore,
-                    pendingDeletion.BufferPath,
-                    pendingDeletion.OriginalPath));
+                    deletedFile.BufferPath,
+                    destinationPath));
 
             return Task.FromResult(OperationResult.Success);
         }
         catch (Exception ex)
         {
-            throw new ServiceException("Failed to restore the last deleted image preview", ex);
+            throw new ServiceException("Failed to restore deleted image preview", ex);
+        }
+    }
+
+    public Task<OperationResult> PermanentlyDeleteAsync(string bufferPath)
+    {
+        try
+        {
+            lock (_safeDeleteLock)
+            {
+                var deletedFile = _deletedFiles.FirstOrDefault(file => PathsEqual(file.BufferPath, bufferPath));
+                if (deletedFile == null)
+                {
+                    return Task.FromResult(OperationResult.Failed);
+                }
+
+                if (_fileSystemService.FileExists(deletedFile.BufferPath))
+                {
+                    _fileSystemService.SafeDelete(deletedFile.BufferPath);
+                }
+
+                _deletedFiles.Remove(deletedFile);
+                SaveDeletionManifest();
+                PublishDeletedFiles();
+            }
+
+            return Task.FromResult(OperationResult.Success);
+        }
+        catch (Exception ex)
+        {
+            throw new ServiceException("Failed to permanently delete image preview", ex);
         }
     }
 
@@ -314,8 +383,10 @@ public sealed class WindowsMediaPreviewOperationsService : IMediaPreviewOperatio
 
             var destinationPath = CreateSafeDeletePath(bufferDirectory, Path.GetFileName(sourcePath));
             MoveFileReliably(sourcePath, destinationPath);
-            _pendingDeletions.Push(new PendingDeletion(sourcePath, destinationPath));
+            _deletedFiles.Add(new DeletedMediaFile(sourcePath, destinationPath, DateTime.UtcNow));
             TrimSafeDeleteBuffer(bufferDirectory, Math.Max(1, configuration.SafeDeletionMaxFileCount));
+            SaveDeletionManifest();
+            PublishDeletedFiles();
         }
     }
 
@@ -346,7 +417,7 @@ public sealed class WindowsMediaPreviewOperationsService : IMediaPreviewOperatio
             _fileSystemService.SafeDelete(filePath);
         }
 
-        RemoveMissingPendingDeletions();
+        RemoveMissingDeletedFiles();
     }
 
     private void MoveFileReliably(string sourcePath, string destinationPath)
@@ -375,13 +446,80 @@ public sealed class WindowsMediaPreviewOperationsService : IMediaPreviewOperatio
         }
     }
 
-    private void RemoveMissingPendingDeletions()
+    private void RemoveMissingDeletedFiles()
     {
-        while (_pendingDeletions.TryPeek(out var pendingDeletion) &&
-               !_fileSystemService.FileExists(pendingDeletion.BufferPath))
+        var removed = _deletedFiles.RemoveAll(file => !_fileSystemService.FileExists(file.BufferPath));
+        if (removed > 0)
         {
-            _pendingDeletions.TryPop(out _);
+            SaveDeletionManifest();
+            PublishDeletedFiles();
         }
+    }
+
+    private void LoadDeletionManifest()
+    {
+        var manifestPath = GetDeletionManifestPath();
+        if (!File.Exists(manifestPath))
+        {
+            return;
+        }
+
+        try
+        {
+            using var stream = new FileStream(manifestPath, FileMode.Open, FileAccess.Read, FileShare.Read);
+            var deletedFiles = JsonSerializer.Deserialize(
+                stream,
+                typeof(List<DeletedMediaFile>),
+                ConfigurationSourceGenerationContext.Default) as List<DeletedMediaFile>;
+            if (deletedFiles != null)
+            {
+                _deletedFiles.AddRange(deletedFiles.Where(file => _fileSystemService.FileExists(file.BufferPath)));
+            }
+        }
+        catch
+        {
+            // A damaged manifest must not prevent the application from starting.
+        }
+    }
+
+    private void SaveDeletionManifest()
+    {
+        var manifestPath = GetDeletionManifestPath();
+        var directory = Path.GetDirectoryName(manifestPath);
+        if (string.IsNullOrWhiteSpace(directory))
+        {
+            return;
+        }
+
+        Directory.CreateDirectory(directory);
+        var temporaryPath = manifestPath + ".tmp";
+        var content = JsonSerializer.Serialize(
+            _deletedFiles,
+            typeof(List<DeletedMediaFile>),
+            ConfigurationSourceGenerationContext.Default);
+        File.WriteAllText(temporaryPath, content);
+        File.Move(temporaryPath, manifestPath, true);
+    }
+
+    private string GetDeletionManifestPath()
+    {
+        var bufferDirectory = GetConfiguration().SafeDeletionDirectoryPath;
+        if (string.IsNullOrWhiteSpace(bufferDirectory))
+        {
+            bufferDirectory = Configuration.GetDefaultSafeDeletionDirectoryPath();
+        }
+
+        return Path.Combine(bufferDirectory, DeletionManifestFileName);
+    }
+
+    private IReadOnlyList<DeletedMediaFile> CreateDeletedFilesSnapshot() =>
+        _deletedFiles
+            .OrderByDescending(file => file.DeletedAtUtc)
+            .ToArray();
+
+    private void PublishDeletedFiles()
+    {
+        _deletedFilesSubject?.OnNext(CreateDeletedFilesSnapshot());
     }
 
     private string GetUniqueFileName(string directory, string fileName)
@@ -427,6 +565,4 @@ public sealed class WindowsMediaPreviewOperationsService : IMediaPreviewOperatio
             Path.TrimEndingDirectorySeparator(right),
             comparison);
     }
-
-    private sealed record PendingDeletion(string OriginalPath, string BufferPath);
 }

@@ -87,4 +87,16 @@
   <data name="Action_OpenFolder" xml:space="preserve"><value>Открыть папку</value></data>
   <data name="Action_ClearSearch" xml:space="preserve"><value>Очистить поиск</value></data>
   <data name="Action_CopyLocation" xml:space="preserve"><value>Скопировать координаты</value></data>
+  <data name="Timeline_OpenOverview" xml:space="preserve"><value>Открыть обзор папки</value></data>
+  <data name="Timeline_Show" xml:space="preserve"><value>Показать временную шкалу</value></data>
+  <data name="Timeline_Hide" xml:space="preserve"><value>Скрыть временную шкалу</value></data>
+  <data name="Overview_Title" xml:space="preserve"><value>Обзор папки — {0}</value></data>
+  <data name="Overview_Files" xml:space="preserve"><value>Файлы</value></data>
+  <data name="Overview_Deleted" xml:space="preserve"><value>Удалённые</value></data>
+  <data name="Overview_NoDeleted" xml:space="preserve"><value>Нет удалённых файлов, доступных для восстановления.</value></data>
+  <data name="Overview_Restore" xml:space="preserve"><value>Восстановить</value></data>
+  <data name="Overview_RestoreAll" xml:space="preserve"><value>Восстановить все</value></data>
+  <data name="Overview_DeletePermanently" xml:space="preserve"><value>Удалить безвозвратно</value></data>
+  <data name="Overview_OriginalFolder" xml:space="preserve"><value>Исходная папка</value></data>
+  <data name="Overview_DeletedAt" xml:space="preserve"><value>Удалён</value></data>
 </root>

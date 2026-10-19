@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reactive;
@@ -12,6 +13,7 @@ using ImageCare.Core.Domain.Folders;
 using ImageCare.Core.Domain.Media;
 using ImageCare.Core.Domain.Notification;
 using ImageCare.Core.Domain.Preview;
+using ImageCare.Core.Services.ConfigurationService;
 using ImageCare.Core.Services.FileSystemWatcherService;
 using ImageCare.Core.Services.FolderClusterizationService;
 using ImageCare.Core.Services.FolderService;
@@ -72,6 +74,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
                                  IFolderStatisticsService folderStatisticsService,
                                  IFolderClusterizationService folderClusterizationService,
                                  INotificationService notificationService,
+                                 IConfigurationService configurationService,
                                  IDialogService dialogService,
                                  IMapper mapper,
                                  ILogger logger,
@@ -99,7 +102,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
 
         _folderSelectedCancellationTokenSource = new CancellationTokenSource();
 
-        TimelineVm = new TimelineViewModel(_folderStatisticsService, _synchronizationContext);
+        TimelineVm = new TimelineViewModel(_folderStatisticsService, configurationService, _synchronizationContext);
     }
 
     // Used by HorizontalScrollBehavior
@@ -173,11 +176,15 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
         _disposable = new CompositeDisposable
         {
             _fileSystemWatcherService.FileCreated
+                                     .Buffer(TimeSpan.FromMilliseconds(150))
+                                     .Where(files => files.Count > 0)
                                      .ObserveOn(_synchronizationContext)
-                                     .Subscribe(OnFileCreated),
+                                     .Subscribe(OnFilesCreated),
             _fileSystemWatcherService.FileDeleted
+                                     .Buffer(TimeSpan.FromMilliseconds(150))
+                                     .Where(files => files.Count > 0)
                                      .ObserveOn(_synchronizationContext)
-                                     .Subscribe(OnFileDeleted),
+                                     .Subscribe(OnFilesDeleted),
             _fileSystemWatcherService.FileRenamed
                                      .ObserveOn(_synchronizationContext)
                                      .Subscribe(OnFileRenamed),
@@ -464,15 +471,15 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
             var files = await _folderService.GetFileModelAsync(selectedFileSystemItem, "*");
 
             token.ThrowIfCancellationRequested();
+            var pathComparer = OperatingSystem.IsWindows()
+                ? StringComparer.OrdinalIgnoreCase
+                : StringComparer.Ordinal;
+            var distinctFiles = files
+                .GroupBy(file => file.FullName, pathComparer)
+                .Select(group => group.First());
             lock (_imagePathsLock)
             {
-                foreach (var file in files)
-                {
-                    if (_imagePaths.All(existing => !PathsEqual(existing.FullName, file.FullName)))
-                    {
-                        _imagePaths.Add(file);
-                    }
-                }
+                _imagePaths.AddRange(distinctFiles);
             }
 
             _ = LoadInitialImagesAsync(token);
@@ -492,22 +499,58 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
         }
     }
 
-    private void OnFileCreated(FileModel fileModel)
+    private void OnFilesCreated(IList<FileModel> files)
     {
-        AddFilePath(fileModel);
-        _ = CreateImagePreviewFromPathAsync(fileModel.FullName, true);
+        var pathComparer = OperatingSystem.IsWindows()
+            ? StringComparer.OrdinalIgnoreCase
+            : StringComparer.Ordinal;
+        var newFiles = files
+            .Where(file => PathsEqual(System.IO.Path.GetDirectoryName(file.FullName), SelectedFolderPath))
+            .GroupBy(file => file.FullName, pathComparer)
+            .Select(group => group.Last())
+            .ToArray();
+
+        lock (_imagePathsLock)
+        {
+            var existingPaths = _imagePaths.Select(file => file.FullName).ToHashSet(pathComparer);
+            _imagePaths.AddRange(newFiles.Where(file => existingPaths.Add(file.FullName)));
+        }
+
+        _ = ProcessCreatedFilesAsync(newFiles);
     }
 
-    private void OnFileDeleted(FileModel fileModel)
+    private async Task ProcessCreatedFilesAsync(IReadOnlyList<FileModel> files)
+    {
+        await Parallel.ForEachAsync(
+            files,
+            new ParallelOptions { MaxDegreeOfParallelism = 4 },
+            async (file, _) => await CreateImagePreviewFromPathAsync(file.FullName, true));
+    }
+
+    private void OnFilesDeleted(IList<FileModel> files)
     {
         try
         {
-            RemoveFilePath(fileModel.FullName);
-            RemoveImagePreviewByPath(fileModel.FullName);
+            var pathComparer = OperatingSystem.IsWindows()
+                ? StringComparer.OrdinalIgnoreCase
+                : StringComparer.Ordinal;
+            var deletedPaths = files.Select(file => file.FullName).ToHashSet(pathComparer);
+
+            lock (_imagePathsLock)
+            {
+                _imagePaths.RemoveWhere(file => deletedPaths.Contains(file.FullName));
+            }
+
+            var selectedWasDeleted = SelectedPreview != null && deletedPaths.Contains(SelectedPreview.Url);
+            ImagePreviews.RemoveWhere(preview => deletedPaths.Contains(preview.Url));
+            if (selectedWasDeleted)
+            {
+                SelectedPreview = ImagePreviews.FirstOrDefault();
+            }
         }
         catch (Exception ex)
         {
-            _logger.Error(ex, "Unexpected exception during handling of file deletion: {Path}", fileModel.FullName);
+            _logger.Error(ex, "Unexpected exception during batch file deletion handling");
         }
     }
 
@@ -717,43 +760,56 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
 
     private async Task LoadChunkAsync(FileModel[] chunk, CancellationToken token)
     {
-        var previews = new List<MediaPreviewViewModel>(chunk.Length);
+        var previews = new ConcurrentBag<MediaPreviewViewModel>();
 
-        foreach (var fileModel in chunk)
-        {
-            token.ThrowIfCancellationRequested();
-
-            var previewImage = await _imageService.GetMediaPreviewAsync(fileModel.FullName);
-            if (previewImage == null)
+        await Parallel.ForEachAsync(
+            chunk,
+            new ParallelOptions { MaxDegreeOfParallelism = 4, CancellationToken = token },
+            async (fileModel, cancellationToken) =>
             {
-                continue;
-            }
+                var previewImage = await _imageService.GetMediaPreviewAsync(fileModel.FullName).ConfigureAwait(false);
+                if (previewImage == null)
+                {
+                    return;
+                }
 
-            var metadata = await _imageService.GetMediaMetadataAsync(previewImage);
-            token.ThrowIfCancellationRequested();
+                var metadata = await _imageService.GetMediaMetadataAsync(previewImage).ConfigureAwait(false);
+                cancellationToken.ThrowIfCancellationRequested();
 
-            var mediaPreviewViewModel = _mapper.Map<MediaPreviewViewModel>(previewImage);
-            mediaPreviewViewModel.FileDate = metadata.CreationDateTime;
-            mediaPreviewViewModel.MetadataString = metadata.GetString();
-            mediaPreviewViewModel.DateTimeString = metadata.CreationDateTime.ToString("dd.MM.yyyy HH:mm");
-            mediaPreviewViewModel.Metadata = metadata;
-            mediaPreviewViewModel.RotateAngle = metadata.Orientation.ToRotationAngle();
-            previews.Add(mediaPreviewViewModel);
-        }
+                var mediaPreviewViewModel = _mapper.Map<MediaPreviewViewModel>(previewImage);
+                mediaPreviewViewModel.FileDate = metadata.CreationDateTime;
+                mediaPreviewViewModel.MetadataString = metadata.GetString();
+                mediaPreviewViewModel.DateTimeString = metadata.CreationDateTime.ToString("dd.MM.yyyy HH:mm");
+                mediaPreviewViewModel.Metadata = metadata;
+                mediaPreviewViewModel.RotateAngle = metadata.Orientation.ToRotationAngle();
+                previews.Add(mediaPreviewViewModel);
+            }).ConfigureAwait(false);
 
         token.ThrowIfCancellationRequested();
-        _synchronizationContext.Send(
+        var collectionUpdate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        _synchronizationContext.Post(
             _ =>
             {
-                foreach (var preview in previews)
+                try
                 {
-                    if (ImagePreviews.All(existing => !PathsEqual(existing.Url, preview.Url)))
-                    {
-                        ImagePreviews.Add(preview);
-                    }
+                    var pathComparer = OperatingSystem.IsWindows()
+                        ? StringComparer.OrdinalIgnoreCase
+                        : StringComparer.Ordinal;
+                    var existingPaths = ImagePreviews
+                        .Select(existing => existing.Url)
+                        .ToHashSet(pathComparer);
+                    var newPreviews = previews
+                        .Where(preview => existingPaths.Add(preview.Url))
+                        .ToArray();
+                    ImagePreviews.AddRange(newPreviews);
+                }
+                finally
+                {
+                    collectionUpdate.SetResult();
                 }
             },
             null);
+        await collectionUpdate.Task.WaitAsync(token);
     }
 
     private async Task LoadImageAsync(int indexInPreviews, CancellationToken token = default)

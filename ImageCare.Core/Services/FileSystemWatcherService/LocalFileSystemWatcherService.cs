@@ -28,7 +28,8 @@ public sealed class LocalFileSystemWatcherService : IFileSystemWatcherService, I
     {
         _filesWatcher = new FileSystemWatcher
         {
-            NotifyFilter = NotifyFilters.FileName | NotifyFilters.LastWrite | NotifyFilters.Size
+            NotifyFilter = NotifyFilters.FileName | NotifyFilters.LastWrite | NotifyFilters.Size,
+            InternalBufferSize = 64 * 1024
         };
 
         _directoriesWatcher = new FileSystemWatcher
@@ -184,13 +185,19 @@ public sealed class LocalFileSystemWatcherService : IFileSystemWatcherService, I
 
     private void SubscribeToFileEvents()
     {
+        var pathComparer = OperatingSystem.IsWindows()
+            ? StringComparer.OrdinalIgnoreCase
+            : StringComparer.Ordinal;
         var fileCreatedSubscription = Observable
                                       .FromEventPattern<FileSystemEventHandler, FileSystemEventArgs>(
                                           h => _filesWatcher.Created += h,
                                           h => _filesWatcher.Created -= h)
                                       .Select(e => CreateFileModel(e.EventArgs))
-                                      .GroupBy(file => file.FullName)
-                                      .SelectMany(group => group.Throttle(TimeSpan.FromSeconds(1)))
+                                      .Buffer(TimeSpan.FromMilliseconds(200))
+                                      .Where(files => files.Count > 0)
+                                      .SelectMany(files => files
+                                          .GroupBy(file => file.FullName, pathComparer)
+                                          .Select(group => group.Last()))
                                       .Subscribe(_fileCreatedSubject);
 
         _subscriptions.Add(fileCreatedSubscription);
@@ -200,8 +207,11 @@ public sealed class LocalFileSystemWatcherService : IFileSystemWatcherService, I
                                           h => _filesWatcher.Deleted += h,
                                           h => _filesWatcher.Deleted -= h)
                                       .Select(e => CreateFileModel(e.EventArgs))
-                                      .GroupBy(file => file.FullName)
-                                      .SelectMany(group => group.Throttle(TimeSpan.FromMilliseconds(100)))
+                                      .Buffer(TimeSpan.FromMilliseconds(200))
+                                      .Where(files => files.Count > 0)
+                                      .SelectMany(files => files
+                                          .GroupBy(file => file.FullName, pathComparer)
+                                          .Select(group => group.Last()))
                                       .Subscribe(_fileDeletedSubject);
 
         _subscriptions.Add(fileDeletedSubscription);

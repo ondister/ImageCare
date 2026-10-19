@@ -1,3 +1,5 @@
+using System;
+
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
@@ -36,10 +38,27 @@ public sealed class WheelScrollBehaviour
 
     private static void OnPointerWheelChanged(object? sender, PointerWheelEventArgs e)
     {
-        if (sender is ScrollViewer scrollViewer)
+        if (sender is not ScrollViewer scrollViewer)
         {
-            scrollViewer.Offset += new Vector(e.Delta.Y * 30, 0);
-            e.Handled = true;
+            return;
         }
+
+        var wheelDelta = Math.Abs(e.Delta.X) > Math.Abs(e.Delta.Y)
+            ? e.Delta.X
+            : e.Delta.Y;
+        if (Math.Abs(wheelDelta) < double.Epsilon)
+        {
+            return;
+        }
+
+        var maximumOffset = Math.Max(0, scrollViewer.Extent.Width - scrollViewer.Viewport.Width);
+        var targetOffset = Math.Clamp(scrollViewer.Offset.X - wheelDelta * 40, 0, maximumOffset);
+        if (Math.Abs(targetOffset - scrollViewer.Offset.X) < 0.01)
+        {
+            return;
+        }
+
+        scrollViewer.Offset = new Vector(targetOffset, scrollViewer.Offset.Y);
+        e.Handled = true;
     }
 }

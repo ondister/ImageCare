@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
@@ -9,15 +11,19 @@ using System.Windows.Input;
 
 using ImageCare.Core.Domain.Folders;
 using ImageCare.Core.Domain.Media;
+using ImageCare.Core.Domain.Notification;
 using ImageCare.Core.Domain.Preview;
+using ImageCare.Core.Services.ConfigurationService;
 using ImageCare.Core.Services.FileSystemWatcherService;
 using ImageCare.Core.Services.FolderClusterizationService;
 using ImageCare.Core.Services.FolderService;
 using ImageCare.Core.Services.FolderStatisticsService;
 using ImageCare.Core.Services.MediaPreviewOperationsService;
 using ImageCare.Core.Services.MediaPreviewService;
+using ImageCare.Core.Services.NotificationService;
 using ImageCare.UI.Avalonia.Collections;
 using ImageCare.UI.Avalonia.Controls;
+using ImageCare.UI.Avalonia.Localization;
 using ImageCare.UI.Avalonia.ViewModels.Domain;
 
 using MapsterMapper;
@@ -37,6 +43,8 @@ internal class GlancePanelViewModel : ViewModelBase, IDialogAware
     private readonly IFolderService _folderService;
     private readonly IFileSystemWatcherService _fileSystemWatcherService;
     private readonly IMediaPreviewOperationsService _fileOperationsService;
+    private readonly INotificationService _notificationService;
+    private readonly LocalizationManager _localization;
     private readonly IMapper _mapper;
     private readonly ILogger _logger;
     private readonly SynchronizationContext _synchronizationContext;
@@ -55,6 +63,8 @@ internal class GlancePanelViewModel : ViewModelBase, IDialogAware
     private GlanceMediaPreviewViewModel? _selectedPreview;
     private bool _isScrollResetRequested;
     private double _panelRowHeight;
+    private bool _hasDeletedFiles;
+    private bool _isRestoringAll;
 
     public GlancePanelViewModel(IFolderStatisticsService folderStatisticsService,
                                 IFolderClusterizationService folderClusterizationService,
@@ -62,9 +72,13 @@ internal class GlancePanelViewModel : ViewModelBase, IDialogAware
                                 IFolderService folderService,
                                 IFileSystemWatcherService fileSystemWatcherService,
                                 IMediaPreviewOperationsService fileOperationsService,
+                                IConfigurationService configurationService,
+                                INotificationService notificationService,
+                                LocalizationManager localization,
                                 IMapper mapper,
                                 ILogger logger,
-                                SynchronizationContext synchronizationContext, DialogCloseListener requestClose)
+                                SynchronizationContext synchronizationContext,
+                                DialogCloseListener requestClose)
     {
         _folderStatisticsService = folderStatisticsService;
         _folderClusterizationService = folderClusterizationService;
@@ -72,6 +86,8 @@ internal class GlancePanelViewModel : ViewModelBase, IDialogAware
         _folderService = folderService;
         _fileSystemWatcherService = fileSystemWatcherService;
         _fileOperationsService = fileOperationsService;
+        _notificationService = notificationService;
+        _localization = localization;
         _mapper = mapper;
         _logger = logger;
         _synchronizationContext = synchronizationContext;
@@ -79,10 +95,14 @@ internal class GlancePanelViewModel : ViewModelBase, IDialogAware
 
         _imageLoadCts = new CancellationTokenSource();
         ImagePreviews = new SortedObservableCollection<GlanceMediaPreviewViewModel>(new CreationDateTimeDescendingComparer());
-        TimelineVm = new TimelineViewModel(_folderStatisticsService, _synchronizationContext);
+        DeletedFiles = new ObservableCollection<DeletedMediaFileViewModel>();
+        TimelineVm = new TimelineViewModel(_folderStatisticsService, configurationService, _synchronizationContext);
 
         ZoomInCommand = CreateCommand(ZoomIn, CanZoomIn).ObservesProperty(() => ImagePreviews.Count);
         ZoomOutCommand = CreateCommand(ZoomOut, CanZoomOut).ObservesProperty(() => ImagePreviews.Count);
+        RestoreAllCommand = CreateAsyncCommand(RestoreAllAsync, () => HasDeletedFiles && !IsRestoringAll)
+            .ObservesProperty(() => HasDeletedFiles)
+            .ObservesProperty(() => IsRestoringAll);
 
         AspectRatioViewModels = new List<AspectRatioViewModel>
         {
@@ -106,7 +126,23 @@ internal class GlancePanelViewModel : ViewModelBase, IDialogAware
 
     public ICommand ZoomOutCommand { get; }
 
+    public ICommand RestoreAllCommand { get; }
+
     public TimelineViewModel TimelineVm { get; }
+
+    public ObservableCollection<DeletedMediaFileViewModel> DeletedFiles { get; }
+
+    public bool HasDeletedFiles
+    {
+        get => _hasDeletedFiles;
+        private set => SetProperty(ref _hasDeletedFiles, value);
+    }
+
+    public bool IsRestoringAll
+    {
+        get => _isRestoringAll;
+        private set => SetProperty(ref _isRestoringAll, value);
+    }
 
     public bool FilesLoading
     {
@@ -157,7 +193,7 @@ internal class GlancePanelViewModel : ViewModelBase, IDialogAware
         set
         {
             SetProperty(ref _selectedFolderPath, value);
-            Title = _selectedFolderPath;
+            Title = _localization.Get("Overview_Title", _selectedFolderPath);
         }
     }
 
@@ -196,18 +232,25 @@ internal class GlancePanelViewModel : ViewModelBase, IDialogAware
         {
             _disposable = new CompositeDisposable
             {
-                _fileSystemWatcherService.FileCreated
+            _fileSystemWatcherService.FileCreated
+                                         .Buffer(TimeSpan.FromMilliseconds(150))
+                                         .Where(files => files.Count > 0)
                                          .ObserveOn(_synchronizationContext)
-                                         .Subscribe(OnFileCreated, onError: OnObservableError),
+                                         .Subscribe(OnFilesCreated, onError: OnObservableError),
                 _fileSystemWatcherService.FileDeleted
+                                         .Buffer(TimeSpan.FromMilliseconds(150))
+                                         .Where(files => files.Count > 0)
                                          .ObserveOn(_synchronizationContext)
-                                         .Subscribe(OnFileDeleted, onError: OnObservableError),
+                                         .Subscribe(OnFilesDeleted, onError: OnObservableError),
                 _fileSystemWatcherService.FileRenamed
                                          .ObserveOn(_synchronizationContext)
                                          .Subscribe(OnFileRenamed, onError: OnObservableError),
                 _fileOperationsService.FileOperationCompleted
                                       .ObserveOn(_synchronizationContext)
                                       .Subscribe(OnFileOperationCompleted, onError: OnObservableError),
+                _fileOperationsService.DeletedFilesChanged
+                                      .ObserveOn(_synchronizationContext)
+                                      .Subscribe(RefreshDeletedFiles, onError: OnObservableError),
                 _folderClusterizationService.ClusterizationCompleted.Subscribe(OnClusterizationCompleted, onError: OnObservableError),
                 TimelineVm.DateSelected.Subscribe(OnTimelineDateSelected, onError: OnObservableError)
             };
@@ -346,15 +389,15 @@ internal class GlancePanelViewModel : ViewModelBase, IDialogAware
             var files = await _folderService.GetFileModelAsync(selectedFileSystemItem, "*");
 
             token.ThrowIfCancellationRequested();
+            var pathComparer = OperatingSystem.IsWindows()
+                ? StringComparer.OrdinalIgnoreCase
+                : StringComparer.Ordinal;
+            var distinctFiles = files
+                .GroupBy(file => file.FullName, pathComparer)
+                .Select(group => group.First());
             lock (_imagePathsLock)
             {
-                foreach (var file in files)
-                {
-                    if (_imagePaths.All(existing => !PathsEqual(existing.FullName, file.FullName)))
-                    {
-                        _imagePaths.Add(file);
-                    }
-                }
+                _imagePaths.AddRange(distinctFiles);
             }
 
             FilesLoading = false;
@@ -424,43 +467,56 @@ internal class GlancePanelViewModel : ViewModelBase, IDialogAware
 
     private async Task LoadChunkAsync(FileModel[] chunk, CancellationToken token)
     {
-        var previews = new List<GlanceMediaPreviewViewModel>(chunk.Length);
+        var previews = new ConcurrentBag<GlanceMediaPreviewViewModel>();
 
-        foreach (var fileModel in chunk)
-        {
-            token.ThrowIfCancellationRequested();
-
-            var previewImage = await _imageService.GetMediaPreviewAsync(fileModel.FullName);
-            if (previewImage == null)
+        await Parallel.ForEachAsync(
+            chunk,
+            new ParallelOptions { MaxDegreeOfParallelism = 4, CancellationToken = token },
+            async (fileModel, cancellationToken) =>
             {
-                continue;
-            }
+                var previewImage = await _imageService.GetMediaPreviewAsync(fileModel.FullName).ConfigureAwait(false);
+                if (previewImage == null)
+                {
+                    return;
+                }
 
-            var metadata = await _imageService.GetMediaMetadataAsync(previewImage);
-            token.ThrowIfCancellationRequested();
+                var metadata = await _imageService.GetMediaMetadataAsync(previewImage).ConfigureAwait(false);
+                cancellationToken.ThrowIfCancellationRequested();
 
-            var mediaPreviewViewModel = _mapper.Map<GlanceMediaPreviewViewModel>(previewImage);
-            mediaPreviewViewModel.FileDate = metadata.CreationDateTime;
-            mediaPreviewViewModel.MetadataString = metadata.GetString();
-            mediaPreviewViewModel.DateTimeString = metadata.CreationDateTime.ToString("dd.MM.yyyy HH:mm");
-            mediaPreviewViewModel.Metadata = metadata;
-            mediaPreviewViewModel.RotateAngle = metadata.Orientation.ToRotationAngle();
-            previews.Add(mediaPreviewViewModel);
-        }
+                var mediaPreviewViewModel = _mapper.Map<GlanceMediaPreviewViewModel>(previewImage);
+                mediaPreviewViewModel.FileDate = metadata.CreationDateTime;
+                mediaPreviewViewModel.MetadataString = metadata.GetString();
+                mediaPreviewViewModel.DateTimeString = metadata.CreationDateTime.ToString("dd.MM.yyyy HH:mm");
+                mediaPreviewViewModel.Metadata = metadata;
+                mediaPreviewViewModel.RotateAngle = metadata.Orientation.ToRotationAngle();
+                previews.Add(mediaPreviewViewModel);
+            }).ConfigureAwait(false);
 
         token.ThrowIfCancellationRequested();
-        _synchronizationContext.Send(
+        var collectionUpdate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        _synchronizationContext.Post(
             _ =>
             {
-                foreach (var preview in previews)
+                try
                 {
-                    if (ImagePreviews.All(existing => !PathsEqual(existing.Url, preview.Url)))
-                    {
-                        ImagePreviews.Add(preview);
-                    }
+                    var pathComparer = OperatingSystem.IsWindows()
+                        ? StringComparer.OrdinalIgnoreCase
+                        : StringComparer.Ordinal;
+                    var existingPaths = ImagePreviews
+                        .Select(existing => existing.Url)
+                        .ToHashSet(pathComparer);
+                    var newPreviews = previews
+                        .Where(preview => existingPaths.Add(preview.Url))
+                        .ToArray();
+                    ImagePreviews.AddRange(newPreviews);
+                }
+                finally
+                {
+                    collectionUpdate.SetResult();
                 }
             },
             null);
+        await collectionUpdate.Task.WaitAsync(token);
     }
 
     private async Task LoadImageAsync(int indexInPreviews, CancellationToken token = default)
@@ -609,23 +665,59 @@ internal class GlancePanelViewModel : ViewModelBase, IDialogAware
         }
     }
 
-    private void OnFileDeleted(FileModel fileModel)
+    private void OnFilesDeleted(IList<FileModel> files)
     {
         try
         {
-            RemoveFilePath(fileModel.FullName);
-            RemoveImagePreviewByPath(fileModel.FullName);
+            var pathComparer = OperatingSystem.IsWindows()
+                ? StringComparer.OrdinalIgnoreCase
+                : StringComparer.Ordinal;
+            var deletedPaths = files.Select(file => file.FullName).ToHashSet(pathComparer);
+
+            lock (_imagePathsLock)
+            {
+                _imagePaths.RemoveWhere(file => deletedPaths.Contains(file.FullName));
+            }
+
+            var selectedWasDeleted = SelectedPreview != null && deletedPaths.Contains(SelectedPreview.Url);
+            ImagePreviews.RemoveWhere(preview => deletedPaths.Contains(preview.Url));
+            if (selectedWasDeleted)
+            {
+                SelectedPreview = ImagePreviews.FirstOrDefault();
+            }
         }
         catch (Exception ex)
         {
-            _logger.Error(ex, "Unexpected exception during handling of file deletion: {Path}", fileModel.FullName);
+            _logger.Error(ex, "Unexpected exception during batch file deletion handling");
         }
     }
 
-    private void OnFileCreated(FileModel fileModel)
+    private void OnFilesCreated(IList<FileModel> files)
     {
-        AddFilePath(fileModel);
-        _ = CreateImagePreviewFromPathAsync(fileModel.FullName, true);
+        var pathComparer = OperatingSystem.IsWindows()
+            ? StringComparer.OrdinalIgnoreCase
+            : StringComparer.Ordinal;
+        var newFiles = files
+            .Where(file => PathsEqual(System.IO.Path.GetDirectoryName(file.FullName), SelectedFolderPath))
+            .GroupBy(file => file.FullName, pathComparer)
+            .Select(group => group.Last())
+            .ToArray();
+
+        lock (_imagePathsLock)
+        {
+            var existingPaths = _imagePaths.Select(file => file.FullName).ToHashSet(pathComparer);
+            _imagePaths.AddRange(newFiles.Where(file => existingPaths.Add(file.FullName)));
+        }
+
+        _ = ProcessCreatedFilesAsync(newFiles);
+    }
+
+    private async Task ProcessCreatedFilesAsync(IReadOnlyList<FileModel> files)
+    {
+        await Parallel.ForEachAsync(
+            files,
+            new ParallelOptions { MaxDegreeOfParallelism = 4 },
+            async (file, _) => await CreateImagePreviewFromPathAsync(file.FullName, true));
     }
 
     private void OnFileOperationCompleted(MediaFileOperationCompleted operation)
@@ -784,6 +876,57 @@ internal class GlancePanelViewModel : ViewModelBase, IDialogAware
         catch (Exception ex)
         {
             _logger.Error(ex, "Failed to cancel image loading");
+        }
+    }
+
+    private void RefreshDeletedFiles(IReadOnlyList<DeletedMediaFile> deletedFiles)
+    {
+        DeletedFiles.Clear();
+        foreach (var deletedFile in deletedFiles)
+        {
+            DeletedFiles.Add(new DeletedMediaFileViewModel(deletedFile, RestoreDeletedFileAsync));
+        }
+
+        HasDeletedFiles = DeletedFiles.Count > 0;
+    }
+
+    private async Task RestoreDeletedFileAsync(DeletedMediaFile deletedFile)
+    {
+        try
+        {
+            var result = await _fileOperationsService.RestoreDeletedFileAsync(deletedFile.BufferPath);
+            if (result == OperationResult.Success)
+            {
+                _notificationService.SendNotification(
+                    new SuccessNotification(_localization["Delete_Restored"], System.IO.Path.GetFileName(deletedFile.OriginalPath)));
+            }
+            else
+            {
+                _notificationService.SendNotification(
+                    new ErrorNotification(_localization["Delete_RestoreFailed"], _localization["Delete_RestoreConflict"]));
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "Failed to restore deleted file {Path}", deletedFile.OriginalPath);
+            _notificationService.SendNotification(
+                new ErrorNotification(_localization["Delete_RestoreFailed"], ex.Message));
+        }
+    }
+
+    private async Task RestoreAllAsync()
+    {
+        try
+        {
+            IsRestoringAll = true;
+            foreach (var deletedFile in _fileOperationsService.GetDeletedFiles().ToArray())
+            {
+                await RestoreDeletedFileAsync(deletedFile);
+            }
+        }
+        finally
+        {
+            IsRestoringAll = false;
         }
     }
 

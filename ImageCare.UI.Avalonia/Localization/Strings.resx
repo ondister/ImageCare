@@ -87,4 +87,16 @@
   <data name="Action_OpenFolder" xml:space="preserve"><value>Open folder</value></data>
   <data name="Action_ClearSearch" xml:space="preserve"><value>Clear search</value></data>
   <data name="Action_CopyLocation" xml:space="preserve"><value>Copy location</value></data>
+  <data name="Timeline_OpenOverview" xml:space="preserve"><value>Open folder overview</value></data>
+  <data name="Timeline_Show" xml:space="preserve"><value>Show timeline</value></data>
+  <data name="Timeline_Hide" xml:space="preserve"><value>Hide timeline</value></data>
+  <data name="Overview_Title" xml:space="preserve"><value>Folder overview — {0}</value></data>
+  <data name="Overview_Files" xml:space="preserve"><value>Files</value></data>
+  <data name="Overview_Deleted" xml:space="preserve"><value>Deleted</value></data>
+  <data name="Overview_NoDeleted" xml:space="preserve"><value>No deleted files are available for recovery.</value></data>
+  <data name="Overview_Restore" xml:space="preserve"><value>Restore</value></data>
+  <data name="Overview_RestoreAll" xml:space="preserve"><value>Restore all</value></data>
+  <data name="Overview_DeletePermanently" xml:space="preserve"><value>Delete permanently</value></data>
+  <data name="Overview_OriginalFolder" xml:space="preserve"><value>Original folder</value></data>
+  <data name="Overview_DeletedAt" xml:space="preserve"><value>Deleted</value></data>
 </root>

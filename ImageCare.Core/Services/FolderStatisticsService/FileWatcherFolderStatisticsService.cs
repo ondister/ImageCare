@@ -174,7 +174,7 @@ public sealed class FileWatcherFolderStatisticsService : IFolderStatisticsServic
                                   var fileModel = await ProcessFileAsync(file, ct).ConfigureAwait(false);
                                   if (fileModel != null && fileModel.CreatedDateTime.HasValue)
                                   {
-                                      AddOrUpdateFileInBucket(fileModel);
+                                      AddOrUpdateFileInBucket(fileModel, publish: false);
                                       var newCount = Interlocked.Increment(ref processedFiles);
 
                                       // Update progress periodically
@@ -193,6 +193,12 @@ public sealed class FileWatcherFolderStatisticsService : IFolderStatisticsServic
 
             cancellationToken.ThrowIfCancellationRequested();
 
+            _totalFilesSubject.OnNext(_currentTotalFiles);
+            foreach (var bucket in _buckets.Values.OrderByDescending(bucket => bucket.Date))
+            {
+                _bucketChangedSubject.OnNext(bucket);
+            }
+
             _progressSubject.OnNext(
                 new ScanProgress(
                     ScanStatus.InitialScanCompleted,
@@ -206,7 +212,7 @@ public sealed class FileWatcherFolderStatisticsService : IFolderStatisticsServic
         }
     }
 
-    private void AddOrUpdateFileInBucket(FileModel fileModel)
+    private void AddOrUpdateFileInBucket(FileModel fileModel, bool publish = true)
     {
         var date = fileModel.CreatedDateTime!.Value.Date;
         var isNewFile = false;
@@ -242,10 +248,13 @@ public sealed class FileWatcherFolderStatisticsService : IFolderStatisticsServic
         // Update total files count if new file was added
         if (isNewFile)
         {
-            UpdateTotalFilesCount(1);
+            UpdateTotalFilesCount(1, publish);
         }
 
-        _bucketChangedSubject.OnNext(updatedBucket);
+        if (publish)
+        {
+            _bucketChangedSubject.OnNext(updatedBucket);
+        }
     }
 
     private void RemoveFileFromBucket(string filePath, DateTime date)
@@ -276,10 +285,13 @@ public sealed class FileWatcherFolderStatisticsService : IFolderStatisticsServic
         }
     }
 
-    private void UpdateTotalFilesCount(int delta)
+    private void UpdateTotalFilesCount(int delta, bool publish = true)
     {
         var newTotal = Interlocked.Add(ref _currentTotalFiles, delta);
-        _totalFilesSubject.OnNext(newTotal);
+        if (publish)
+        {
+            _totalFilesSubject.OnNext(newTotal);
+        }
     }
 
     private async ValueTask<FileModel?> ProcessFileAsync(FileModel file, CancellationToken cancellationToken)
@@ -346,50 +358,98 @@ public sealed class FileWatcherFolderStatisticsService : IFolderStatisticsServic
             {
                 NotifyFilter = NotifyFilters.FileName | NotifyFilters.LastWrite | NotifyFilters.CreationTime,
                 EnableRaisingEvents = true,
-                IncludeSubdirectories = false
+                IncludeSubdirectories = false,
+                InternalBufferSize = 64 * 1024
             };
 
+            var pathComparer = OperatingSystem.IsWindows()
+                ? StringComparer.OrdinalIgnoreCase
+                : StringComparer.Ordinal;
             var createdObservable = Observable.FromEventPattern<FileSystemEventHandler, FileSystemEventArgs>(
                                                   h => watcher.Created += h,
                                                   h => watcher.Created -= h)
-                                              .Throttle(TimeSpan.FromMilliseconds(100))
-                                              .Where(args => IsSupportedMediaFile(args.EventArgs.FullPath)); // Filter supported formats
+                                              .Select(args => args.EventArgs.FullPath)
+                                              .Where(IsSupportedMediaFile)
+                                              .Buffer(TimeSpan.FromMilliseconds(200))
+                                              .Select(paths => (IReadOnlyList<string>)paths.Distinct(pathComparer).ToArray())
+                                              .Where(paths => paths.Count > 0);
 
             var deletedObservable = Observable.FromEventPattern<FileSystemEventHandler, FileSystemEventArgs>(
                                                   h => watcher.Deleted += h,
                                                   h => watcher.Deleted -= h)
-                                              .Throttle(TimeSpan.FromMilliseconds(100))
-                                              .Where(args => IsSupportedMediaFile(args.EventArgs.FullPath)); // Filter supported formats
+                                              .Select(args => args.EventArgs.FullPath)
+                                              .Where(IsSupportedMediaFile)
+                                              .Buffer(TimeSpan.FromMilliseconds(200))
+                                              .Select(paths => (IReadOnlyList<string>)paths.Distinct(pathComparer).ToArray())
+                                              .Where(paths => paths.Count > 0);
+
+            var errorObservable = Observable.FromEventPattern<ErrorEventHandler, ErrorEventArgs>(
+                h => watcher.Error += h,
+                h => watcher.Error -= h);
 
             _subscriptions = new CompositeDisposable
             {
-                createdObservable.Subscribe(args => _ = HandleFileAddedAsync(args.EventArgs.FullPath)),
-                deletedObservable.Subscribe(args => HandleFileDeleted(args.EventArgs.FullPath))
+                createdObservable.Subscribe(paths => _ = HandleFilesAddedAsync(paths)),
+                deletedObservable.Subscribe(HandleFilesDeleted),
+                errorObservable.Subscribe(_event => { _ = StartAsync(directoryPath); })
             };
 
             _watchers[directoryPath] = watcher;
         }
     }
 
-    private async Task HandleFileAddedAsync(string filePath)
+    private async Task HandleFilesAddedAsync(IReadOnlyList<string> filePaths)
     {
         if (_isDisposed || !_isScanning)
         {
             return;
         }
 
+        var changedDates = new ConcurrentDictionary<DateTime, byte>();
         try
         {
-            var fileModel = await ProcessFileAsync(filePath, CancellationToken.None);
-            if (fileModel != null && fileModel.CreatedDateTime.HasValue)
+            await Parallel.ForEachAsync(
+                filePaths,
+                new ParallelOptions { MaxDegreeOfParallelism = 4 },
+                async (filePath, cancellationToken) =>
+                {
+                    try
+                    {
+                        var fileModel = await ProcessFileAsync(filePath, cancellationToken).ConfigureAwait(false);
+                        if (fileModel?.CreatedDateTime is { } createdDateTime)
+                        {
+                            AddOrUpdateFileInBucket(fileModel, publish: false);
+                            changedDates.TryAdd(createdDateTime.Date, 0);
+                        }
+                    }
+                    catch (Exception)
+                    {
+                        // A file may still be in transit or disappear during a burst; the next reconciliation scan fixes it.
+                    }
+                }).ConfigureAwait(false);
+
+            _totalFilesSubject.OnNext(_currentTotalFiles);
+            foreach (var date in changedDates.Keys)
             {
-                AddOrUpdateFileInBucket(fileModel);
-                _progressSubject.OnNext(new ScanProgress(ScanStatus.FileChanged));
+                if (_buckets.TryGetValue(date, out var bucket))
+                {
+                    _bucketChangedSubject.OnNext(bucket);
+                }
             }
+
+            _progressSubject.OnNext(new ScanProgress(ScanStatus.FileChanged));
         }
         catch (Exception ex)
         {
-            throw new ServiceException($"Failed to handle file added: {filePath}", ex);
+            _progressSubject.OnNext(new ScanProgress(ScanStatus.ErrorOccurred, Error: ex));
+        }
+    }
+
+    private void HandleFilesDeleted(IReadOnlyList<string> filePaths)
+    {
+        foreach (var filePath in filePaths)
+        {
+            HandleFileDeleted(filePath);
         }
     }
 
