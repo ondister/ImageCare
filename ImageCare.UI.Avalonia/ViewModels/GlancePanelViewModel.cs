@@ -622,7 +622,7 @@ internal class GlancePanelViewModel : ViewModelBase, IDialogAware
             RemoveImagePreviewByPath(operation.SourcePath);
         }
 
-        if (operation.Kind is MediaFileOperationKind.Copy or MediaFileOperationKind.Move &&
+        if (operation.Kind is MediaFileOperationKind.Copy or MediaFileOperationKind.Move or MediaFileOperationKind.Restore &&
             operation.DestinationPath is { } destinationPath &&
             PathsEqual(System.IO.Path.GetDirectoryName(destinationPath), SelectedFolderPath))
         {

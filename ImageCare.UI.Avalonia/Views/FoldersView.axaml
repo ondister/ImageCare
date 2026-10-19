@@ -207,7 +207,8 @@
                                               VerticalAlignment="Center"
                                               VerticalContentAlignment="Center"
                                               Command="{Binding ElementName=This, Path=DataContext.SetSearchResultCommand}"
-                                              CommandParameter="{Binding }">
+                                              CommandParameter="{Binding }"
+                                              ToolTip.Tip="{localization:Loc Action_OpenFolder}">
 
                                         <iconPacks:PackIconMaterial Kind="FolderOutline"
                                                                     Height="{StaticResource Icon.Size.Small}"
@@ -287,6 +288,7 @@
                 <!-- Start Search Button -->
                 <Button Grid.Column="1"
                         Command="{Binding PerformSearchCommand}"
+                        ToolTip.Tip="{localization:Loc Folders_SearchFolders}"
                         IsVisible="{Binding !IsInSearchSession}"
                         Margin="4"
                         Padding="4">
@@ -298,6 +300,7 @@
                 <!-- Cancel Search Button -->
                 <Button Grid.Column="1"
                         Command="{Binding ClearSearchCommand}"
+                        ToolTip.Tip="{localization:Loc Action_ClearSearch}"
                         IsVisible="{Binding IsInSearchSession}"
                         Margin="4"
                         Padding="4">

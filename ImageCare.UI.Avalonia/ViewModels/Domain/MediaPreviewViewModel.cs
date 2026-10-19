@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
@@ -13,6 +14,7 @@ using ImageCare.Core.Services.FileAssociationsService;
 using ImageCare.Core.Services.MediaPreviewOperationsService;
 using ImageCare.Core.Services.MediaPreviewService;
 using ImageCare.Core.Services.NotificationService;
+using ImageCare.UI.Avalonia.Localization;
 
 using MapsterMapper;
 
@@ -28,6 +30,7 @@ internal class MediaPreviewViewModel : ViewModelBase, IComparable<MediaPreviewVi
     private readonly IFileAssociationsService _fileAssociationsService;
     private readonly IMapper _mapper;
     private readonly ILogger _logger;
+    private readonly LocalizationManager _localization;
     private Bitmap? _previewBitmap;
     private bool _selected;
     private bool _isLoading = true;
@@ -52,7 +55,8 @@ internal class MediaPreviewViewModel : ViewModelBase, IComparable<MediaPreviewVi
                                  INotificationService notificationService,
                                  IFileAssociationsService fileAssociationsService,
                                  IMapper mapper,
-                                 ILogger logger)
+                                 ILogger logger,
+                                 LocalizationManager localization)
     {
         Title = title;
         Url = url;
@@ -65,6 +69,7 @@ internal class MediaPreviewViewModel : ViewModelBase, IComparable<MediaPreviewVi
         _fileAssociationsService = fileAssociationsService;
         _mapper = mapper;
         _logger = logger;
+        _localization = localization;
 
         RemoveImagePreviewCommand = CreateAsyncCommand(RemoveImagePreviewAsync, CanRemoveImagePreview).ObservesProperty(() => IsRemoving);
 
@@ -205,32 +210,40 @@ internal class MediaPreviewViewModel : ViewModelBase, IComparable<MediaPreviewVi
 
     internal async Task RemoveImagePreviewAsync()
     {
+        var fileName = Path.GetFileName(Url);
         try
         {
             IsRemoving = true;
-
-            var notificationTitle = $"Delete {Url}";
-            _notificationService.SendNotification(new Notification(notificationTitle, string.Empty));
+            _notificationService.SendNotification(
+                new Notification(_localization.Get("Delete_Removing", fileName), string.Empty));
 
             var result = await _fileOperationsService.DeleteImagePreviewAsync(_mapper.Map<MediaPreview>(this));
 
             switch (result)
             {
                 case OperationResult.Success:
-                    _notificationService.SendNotification(new SuccessNotification(notificationTitle, ""));
+                    _notificationService.SendNotification(
+                        new SuccessNotification(
+                            _localization.Get("Delete_Removed", fileName),
+                            _fileOperationsService.CanUndoDelete
+                                ? _localization["Delete_UndoHint"]
+                                : string.Empty));
                     break;
                 case OperationResult.Failed:
-                    _notificationService.SendNotification(new ErrorNotification(notificationTitle, ""));
+                    _notificationService.SendNotification(
+                        new ErrorNotification(_localization.Get("Delete_Failed", fileName), string.Empty));
                     break;
             }
         }
         catch (Exception exception)
         {
-            _logger.Error(exception, $"Unexpected exception during preview deletion for file {Url}");
+            _logger.Error(exception, "Unexpected exception during preview deletion for file {Url}", Url);
+            _notificationService.SendNotification(
+                new ErrorNotification(_localization.Get("Delete_Failed", fileName), exception.Message));
         }
         finally
         {
-           IsRemoving=false;
+            IsRemoving = false;
         }
     }
 

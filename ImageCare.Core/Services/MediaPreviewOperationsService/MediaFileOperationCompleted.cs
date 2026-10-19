@@ -4,7 +4,8 @@ public enum MediaFileOperationKind
 {
     Copy,
     Move,
-    Delete
+    Delete,
+    Restore
 }
 
 public sealed record MediaFileOperationCompleted(

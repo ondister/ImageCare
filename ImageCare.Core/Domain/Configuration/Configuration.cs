@@ -3,10 +3,27 @@ namespace ImageCare.Core.Domain.Configuration;
 
 public sealed class Configuration
 {
+    public static string GetDefaultSafeDeletionDirectoryPath()
+    {
+        return Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "ImageCare",
+            "DeletedFiles");
+    }
+
     public string UiCultureName { get; set; } = string.Empty;
 
 
     public bool RestoreLastFoldersOnStartup { get; set; } = true;
+
+
+    public bool SafeDeletionEnabled { get; set; } = true;
+
+
+    public string SafeDeletionDirectoryPath { get; set; } = GetDefaultSafeDeletionDirectoryPath();
+
+
+    public int SafeDeletionMaxFileCount { get; set; } = 100;
 
 
 	public string LastSourceDirectoryPath { get; set; } = string.Empty;

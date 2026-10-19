@@ -9,6 +9,7 @@
              xmlns:controls="clr-namespace:ImageCare.UI.Avalonia.Controls"
              xmlns:behaviors="clr-namespace:ImageCare.UI.Avalonia.Behaviors"
              xmlns:viewModels="clr-namespace:ImageCare.UI.Avalonia.ViewModels"
+             xmlns:localization="clr-namespace:ImageCare.UI.Avalonia.Localization"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              mvvm:ViewModelLocator.AutoWireViewModel="True"
              x:Class="ImageCare.UI.Avalonia.Views.GlancePanelView"
@@ -109,7 +110,8 @@
                                                   Margin="{StaticResource MarginTop.XLarge}"
                                                   Command="{CompiledBinding RemoveImagePreviewCommand}"
 
-                                                  Classes="Danger">
+                                                  Classes="Danger"
+                                                  ToolTip.Tip="{localization:Loc Action_Delete}">
 
 											<iconPacks:PackIconLucide Kind="Trash2"
                                                                       Height="{StaticResource Icon.Size.Micro}"
@@ -123,7 +125,8 @@
                                                     Height="30"
                                                     Margin="{StaticResource MarginBottom.XLarge}"
                                                     IsVisible="{Binding UseOpenWith, Mode=OneTime}"
-                                                    Classes="IconButton">
+                                                    Classes="IconButton"
+                                                    ToolTip.Tip="{localization:Loc Action_OpenWith}">
 
 										<DropDownButton.Content>
 											<iconPacks:PackIconMaterial Kind="ApplicationExport"
@@ -190,6 +193,7 @@
                 <Button Grid.Column="0"
                               Classes="Small"
                               Command="{Binding ZoomOutCommand}"
+                              ToolTip.Tip="{localization:Loc Action_ZoomOut}"
                               Margin="{StaticResource MarginAll.Small}"
                               Padding="{StaticResource Padding.Inner}"
                               VerticalAlignment="Center">
@@ -211,6 +215,7 @@
                 <Button Grid.Column="2"
                               Classes="Small"
                               Command="{Binding ZoomInCommand}"
+                              ToolTip.Tip="{localization:Loc Action_ZoomIn}"
                               Padding="{StaticResource Padding.Inner}"
                               Margin="{StaticResource MarginAll.Small}"
                               VerticalAlignment="Center">

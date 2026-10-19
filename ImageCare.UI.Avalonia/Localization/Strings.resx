@@ -66,4 +66,25 @@
   <data name="Action_Play" xml:space="preserve"><value>Play</value></data>
   <data name="Action_Pause" xml:space="preserve"><value>Pause</value></data>
   <data name="Action_Stop" xml:space="preserve"><value>Stop</value></data>
+  <data name="Common_Undo" xml:space="preserve"><value>Undo</value></data>
+  <data name="Settings_SafeDeletion" xml:space="preserve"><value>Safe deletion</value></data>
+  <data name="Settings_SafeDeletionDescription" xml:space="preserve"><value>Move removed media to an ImageCare buffer instead of deleting it permanently.</value></data>
+  <data name="Settings_SafeDeletionFolder" xml:space="preserve"><value>Buffer folder</value></data>
+  <data name="Settings_SafeDeletionMaxFiles" xml:space="preserve"><value>Maximum files in buffer</value></data>
+  <data name="Settings_SelectSafeDeletionFolder" xml:space="preserve"><value>Select the safe deletion buffer folder</value></data>
+  <data name="Delete_Removing" xml:space="preserve"><value>Removing {0}…</value></data>
+  <data name="Delete_Removed" xml:space="preserve"><value>Removed {0}</value></data>
+  <data name="Delete_UndoHint" xml:space="preserve"><value>You can restore the most recently removed file.</value></data>
+  <data name="Delete_Failed" xml:space="preserve"><value>Could not remove {0}</value></data>
+  <data name="Delete_Restored" xml:space="preserve"><value>The file was restored</value></data>
+  <data name="Delete_RestoreFailed" xml:space="preserve"><value>Could not restore the file</value></data>
+  <data name="Delete_RestoreConflict" xml:space="preserve"><value>The original folder is unavailable or a file with the same name already exists.</value></data>
+  <data name="Action_UndoDelete" xml:space="preserve"><value>Restore the most recently removed file</value></data>
+  <data name="Action_Delete" xml:space="preserve"><value>Remove file</value></data>
+  <data name="Action_OpenWith" xml:space="preserve"><value>Open with</value></data>
+  <data name="Action_ZoomOut" xml:space="preserve"><value>Show fewer columns</value></data>
+  <data name="Action_ZoomIn" xml:space="preserve"><value>Show more columns</value></data>
+  <data name="Action_OpenFolder" xml:space="preserve"><value>Open folder</value></data>
+  <data name="Action_ClearSearch" xml:space="preserve"><value>Clear search</value></data>
+  <data name="Action_CopyLocation" xml:space="preserve"><value>Copy location</value></data>
 </root>

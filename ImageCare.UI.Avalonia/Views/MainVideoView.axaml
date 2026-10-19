@@ -7,6 +7,7 @@
              x:Class="ImageCare.UI.Avalonia.Views.MainVideoView"
              xmlns:iconPacks="https://github.com/MahApps/IconPacks.Avalonia"
              xmlns:views="clr-namespace:ImageCare.UI.Avalonia.Views"
+             xmlns:localization="clr-namespace:ImageCare.UI.Avalonia.Localization"
              x:DataType="viewModels:MainVideoViewModel">
 
     <Grid RowDefinitions="*,Auto">
@@ -23,7 +24,7 @@
 
             <StackPanel Grid.Column="0" Orientation="Horizontal">
                 <Button Margin="{StaticResource MarginAll.Small}"
-                              >
+                        ToolTip.Tip="{localization:Loc Action_Metadata}">
 
                         <iconPacks:PackIconLucide Kind="List"
                                                   Height="{StaticResource Icon.Size.Small}"
@@ -43,7 +44,8 @@
                 <Button
                     Background="Transparent"
                     BorderBrush="Transparent"
-                    Command="{Binding PlayCommand}">
+                    Command="{Binding PlayCommand}"
+                    ToolTip.Tip="{localization:Loc Action_Play}">
                     <iconPacks:PackIconMaterial Kind="Play"
                                                 Height="{StaticResource Icon.Size.Small}"
                                                 Width="{StaticResource Icon.Size.Small}"
@@ -53,7 +55,8 @@
                 <Button
                     Background="Transparent"
                     BorderBrush="Transparent"
-                    Command="{Binding PauseCommand}">
+                    Command="{Binding PauseCommand}"
+                    ToolTip.Tip="{localization:Loc Action_Pause}">
                     <iconPacks:PackIconMaterial Kind="Pause"
                                                 Height="{StaticResource Icon.Size.Small}"
                                                 Width="{StaticResource Icon.Size.Small}"
@@ -63,7 +66,8 @@
                 <Button
                     Background="Transparent"
                     BorderBrush="Transparent"
-                    Command="{Binding StopCommand}">
+                    Command="{Binding StopCommand}"
+                    ToolTip.Tip="{localization:Loc Action_Stop}">
                     <iconPacks:PackIconMaterial Kind="Stop"
                                                 Height="{StaticResource Icon.Size.Small}"
                                                 Width="{StaticResource Icon.Size.Small}"

@@ -34,6 +34,9 @@ public sealed class SettingsViewModel : ViewModelBase
     private ApplicationChoiceViewModel? _selectedApplicationChoice;
     private LanguageOption? _selectedLanguage;
     private bool _restoreLastFoldersOnStartup;
+    private bool _safeDeletionEnabled;
+    private string _safeDeletionDirectoryPath = string.Empty;
+    private int _safeDeletionMaxFileCount = 100;
 
     public SettingsViewModel(
         IConfigurationService configurationService,
@@ -67,6 +70,9 @@ public sealed class SettingsViewModel : ViewModelBase
             RestoreRecommendedApplications,
             () => true,
             OnCommandException);
+        ChooseSafeDeletionDirectoryCommand = CreateAsyncCommand(
+            ChooseSafeDeletionDirectoryAsync,
+            OnCommandException);
 
         _newExtension = SupportedExtensions.FirstOrDefault(extension =>
             extension.Equals(".jpg", StringComparison.OrdinalIgnoreCase))
@@ -96,6 +102,53 @@ public sealed class SettingsViewModel : ViewModelBase
             }
 
             _configService.Configuration.Value.RestoreLastFoldersOnStartup = value;
+            SaveConfiguration();
+        }
+    }
+
+    public bool SafeDeletionEnabled
+    {
+        get => _safeDeletionEnabled;
+        set
+        {
+            if (!SetProperty(ref _safeDeletionEnabled, value))
+            {
+                return;
+            }
+
+            _configService.Configuration.Value.SafeDeletionEnabled = value;
+            SaveConfiguration();
+        }
+    }
+
+    public string SafeDeletionDirectoryPath
+    {
+        get => _safeDeletionDirectoryPath;
+        set
+        {
+            var normalizedValue = value ?? string.Empty;
+            if (!SetProperty(ref _safeDeletionDirectoryPath, normalizedValue))
+            {
+                return;
+            }
+
+            _configService.Configuration.Value.SafeDeletionDirectoryPath = normalizedValue;
+            SaveConfiguration();
+        }
+    }
+
+    public int SafeDeletionMaxFileCount
+    {
+        get => _safeDeletionMaxFileCount;
+        set
+        {
+            var normalizedValue = Math.Clamp(value, 1, 10_000);
+            if (!SetProperty(ref _safeDeletionMaxFileCount, normalizedValue))
+            {
+                return;
+            }
+
+            _configService.Configuration.Value.SafeDeletionMaxFileCount = normalizedValue;
             SaveConfiguration();
         }
     }
@@ -173,6 +226,8 @@ public sealed class SettingsViewModel : ViewModelBase
 
     public ICommand RestoreRecommendedApplicationsCommand { get; }
 
+    public ICommand ChooseSafeDeletionDirectoryCommand { get; }
+
     public void Close()
     {
         try
@@ -195,6 +250,18 @@ public sealed class SettingsViewModel : ViewModelBase
 
             _restoreLastFoldersOnStartup = _configService.Configuration.Value.RestoreLastFoldersOnStartup;
             RaisePropertyChanged(nameof(RestoreLastFoldersOnStartup));
+
+            _safeDeletionEnabled = _configService.Configuration.Value.SafeDeletionEnabled;
+            RaisePropertyChanged(nameof(SafeDeletionEnabled));
+
+            _safeDeletionDirectoryPath = _configService.Configuration.Value.SafeDeletionDirectoryPath;
+            RaisePropertyChanged(nameof(SafeDeletionDirectoryPath));
+
+            _safeDeletionMaxFileCount = Math.Clamp(
+                _configService.Configuration.Value.SafeDeletionMaxFileCount,
+                1,
+                10_000);
+            RaisePropertyChanged(nameof(SafeDeletionMaxFileCount));
 
             LoadAssociations();
         }
@@ -314,6 +381,31 @@ public sealed class SettingsViewModel : ViewModelBase
         catch (Exception ex)
         {
             _logger.Error(ex, "Failed to select an external application");
+        }
+    }
+
+    private async Task ChooseSafeDeletionDirectoryAsync(
+        IProgress<int> progress,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var directoryPath = await _fileDialogService.ShowOpenFolderDialogAsync(
+                _localization["Settings_SelectSafeDeletionFolder"]);
+
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!string.IsNullOrWhiteSpace(directoryPath))
+            {
+                SafeDeletionDirectoryPath = directoryPath;
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // The folder picker was cancelled.
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "Failed to select the safe deletion directory");
         }
     }
 

@@ -4,6 +4,7 @@
              xmlns:iconPacks="https://github.com/MahApps/IconPacks.Avalonia"
              xmlns:views="clr-namespace:ImageCare.UI.Avalonia.Views"
              xmlns:avalonia="clr-namespace:Mapsui.UI.Avalonia;assembly=Mapsui.UI.Avalonia"
+             xmlns:localization="clr-namespace:ImageCare.UI.Avalonia.Localization"
              x:Class="ImageCare.UI.Avalonia.Views.MainImageView"
              x:DataType="viewModels:MainImageViewModel"
              x:Name="This"
@@ -57,7 +58,8 @@
 
                 <Button Margin="{StaticResource MarginHorizontal.Small}"
 
-                              Command="{Binding CopyLocationToClipboardCommand}">
+                              Command="{Binding CopyLocationToClipboardCommand}"
+                              ToolTip.Tip="{localization:Loc Action_CopyLocation}">
 
                         <iconPacks:PackIconLucide Kind="ClipboardCopy"
                                                   Height="{StaticResource Icon.Size.Small}"
@@ -80,6 +82,7 @@
                               Margin="{StaticResource MarginHorizontal.Small}"
                               Width="40"
                               IsChecked="{Binding MapIsEnabled}"
+                              ToolTip.Tip="{localization:Loc Action_Map}"
                               IsVisible="{Binding HasLocation}">
                     <iconPacks:PackIconLucide Kind="MapPinned"
                                               Height="{StaticResource Icon.Size.Small}"
@@ -91,7 +94,8 @@
                               Margin="{StaticResource MarginAll.Small}"
                               Width="40"
 
-                              IsEnabled="{Binding !!MainBitmap}">
+                              IsEnabled="{Binding !!MainBitmap}"
+                              ToolTip.Tip="{localization:Loc Action_Metadata}">
 
                         <iconPacks:PackIconLucide Kind="List"
                                                   Height="{StaticResource Icon.Size.Small}"
@@ -116,7 +120,8 @@
 
                                   IsEnabled="{Binding !!MainBitmap}"
                                   IsVisible="{Binding !MapIsEnabled}"
-                                  Command="{Binding ElementName=This, Path=ResetMatrixCommand}">
+                                  Command="{Binding ElementName=This, Path=ResetMatrixCommand}"
+                                  ToolTip.Tip="{localization:Loc Action_ResetView}">
 
                             <iconPacks:PackIconLucide Kind="Square"
                                                       Height="{StaticResource Icon.Size.Small}"
@@ -128,7 +133,8 @@
 
                                   IsEnabled="{Binding !!MainBitmap}"
                                   IsVisible="{Binding !MapIsEnabled}"
-                                  Command="{Binding OpenInWindowCommand}">
+                                  Command="{Binding OpenInWindowCommand}"
+                                  ToolTip.Tip="{localization:Loc Action_OpenSeparate}">
 
                             <iconPacks:PackIconLucide Kind="SquareArrowOutUpRight"
                                                       Height="{StaticResource Icon.Size.Small}"

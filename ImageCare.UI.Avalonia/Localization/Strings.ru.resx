@@ -66,4 +66,25 @@
   <data name="Action_Play" xml:space="preserve"><value>Воспроизвести</value></data>
   <data name="Action_Pause" xml:space="preserve"><value>Пауза</value></data>
   <data name="Action_Stop" xml:space="preserve"><value>Остановить</value></data>
+  <data name="Common_Undo" xml:space="preserve"><value>Отменить</value></data>
+  <data name="Settings_SafeDeletion" xml:space="preserve"><value>Безопасное удаление</value></data>
+  <data name="Settings_SafeDeletionDescription" xml:space="preserve"><value>Перемещать удалённые медиафайлы в буфер ImageCare вместо безвозвратного удаления.</value></data>
+  <data name="Settings_SafeDeletionFolder" xml:space="preserve"><value>Папка буфера</value></data>
+  <data name="Settings_SafeDeletionMaxFiles" xml:space="preserve"><value>Максимум файлов в буфере</value></data>
+  <data name="Settings_SelectSafeDeletionFolder" xml:space="preserve"><value>Выберите папку буфера безопасного удаления</value></data>
+  <data name="Delete_Removing" xml:space="preserve"><value>Удаление файла «{0}»…</value></data>
+  <data name="Delete_Removed" xml:space="preserve"><value>Файл «{0}» удалён</value></data>
+  <data name="Delete_UndoHint" xml:space="preserve"><value>Последний удалённый файл можно восстановить.</value></data>
+  <data name="Delete_Failed" xml:space="preserve"><value>Не удалось удалить файл «{0}»</value></data>
+  <data name="Delete_Restored" xml:space="preserve"><value>Файл восстановлен</value></data>
+  <data name="Delete_RestoreFailed" xml:space="preserve"><value>Не удалось восстановить файл</value></data>
+  <data name="Delete_RestoreConflict" xml:space="preserve"><value>Исходная папка недоступна или файл с таким именем уже существует.</value></data>
+  <data name="Action_UndoDelete" xml:space="preserve"><value>Восстановить последний удалённый файл</value></data>
+  <data name="Action_Delete" xml:space="preserve"><value>Удалить файл</value></data>
+  <data name="Action_OpenWith" xml:space="preserve"><value>Открыть с помощью</value></data>
+  <data name="Action_ZoomOut" xml:space="preserve"><value>Показать меньше столбцов</value></data>
+  <data name="Action_ZoomIn" xml:space="preserve"><value>Показать больше столбцов</value></data>
+  <data name="Action_OpenFolder" xml:space="preserve"><value>Открыть папку</value></data>
+  <data name="Action_ClearSearch" xml:space="preserve"><value>Очистить поиск</value></data>
+  <data name="Action_CopyLocation" xml:space="preserve"><value>Скопировать координаты</value></data>
 </root>

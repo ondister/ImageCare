@@ -27,6 +27,24 @@ public sealed class AvaloniaFileDialogService : IFileDialogService
             ("All files", new[] { "*.*" }));
     }
 
+    public async Task<string?> ShowOpenFolderDialogAsync(string title)
+    {
+        var topLevel = GetTopLevel();
+        if (topLevel == null)
+        {
+            return null;
+        }
+
+        var folders = await topLevel.StorageProvider.OpenFolderPickerAsync(
+            new FolderPickerOpenOptions
+            {
+                Title = title,
+                AllowMultiple = false
+            });
+
+        return folders.Count >= 1 ? folders[0].Path.LocalPath : null;
+    }
+
     public async Task<string?> ShowOpenFileDialogAsync(
         string title,
         params (string Name, string[] Patterns)[] filters)

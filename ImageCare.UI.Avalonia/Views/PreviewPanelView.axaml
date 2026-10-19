@@ -127,7 +127,8 @@
                                                   Margin="{StaticResource MarginTop.XLarge}"
                                                   Command="{CompiledBinding RemoveImagePreviewCommand}"
 
-                                                  Classes="Danger">
+                                                  Classes="Danger"
+                                                  ToolTip.Tip="{localization:Loc Action_Delete}">
 
                                             <iconPacks:PackIconLucide Kind="Trash2"
                                                                       Height="{StaticResource Icon.Size.Micro}"
@@ -141,7 +142,8 @@
                                                     Height="30"
                                                     Margin="{StaticResource MarginBottom.XLarge}"
                                                     IsVisible="{Binding UseOpenWith, Mode=OneTime}"
-                                                    Classes="IconButton">
+                                                    Classes="IconButton"
+                                                    ToolTip.Tip="{localization:Loc Action_OpenWith}">
 
                                         <DropDownButton.Content>
                                             <iconPacks:PackIconMaterial Kind="ApplicationExport"

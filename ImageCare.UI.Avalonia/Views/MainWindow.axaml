@@ -5,6 +5,7 @@
         xmlns:ui="clr-namespace:ImageCare.UI.Avalonia"
         xmlns:iconPacks="https://github.com/MahApps/IconPacks.Avalonia"
         xmlns:views="clr-namespace:ImageCare.UI.Avalonia.Views"
+        xmlns:localization="clr-namespace:ImageCare.UI.Avalonia.Localization"
         x:Class="ImageCare.UI.Avalonia.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Icon="/Assets/imagecare-logo.ico"
@@ -63,14 +64,16 @@
                             <StackPanel Orientation="Vertical" VerticalAlignment="Center">
                                 <Button Margin="{StaticResource MarginAll.Small}"
                                         Classes="IconButton"
-                                        Command="{CompiledBinding CopySelectedPreviewCommand}">
+                                        Command="{CompiledBinding CopySelectedPreviewCommand}"
+                                        ToolTip.Tip="{localization:Loc Action_Copy}">
                                     <iconPacks:PackIconMaterial Kind="ContentCopy"
                                                                 Height="{StaticResource Icon.Size.Small}"
                                                                 Width="{StaticResource Icon.Size.Small}" />
                                 </Button>
                                 <Button Margin="{StaticResource MarginAll.Small}"
                                         Classes="IconButton"
-                                        Command="{CompiledBinding MoveSelectedPreviewCommand}">
+                                        Command="{CompiledBinding MoveSelectedPreviewCommand}"
+                                        ToolTip.Tip="{localization:Loc Action_Move}">
                                     <iconPacks:PackIconMaterial Kind="FileReplaceOutline"
                                                                 Height="{StaticResource Icon.Size.Small}"
                                                                 Width="{StaticResource Icon.Size.Small}" />

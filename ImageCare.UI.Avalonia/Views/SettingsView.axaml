@@ -37,6 +37,40 @@
                 <TextBlock Text="{localization:Loc Settings_RestoreLastFoldersDescription}"
                            Opacity="0.7"
                            TextWrapping="Wrap" />
+
+                <Separator Margin="{DynamicResource MarginVertical.Small}" />
+
+                <ToggleSwitch Content="{localization:Loc Settings_SafeDeletion}"
+                              IsChecked="{Binding SafeDeletionEnabled, Mode=TwoWay}" />
+                <TextBlock Text="{localization:Loc Settings_SafeDeletionDescription}"
+                           Opacity="0.7"
+                           TextWrapping="Wrap" />
+
+                <Grid ColumnDefinitions="Auto,*,Auto"
+                      ColumnSpacing="8"
+                      IsEnabled="{Binding SafeDeletionEnabled}">
+                    <TextBlock Grid.Column="0"
+                               Text="{localization:Loc Settings_SafeDeletionFolder}"
+                               VerticalAlignment="Center" />
+                    <TextBox Grid.Column="1"
+                             Text="{Binding SafeDeletionDirectoryPath, Mode=TwoWay}"
+                             MinWidth="360" />
+                    <Button Grid.Column="2"
+                            Content="{localization:Loc Settings_Browse}"
+                            Command="{Binding ChooseSafeDeletionDirectoryCommand}" />
+                </Grid>
+
+                <StackPanel Orientation="Horizontal"
+                            Spacing="8"
+                            IsEnabled="{Binding SafeDeletionEnabled}">
+                    <TextBlock Text="{localization:Loc Settings_SafeDeletionMaxFiles}"
+                               VerticalAlignment="Center" />
+                    <NumericUpDown Value="{Binding SafeDeletionMaxFileCount, Mode=TwoWay}"
+                                   Minimum="1"
+                                   Maximum="10000"
+                                   Increment="1"
+                                   Width="100" />
+                </StackPanel>
             </StackPanel>
         </TabItem>
 

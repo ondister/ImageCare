@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:iconPacks="https://github.com/MahApps/IconPacks.Avalonia"
              xmlns:viewModels="clr-namespace:ImageCare.UI.Avalonia.ViewModels"
+             xmlns:localization="clr-namespace:ImageCare.UI.Avalonia.Localization"
              mc:Ignorable="d"
              x:Name="This"
              x:Class="ImageCare.UI.Avalonia.Views.MainImageSeparateView"
@@ -37,7 +38,8 @@
                     Margin="{StaticResource MarginAll.Small}"
                     Classes="IconButton"
                     IsEnabled="{Binding !!MainBitmap}"
-                    Command="{Binding ElementName=This, Path=ResetMatrixCommand}">
+                    Command="{Binding ElementName=This, Path=ResetMatrixCommand}"
+                    ToolTip.Tip="{localization:Loc Action_ResetView}">
                 <iconPacks:PackIconLucide Kind="Square"
                                           Height="{StaticResource Icon.Size.Small}"
                                           Width="{StaticResource Icon.Size.Small}" />

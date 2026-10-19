@@ -11,6 +11,7 @@ using ImageCare.Core.Services.FolderService;
 using ImageCare.Core.Services.MediaPreviewOperationsService;
 using ImageCare.Core.Services.MediaPreviewService;
 using ImageCare.Core.Services.NotificationService;
+using ImageCare.UI.Avalonia.Localization;
 using ImageCare.UI.Avalonia.ViewModels.Domain;
 using ImageCare.UI.Avalonia.ViewModels.Domain.Logs;
 
@@ -77,7 +78,8 @@ public class RegisterMapper : IRegister
                                _serviceLocator.Resolve<INotificationService>(),
                                _serviceLocator.Resolve<IFileAssociationsService>(),
                                _serviceLocator.Resolve<IMapper>(),
-                               _serviceLocator.Resolve<ILogger>()));
+                               _serviceLocator.Resolve<ILogger>(),
+                               _serviceLocator.Resolve<LocalizationManager>()));
 
         cfg.NewConfig<MediaPreview, GlanceMediaPreviewViewModel>()
            .Ignore(dst => dst.PreviewBitmap)
@@ -103,7 +105,8 @@ public class RegisterMapper : IRegister
                                _serviceLocator.Resolve<INotificationService>(),
                                _serviceLocator.Resolve<IFileAssociationsService>(),
                                _serviceLocator.Resolve<IMapper>(),
-                               _serviceLocator.Resolve<ILogger>()));
+                               _serviceLocator.Resolve<ILogger>(),
+                               _serviceLocator.Resolve<LocalizationManager>()));
     }
 
     private void MapDirectory(TypeAdapterConfig cfg)

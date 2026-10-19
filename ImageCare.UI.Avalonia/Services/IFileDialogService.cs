@@ -7,4 +7,6 @@ public interface IFileDialogService
     Task<string?> ShowOpenFileDialogAsync(string title, params (string Name, string[] Patterns)[] filters);
 
     Task<string?> ShowOpenApplicationDialogAsync(string title);
+
+    Task<string?> ShowOpenFolderDialogAsync(string title);
 }

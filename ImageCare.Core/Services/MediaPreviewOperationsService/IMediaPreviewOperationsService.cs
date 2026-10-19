@@ -15,6 +15,10 @@ public interface IMediaPreviewOperationsService
 
 	Task<OperationResult> DeleteImagePreviewAsync(MediaPreview imagePreview);
 
+    bool CanUndoDelete { get; }
+
+    Task<OperationResult> UndoLastDeleteAsync();
+
 	void SetSelectedPreview(SelectedMediaPreview selectedImagePreview);
 
 	void OpenInExternalProcess(MediaPreview mediaPreview, string pathToExecutable);
