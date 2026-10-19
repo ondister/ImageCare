@@ -13,6 +13,7 @@ using ImageCare.Core.Services.DrivesWatcherService;
 using ImageCare.Core.Services.FileSystemService;
 using ImageCare.Core.Services.FileSystemWatcherService;
 using ImageCare.Core.Services.FolderService;
+using ImageCare.UI.Avalonia.Localization;
 using ImageCare.UI.Avalonia.ViewModels.Domain;
 
 using MapsterMapper;
@@ -25,7 +26,7 @@ namespace ImageCare.UI.Avalonia.ViewModels;
 
 internal class FoldersViewModel : NavigatedViewModelBase
 {
-    private const string SearchTargetText = "Search folders";
+    private readonly LocalizationManager _localization;
     private readonly IFolderService _folderService;
     private readonly IFileSystemService _fileSystemService;
     private readonly IMultiSourcesFileSystemWatcherService _multiSourcesFileSystemWatcherService;
@@ -44,7 +45,7 @@ internal class FoldersViewModel : NavigatedViewModelBase
     private string? _searchHeader;
     private bool _isSearchEnabled;
     private bool _isInSearchSession;
-    private string _searchTarget = SearchTargetText;
+    private string _searchTarget = string.Empty;
 
     public FoldersViewModel(IFolderService folderService,
                             IFileSystemService fileSystemService,
@@ -52,6 +53,7 @@ internal class FoldersViewModel : NavigatedViewModelBase
                             IDrivesWatcherService drivesWatcherService,
                             IMapper mapper,
                             ILogger logger,
+                            LocalizationManager localization,
                             SynchronizationContext synchronizationContext)
     {
         _folderService = folderService ?? throw new ArgumentNullException(nameof(folderService));
@@ -60,7 +62,10 @@ internal class FoldersViewModel : NavigatedViewModelBase
         _drivesWatcherService = drivesWatcherService ?? throw new ArgumentNullException(nameof(drivesWatcherService));
         _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _localization = localization ?? throw new ArgumentNullException(nameof(localization));
         _synchronizationContext = synchronizationContext ?? throw new ArgumentNullException(nameof(synchronizationContext));
+        _searchTarget = _localization["Folders_SearchFolders"];
+        _localization.CultureChanged += OnCultureChanged;
 
         OnViewLoadedCommand = CreateAsyncCommand(OnViewLoadedAsync, () => !IsLoading);
 
@@ -253,7 +258,10 @@ internal class FoldersViewModel : NavigatedViewModelBase
             IsSearching = true;
             IsInSearchSession = true;
 
-            SearchHeader = $"Searching for \"{SearchText}\" in {SelectedFileSystemItem?.Name ?? "all folders"}...";
+            SearchHeader = _localization.Get(
+                "Folders_SearchHeader",
+                SearchText,
+                SelectedFileSystemItem?.Name ?? _localization["Folders_AllFolders"]);
 
             await Task.Run(
                 () =>
@@ -269,17 +277,17 @@ internal class FoldersViewModel : NavigatedViewModelBase
                 },
                 cancellationToken);
 
-            SearchHeader = $"Found {SearchResults.Count} results for \"{SearchText}\"";
+            SearchHeader = _localization.Get("Folders_SearchFound", SearchResults.Count, SearchText);
         }
         catch (OperationCanceledException)
         {
-            SearchHeader = "Search cancelled";
+            SearchHeader = _localization["Folders_SearchCancelled"];
         }
         catch (Exception ex)
         {
             _logger.Error(ex, "Failed to perform search");
 
-            SearchHeader = "Search failed";
+            SearchHeader = _localization["Folders_SearchFailed"];
         }
         finally
         {
@@ -334,12 +342,27 @@ internal class FoldersViewModel : NavigatedViewModelBase
                 _folderService.SetSelectedDirectory(selectedDirectory);
 
                 IsSearchEnabled = value is not (SpecialDirectoryViewModel or DriveViewModel or DeviceViewModel);
-                SearchTarget = $"{SearchTargetText} in {_selectedFileSystemItem.Name}";
+                SearchTarget = _localization.Get("Folders_SearchFoldersIn", _selectedFileSystemItem.Name);
             }
             catch (Exception ex)
             {
                 _logger.Error(ex, "Failed to set selected directory: {Path}", value.Path);
             }
+        }
+    }
+
+    private void OnCultureChanged(object? sender, EventArgs e)
+    {
+        SearchTarget = _selectedFileSystemItem == null
+            ? _localization["Folders_SearchFolders"]
+            : _localization.Get("Folders_SearchFoldersIn", _selectedFileSystemItem.Name);
+
+        if (IsSearching)
+        {
+            SearchHeader = _localization.Get(
+                "Folders_SearchHeader",
+                SearchText,
+                _selectedFileSystemItem?.Name ?? _localization["Folders_AllFolders"]);
         }
     }
 

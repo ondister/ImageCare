@@ -3,6 +3,8 @@ namespace ImageCare.Core.Domain.Configuration;
 
 public sealed class Configuration
 {
+    public string UiCultureName { get; set; } = string.Empty;
+
 
 	public string LastSourceDirectoryPath { get; set; } = string.Empty;
 

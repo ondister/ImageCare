@@ -4,6 +4,8 @@
     <TargetFramework>net10.0</TargetFramework>
     <AssemblyTitle>ImageCare</AssemblyTitle>
     <AssemblyName>ImageCare</AssemblyName>
+    <RootNamespace>ImageCare.UI.Avalonia</RootNamespace>
+    <NeutralLanguage>en</NeutralLanguage>
     <Nullable>enable</Nullable>
     <AvaloniaUseCompiledBindingsByDefault>false</AvaloniaUseCompiledBindingsByDefault>
     <Platforms>AnyCPU</Platforms>

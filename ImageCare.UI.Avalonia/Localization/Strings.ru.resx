@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms</value></resheader>
+  <data name="Common_Create" xml:space="preserve"><value>Создать</value></data>
+  <data name="Common_Rename" xml:space="preserve"><value>Переименовать</value></data>
+  <data name="Common_Delete" xml:space="preserve"><value>Удалить</value></data>
+  <data name="Bottom_MessagesList" xml:space="preserve"><value>Сообщения</value></data>
+  <data name="Bottom_Settings" xml:space="preserve"><value>Настройки</value></data>
+  <data name="Folders_SearchFolders" xml:space="preserve"><value>Поиск папок</value></data>
+  <data name="Folders_SearchFoldersIn" xml:space="preserve"><value>Поиск папок в «{0}»</value></data>
+  <data name="Folders_Searching" xml:space="preserve"><value>Поиск...</value></data>
+  <data name="Folders_SearchHeader" xml:space="preserve"><value>Поиск «{0}» в {1}...</value></data>
+  <data name="Folders_SearchFound" xml:space="preserve"><value>Найдено результатов: {0}. Запрос: «{1}»</value></data>
+  <data name="Folders_SearchCancelled" xml:space="preserve"><value>Поиск отменён</value></data>
+  <data name="Folders_SearchFailed" xml:space="preserve"><value>Ошибка поиска</value></data>
+  <data name="Folders_AllFolders" xml:space="preserve"><value>выбранной папке</value></data>
+  <data name="Preview_LoadingFolder" xml:space="preserve"><value>Загрузка содержимого папки. Подождите...</value></data>
+  <data name="Metadata_Title" xml:space="preserve"><value>Название</value></data>
+  <data name="Metadata_Description" xml:space="preserve"><value>Описание</value></data>
+  <data name="Logs_Type" xml:space="preserve"><value>Тип</value></data>
+  <data name="Logs_Timestamp" xml:space="preserve"><value>Время</value></data>
+  <data name="Logs_Message" xml:space="preserve"><value>Сообщение</value></data>
+  <data name="Logs_ExceptionMessage" xml:space="preserve"><value>Текст исключения</value></data>
+  <data name="Logs_Errors" xml:space="preserve"><value>Ошибки</value></data>
+  <data name="Logs_Warnings" xml:space="preserve"><value>Предупреждения</value></data>
+  <data name="Logs_ClearMessages" xml:space="preserve"><value>Очистить сообщения</value></data>
+  <data name="Settings_Title" xml:space="preserve"><value>Настройки</value></data>
+  <data name="Settings_General" xml:space="preserve"><value>Общие</value></data>
+  <data name="Settings_InterfaceLanguage" xml:space="preserve"><value>Язык интерфейса</value></data>
+  <data name="Settings_LanguageDescription" xml:space="preserve"><value>Язык изменяется сразу и сохраняется автоматически.</value></data>
+  <data name="Settings_FileAssociations" xml:space="preserve"><value>Ассоциации файлов</value></data>
+  <data name="Settings_AddNewAssociation" xml:space="preserve"><value>Добавить ассоциацию файла</value></data>
+  <data name="Settings_ExtensionPlaceholder" xml:space="preserve"><value>Расширение (например, .cr2 или .jpg)</value></data>
+  <data name="Settings_DisplayNamePlaceholder" xml:space="preserve"><value>Отображаемое название</value></data>
+  <data name="Settings_Add" xml:space="preserve"><value>Добавить</value></data>
+  <data name="Settings_EditSelectedAssociation" xml:space="preserve"><value>Изменить выбранную ассоциацию</value></data>
+  <data name="Settings_PathPlaceholder" xml:space="preserve"><value>Путь к приложению</value></data>
+  <data name="Settings_Browse" xml:space="preserve"><value>Обзор...</value></data>
+  <data name="Settings_CurrentAssociations" xml:space="preserve"><value>Текущие ассоциации</value></data>
+  <data name="Settings_RemoveSelected" xml:space="preserve"><value>Удалить выбранную</value></data>
+  <data name="Settings_AssociationDescription" xml:space="preserve"><value>Ассоциации позволяют открывать выбранные типы файлов в другом приложении.</value></data>
+  <data name="Settings_SelectApplication" xml:space="preserve"><value>Выберите приложение</value></data>
+  <data name="Settings_Executable" xml:space="preserve"><value>Приложение</value></data>
+  <data name="Settings_AllFiles" xml:space="preserve"><value>Все файлы</value></data>
+  <data name="ImageViewer_Title" xml:space="preserve"><value>ImageCare — просмотр изображения</value></data>
+  <data name="Action_Copy" xml:space="preserve"><value>Копировать</value></data>
+  <data name="Action_Move" xml:space="preserve"><value>Переместить</value></data>
+  <data name="Action_Metadata" xml:space="preserve"><value>Метаданные</value></data>
+  <data name="Action_OpenSeparate" xml:space="preserve"><value>Открыть в отдельном окне</value></data>
+  <data name="Action_Map" xml:space="preserve"><value>Показать место на карте</value></data>
+  <data name="Action_ResetView" xml:space="preserve"><value>Сбросить вид</value></data>
+  <data name="Action_Play" xml:space="preserve"><value>Воспроизвести</value></data>
+  <data name="Action_Pause" xml:space="preserve"><value>Пауза</value></data>
+  <data name="Action_Stop" xml:space="preserve"><value>Остановить</value></data>
+</root>

@@ -24,6 +24,7 @@ using ImageCare.Core.Services.MediaPreviewService;
 using ImageCare.Core.Services.NotificationService;
 using ImageCare.Core.Services.ProcessService;
 using ImageCare.UI.Avalonia.Behaviors;
+using ImageCare.UI.Avalonia.Localization;
 using ImageCare.UI.Avalonia.Mapping;
 using ImageCare.UI.Avalonia.Services;
 using ImageCare.UI.Avalonia.ViewModels;
@@ -69,6 +70,8 @@ public class App : PrismApplication
 
     protected override AvaloniaObject CreateShell()
     {
+        var configuration = Container.Resolve<IConfigurationService>().Configuration.Value;
+        LocalizationManager.Instance.SetCulture(configuration.UiCultureName);
         return Container.Resolve<MainWindow>();
     }
 
@@ -80,6 +83,8 @@ public class App : PrismApplication
 
     protected override void RegisterTypes(IContainerRegistry containerRegistry)
     {
+        containerRegistry.RegisterInstance(LocalizationManager.Instance);
+
         var logService = new SinkLogEventService();
         containerRegistry.RegisterInstance<ILogEventService>(logService);
         containerRegistry.RegisterInstance<ILogNotificationService>(logService);

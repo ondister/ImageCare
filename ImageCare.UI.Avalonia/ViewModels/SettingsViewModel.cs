@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading;
@@ -7,6 +8,7 @@ using System.Windows.Input;
 
 using ImageCare.Core.Domain.Configuration;
 using ImageCare.Core.Services.ConfigurationService;
+using ImageCare.UI.Avalonia.Localization;
 using ImageCare.UI.Avalonia.Services;
 using ImageCare.UI.Avalonia.ViewModels.Domain;
 
@@ -22,20 +24,24 @@ public sealed class SettingsViewModel : ViewModelBase
     private readonly IFileDialogService _fileDialogService;
     private readonly IMapper _mapper;
     private readonly ILogger _logger;
+    private readonly LocalizationManager _localization;
 
     private string _newExtension = string.Empty;
     private string _newName = string.Empty;
     private FileApplicationAssociationViewModel? _selectedAssociation;
+    private LanguageOption? _selectedLanguage;
 
     public SettingsViewModel(IConfigurationService configurationService,
                              IFileDialogService fileDialogService,
                              IMapper mapper,
-                             ILogger logger)
+                             ILogger logger,
+                             LocalizationManager localization)
     {
         _configService = configurationService;
         _fileDialogService = fileDialogService;
         _mapper = mapper;
         _logger = logger;
+        _localization = localization;
 
         AddAssociationCommand = CreateCommand(AddAssociation, CanAddAssociation, OnCommandException)
                                 .ObservesProperty(() => NewExtension)
@@ -46,8 +52,26 @@ public sealed class SettingsViewModel : ViewModelBase
             .ObservesProperty(() => SelectedAssociation);
     }
 
-    /// <inheritdoc />
-    public string Title { get; } = "Settings";
+    public string Title => _localization["Settings_Title"];
+
+    public IReadOnlyList<LanguageOption> AvailableLanguages => _localization.SupportedLanguages;
+
+    public LanguageOption? SelectedLanguage
+    {
+        get => _selectedLanguage;
+        set
+        {
+            if (!SetProperty(ref _selectedLanguage, value) || value == null)
+            {
+                return;
+            }
+
+            _localization.SetCulture(value.Name);
+            _configService.Configuration.Value.UiCultureName = value.Name;
+            SaveConfiguration();
+            RaisePropertyChanged(nameof(Title));
+        }
+    }
 
     public ObservableCollection<FileApplicationAssociationViewModel> Associations { get; } = new();
 
@@ -91,6 +115,9 @@ public sealed class SettingsViewModel : ViewModelBase
     {
         try
         {
+            _selectedLanguage = AvailableLanguages.FirstOrDefault(language =>
+                string.Equals(language.Name, _localization.Culture.Name, StringComparison.OrdinalIgnoreCase));
+            RaisePropertyChanged(nameof(SelectedLanguage));
             LoadAssociations();
         }
         catch (Exception ex)
@@ -205,9 +232,9 @@ public sealed class SettingsViewModel : ViewModelBase
             }
 
             var filePath = await _fileDialogService.ShowOpenFileDialogAsync(
-                               "Select application",
-                               ("Executable", new[] { "*.exe", "*.bat" }),
-                               ("All files", new[] { "*.*" }));
+                               _localization["Settings_SelectApplication"],
+                               (_localization["Settings_Executable"], new[] { "*.exe", "*.bat" }),
+                               (_localization["Settings_AllFiles"], new[] { "*.*" }));
 
             if (string.IsNullOrEmpty(filePath))
             {

@@ -4,6 +4,7 @@
              xmlns:system="clr-namespace:System;assembly=System.Runtime"
              xmlns:logs="clr-namespace:ImageCare.UI.Avalonia.ViewModels.Domain.Logs"
              xmlns:viewModels="clr-namespace:ImageCare.UI.Avalonia.ViewModels"
+             xmlns:localization="clr-namespace:ImageCare.UI.Avalonia.Localization"
              x:Class="ImageCare.UI.Avalonia.Views.LogViewerView"
              x:DataType="viewModels:LogViewerViewModel">
 
@@ -15,8 +16,6 @@
     </UserControl.Resources>
 
     <UserControl.Styles>
-
-        <StyleInclude Source="avares://IconPacks.Avalonia.Lucide/Lucide.axaml" />
 
         <Style Selector="TextBlock">
             <Setter Property="Margin" Value="{StaticResource MarginAll.Small}" />
@@ -68,13 +67,13 @@
                                     <ColumnDefinition SharedSizeGroup="exception" />
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Grid.Column="0"
-                                           Text="Type" />
+                                           Text="{localization:Loc Logs_Type}" />
                                 <TextBlock Grid.Column="1"
-                                           Text="Timestamp" />
+                                           Text="{localization:Loc Logs_Timestamp}" />
                                 <TextBlock Grid.Column="2"
-                                           Text="Message" />
+                                           Text="{localization:Loc Logs_Message}" />
                                 <TextBlock Grid.Column="3"
-                                           Text="Exception message" />
+                                           Text="{localization:Loc Logs_ExceptionMessage}" />
 
                             </Grid>
 
@@ -150,7 +149,7 @@
                 <StackPanel Orientation="Horizontal">
                     <iconPacks:PackIconLucide Kind="OctagonX"
                                               Foreground="{DynamicResource Brush.Danger}" />
-                    <TextBlock Text="Errors" />
+                    <TextBlock Text="{localization:Loc Logs_Errors}" />
                     <TextBlock Text="{Binding ErrorsCount}" />
                 </StackPanel>
             </ToggleButton>
@@ -160,7 +159,7 @@
                 <StackPanel Orientation="Horizontal">
                     <iconPacks:PackIconLucide Kind="TriangleAlert"
                                               Foreground="{DynamicResource Brush.Warning}" />
-                    <TextBlock Text="Warnings" />
+                    <TextBlock Text="{localization:Loc Logs_Warnings}" />
                     <TextBlock Text="{Binding WarningsCount}" />
                 </StackPanel>
             </ToggleButton>
@@ -170,7 +169,7 @@
                     Command="{Binding ClearMessagesCommand}">
                 <StackPanel Orientation="Horizontal">
                     <iconPacks:PackIconLucide Kind="Eraser" />
-                    <TextBlock Text="Clear Messages" />
+                    <TextBlock Text="{localization:Loc Logs_ClearMessages}" />
                 </StackPanel>
             </Button>
         </Grid>

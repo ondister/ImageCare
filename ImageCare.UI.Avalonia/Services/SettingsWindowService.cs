@@ -5,6 +5,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 
 using ImageCare.Core.Services.ConfigurationService;
+using ImageCare.UI.Avalonia.Localization;
 using ImageCare.UI.Avalonia.ViewModels;
 using ImageCare.UI.Avalonia.Views;
 
@@ -20,17 +21,20 @@ internal sealed class SettingsWindowService
     private readonly IFileDialogService _fileDialogService;
     private readonly IMapper _mapper;
     private readonly ILogger _logger;
+    private readonly LocalizationManager _localization;
     private Window? _window;
 
     public SettingsWindowService(IConfigurationService configurationService,
                                  IFileDialogService fileDialogService,
                                  IMapper mapper,
-                                 ILogger logger)
+                                 ILogger logger,
+                                 LocalizationManager localization)
     {
         _configurationService = configurationService;
         _fileDialogService = fileDialogService;
         _mapper = mapper;
         _logger = logger;
+        _localization = localization;
     }
 
     public void Show()
@@ -45,7 +49,8 @@ internal sealed class SettingsWindowService
             _configurationService,
             _fileDialogService,
             _mapper,
-            _logger);
+            _logger,
+            _localization);
         var window = new Window
         {
             Title = viewModel.Title,
@@ -60,6 +65,7 @@ internal sealed class SettingsWindowService
         _window = window;
         window.Opened += OnOpened;
         window.Closed += OnClosed;
+        _localization.CultureChanged += OnCultureChanged;
 
         if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime
             {
@@ -81,9 +87,15 @@ internal sealed class SettingsWindowService
             viewModel.Open();
         }
 
+        void OnCultureChanged(object? sender, EventArgs args)
+        {
+            window.Title = viewModel.Title;
+        }
+
         void OnClosed(object? sender, EventArgs args)
         {
             window.Closed -= OnClosed;
+            _localization.CultureChanged -= OnCultureChanged;
             viewModel.Close();
             _window = null;
         }

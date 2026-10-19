@@ -7,6 +7,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 
 using ImageCare.Core.Services.MediaPreviewOperationsService;
 using ImageCare.Core.Services.MediaPreviewService;
+using ImageCare.UI.Avalonia.Localization;
 using ImageCare.UI.Avalonia.ViewModels;
 using ImageCare.UI.Avalonia.Views;
 
@@ -20,16 +21,19 @@ internal sealed class ImageViewerWindowService
     private readonly IMediaPreviewOperationsService _fileOperationsService;
     private readonly ILogger _logger;
     private readonly SynchronizationContext _synchronizationContext;
+    private readonly LocalizationManager _localization;
 
     public ImageViewerWindowService(IMediaPreviewService imageService,
                                     IMediaPreviewOperationsService fileOperationsService,
                                     ILogger logger,
-                                    SynchronizationContext synchronizationContext)
+                                    SynchronizationContext synchronizationContext,
+                                    LocalizationManager localization)
     {
         _imageService = imageService;
         _fileOperationsService = fileOperationsService;
         _logger = logger;
         _synchronizationContext = synchronizationContext;
+        _localization = localization;
     }
 
     public void Show()
@@ -41,7 +45,7 @@ internal sealed class ImageViewerWindowService
             _synchronizationContext);
         var window = new Window
         {
-            Title = "ImageCare — Image Viewer",
+            Title = _localization["ImageViewer_Title"],
             MinWidth = 800,
             MinHeight = 600,
             WindowState = WindowState.Maximized,
@@ -50,6 +54,7 @@ internal sealed class ImageViewerWindowService
 
         window.Opened += OnOpened;
         window.Closed += OnClosed;
+        _localization.CultureChanged += OnCultureChanged;
 
         if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime
             {
@@ -71,9 +76,15 @@ internal sealed class ImageViewerWindowService
             viewModel.Open();
         }
 
+        void OnCultureChanged(object? sender, EventArgs args)
+        {
+            window.Title = _localization["ImageViewer_Title"];
+        }
+
         void OnClosed(object? sender, EventArgs args)
         {
             window.Closed -= OnClosed;
+            _localization.CultureChanged -= OnCultureChanged;
             viewModel.Close();
         }
     }

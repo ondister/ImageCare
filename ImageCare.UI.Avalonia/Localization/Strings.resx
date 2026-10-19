@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms</value></resheader>
+  <data name="Common_Create" xml:space="preserve"><value>Create</value></data>
+  <data name="Common_Rename" xml:space="preserve"><value>Rename</value></data>
+  <data name="Common_Delete" xml:space="preserve"><value>Delete</value></data>
+  <data name="Bottom_MessagesList" xml:space="preserve"><value>Messages</value></data>
+  <data name="Bottom_Settings" xml:space="preserve"><value>Settings</value></data>
+  <data name="Folders_SearchFolders" xml:space="preserve"><value>Search folders</value></data>
+  <data name="Folders_SearchFoldersIn" xml:space="preserve"><value>Search folders in {0}</value></data>
+  <data name="Folders_Searching" xml:space="preserve"><value>Searching...</value></data>
+  <data name="Folders_SearchHeader" xml:space="preserve"><value>Searching for “{0}” in {1}...</value></data>
+  <data name="Folders_SearchFound" xml:space="preserve"><value>Found {0} results for “{1}”</value></data>
+  <data name="Folders_SearchCancelled" xml:space="preserve"><value>Search cancelled</value></data>
+  <data name="Folders_SearchFailed" xml:space="preserve"><value>Search failed</value></data>
+  <data name="Folders_AllFolders" xml:space="preserve"><value>all folders</value></data>
+  <data name="Preview_LoadingFolder" xml:space="preserve"><value>Loading folder structure. Please wait...</value></data>
+  <data name="Metadata_Title" xml:space="preserve"><value>Title</value></data>
+  <data name="Metadata_Description" xml:space="preserve"><value>Description</value></data>
+  <data name="Logs_Type" xml:space="preserve"><value>Type</value></data>
+  <data name="Logs_Timestamp" xml:space="preserve"><value>Timestamp</value></data>
+  <data name="Logs_Message" xml:space="preserve"><value>Message</value></data>
+  <data name="Logs_ExceptionMessage" xml:space="preserve"><value>Exception message</value></data>
+  <data name="Logs_Errors" xml:space="preserve"><value>Errors</value></data>
+  <data name="Logs_Warnings" xml:space="preserve"><value>Warnings</value></data>
+  <data name="Logs_ClearMessages" xml:space="preserve"><value>Clear messages</value></data>
+  <data name="Settings_Title" xml:space="preserve"><value>Settings</value></data>
+  <data name="Settings_General" xml:space="preserve"><value>General</value></data>
+  <data name="Settings_InterfaceLanguage" xml:space="preserve"><value>Interface language</value></data>
+  <data name="Settings_LanguageDescription" xml:space="preserve"><value>The language changes immediately and is saved automatically.</value></data>
+  <data name="Settings_FileAssociations" xml:space="preserve"><value>File associations</value></data>
+  <data name="Settings_AddNewAssociation" xml:space="preserve"><value>Add new file association</value></data>
+  <data name="Settings_ExtensionPlaceholder" xml:space="preserve"><value>Extension (e.g. .cr2, .jpg)</value></data>
+  <data name="Settings_DisplayNamePlaceholder" xml:space="preserve"><value>Display name</value></data>
+  <data name="Settings_Add" xml:space="preserve"><value>Add</value></data>
+  <data name="Settings_EditSelectedAssociation" xml:space="preserve"><value>Edit selected association</value></data>
+  <data name="Settings_PathPlaceholder" xml:space="preserve"><value>Path to executable</value></data>
+  <data name="Settings_Browse" xml:space="preserve"><value>Browse...</value></data>
+  <data name="Settings_CurrentAssociations" xml:space="preserve"><value>Current associations</value></data>
+  <data name="Settings_RemoveSelected" xml:space="preserve"><value>Remove selected</value></data>
+  <data name="Settings_AssociationDescription" xml:space="preserve"><value>File associations allow specific file types to be opened with another application.</value></data>
+  <data name="Settings_SelectApplication" xml:space="preserve"><value>Select application</value></data>
+  <data name="Settings_Executable" xml:space="preserve"><value>Executable</value></data>
+  <data name="Settings_AllFiles" xml:space="preserve"><value>All files</value></data>
+  <data name="ImageViewer_Title" xml:space="preserve"><value>ImageCare — Image Viewer</value></data>
+  <data name="Action_Copy" xml:space="preserve"><value>Copy</value></data>
+  <data name="Action_Move" xml:space="preserve"><value>Move</value></data>
+  <data name="Action_Metadata" xml:space="preserve"><value>Metadata</value></data>
+  <data name="Action_OpenSeparate" xml:space="preserve"><value>Open in a separate window</value></data>
+  <data name="Action_Map" xml:space="preserve"><value>Show location on map</value></data>
+  <data name="Action_ResetView" xml:space="preserve"><value>Reset view</value></data>
+  <data name="Action_Play" xml:space="preserve"><value>Play</value></data>
+  <data name="Action_Pause" xml:space="preserve"><value>Pause</value></data>
+  <data name="Action_Stop" xml:space="preserve"><value>Stop</value></data>
+</root>

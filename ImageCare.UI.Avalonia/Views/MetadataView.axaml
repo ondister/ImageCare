@@ -5,6 +5,7 @@
              xmlns:mvvm="http://prismlibrary.com/"
              xmlns:domain="clr-namespace:ImageCare.UI.Avalonia.ViewModels.Domain"
              xmlns:viewModels="clr-namespace:ImageCare.UI.Avalonia.ViewModels"
+             xmlns:localization="clr-namespace:ImageCare.UI.Avalonia.Localization"
              mc:Ignorable="d"
              mvvm:ViewModelLocator.AutoWireViewModel="True"
              x:Class="ImageCare.UI.Avalonia.Views.MetadataView"
@@ -28,9 +29,9 @@
                             <ColumnDefinition SharedSizeGroup="description" />
                         </Grid.ColumnDefinitions>
                         <TextBlock Grid.Column="0"
-                                   Text="Title" />
+                                   Text="{localization:Loc Metadata_Title}" />
                         <TextBlock Grid.Column="1"
-                                   Text="Description" />
+                                   Text="{localization:Loc Metadata_Description}" />
 
                     </Grid>
 

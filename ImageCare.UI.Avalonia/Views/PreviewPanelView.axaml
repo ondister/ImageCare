@@ -7,6 +7,7 @@
              xmlns:controls="clr-namespace:ImageCare.UI.Avalonia.Controls"
              xmlns:behaviors="clr-namespace:ImageCare.UI.Avalonia.Behaviors"
              xmlns:views="clr-namespace:ImageCare.UI.Avalonia.Views"
+             xmlns:localization="clr-namespace:ImageCare.UI.Avalonia.Localization"
              prism:ViewModelLocator.AutoWireViewModel="True"
              x:Class="ImageCare.UI.Avalonia.Views.PreviewPanelView"
              x:DataType="viewModels:PreviewPanelViewModel"
@@ -27,7 +28,7 @@
 
         <!--Panel-->
         <TextBlock Grid.Row="1"
-                   Text="Loading folder structure. Please wait a second..."
+                   Text="{localization:Loc Preview_LoadingFolder}"
                    HorizontalAlignment="Center"
                    VerticalAlignment="Center"
                    FontSize="{StaticResource Font.Size.SectionHeader}"

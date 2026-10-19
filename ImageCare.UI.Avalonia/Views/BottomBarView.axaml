@@ -4,6 +4,7 @@
              xmlns:viewModels="clr-namespace:ImageCare.UI.Avalonia.ViewModels"
              xmlns:iconPacks="https://github.com/MahApps/IconPacks.Avalonia"
              xmlns:domain="clr-namespace:ImageCare.UI.Avalonia.ViewModels.Domain"
+             xmlns:localization="clr-namespace:ImageCare.UI.Avalonia.Localization"
              x:Class="ImageCare.UI.Avalonia.Views.BottomBarView"
              mvvm:ViewModelLocator.AutoWireViewModel="True"
              x:DataType="viewModels:BottomBarViewModel">
@@ -38,7 +39,7 @@
                                    VerticalAlignment="Center"
                                    HorizontalAlignment="Center" />
                     </Border>
-                    <TextBlock Text="Messages List" VerticalAlignment="Center" />
+                    <TextBlock Text="{localization:Loc Bottom_MessagesList}" VerticalAlignment="Center" />
                 </StackPanel>
             </Button>
 
@@ -85,7 +86,7 @@
                     Margin="{StaticResource MarginHorizontal.Small}">
                 <StackPanel Orientation="Horizontal" Spacing="4">
                     <iconPacks:PackIconLucide Kind="Settings" />
-                    <TextBlock Text="Settings" VerticalAlignment="Center" />
+                    <TextBlock Text="{localization:Loc Bottom_Settings}" VerticalAlignment="Center" />
                 </StackPanel>
             </Button>
         </Grid>
