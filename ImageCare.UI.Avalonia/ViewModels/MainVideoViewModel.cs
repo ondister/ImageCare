@@ -173,9 +173,20 @@ internal class MainVideoViewModel : NavigatedViewModelBase
 
     public double Volume
     {
-        get => OperatingSystem.IsMacOS()
-            ? MacPlayer?.Volume ?? 100
-            : Mpv?.Volume.Get() ?? 0;
+        get
+        {
+            try
+            {
+                return OperatingSystem.IsMacOS()
+                    ? MacPlayer?.Volume ?? 100
+                    : Mpv?.Volume.Get() ?? 0;
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Error reading player volume");
+                return 0;
+            }
+        }
         set
         {
             try
@@ -318,6 +329,7 @@ internal class MainVideoViewModel : NavigatedViewModelBase
 
     internal void Show(SelectedMediaPreview preview)
     {
+        SubscribeMpvEvents();
         OnPreviewSelected(preview);
     }
 

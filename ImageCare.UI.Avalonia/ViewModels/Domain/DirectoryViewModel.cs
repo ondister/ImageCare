@@ -41,7 +41,6 @@ internal class DirectoryViewModel : ViewModelBase, IComparable<DirectoryViewMode
     private CancellationTokenSource? _expantionCancellationTokenSource;
     private DirectoryLoadState _loadState;
     private readonly SemaphoreSlim _loadingSemaphore = new SemaphoreSlim(1, 1);
-    private TaskCompletionSource<bool>? _loadingCompletionSource;
     private bool _isSelected;
     private bool _isRenaming;
     private DirectoryViewModel? _parent;
@@ -324,7 +323,7 @@ internal class DirectoryViewModel : ViewModelBase, IComparable<DirectoryViewMode
                         ChildFileSystemItems.Clear();
                     }
 
-                    _ = SeedFileSystemItemsAsync(_expantionCancellationTokenSource.Token);
+                    _ = LoadExpandedDirectoryAsync(_expantionCancellationTokenSource.Token);
                 }
 
                 _folderService.AddVisitingFolder(_mapper.Map<DirectoryModel>(this), FileManagerPanel);
@@ -386,9 +385,24 @@ internal class DirectoryViewModel : ViewModelBase, IComparable<DirectoryViewMode
         }
     }
 
+    private async Task LoadExpandedDirectoryAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await SeedFileSystemItemsAsync(cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            // Collapsing or re-expanding a node cancels the previous load.
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "Failed to load expanded directory: {Path}", Path);
+        }
+    }
+
     private async Task SeedFileSystemItemsAsync(CancellationToken cancellationToken)
     {
-        
         await _loadingSemaphore.WaitAsync(cancellationToken);
 
         try
@@ -399,77 +413,50 @@ internal class DirectoryViewModel : ViewModelBase, IComparable<DirectoryViewMode
             }
 
             LoadState = DirectoryLoadState.Loading;
+            cancellationToken.ThrowIfCancellationRequested();
 
-            _loadingCompletionSource = new TaskCompletionSource<bool>();
+            var currentDirectoryModel = await _folderService.GetDirectoryModelAsync(Path);
 
-            try
+            if (ChildFileSystemItems.Count == 0 ||
+                ChildFileSystemItems.All(c => c.LoadState != DirectoryLoadState.Loaded))
             {
-                cancellationToken.ThrowIfCancellationRequested();
+                ChildFileSystemItems.Clear();
 
-                var currentDirectoryModel = await _folderService.GetDirectoryModelAsync(Path);
-
-                if (ChildFileSystemItems.Count == 0 ||
-                    (ChildFileSystemItems.Count > 0 && ChildFileSystemItems.All(c => c.LoadState != DirectoryLoadState.Loaded)))
+                foreach (var directoryModel in currentDirectoryModel.DirectoryModels)
                 {
-                    ChildFileSystemItems.Clear();
-
-                    foreach (var directoryModel in currentDirectoryModel.DirectoryModels)
-                    {
-                        cancellationToken.ThrowIfCancellationRequested();
-
-                        var fileSystemItemViewModel = _mapper.Map<DirectoryViewModel>(directoryModel);
-                        ChildFileSystemItems.Add(fileSystemItemViewModel);
-                    }
+                    cancellationToken.ThrowIfCancellationRequested();
+                    ChildFileSystemItems.Add(_mapper.Map<DirectoryViewModel>(directoryModel));
                 }
+            }
 
-                LoadState = DirectoryLoadState.Loaded;
-                _loadingCompletionSource.TrySetResult(true);
-            }
-            catch (OperationCanceledException)
-            {
-                LoadState = DirectoryLoadState.Initial;
-                _loadingCompletionSource.TrySetCanceled(cancellationToken);
-                throw;
-            }
-            catch (Exception ex)
-            {
-                LoadState = DirectoryLoadState.Initial;
-                _loadingCompletionSource.TrySetException(ex);
-                throw;
-            }
+            LoadState = DirectoryLoadState.Loaded;
+        }
+        catch
+        {
+            LoadState = DirectoryLoadState.Initial;
+            throw;
         }
         finally
         {
             _loadingSemaphore.Release();
-            _loadingCompletionSource = null;
         }
     }
-
-    public Task WaitForLoadingAsync(CancellationToken cancellationToken = default)
-    {
-        if (LoadState == DirectoryLoadState.Loaded)
-        {
-            return Task.CompletedTask;
-        }
-
-        if (_loadingCompletionSource != null)
-        {
-            return _loadingCompletionSource.Task
-                                           .WaitAsync(cancellationToken);
-        }
-
-        return Task.CompletedTask;
-    }
-
 
     public async Task EnsureLoadedAsync(CancellationToken cancellationToken = default)
     {
-        if (LoadState == DirectoryLoadState.Initial && !IsExpanded)
+        if (LoadState == DirectoryLoadState.Loaded)
+        {
+            return;
+        }
+
+        if (!IsExpanded)
         {
             IsExpanded = true;
         }
 
-        await WaitForLoadingAsync(cancellationToken);
+        // Await the real load instead of relying on the fire-and-forget expansion handler.
+        // The semaphore coalesces this call with a load that expansion already started.
+        await SeedFileSystemItemsAsync(cancellationToken);
     }
 
     private void CreateFolder()

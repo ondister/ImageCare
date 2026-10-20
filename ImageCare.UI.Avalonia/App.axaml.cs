@@ -6,6 +6,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+using Avalonia.Threading;
 using DryIoc;
 using ImageCare.Core.Domain.Configuration;
 using ImageCare.Core.Domain.Folders;
@@ -47,6 +48,8 @@ namespace ImageCare.UI.Avalonia;
 
 public class App : PrismApplication
 {
+    private SplashWindow? _splashWindow;
+
     protected override Rules CreateContainerRules()
     {
         return base.CreateContainerRules()
@@ -64,6 +67,8 @@ public class App : PrismApplication
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             desktop.ShutdownRequested += OnShutdownRequested;
+            _splashWindow = new SplashWindow();
+            _splashWindow.Show();
         }
 
         base.OnFrameworkInitializationCompleted();
@@ -79,7 +84,26 @@ public class App : PrismApplication
         }
 
         LocalizationManager.Instance.SetCulture(configuration.UiCultureName);
-        return Container.Resolve<MainWindow>();
+
+        var mainWindow = Container.Resolve<MainWindow>();
+        mainWindow.Opened += OnMainWindowOpened;
+        return mainWindow;
+    }
+
+    private void OnMainWindowOpened(object? sender, EventArgs e)
+    {
+        if (sender is MainWindow mainWindow)
+        {
+            mainWindow.Opened -= OnMainWindowOpened;
+        }
+
+        Dispatcher.UIThread.Post(
+            () =>
+            {
+                _splashWindow?.Close();
+                _splashWindow = null;
+            },
+            DispatcherPriority.Background);
     }
 
     protected virtual void OnShutdownRequested(object? sender, ShutdownRequestedEventArgs e)
@@ -97,6 +121,7 @@ public class App : PrismApplication
         containerRegistry.RegisterInstance<ILogNotificationService>(logService);
 
         var serilogLogger = CreateLogger(logService);
+        Log.Logger = serilogLogger;
         containerRegistry.RegisterInstance<ILogger>(serilogLogger);
 
         containerRegistry.RegisterDialog<LogViewerView>("logViewer");

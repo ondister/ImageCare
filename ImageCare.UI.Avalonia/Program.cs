@@ -2,6 +2,7 @@ using System;
 using System.Threading.Tasks;
 
 using Avalonia;
+using Avalonia.Win32;
 
 using Serilog;
 
@@ -15,6 +16,7 @@ internal sealed class Program
         try
         {
             TaskScheduler.UnobservedTaskException += TaskScheduler_UnobservedTaskException;
+            AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
 
             BuildAvaloniaApp()
                 .StartWithClassicDesktopLifetime(args);
@@ -34,12 +36,31 @@ internal sealed class Program
     // Exposed so the Avalonia tooling and designer can discover the app configuration.
     public static AppBuilder BuildAvaloniaApp()
     {
-        return AppBuilder.Configure<App>()
-                         .UsePlatformDetect();
+        var builder = AppBuilder.Configure<App>()
+                                .UsePlatformDetect();
+
+        if (OperatingSystem.IsWindows())
+        {
+            builder.With(new Win32PlatformOptions
+            {
+                RenderingMode = [Win32RenderingMode.AngleEgl, Win32RenderingMode.Software]
+            });
+        }
+
+        return builder;
     }
 
     private static void TaskScheduler_UnobservedTaskException(object? sender, UnobservedTaskExceptionEventArgs e)
     {
         Log.Error(e.Exception, "Unhandled task exception.");
+        e.SetObserved();
+    }
+
+    private static void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)
+    {
+        if (e.ExceptionObject is Exception exception)
+        {
+            Log.Fatal(exception, "Unhandled application exception. Terminating: {IsTerminating}", e.IsTerminating);
+        }
     }
 }

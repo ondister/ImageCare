@@ -164,10 +164,15 @@ internal class FoldersViewModel : NavigatedViewModelBase
 
             _compositeDisposable = new CompositeDisposable
             {
-                _drivesWatcherService.DriveMounted.Subscribe(OnDriveMounted, OnObservableError),
-                _drivesWatcherService.DriveUnmounted.Subscribe(OnDriveUnmounted, OnObservableError),
+                _drivesWatcherService.DriveMounted
+                                     .ObserveOn(_synchronizationContext)
+                                     .Subscribe(OnDriveMounted, OnObservableError),
+                _drivesWatcherService.DriveUnmounted
+                                     .ObserveOn(_synchronizationContext)
+                                     .Subscribe(OnDriveUnmounted, OnObservableError),
                 _drivesWatcherService.DriveAvailableFreeSpaceChanged
                                      .DistinctUntilChanged()
+                                     .ObserveOn(_synchronizationContext)
                                      .Subscribe(OnFreeSpaceChanged, OnObservableError),
                 _folderService.FolderVisited
                               .Where(folder => folder.FileManagerPanel == FileManagerPanel)
@@ -224,25 +229,23 @@ internal class FoldersViewModel : NavigatedViewModelBase
 
     private async Task SetSearchResultAsync(DirectoryViewModel directoryViewModel)
     {
-        if (directoryViewModel == null)
+        if (directoryViewModel == null || SelectedFileSystemItem == null)
         {
             return;
         }
 
+        var sourceDirectory = SelectedFileSystemItem;
+        var targetPath = directoryViewModel.Path;
+
         try
         {
+            var targetDirectory = await GoToFolderFromSelectedAsync(sourceDirectory, targetPath);
+            SelectedFileSystemItem = targetDirectory;
             ClearSearch();
-
-            if (SelectedFileSystemItem == null)
-            {
-                return;
-            }
-
-            SelectedFileSystemItem = await GoToFolderFromSelectedAsync(SelectedFileSystemItem, directoryViewModel.Path);
         }
         catch (Exception ex)
         {
-            _logger.Error(ex, "Failed to open search result: {Path}", directoryViewModel.Path);
+            _logger.Error(ex, "Failed to open search result: {Path}", targetPath);
         }
     }
 

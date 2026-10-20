@@ -60,15 +60,19 @@
                       MinHeight="96"
                       Background="{DynamicResource Brush.PreviewSurface}"
                       ClipToBounds="True">
-                    <LayoutTransformControl Margin="8"
-                                            HorizontalAlignment="Center"
-                                            VerticalAlignment="Center">
-                        <Image Source="{Binding PreviewBitmap}"
-                               Stretch="Uniform" />
-                        <LayoutTransformControl.LayoutTransform>
-                            <RotateTransform Angle="{Binding RotateAngle}" />
-                        </LayoutTransformControl.LayoutTransform>
-                    </LayoutTransformControl>
+                    <Viewbox Margin="8"
+                             Stretch="Uniform"
+                             StretchDirection="Both"
+                             HorizontalAlignment="Stretch"
+                             VerticalAlignment="Stretch">
+                        <LayoutTransformControl>
+                            <Image Source="{Binding PreviewBitmap}"
+                                   Stretch="None" />
+                            <LayoutTransformControl.LayoutTransform>
+                                <RotateTransform Angle="{Binding RotateAngle}" />
+                            </LayoutTransformControl.LayoutTransform>
+                        </LayoutTransformControl>
+                    </Viewbox>
 
                     <avaloniaProgressRing:ProgressRing Width="28"
                                                        Height="28"

@@ -28,15 +28,39 @@ public partial class MainVideoView : UserControl
             _macPlayer = new MacVideoPlayerView();
             VideoHost.Content = _macPlayer;
         }
-        else
+        else if (OperatingSystem.IsWindows())
         {
-            MpvApi.RootPath = Path.Combine(AppContext.BaseDirectory, "player-native");
-            var mpvView = new MpvView();
-            mpvView.Bind(MpvView.MpvContextProperty, new Binding(nameof(MainVideoViewModel.Mpv))
+            try
             {
-                Mode = BindingMode.OneWayToSource
-            });
-            VideoHost.Content = mpvView;
+                var nativePlayerDirectory = Path.Combine(AppContext.BaseDirectory, "player-native");
+                var nativeLibraryPath = Path.Combine(nativePlayerDirectory, "libmpv-2.dll");
+                if (!File.Exists(nativeLibraryPath))
+                {
+                    throw new FileNotFoundException(
+                        "The native Windows video player library was not deployed.",
+                        nativeLibraryPath);
+                }
+
+                MpvApi.RootPath = nativePlayerDirectory;
+                var mpvView = new MpvView();
+                mpvView.Bind(MpvView.MpvContextProperty, new Binding(nameof(MainVideoViewModel.Mpv))
+                {
+                    Mode = BindingMode.OneWayToSource
+                });
+                VideoHost.Content = mpvView;
+            }
+            catch (Exception ex)
+            {
+                Serilog.Log.Error(ex, "Failed to initialize the Windows video player");
+                VideoHost.Content = new TextBlock
+                {
+                    Text = "Video playback is unavailable. See the application log for details.",
+                    TextWrapping = global::Avalonia.Media.TextWrapping.Wrap,
+                    HorizontalAlignment = global::Avalonia.Layout.HorizontalAlignment.Center,
+                    VerticalAlignment = global::Avalonia.Layout.VerticalAlignment.Center,
+                    Margin = new Thickness(24)
+                };
+            }
         }
 
         DataContextChanged += OnDataContextChanged;

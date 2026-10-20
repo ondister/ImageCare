@@ -1,0 +1,39 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:avaloniaProgressRing="clr-namespace:AvaloniaProgressRing;assembly=AvaloniaProgressRing"
+        xmlns:localization="clr-namespace:ImageCare.UI.Avalonia.Localization"
+        x:Class="ImageCare.UI.Avalonia.Views.SplashWindow"
+        Width="420"
+        Height="220"
+        CanResize="False"
+        ShowInTaskbar="False"
+        WindowDecorations="None"
+        WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource ThemeBackgroundBrush}">
+    <Border BorderBrush="{DynamicResource Brush.Splitter}"
+            BorderThickness="1"
+            CornerRadius="8"
+            Padding="28">
+        <StackPanel HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Spacing="16">
+            <Image Source="/Assets/imagecare-logo.ico"
+                   Width="72"
+                   Height="72"
+                   Stretch="Uniform" />
+            <TextBlock Text="ImageCare"
+                       HorizontalAlignment="Center"
+                       FontSize="24"
+                       FontWeight="SemiBold" />
+            <StackPanel Orientation="Horizontal"
+                        HorizontalAlignment="Center"
+                        Spacing="10">
+                <avaloniaProgressRing:ProgressRing Width="22"
+                                                   Height="22"
+                                                   IsActive="True" />
+                <TextBlock Text="{localization:Loc Preview_LoadingFolder}"
+                           VerticalAlignment="Center" />
+            </StackPanel>
+        </StackPanel>
+    </Border>
+</Window>

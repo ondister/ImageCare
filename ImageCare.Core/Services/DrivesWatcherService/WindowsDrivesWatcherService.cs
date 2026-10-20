@@ -1,4 +1,4 @@
-﻿using System.Reactive.Disposables;
+using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 
@@ -9,141 +9,212 @@ namespace ImageCare.Core.Services.DrivesWatcherService;
 
 public sealed class WindowsDrivesWatcherService : IDrivesWatcherService, IDisposable
 {
-	private readonly IFolderService _folderService;
-	private readonly IManagementEventWatcher _watcher;
-	private readonly IDriveInfoProvider _driveInfoProvider;
-	private readonly IDriveModelsFactory _driveModelsFactory;
+    private static readonly TimeSpan FreeSpaceProbeTimeout = TimeSpan.FromSeconds(3);
 
-	private readonly Subject<DriveModel> _driveMountedSubject;
-	private readonly Subject<string> _driveUnmountedSubject;
-	private readonly Subject<AvailableFreeSpaceInfo> _driveFreeSpaceSubject;
-	private readonly CompositeDisposable _subscriptions;
+    private readonly IFolderService _folderService;
+    private readonly IManagementEventWatcher _watcher;
+    private readonly IDriveInfoProvider _driveInfoProvider;
+    private readonly IDriveModelsFactory _driveModelsFactory;
+    private readonly Subject<DriveModel> _driveMountedSubject;
+    private readonly Subject<string> _driveUnmountedSubject;
+    private readonly Subject<AvailableFreeSpaceInfo> _driveFreeSpaceSubject;
+    private readonly CompositeDisposable _subscriptions;
+    private readonly object _watcherLock = new();
 
-	private CancellationTokenSource _cancellationTokenSource;
-	private bool _disposed;
+    private CancellationTokenSource? _cancellationTokenSource;
+    private int _watcherClients;
+    private bool _disposed;
 
-	public WindowsDrivesWatcherService(IFolderService folderService,
-	                                   IManagementEventWatcher watcher,
-	                                   IDriveInfoProvider driveInfoProvider,
-	                                   IDriveModelsFactory driveModelsFactory)
-	{
-		_folderService = folderService;
-		_watcher = watcher;
-		_driveInfoProvider = driveInfoProvider;
-		_driveModelsFactory = driveModelsFactory;
+    public WindowsDrivesWatcherService(IFolderService folderService,
+                                       IManagementEventWatcher watcher,
+                                       IDriveInfoProvider driveInfoProvider,
+                                       IDriveModelsFactory driveModelsFactory)
+    {
+        _folderService = folderService;
+        _watcher = watcher;
+        _driveInfoProvider = driveInfoProvider;
+        _driveModelsFactory = driveModelsFactory;
 
-		_driveMountedSubject = new Subject<DriveModel>();
-		_driveUnmountedSubject = new Subject<string>();
-		_driveFreeSpaceSubject = new Subject<AvailableFreeSpaceInfo>();
+        _driveMountedSubject = new Subject<DriveModel>();
+        _driveUnmountedSubject = new Subject<string>();
+        _driveFreeSpaceSubject = new Subject<AvailableFreeSpaceInfo>();
 
-		_subscriptions = new CompositeDisposable
-		{
-			_watcher.DeviceArrived.Select(driveName => Observable.FromAsync(() => OnDeviceArrival(driveName))).Concat().Subscribe(),
-			_watcher.DeviceRemoved.Subscribe(OnDeviceRemoval)
-		};
+        _subscriptions = new CompositeDisposable
+        {
+            _watcher.DeviceArrived
+                    .Select(driveName => Observable.FromAsync(() => OnDeviceArrival(driveName)))
+                    .Concat()
+                    .Subscribe(),
+            _watcher.DeviceRemoved.Subscribe(OnDeviceRemoval)
+        };
+    }
 
-		_cancellationTokenSource = new CancellationTokenSource();
-	}
+    public IObservable<DriveModel> DriveMounted => _driveMountedSubject.AsObservable();
 
-	public IObservable<DriveModel> DriveMounted => _driveMountedSubject.AsObservable();
+    public IObservable<string> DriveUnmounted => _driveUnmountedSubject.AsObservable();
 
-	public IObservable<string> DriveUnmounted => _driveUnmountedSubject.AsObservable();
+    public IObservable<AvailableFreeSpaceInfo> DriveAvailableFreeSpaceChanged => _driveFreeSpaceSubject.AsObservable();
 
-	public IObservable<AvailableFreeSpaceInfo> DriveAvailableFreeSpaceChanged => _driveFreeSpaceSubject.AsObservable();
+    public void Dispose()
+    {
+        lock (_watcherLock)
+        {
+            if (_disposed)
+            {
+                return;
+            }
 
-	public void Dispose()
-	{
-		if (_disposed)
-		{
-			return;
-		}
+            _disposed = true;
+            _watcherClients = 0;
+            _cancellationTokenSource?.Cancel();
+            _cancellationTokenSource?.Dispose();
+            _cancellationTokenSource = null;
+        }
 
-		_watcher.Dispose();
-		_cancellationTokenSource?.Cancel();
-		_cancellationTokenSource?.Dispose();
-		_driveMountedSubject.Dispose();
-		_driveUnmountedSubject.Dispose();
-		_driveFreeSpaceSubject.Dispose();
-		_subscriptions.Dispose();
-		_disposed = true;
-	}
+        _subscriptions.Dispose();
+        _watcher.Dispose();
+        _driveMountedSubject.Dispose();
+        _driveUnmountedSubject.Dispose();
+        _driveFreeSpaceSubject.Dispose();
+    }
 
-	public void StartWatching()
-	{
-		if (_disposed)
-		{
-			throw new ObjectDisposedException(nameof(WindowsDrivesWatcherService));
-		}
+    public void StartWatching()
+    {
+        lock (_watcherLock)
+        {
+            ObjectDisposedException.ThrowIf(_disposed, this);
 
-		_watcher.Start();
-		_cancellationTokenSource = new CancellationTokenSource();
-		_ = StartWatchingFreeSpaceAsync(_cancellationTokenSource.Token);
-	}
+            _watcherClients++;
+            if (_watcherClients > 1)
+            {
+                return;
+            }
 
-	public void StopWatching()
-	{
-		_watcher.Stop();
-		_cancellationTokenSource?.Cancel();
-	}
+            try
+            {
+                _watcher.Start();
+                _cancellationTokenSource = new CancellationTokenSource();
+                var token = _cancellationTokenSource.Token;
+                _ = Task.Run(() => StartWatchingFreeSpaceAsync(token), token);
+            }
+            catch
+            {
+                _watcherClients = 0;
+                _cancellationTokenSource?.Dispose();
+                _cancellationTokenSource = null;
+                throw;
+            }
+        }
+    }
 
-	private async Task OnDeviceArrival(string driveName)
-	{
-		var driveInfo = _driveInfoProvider.GetDriveByName(driveName);
-		if (driveInfo == null)
-		{
-			return;
-		}
+    public void StopWatching()
+    {
+        lock (_watcherLock)
+        {
+            if (_disposed || _watcherClients == 0)
+            {
+                return;
+            }
 
-		var driveModel = _driveModelsFactory.CreateDriveModel(driveInfo);
-		if (driveModel == null)
-		{
-			return;
-		}
+            _watcherClients--;
+            if (_watcherClients > 0)
+            {
+                return;
+            }
 
-		try
-		{
-			var directories = await _folderService.GetCustomDirectoriesLevelAsync(driveModel, true);
-			driveModel.AddDirectories(directories.DirectoryModels);
-			_driveMountedSubject.OnNext(driveModel);
-		}
-		catch
-		{
-			//Ignored
-		}
-	}
+            _watcher.Stop();
+            _cancellationTokenSource?.Cancel();
+            _cancellationTokenSource?.Dispose();
+            _cancellationTokenSource = null;
+        }
+    }
 
-	private void OnDeviceRemoval(string driveName)
-	{
-		var driveInfo = _driveInfoProvider.GetDriveByName(driveName);
-		if (driveInfo == null)
-		{
-			_driveUnmountedSubject.OnNext($"{driveName}\\");
-		}
-	}
+    private async Task OnDeviceArrival(string driveName)
+    {
+        try
+        {
+            var driveInfo = _driveInfoProvider.GetDriveByName(driveName);
+            if (driveInfo == null)
+            {
+                return;
+            }
 
-	private async Task StartWatchingFreeSpaceAsync(CancellationToken token)
-	{
-		while (!token.IsCancellationRequested)
-		{
-			try
-			{
-				var drives = _driveInfoProvider.GetDrives()
-				                               .Where(d => d is { DriveType: DriveType.Removable, IsReady: true });
+            var driveModel = _driveModelsFactory.CreateDriveModel(driveInfo);
+            if (driveModel == null)
+            {
+                return;
+            }
 
-				foreach (var drive in drives)
-				{
-					_driveFreeSpaceSubject.OnNext(
-						new AvailableFreeSpaceInfo(
-							drive.RootDirectory.FullName,
-							drive.AvailableFreeSpace));
-				}
+            var directories = await _folderService.GetCustomDirectoriesLevelAsync(driveModel, true);
+            driveModel.AddDirectories(directories.DirectoryModels);
+            _driveMountedSubject.OnNext(driveModel);
+        }
+        catch
+        {
+            // A disconnected or inaccessible drive must not terminate the watcher stream.
+        }
+    }
 
-				await Task.Delay(TimeSpan.FromSeconds(5), token);
-			}
-			catch (OperationCanceledException)
-			{
-				break;
-			}
-		}
-	}
+    private void OnDeviceRemoval(string driveName)
+    {
+        var driveInfo = _driveInfoProvider.GetDriveByName(driveName);
+        if (driveInfo == null)
+        {
+            _driveUnmountedSubject.OnNext($"{driveName}\\");
+        }
+    }
+
+    private async Task StartWatchingFreeSpaceAsync(CancellationToken token)
+    {
+        while (!token.IsCancellationRequested)
+        {
+            try
+            {
+                var probeTask = Task.Run(() =>
+                {
+                    try
+                    {
+                        return _driveInfoProvider.GetDrives()
+                            .Where(drive => drive is { DriveType: DriveType.Removable, IsReady: true })
+                            .Select(drive => new AvailableFreeSpaceInfo(
+                                drive.RootDirectory.FullName,
+                                drive.AvailableFreeSpace))
+                            .ToArray();
+                    }
+                    catch
+                    {
+                        return Array.Empty<AvailableFreeSpaceInfo>();
+                    }
+                });
+
+                var freeSpaceEntries = await probeTask.WaitAsync(FreeSpaceProbeTimeout, token);
+                foreach (var freeSpace in freeSpaceEntries)
+                {
+                    _driveFreeSpaceSubject.OnNext(freeSpace);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                break;
+            }
+            catch (TimeoutException)
+            {
+                // Do not start more probes while a Windows DriveInfo call is blocked.
+                break;
+            }
+            catch
+            {
+                // A transient drive failure is retried on the next interval.
+            }
+
+            try
+            {
+                await Task.Delay(TimeSpan.FromSeconds(5), token);
+            }
+            catch (OperationCanceledException)
+            {
+                break;
+            }
+        }
+    }
 }

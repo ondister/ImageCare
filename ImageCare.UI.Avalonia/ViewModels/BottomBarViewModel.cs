@@ -138,9 +138,9 @@ internal class BottomBarViewModel : NavigatedViewModelBase
                 _notificationService.NotificationReceived
                     .ObserveOn(_synchronizationContext)
                     .Subscribe(OnNotificationReceived, OnError),
-                _mediaPreviewOperationsService.FileOperationCompleted
+                _mediaPreviewOperationsService.DeletedFilesChanged
                     .ObserveOn(_synchronizationContext)
-                    .Subscribe(OnFileOperationCompleted, OnError),
+                    .Subscribe(files => CanUndoDelete = files.Count > 0, OnError),
                 _fileTransferOperationState.StatusChanged
                     .ObserveOn(_synchronizationContext)
                     .Subscribe(ApplyFileTransferStatus, OnError)

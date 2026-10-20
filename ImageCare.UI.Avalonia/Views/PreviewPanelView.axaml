@@ -67,8 +67,8 @@
                 <controls:PreviewsListBox.ItemTemplate>
                     <DataTemplate DataType="domain:MediaPreviewViewModel">
                         <controls:MediaPreviewCard Width="270"
-                                                   MinHeight="180"
-                                                   VerticalAlignment="Stretch" />
+                                                   Height="300"
+                                                   VerticalAlignment="Center" />
                     </DataTemplate>
                 </controls:PreviewsListBox.ItemTemplate>
             </controls:PreviewsListBox>

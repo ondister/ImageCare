@@ -451,16 +451,26 @@ public sealed class LocalFileSystemFolderService : IFolderService, IDisposable
 
     private async Task<bool> CheckDriveReadyWithTimeoutAsync(DriveInfo driveInfo, CancellationToken cancellationToken)
     {
+        var probeTask = Task.Run(() =>
+        {
+            try
+            {
+                return driveInfo.IsReady;
+            }
+            catch
+            {
+                return false;
+            }
+        });
+
         try
         {
-            return await Task.Run(() => { return driveInfo.IsReady; }, cancellationToken);
+            return await probeTask.WaitAsync(cancellationToken);
         }
         catch (OperationCanceledException)
         {
-            return false;
-        }
-        catch (Exception)
-        {
+            // DriveInfo has no cancellable API. Stop awaiting an unavailable network drive;
+            // the isolated worker may finish later without blocking application startup.
             return false;
         }
     }

@@ -55,8 +55,14 @@
     <ProjectReference Include="..\ImageCare.Core\ImageCare.Core.csproj" />
   </ItemGroup>
 
-  <ItemGroup Condition="'$(RuntimeIdentifier)' == 'win-x64' Or '$(RuntimeIdentifier)' == 'win-x86'">
-    <Content Include="$(MSBuildProjectDirectory)\player-native\$(RuntimeIdentifier)\libmpv-2.dll">
+  <PropertyGroup>
+    <NativePlayerRuntimeIdentifier Condition="'$(RuntimeIdentifier)' == 'win-x64' Or '$(RuntimeIdentifier)' == 'win-x86'">$(RuntimeIdentifier)</NativePlayerRuntimeIdentifier>
+    <NativePlayerRuntimeIdentifier Condition="$([MSBuild]::IsOSPlatform('Windows')) And '$(NativePlayerRuntimeIdentifier)' == '' And '$(PlatformTarget)' == 'x86'">win-x86</NativePlayerRuntimeIdentifier>
+    <NativePlayerRuntimeIdentifier Condition="$([MSBuild]::IsOSPlatform('Windows')) And '$(NativePlayerRuntimeIdentifier)' == ''">win-x64</NativePlayerRuntimeIdentifier>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(NativePlayerRuntimeIdentifier)' != ''">
+    <Content Include="$(MSBuildProjectDirectory)\player-native\$(NativePlayerRuntimeIdentifier)\libmpv-2.dll">
       <Link>player-native\libmpv-2.dll</Link>
       <TargetPath>player-native\libmpv-2.dll</TargetPath>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
