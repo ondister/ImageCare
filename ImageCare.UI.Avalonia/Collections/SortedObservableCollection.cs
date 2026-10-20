@@ -95,14 +95,15 @@ public class SortedObservableCollection<T> : ObservableCollection<T>
 
 	public void RefreshSort()
 	{
-		var items = Items.ToList();
-		Items.Clear();
-		foreach (var item in items.OrderBy(x => x, _comparer))
+		var sortedItems = Items.OrderBy(item => item, _comparer).ToArray();
+		for (var targetIndex = 0; targetIndex < sortedItems.Length; targetIndex++)
 		{
-			Items.Add(item);
+			var currentIndex = IndexOf(sortedItems[targetIndex]);
+			if (currentIndex != targetIndex)
+			{
+				Move(currentIndex, targetIndex);
+			}
 		}
-
-		OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
 	}
 
 	protected override void InsertItem(int index, T item)

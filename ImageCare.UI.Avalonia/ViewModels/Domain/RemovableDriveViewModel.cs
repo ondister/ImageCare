@@ -63,6 +63,8 @@ internal sealed class RemovableDriveViewModel : DriveViewModel
             SpacePercentage = 100.0 - (double)AvailableFreeSpace / TotalSize * 100;
         }
 
-        SpaceInfo = $"{Math.Round(AvailableFreeSpace / Math.Pow(1024, 3), 1)} gb \\ {Math.Round(TotalSize / Math.Pow(1024, 3), 1)} gb";
+        var availableGigabytes = Math.Round(AvailableFreeSpace / Math.Pow(1024, 3), 1);
+        var totalGigabytes = Math.Round(TotalSize / Math.Pow(1024, 3), 1);
+        SpaceInfo = $"{availableGigabytes:0.#} / {totalGigabytes:0.#} GB";
     }
 }

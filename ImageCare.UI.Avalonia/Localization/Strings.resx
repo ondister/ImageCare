@@ -27,6 +27,11 @@
   <data name="Folders_SearchFound" xml:space="preserve"><value>Found {0} results for “{1}”</value></data>
   <data name="Folders_SearchCancelled" xml:space="preserve"><value>Search cancelled</value></data>
   <data name="Folders_SearchFailed" xml:space="preserve"><value>Search failed</value></data>
+  <data name="Folders_Recent" xml:space="preserve"><value>Popular</value></data>
+  <data name="Folders_AddRecent" xml:space="preserve"><value>Add folder to Popular</value></data>
+  <data name="Folders_RemoveRecent" xml:space="preserve"><value>Remove from Popular</value></data>
+  <data name="Folders_SelectRecent" xml:space="preserve"><value>Select a folder to add to Popular</value></data>
+  <data name="Folders_RecentHint" xml:space="preserve"><value>Frequently used and manually added folders</value></data>
   <data name="Folders_AllFolders" xml:space="preserve"><value>all folders</value></data>
   <data name="Preview_LoadingFolder" xml:space="preserve"><value>Loading folder structure. Please wait...</value></data>
   <data name="Metadata_Title" xml:space="preserve"><value>Title</value></data>

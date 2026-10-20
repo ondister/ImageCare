@@ -27,6 +27,11 @@
   <data name="Folders_SearchFound" xml:space="preserve"><value>Найдено результатов: {0}. Запрос: «{1}»</value></data>
   <data name="Folders_SearchCancelled" xml:space="preserve"><value>Поиск отменён</value></data>
   <data name="Folders_SearchFailed" xml:space="preserve"><value>Ошибка поиска</value></data>
+  <data name="Folders_Recent" xml:space="preserve"><value>Популярные</value></data>
+  <data name="Folders_AddRecent" xml:space="preserve"><value>Добавить папку в популярные</value></data>
+  <data name="Folders_RemoveRecent" xml:space="preserve"><value>Убрать из популярных</value></data>
+  <data name="Folders_SelectRecent" xml:space="preserve"><value>Выберите папку для добавления в популярные</value></data>
+  <data name="Folders_RecentHint" xml:space="preserve"><value>Часто используемые и добавленные вручную папки</value></data>
   <data name="Folders_AllFolders" xml:space="preserve"><value>выбранной папке</value></data>
   <data name="Preview_LoadingFolder" xml:space="preserve"><value>Загрузка содержимого папки. Подождите...</value></data>
   <data name="Metadata_Title" xml:space="preserve"><value>Название</value></data>

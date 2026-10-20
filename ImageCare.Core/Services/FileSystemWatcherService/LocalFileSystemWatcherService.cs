@@ -35,7 +35,7 @@ public sealed class LocalFileSystemWatcherService : IFileSystemWatcherService, I
         _directoriesWatcher = new FileSystemWatcher
         {
             NotifyFilter = NotifyFilters.DirectoryName | NotifyFilters.LastWrite | NotifyFilters.Size,
-            IncludeSubdirectories = true
+            IncludeSubdirectories = false
         };
 
         _fileCreatedSubject = new Subject<FileModel>();

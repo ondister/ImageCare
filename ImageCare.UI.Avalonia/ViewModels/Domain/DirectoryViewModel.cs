@@ -44,6 +44,8 @@ internal class DirectoryViewModel : ViewModelBase, IComparable<DirectoryViewMode
     private bool _isSelected;
     private bool _isRenaming;
     private DirectoryViewModel? _parent;
+    private int? _recentOrder;
+    private bool _isPinnedPopular;
 
     public DirectoryViewModel(string? name,
                               string path,
@@ -115,6 +117,8 @@ internal class DirectoryViewModel : ViewModelBase, IComparable<DirectoryViewMode
 
     public FileManagerPanel FileManagerPanel { get; private set; }
 
+    public DirectoryViewModel? Parent => _parent;
+
     public Collections.SortedObservableCollection<DirectoryViewModel> ChildFileSystemItems { get; }
 
     public bool IsLoaded
@@ -125,8 +129,31 @@ internal class DirectoryViewModel : ViewModelBase, IComparable<DirectoryViewMode
     public DirectoryLoadState LoadState
     {
         get => _loadState;
-        private set => SetProperty(ref _loadState, value);
+        private set
+        {
+            if (SetProperty(ref _loadState, value))
+            {
+                RaisePropertyChanged(nameof(IsLoading));
+                RaiseFolderIconPropertiesChanged();
+            }
+        }
     }
+
+    public bool IsLoading => LoadState == DirectoryLoadState.Loading;
+
+    public bool IsOpen => IsSelected || (IsExpanded && ChildFileSystemItems.Count > 0);
+
+    public bool IsOpenFolderIconVisible => !IsLoading && IsOpen;
+
+    public bool IsClosedRegularFolder => !IsLoading && !IsOpen && !HasSupportedMedia;
+
+    public bool IsClosedMediaFolder => !IsLoading && !IsOpen && HasSupportedMedia;
+
+    public bool IsRecentEntry => _recentOrder.HasValue;
+
+    public bool IsPinnedPopular => _isPinnedPopular;
+
+    public int RecentOrder => _recentOrder ?? int.MaxValue;
 
     public bool IsExpanded
     {
@@ -135,6 +162,7 @@ internal class DirectoryViewModel : ViewModelBase, IComparable<DirectoryViewMode
         {
             if (SetProperty(ref _isExpanded, value))
             {
+                RaiseFolderIconPropertiesChanged();
                 HandleExpansionChange();
             }
         }
@@ -143,13 +171,39 @@ internal class DirectoryViewModel : ViewModelBase, IComparable<DirectoryViewMode
     public bool IsSelected
     {
         get => _isSelected;
-        set => SetProperty(ref _isSelected, value);
+        set
+        {
+            if (SetProperty(ref _isSelected, value))
+            {
+                RaiseFolderIconPropertiesChanged();
+            }
+        }
     }
 
     public bool HasSupportedMedia
     {
         get => _hasSupportedMedia;
-        set => SetProperty(ref _hasSupportedMedia, value);
+        set
+        {
+            if (SetProperty(ref _hasSupportedMedia, value))
+            {
+                RaiseFolderIconPropertiesChanged();
+            }
+        }
+    }
+
+    public void SetRecentOrder(int? order, bool isPinnedPopular = false)
+    {
+        if (_recentOrder == order && _isPinnedPopular == isPinnedPopular)
+        {
+            return;
+        }
+
+        _recentOrder = order;
+        _isPinnedPopular = isPinnedPopular;
+        RaisePropertyChanged(nameof(IsRecentEntry));
+        RaisePropertyChanged(nameof(IsPinnedPopular));
+        RaisePropertyChanged(nameof(RecentOrder));
     }
 
     public int CompareTo(DirectoryViewModel? other)
@@ -164,7 +218,20 @@ internal class DirectoryViewModel : ViewModelBase, IComparable<DirectoryViewMode
             return 1;
         }
 
+        if (IsRecentEntry && other.IsRecentEntry)
+        {
+            return RecentOrder.CompareTo(other.RecentOrder);
+        }
+
         return string.Compare(Path, other.Path, StringComparison.Ordinal);
+    }
+
+    private void RaiseFolderIconPropertiesChanged()
+    {
+        RaisePropertyChanged(nameof(IsOpen));
+        RaisePropertyChanged(nameof(IsOpenFolderIconVisible));
+        RaisePropertyChanged(nameof(IsClosedRegularFolder));
+        RaisePropertyChanged(nameof(IsClosedMediaFolder));
     }
 
     public DirectoryViewModel? FindChildByPathRecursively(string pathToFind)
@@ -249,17 +316,23 @@ internal class DirectoryViewModel : ViewModelBase, IComparable<DirectoryViewMode
                              ?? throw new InvalidOperationException($"Cannot rename root directory '{oldDirectory.Path}'");
             var renamedDirectory = new DirectoryModel(newName, System.IO.Path.Combine(parentPath, newName));
 
-            if (IsExpanded)
+            var expandedDirectories = EnumerateSubtree()
+                                     .Where(directory => directory.IsExpanded)
+                                     .Select(directory => _mapper.Map<DirectoryModel>(directory))
+                                     .ToArray();
+            foreach (var expandedDirectory in expandedDirectories)
             {
-                _folderService.RemoveVisitingFolder(oldDirectory, FileManagerPanel);
+                _folderService.RemoveVisitingFolder(expandedDirectory, FileManagerPanel);
             }
 
             UpdateDirectory(renamedDirectory);
             _parent?.ChildFileSystemItems.RefreshSort();
 
-            if (IsExpanded)
+            foreach (var expandedDirectory in EnumerateSubtree().Where(directory => directory.IsExpanded))
             {
-                _folderService.AddVisitingFolder(renamedDirectory, FileManagerPanel);
+                _folderService.AddVisitingFolder(
+                    _mapper.Map<DirectoryModel>(expandedDirectory),
+                    FileManagerPanel);
             }
 
             if (IsSelected)
@@ -276,6 +349,22 @@ internal class DirectoryViewModel : ViewModelBase, IComparable<DirectoryViewMode
         {
             IsEditing = false;
             _isRenaming = false;
+        }
+    }
+
+    private IEnumerable<DirectoryViewModel> EnumerateSubtree()
+    {
+        var pending = new Stack<DirectoryViewModel>();
+        pending.Push(this);
+        while (pending.Count > 0)
+        {
+            var current = pending.Pop();
+            yield return current;
+
+            foreach (var child in current.ChildFileSystemItems)
+            {
+                pending.Push(child);
+            }
         }
     }
 
@@ -330,6 +419,12 @@ internal class DirectoryViewModel : ViewModelBase, IComparable<DirectoryViewMode
             }
             else
             {
+                _expantionCancellationTokenSource?.Cancel();
+                if (this is not DeviceViewModel and not SpecialDirectoryViewModel)
+                {
+                    LoadState = DirectoryLoadState.Initial;
+                }
+
                 _folderService.RemoveVisitingFolder(_mapper.Map<DirectoryModel>(this), FileManagerPanel);
             }
         }
@@ -370,6 +465,8 @@ internal class DirectoryViewModel : ViewModelBase, IComparable<DirectoryViewMode
     {
         try
         {
+            RaiseFolderIconPropertiesChanged();
+
             if (eventArgs.NewItems != null)
             {
                 foreach (var item in eventArgs.NewItems.OfType<DirectoryViewModel>())
@@ -439,6 +536,14 @@ internal class DirectoryViewModel : ViewModelBase, IComparable<DirectoryViewMode
         finally
         {
             _loadingSemaphore.Release();
+        }
+    }
+
+    public void InvalidateChildren()
+    {
+        if (this is not DeviceViewModel and not SpecialDirectoryViewModel)
+        {
+            LoadState = DirectoryLoadState.Initial;
         }
     }
 

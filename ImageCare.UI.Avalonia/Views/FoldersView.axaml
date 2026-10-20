@@ -11,159 +11,228 @@
              x:DataType="viewModels:FoldersViewModel"
              x:Name="This">
 
-    <Grid Margin="{StaticResource MarginAll.Small}">
-
-        <Grid.RowDefinitions>
-            <RowDefinition Height="*" />
-            <RowDefinition Height="Auto" />
-        </Grid.RowDefinitions>
-
-        <!-- Folders Panel -->
-        <TreeView Grid.Row="0"
+    <Grid Margin="4,2,4,4" RowDefinitions="*,Auto">
+        <TreeView x:Name="FolderTree"
+                  Grid.Row="0"
+                  Background="Transparent"
                   ItemsSource="{Binding FileSystemItemViewModels}"
                   SelectedItem="{Binding SelectedFileSystemItem, Mode=TwoWay}"
                   SelectionMode="Single"
                   IsVisible="{Binding !IsInSearchSession}">
-
             <TreeView.Styles>
                 <Style Selector="TreeViewItem" x:DataType="domain:DirectoryViewModel">
                     <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
+                    <Setter Property="MinHeight" Value="26" />
+                    <Setter Property="Padding" Value="2,0" />
+                    <Setter Property="Margin" Value="0" />
+                    <Setter Property="CornerRadius" Value="6" />
+                </Style>
+                <Style Selector="TreeViewItem:selected">
+                    <Setter Property="Background" Value="{DynamicResource Brush.AccentSubtle}" />
+                    <Setter Property="Foreground" Value="{DynamicResource Brush.Accent}" />
+                </Style>
+                <Style Selector="TreeViewItem:pointerover:not(:selected)">
+                    <Setter Property="Background" Value="{DynamicResource ThemeControlLowBrush}" />
+                </Style>
+                <Style Selector="Border.FolderRow.Selected">
+                    <Setter Property="Background" Value="{DynamicResource Brush.AccentSubtle}" />
+                </Style>
+                <Style Selector="Button.TreeAction">
+                    <Setter Property="Width" Value="22" />
+                    <Setter Property="Height" Value="22" />
+                    <Setter Property="MinWidth" Value="0" />
+                    <Setter Property="MinHeight" Value="0" />
+                    <Setter Property="Padding" Value="5" />
+                    <Setter Property="CornerRadius" Value="5" />
+                    <Setter Property="VerticalAlignment" Value="Center" />
                 </Style>
             </TreeView.Styles>
 
             <TreeView.DataTemplates>
-
                 <TreeDataTemplate DataType="domain:DeviceViewModel" ItemsSource="{Binding ChildFileSystemItems}">
-                    <StackPanel Orientation="Horizontal">
-                        <iconPacks:PackIconMaterial Kind="DesktopClassic"
-                                                    Height="{StaticResource Icon.Size.Small}"
-                                                    Width="{StaticResource Icon.Size.Small}"
-                                                    Margin="{StaticResource MarginHorizontal.Small}" />
-                        <TextBlock Text="{Binding Name}"
-                                   Margin="{StaticResource MarginHorizontal.Small}" />
-                    </StackPanel>
+                    <Grid MinHeight="26" ColumnDefinitions="24,*" VerticalAlignment="Center">
+                        <iconPacks:PackIconMaterial Grid.Column="0"
+                                                    Kind="DesktopClassic"
+                                                    Width="18"
+                                                    Height="18"
+                                                    HorizontalAlignment="Center"
+                                                    VerticalAlignment="Center" />
+                        <TextBlock Grid.Column="1"
+                                   Margin="7,0,4,0"
+                                   Text="{Binding Name}"
+                                   FontWeight="SemiBold"
+                                   VerticalAlignment="Center"
+                                   TextTrimming="CharacterEllipsis" />
+                    </Grid>
+                </TreeDataTemplate>
+
+                <TreeDataTemplate DataType="domain:SpecialDirectoryViewModel" ItemsSource="{Binding ChildFileSystemItems}">
+                    <Grid MinHeight="28" ColumnDefinitions="20,Auto,Auto" VerticalAlignment="Center">
+                        <iconPacks:PackIconMaterial Grid.Column="0"
+                                                    Kind="History"
+                                                    Width="18"
+                                                    Height="18"
+                                                    HorizontalAlignment="Center"
+                                                    VerticalAlignment="Center" />
+                        <TextBlock Grid.Column="1"
+                                   Margin="4,0,2,0"
+                                   Text="{localization:Loc Folders_Recent}"
+                                   FontWeight="SemiBold"
+                                   VerticalAlignment="Center"
+                                   TextTrimming="CharacterEllipsis"
+                                   ToolTip.Tip="{localization:Loc Folders_RecentHint}" />
+                        <Button Grid.Column="2"
+                                Classes="TreeAction"
+                                Click="OnChoosePopularFolderClick"
+                                ToolTip.Tip="{localization:Loc Folders_AddRecent}">
+                            <iconPacks:PackIconMaterial Kind="Plus"
+                                                        Width="14"
+                                                        Height="14" />
+                        </Button>
+                    </Grid>
                 </TreeDataTemplate>
 
                 <TreeDataTemplate DataType="domain:FixedDriveViewModel" ItemsSource="{Binding ChildFileSystemItems}">
-                    <StackPanel Orientation="Horizontal">
-                        <iconPacks:PackIconMaterial Kind="Harddisk"
-                                                    Height="{StaticResource Icon.Size.Small}"
-                                                    Width="{StaticResource Icon.Size.Small}"
-                                                    Margin="{StaticResource MarginHorizontal.Small}" />
-                        <TextBlock Text="{Binding Name}"
-                                   Margin="{StaticResource MarginHorizontal.Small}" />
-                    </StackPanel>
+                    <Grid MinHeight="26" ColumnDefinitions="24,*" VerticalAlignment="Center">
+                        <iconPacks:PackIconMaterial Grid.Column="0"
+                                                    Kind="Harddisk"
+                                                    Width="18"
+                                                    Height="18"
+                                                    HorizontalAlignment="Center"
+                                                    VerticalAlignment="Center" />
+                        <TextBlock Grid.Column="1"
+                                   Margin="7,0,4,0"
+                                   Text="{Binding Name}"
+                                   VerticalAlignment="Center"
+                                   TextTrimming="CharacterEllipsis" />
+                    </Grid>
                 </TreeDataTemplate>
 
                 <TreeDataTemplate DataType="domain:NetworkDriveViewModel" ItemsSource="{Binding ChildFileSystemItems}">
-                    <StackPanel Orientation="Horizontal">
-                        <iconPacks:PackIconMaterial Kind="FolderNetworkOutline"
-                                                    Height="{StaticResource Icon.Size.Small}"
-                                                    Width="{StaticResource Icon.Size.Small}"
-                                                    Margin="{StaticResource MarginHorizontal.Small}" />
-                        <TextBlock Text="{Binding Name}"
-                                   Margin="{StaticResource MarginHorizontal.Small}" />
-                    </StackPanel>
+                    <Grid MinHeight="26" ColumnDefinitions="24,*" VerticalAlignment="Center">
+                        <iconPacks:PackIconMaterial Grid.Column="0"
+                                                    Kind="FolderNetworkOutline"
+                                                    Width="18"
+                                                    Height="18"
+                                                    HorizontalAlignment="Center"
+                                                    VerticalAlignment="Center" />
+                        <TextBlock Grid.Column="1"
+                                   Margin="7,0,4,0"
+                                   Text="{Binding Name}"
+                                   VerticalAlignment="Center"
+                                   TextTrimming="CharacterEllipsis" />
+                    </Grid>
                 </TreeDataTemplate>
 
-                <TreeDataTemplate DataType="domain:RemovableDriveViewModel"
-                                  ItemsSource="{Binding ChildFileSystemItems}">
-                    <StackPanel Orientation="Horizontal">
-                        <iconPacks:PackIconMaterial Kind="Sd"
-                                                    Height="{StaticResource Icon.Size.Small}"
-                                                    Width="{StaticResource Icon.Size.Small}"
-                                                    Margin="{StaticResource MarginHorizontal.Small}" />
-                        <TextBlock Text="{Binding Name}"
-                                   Margin="{StaticResource MarginHorizontal.Small}" />
-                        <StackPanel Orientation="Vertical">
-                            <ProgressBar
-                                Width="40"
-                                Maximum="100"
-                                Minimum="0"
-                                HorizontalAlignment="Left"
-                                Value="{Binding SpacePercentage}" />
+                <TreeDataTemplate DataType="domain:RemovableDriveViewModel" ItemsSource="{Binding ChildFileSystemItems}">
+                    <Grid MinHeight="34" ColumnDefinitions="24,*,Auto" VerticalAlignment="Center">
+                        <iconPacks:PackIconMaterial Grid.Column="0"
+                                                    Kind="Sd"
+                                                    Width="18"
+                                                    Height="18"
+                                                    HorizontalAlignment="Center"
+                                                    VerticalAlignment="Center" />
+                        <TextBlock Grid.Column="1"
+                                   Margin="7,0,8,0"
+                                   Text="{Binding Name}"
+                                   VerticalAlignment="Center"
+                                   TextTrimming="CharacterEllipsis" />
+                        <StackPanel Grid.Column="2"
+                                    Width="82"
+                                    Margin="4,3,4,3"
+                                    Spacing="3"
+                                    VerticalAlignment="Center">
                             <TextBlock Text="{Binding SpaceInfo}"
-                                       HorizontalAlignment="Right"
-                                       FontSize="{StaticResource Font.Size.Small}"
-                                       Margin="{StaticResource MarginVertical.Small}" />
+                                       FontSize="{StaticResource Font.Size.Micro}"
+                                       HorizontalAlignment="Right" />
+                            <ProgressBar Height="3"
+                                         Minimum="0"
+                                         Maximum="100"
+                                         Value="{Binding SpacePercentage}" />
                         </StackPanel>
-                    </StackPanel>
+                    </Grid>
                 </TreeDataTemplate>
 
                 <TreeDataTemplate x:DataType="domain:DirectoryViewModel" ItemsSource="{Binding ChildFileSystemItems}">
-                    <StackPanel Orientation="Horizontal">
-                        <iconPacks:PackIconMaterial Kind="FolderOutline"
-                                                    Height="{StaticResource Icon.Size.Small}"
-                                                    Width="{StaticResource Icon.Size.Small}"
-                                                    Margin="{StaticResource MarginHorizontal.Small}">
-                            <iconPacks:PackIconMaterial.IsVisible>
-                                <MultiBinding Converter="{x:Static BoolConverters.And}">
-                                    <Binding Path="!IsExpanded" />
-                                    <Binding Path="!HasSupportedMedia" />
-                                </MultiBinding>
-                            </iconPacks:PackIconMaterial.IsVisible>
-                        </iconPacks:PackIconMaterial>
+                    <Border Classes="FolderRow"
+                            Classes.Selected="{Binding IsSelected}"
+                            MinHeight="26"
+                            Background="Transparent"
+                            CornerRadius="5">
+                        <Grid MinHeight="26" ColumnDefinitions="24,*,Auto" VerticalAlignment="Center">
+                        <Grid Grid.Column="0" Width="20" Height="20">
+                            <iconPacks:PackIconMaterial Kind="FolderOutline"
+                                                        Width="18"
+                                                        Height="18"
+                                                        HorizontalAlignment="Center"
+                                                        VerticalAlignment="Center"
+                                                        IsVisible="{Binding IsClosedRegularFolder}" />
+                            <iconPacks:PackIconMaterial Kind="FolderOpenOutline"
+                                                        Width="18"
+                                                        Height="18"
+                                                        HorizontalAlignment="Center"
+                                                        VerticalAlignment="Center"
+                                                        IsVisible="{Binding IsOpenFolderIconVisible}" />
+                            <iconPacks:PackIconMaterial Kind="FolderImage"
+                                                        Width="18"
+                                                        Height="18"
+                                                        HorizontalAlignment="Center"
+                                                        VerticalAlignment="Center"
+                                                        IsVisible="{Binding IsClosedMediaFolder}" />
+                            <avaloniaProgressRing:ProgressRing Width="18"
+                                                               Height="18"
+                                                               IsActive="{Binding IsLoading}"
+                                                               HorizontalAlignment="Center"
+                                                               VerticalAlignment="Center"
+                                                               IsVisible="{Binding IsLoading}" />
+                        </Grid>
 
-                        <iconPacks:PackIconMaterial Kind="FolderOpenOutline"
-                                                    Height="{StaticResource Icon.Size.Small}"
-                                                    Width="{StaticResource Icon.Size.Small}"
-                                                    Margin="{StaticResource MarginHorizontal.Small}"
-                                                    IsVisible="{Binding IsExpanded}" />
-
-                        <iconPacks:PackIconMaterial Kind="FolderImage"
-                                                    Height="{StaticResource Icon.Size.Small}"
-                                                    Width="{StaticResource Icon.Size.Small}"
-                                                    Margin="{StaticResource MarginHorizontal.Small}">
-                            <iconPacks:PackIconMaterial.IsVisible>
-                                <MultiBinding Converter="{x:Static BoolConverters.And}">
-                                    <Binding Path="!IsExpanded" />
-                                    <Binding Path="HasSupportedMedia" />
-                                </MultiBinding>
-                            </iconPacks:PackIconMaterial.IsVisible>
-                        </iconPacks:PackIconMaterial>
-
-                        <avaloniaProgressRing:ProgressRing Width="{StaticResource Icon.Size.Small}"
-                                                           Height="{StaticResource Icon.Size.Small}"
-                                                           IsActive="True"
-                                                           HorizontalAlignment="Center"
-                                                           VerticalAlignment="Center"
-                                                           Margin="{StaticResource MarginHorizontal.Small}"
-                                                           IsVisible="{Binding IsLoaded}" />
-                        <ContentPresenter Content="{Binding}"
+                        <ContentPresenter Grid.Column="1"
+                                          Content="{Binding}"
                                           Classes.IsEditing="{Binding IsEditing}"
                                           Classes.IsNotEditing="{Binding !IsEditing}"
-                                          Margin="{StaticResource MarginHorizontal.Small}">
-
+                                          Margin="7,0,4,0"
+                                          VerticalAlignment="Center">
                             <ContentPresenter.KeyBindings>
                                 <KeyBinding Command="{Binding RenameFolderCommand}" Gesture="Enter" />
                             </ContentPresenter.KeyBindings>
-
                             <ContentPresenter.Resources>
-                                <!-- Display Template -->
-                                <DataTemplate x:Key="DisplayTemplate"
-                                              x:DataType="domain:DirectoryViewModel">
-                                    <TextBlock Text="{Binding Name}">
-                                        <TextBlock.ContextMenu>
-                                            <ContextMenu>
-                                                <MenuItem Header="{localization:Loc Common_Create}"
-                                                          Command="{Binding CreateFolderCommand}" />
-                                                <MenuItem Header="{localization:Loc Common_Rename}"
-                                                          Command="{Binding StartRenameFolderCommand}" />
-                                                <MenuItem Header="{localization:Loc Common_Delete}"
-                                                          Command="{Binding DeleteFolderCommand}" />
-                                            </ContextMenu>
-                                        </TextBlock.ContextMenu>
-                                    </TextBlock>
+                                <DataTemplate x:Key="DisplayTemplate" x:DataType="domain:DirectoryViewModel">
+                                    <StackPanel Spacing="0">
+                                        <TextBlock Text="{Binding Name}"
+                                                   VerticalAlignment="Center"
+                                                   TextTrimming="CharacterEllipsis">
+                                            <TextBlock.ContextMenu>
+                                                <ContextMenu>
+                                                    <MenuItem Header="{localization:Loc Folders_AddRecent}"
+                                                              Tag="{Binding}"
+                                                              Click="OnAddFolderToRecentClick"
+                                                              IsVisible="{Binding !IsRecentEntry}" />
+                                                    <Separator IsVisible="{Binding !IsRecentEntry}" />
+                                                    <MenuItem Header="{localization:Loc Common_Create}"
+                                                              Command="{Binding CreateFolderCommand}"
+                                                              IsVisible="{Binding !IsRecentEntry}" />
+                                                    <MenuItem Header="{localization:Loc Common_Rename}"
+                                                              Command="{Binding StartRenameFolderCommand}"
+                                                              IsVisible="{Binding !IsRecentEntry}" />
+                                                    <MenuItem Header="{localization:Loc Common_Delete}"
+                                                              Command="{Binding DeleteFolderCommand}"
+                                                              IsVisible="{Binding !IsRecentEntry}" />
+                                                </ContextMenu>
+                                            </TextBlock.ContextMenu>
+                                        </TextBlock>
+                                        <TextBlock Text="{Binding Path}"
+                                                   FontSize="{StaticResource Font.Size.Micro}"
+                                                   Opacity="0.65"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   IsVisible="{Binding IsRecentEntry}" />
+                                    </StackPanel>
                                 </DataTemplate>
-
-                                <!-- Edit Template -->
-                                <DataTemplate x:Key="EditTemplate"
-                                              x:DataType="domain:DirectoryViewModel">
+                                <DataTemplate x:Key="EditTemplate" x:DataType="domain:DirectoryViewModel">
                                     <TextBox Text="{Binding EditableName, UpdateSourceTrigger=PropertyChanged}"
                                              LostFocus="OnNameTextBoxLostFocus" />
                                 </DataTemplate>
                             </ContentPresenter.Resources>
-
                             <ContentPresenter.Styles>
                                 <Style Selector="ContentPresenter.IsNotEditing">
                                     <Setter Property="ContentTemplate" Value="{StaticResource DisplayTemplate}" />
@@ -173,96 +242,101 @@
                                 </Style>
                             </ContentPresenter.Styles>
                         </ContentPresenter>
-                    </StackPanel>
+
+                        <Button Grid.Column="2"
+                                Classes="TreeAction"
+                                Margin="2,0"
+                                IsVisible="{Binding IsPinnedPopular}"
+                                Command="{Binding DataContext.RemoveRecentFolderCommand, ElementName=This}"
+                                CommandParameter="{Binding}"
+                                ToolTip.Tip="{localization:Loc Folders_RemoveRecent}">
+                            <iconPacks:PackIconMaterial Kind="Close"
+                                                        Width="13"
+                                                        Height="13" />
+                        </Button>
+                        </Grid>
+                    </Border>
                 </TreeDataTemplate>
             </TreeView.DataTemplates>
         </TreeView>
 
-        <!-- Search Results Panel -->
         <Border Grid.Row="0"
+                Padding="4"
                 Background="{DynamicResource ThemeBackgroundBrush}"
                 IsVisible="{Binding IsInSearchSession}">
-            <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="*" />
-                </Grid.RowDefinitions>
-
-                <!-- Search Header -->
+            <Grid RowDefinitions="Auto,*">
                 <TextBlock Grid.Row="0"
                            Text="{Binding SearchHeader}"
-                           FontWeight="Bold"
-                           Margin="{StaticResource MarginBottom.Small}" />
-
-                <!-- Search Results List -->
-                <ItemsControl Grid.Row="1"
-                              ItemsSource="{Binding SearchResults}">
-
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate x:DataType="domain:DirectoryViewModel">
-                            <StackPanel Orientation="Horizontal"
-                                        Margin="{StaticResource MarginVertical.Small}">
-                                <Button Margin="{StaticResource MarginAll.Small}"
-                                              VerticalAlignment="Center"
-                                              VerticalContentAlignment="Center"
-                                              Command="{Binding ElementName=This, Path=DataContext.SetSearchResultCommand}"
-                                              CommandParameter="{Binding }"
-                                              ToolTip.Tip="{localization:Loc Action_OpenFolder}">
-
-                                        <iconPacks:PackIconMaterial Kind="FolderOutline"
-                                                                    Height="{StaticResource Icon.Size.Small}"
-                                                                    Width="{StaticResource Icon.Size.Small}"
-                                                                    Margin="{StaticResource MarginAll.Small}" />
-
+                           FontWeight="SemiBold"
+                           Margin="6,4,6,8" />
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                    <ItemsControl ItemsSource="{Binding SearchResults}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="domain:DirectoryViewModel">
+                                <Button Margin="2"
+                                        Padding="8,6"
+                                        HorizontalContentAlignment="Stretch"
+                                        Command="{Binding DataContext.SetSearchResultCommand, ElementName=This}"
+                                        CommandParameter="{Binding}"
+                                        ToolTip.Tip="{localization:Loc Action_OpenFolder}">
+                                    <Grid ColumnDefinitions="24,*">
+                                        <iconPacks:PackIconMaterial Grid.Column="0"
+                                                                    Kind="FolderSearch"
+                                                                    Width="18"
+                                                                    Height="18"
+                                                                    VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" Margin="8,0,0,0">
+                                            <TextBlock Text="{Binding Name}"
+                                                       FontWeight="SemiBold"
+                                                       TextTrimming="CharacterEllipsis" />
+                                            <TextBlock Text="{Binding Path}"
+                                                       FontSize="{StaticResource Font.Size.Micro}"
+                                                       Opacity="0.65"
+                                                       TextTrimming="CharacterEllipsis" />
+                                        </StackPanel>
+                                    </Grid>
                                 </Button>
-                                <TextBlock Text="{Binding Name}"
-                                           VerticalAlignment="Center" />
-                                <TextBlock Text="{Binding Path}"
-                                           VerticalAlignment="Center"
-                                           FontSize="{StaticResource Font.Size.Small}"
-                                           Opacity="0.7"
-                                           Margin="20,0,0,0" />
-                            </StackPanel>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
             </Grid>
         </Border>
 
-
-        <!-- Loading Overlay -->
-        <Border Grid.Row="0" Grid.RowSpan="2"
+        <Border Grid.Row="0"
+                Grid.RowSpan="2"
                 Background="{DynamicResource ThemeBackgroundBrush}"
-                Opacity="0.85"
+                Opacity="0.92"
                 IsVisible="{Binding IsLoading}">
             <StackPanel HorizontalAlignment="Center"
                         VerticalAlignment="Center"
                         Spacing="12">
-                <avaloniaProgressRing:ProgressRing Width="60"
-                                                   Height="60"
+                <avaloniaProgressRing:ProgressRing Width="48"
+                                                   Height="48"
                                                    IsActive="{Binding IsLoading}"
                                                    HorizontalAlignment="Center" />
-                <TextBlock Text="{localization:Loc Preview_LoadingFolder}"
+                <TextBlock MaxWidth="220"
+                           Text="{localization:Loc Preview_LoadingFolder}"
                            HorizontalAlignment="Center"
                            TextAlignment="Center"
                            TextWrapping="Wrap" />
             </StackPanel>
         </Border>
 
-        <!-- Search Panel -->
         <Border Grid.Row="1"
-                Height="30"
+                Height="32"
                 Background="{DynamicResource ThemeControlMidBrush}"
-                CornerRadius="4"
-                Margin="0,0,0,4"
+                CornerRadius="6"
+                Margin="2,4,2,0"
                 IsVisible="{Binding IsSearchEnabled}">
-            <Grid Height="28" ColumnDefinitions="*,Auto">
-                <!-- Search TextBox with Progress Overlay -->
+            <Grid Height="30" ColumnDefinitions="*,Auto">
                 <Grid Grid.Column="0">
                     <TextBox x:Name="SearchTextBox"
-                             Height="28"
+                             Height="30"
                              MinHeight="0"
-                             Padding="6,0"
+                             Padding="8,0"
+                             Background="Transparent"
+                             BorderThickness="0"
                              VerticalContentAlignment="Center"
                              PlaceholderText="{Binding SearchTarget}"
                              IsEnabled="{Binding !IsSearching}"
@@ -271,53 +345,39 @@
                             <KeyBinding Command="{Binding PerformSearchCommand}" Gesture="Enter" />
                         </TextBox.KeyBindings>
                     </TextBox>
-
                     <Border Background="{DynamicResource ThemeControlMidBrush}"
-                            Opacity="0.9"
+                            CornerRadius="6"
+                            Opacity="0.96"
                             IsVisible="{Binding IsSearching}">
                         <StackPanel Orientation="Horizontal"
                                     HorizontalAlignment="Center"
                                     VerticalAlignment="Center"
                                     Spacing="6">
-                            <avaloniaProgressRing:ProgressRing Width="{StaticResource Icon.Size.Small}"
-                                                               Height="{StaticResource Icon.Size.Small}"
+                            <avaloniaProgressRing:ProgressRing Width="16"
+                                                               Height="16"
                                                                IsActive="True" />
                             <TextBlock Text="{localization:Loc Folders_Searching}"
-                                       VerticalAlignment="Center"
-                                       Foreground="{DynamicResource ThemeForegroundBrush}" />
+                                       VerticalAlignment="Center" />
                         </StackPanel>
                     </Border>
                 </Grid>
-
                 <Button Grid.Column="1"
-                        Width="28"
-                        Height="28"
-                        MinWidth="0"
-                        MinHeight="0"
-                        Padding="4"
+                        Classes="TreeAction"
+                        Margin="2"
                         Command="{Binding PerformSearchCommand}"
                         ToolTip.Tip="{localization:Loc Folders_SearchFolders}"
                         IsVisible="{Binding !IsInSearchSession}">
-                    <iconPacks:PackIconMaterial Kind="FolderSearch"
-                                                Height="{StaticResource Icon.Size.Small}"
-                                                Width="{StaticResource Icon.Size.Small}" />
+                    <iconPacks:PackIconMaterial Kind="FolderSearch" Width="16" Height="16" />
                 </Button>
-
                 <Button Grid.Column="1"
-                        Width="28"
-                        Height="28"
-                        MinWidth="0"
-                        MinHeight="0"
-                        Padding="4"
+                        Classes="TreeAction"
+                        Margin="2"
                         Command="{Binding ClearSearchCommand}"
                         ToolTip.Tip="{localization:Loc Action_ClearSearch}"
                         IsVisible="{Binding IsInSearchSession}">
-                    <iconPacks:PackIconMaterial Kind="Close"
-                                                Height="{StaticResource Icon.Size.Small}"
-                                                Width="{StaticResource Icon.Size.Small}" />
+                    <iconPacks:PackIconMaterial Kind="Close" Width="16" Height="16" />
                 </Button>
             </Grid>
         </Border>
-
     </Grid>
 </UserControl>

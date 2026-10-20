@@ -14,6 +14,7 @@ public sealed class LocalFolderHistoryService : IFolderHistoryService
 
     private readonly IConfigurationService _configurationService;
     private readonly ConcurrentQueue<string> _recentFolders = new();
+    private readonly List<string> _popularFolders = [];
     private readonly ConcurrentDictionary<string, IReadOnlyList<SmartDirectoryModel>> _smartFoldersCache = new(StringComparer.OrdinalIgnoreCase);
     private readonly object _syncRoot = new();
     private readonly int _bufferSize = DefaultBufferSize;
@@ -24,38 +25,99 @@ public sealed class LocalFolderHistoryService : IFolderHistoryService
         LoadHistory();
     }
 
+    public event EventHandler? HistoryChanged;
+
     public void AddFolderToHistory(string folderPath)
     {
-        if (string.IsNullOrWhiteSpace(folderPath) || !Directory.Exists(folderPath))
+        if (string.Equals(folderPath, DirectoryModel.RootPath, StringComparison.Ordinal) ||
+            !TryNormalizeExistingPath(folderPath, out var normalizedPath))
         {
             return;
         }
 
-        var normalizedPath = Path.TrimEndingDirectorySeparator(Path.GetFullPath(folderPath));
-
+        var changed = false;
         lock (_syncRoot)
         {
-            // Remove if exists and move to front
-            var tempList = _recentFolders
-                           .Where(p => !string.Equals(p, normalizedPath, StringComparison.OrdinalIgnoreCase))
-                           .ToList();
+            var comparer = GetPathComparer();
+            var currentPaths = _recentFolders.ToList();
+            var updatedPaths = currentPaths
+                              .Where(path => !comparer.Equals(path, normalizedPath))
+                              .Prepend(normalizedPath)
+                              .Take(_bufferSize)
+                              .ToList();
 
-            _recentFolders.Clear();
-
-            tempList.Insert(0, normalizedPath);
-
-            // Trim to buffer size
-            if (tempList.Count > _bufferSize)
+            changed = !currentPaths.SequenceEqual(updatedPaths, comparer);
+            if (changed)
             {
-                tempList = tempList.Take(_bufferSize).ToList();
+                ReplaceRecentFolders(updatedPaths);
+                _smartFoldersCache.Clear();
             }
+        }
 
-            foreach (var path in tempList)
+        if (changed)
+        {
+            HistoryChanged?.Invoke(this, EventArgs.Empty);
+        }
+    }
+
+    public void AddFolderToPopular(string folderPath)
+    {
+        if (!TryNormalizeExistingPath(folderPath, out var normalizedPath))
+        {
+            return;
+        }
+
+        var changed = false;
+        lock (_syncRoot)
+        {
+            var comparer = GetPathComparer();
+            if (!_popularFolders.Contains(normalizedPath, comparer))
             {
-                _recentFolders.Enqueue(path);
+                _popularFolders.Insert(0, normalizedPath);
+                changed = true;
             }
+        }
 
-            _smartFoldersCache.Clear(); // Invalidate cache when history changes
+        if (changed)
+        {
+            HistoryChanged?.Invoke(this, EventArgs.Empty);
+        }
+    }
+
+    public void RemoveFolderFromPopular(string folderPath)
+    {
+        if (string.IsNullOrWhiteSpace(folderPath))
+        {
+            return;
+        }
+
+        string normalizedPath;
+        try
+        {
+            normalizedPath = Path.TrimEndingDirectorySeparator(Path.GetFullPath(folderPath));
+        }
+        catch (Exception)
+        {
+            return;
+        }
+
+        var changed = false;
+        lock (_syncRoot)
+        {
+            changed = _popularFolders.RemoveAll(path => GetPathComparer().Equals(path, normalizedPath)) > 0;
+        }
+
+        if (changed)
+        {
+            HistoryChanged?.Invoke(this, EventArgs.Empty);
+        }
+    }
+
+    public IReadOnlyList<string> GetPopularFolders()
+    {
+        lock (_syncRoot)
+        {
+            return _popularFolders.ToArray();
         }
     }
 
@@ -108,6 +170,7 @@ public sealed class LocalFolderHistoryService : IFolderHistoryService
             lock (_syncRoot)
             {
                 configuration.RecentFolderPaths = _recentFolders.ToList();
+                configuration.PopularFolderPaths = _popularFolders.ToList();
 
                 // Save current smart folders for persistence (using default min intersections)
                 var smartFolders = ComputeSmartFolders(_recentFolders.ToArray(), DefaultMinIntersections);
@@ -139,6 +202,16 @@ public sealed class LocalFolderHistoryService : IFolderHistoryService
                     }
                 }
 
+                _popularFolders.Clear();
+                foreach (var path in configuration.PopularFolderPaths)
+                {
+                    if (TryNormalizeExistingPath(path, out var normalizedPath) &&
+                        !_popularFolders.Contains(normalizedPath, GetPathComparer()))
+                    {
+                        _popularFolders.Add(normalizedPath);
+                    }
+                }
+
                 _smartFoldersCache.Clear();
             }
         }
@@ -146,6 +219,39 @@ public sealed class LocalFolderHistoryService : IFolderHistoryService
         {
             throw new ServiceException("Failed to load folder history", ex);
         }
+    }
+
+    private void ReplaceRecentFolders(IEnumerable<string> paths)
+    {
+        _recentFolders.Clear();
+        foreach (var path in paths)
+        {
+            _recentFolders.Enqueue(path);
+        }
+    }
+
+    private static bool TryNormalizeExistingPath(string folderPath, out string normalizedPath)
+    {
+        normalizedPath = string.Empty;
+        if (string.IsNullOrWhiteSpace(folderPath))
+        {
+            return false;
+        }
+
+        try
+        {
+            normalizedPath = Path.TrimEndingDirectorySeparator(Path.GetFullPath(folderPath));
+            return Directory.Exists(normalizedPath);
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+    }
+
+    private static StringComparer GetPathComparer()
+    {
+        return OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
     }
 
     private IReadOnlyList<SmartDirectoryModel> ComputeSmartFolders(IReadOnlyList<string> recentFolders, int minIntersections)

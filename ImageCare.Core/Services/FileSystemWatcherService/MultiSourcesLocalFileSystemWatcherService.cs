@@ -1,4 +1,4 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
@@ -10,201 +10,231 @@ namespace ImageCare.Core.Services.FileSystemWatcherService;
 
 public sealed class MultiSourcesLocalFileSystemWatcherService : IMultiSourcesFileSystemWatcherService, IDisposable
 {
-	private readonly Subject<FileModel> _fileCreatedSubject;
-	private readonly Subject<FileModel> _fileDeletedSubject;
-	private readonly Subject<FileRenamedModel> _fileRenamedSubject;
+    private readonly Subject<FileModel> _fileCreatedSubject = new();
+    private readonly Subject<FileModel> _fileDeletedSubject = new();
+    private readonly Subject<FileRenamedModel> _fileRenamedSubject = new();
+    private readonly Subject<DirectoryModel> _directoryCreatedSubject = new();
+    private readonly Subject<DirectoryModel> _directoryDeletedSubject = new();
+    private readonly Subject<DirectoryRenamedModel> _directoryRenamedSubject = new();
+    private readonly Dictionary<string, WatchRegistration> _registrations;
+    private readonly object _syncRoot = new();
+    private bool _disposed;
 
-	private readonly Subject<DirectoryModel> _directoryCreatedSubject;
-	private readonly Subject<DirectoryModel> _directoryDeletedSubject;
-	private readonly Subject<DirectoryRenamedModel> _directoryRenamedSubject;
+    public MultiSourcesLocalFileSystemWatcherService()
+    {
+        var pathComparer = OperatingSystem.IsWindows()
+            ? StringComparer.OrdinalIgnoreCase
+            : StringComparer.Ordinal;
+        _registrations = new Dictionary<string, WatchRegistration>(pathComparer);
+    }
 
-	private readonly ConcurrentDictionary<string, LocalFileSystemWatcherService> _services = new();
-	private readonly ConcurrentDictionary<string, CompositeDisposable> _subscriptions = new();
-	private bool _disposed;
+    public IObservable<FileModel> FileCreated => _fileCreatedSubject.AsObservable();
 
-	public MultiSourcesLocalFileSystemWatcherService()
-	{
-		_fileCreatedSubject = new Subject<FileModel>();
-		_fileDeletedSubject = new Subject<FileModel>();
-		_fileRenamedSubject = new Subject<FileRenamedModel>();
+    public IObservable<FileModel> FileDeleted => _fileDeletedSubject.AsObservable();
 
-		_directoryCreatedSubject = new Subject<DirectoryModel>();
-		_directoryDeletedSubject = new Subject<DirectoryModel>();
-		_directoryRenamedSubject = new Subject<DirectoryRenamedModel>();
-	}
+    public IObservable<FileRenamedModel> FileRenamed => _fileRenamedSubject.AsObservable();
 
-	public IObservable<FileModel> FileCreated => _fileCreatedSubject.AsObservable();
+    public IObservable<DirectoryModel> DirectoryCreated => _directoryCreatedSubject.AsObservable();
 
-	public IObservable<FileModel> FileDeleted => _fileDeletedSubject.AsObservable();
+    public IObservable<DirectoryModel> DirectoryDeleted => _directoryDeletedSubject.AsObservable();
 
-	public IObservable<FileRenamedModel> FileRenamed => _fileRenamedSubject.AsObservable();
+    public IObservable<DirectoryRenamedModel> DirectoryRenamed => _directoryRenamedSubject.AsObservable();
 
-	public IObservable<DirectoryModel> DirectoryCreated => _directoryCreatedSubject.AsObservable();
+    public void Dispose()
+    {
+        lock (_syncRoot)
+        {
+            if (_disposed)
+            {
+                return;
+            }
 
-	public IObservable<DirectoryModel> DirectoryDeleted => _directoryDeletedSubject.AsObservable();
+            DisposeRegistrations();
+            _fileCreatedSubject.Dispose();
+            _fileDeletedSubject.Dispose();
+            _fileRenamedSubject.Dispose();
+            _directoryCreatedSubject.Dispose();
+            _directoryDeletedSubject.Dispose();
+            _directoryRenamedSubject.Dispose();
+            _disposed = true;
+        }
+    }
 
-	public IObservable<DirectoryRenamedModel> DirectoryRenamed => _directoryRenamedSubject.AsObservable();
+    public void StartWatching()
+    {
+        lock (_syncRoot)
+        {
+            ThrowIfDisposed();
+            foreach (var registration in _registrations.Values)
+            {
+                registration.Service.StartWatching();
+            }
+        }
+    }
 
-	public void Dispose()
-	{
-		if (_disposed)
-		{
-			return;
-		}
+    public void StopWatching()
+    {
+        lock (_syncRoot)
+        {
+            if (_disposed)
+            {
+                return;
+            }
 
-		_fileCreatedSubject.Dispose();
-		_fileDeletedSubject.Dispose();
-		_fileRenamedSubject.Dispose();
+            foreach (var registration in _registrations.Values)
+            {
+                registration.Service.StopWatching();
+            }
+        }
+    }
 
-		_directoryCreatedSubject.Dispose();
-		_directoryDeletedSubject.Dispose();
-		_directoryRenamedSubject.Dispose();
+    public void StartWatchingDirectory(string directoryPath)
+    {
+        var normalizedPath = NormalizeExistingDirectoryPath(directoryPath);
 
-		foreach (var subscription in _subscriptions.Values)
-		{
-			subscription.Dispose();
-		}
+        lock (_syncRoot)
+        {
+            ThrowIfDisposed();
 
-		_subscriptions.Clear();
+            if (_registrations.TryGetValue(normalizedPath, out var existingRegistration))
+            {
+                existingRegistration.ReferenceCount++;
+                return;
+            }
 
-		foreach (var service in _services.Values)
-		{
-			service.Dispose();
-		}
+            LocalFileSystemWatcherService? service = null;
+            CompositeDisposable? subscriptions = null;
+            try
+            {
+                service = new LocalFileSystemWatcherService();
+                subscriptions = new CompositeDisposable
+                {
+                    service.FileCreated.Subscribe(_fileCreatedSubject),
+                    service.FileDeleted.Subscribe(_fileDeletedSubject),
+                    service.FileRenamed.Subscribe(_fileRenamedSubject),
+                    service.DirectoryCreated.Subscribe(_directoryCreatedSubject),
+                    service.DirectoryDeleted.Subscribe(_directoryDeletedSubject),
+                    service.DirectoryRenamed.Subscribe(_directoryRenamedSubject)
+                };
 
-		_services.Clear();
+                service.StartWatchingDirectory(normalizedPath);
+                _registrations.Add(normalizedPath, new WatchRegistration(service, subscriptions));
+            }
+            catch (Exception ex)
+            {
+                subscriptions?.Dispose();
+                service?.Dispose();
+                throw new ServiceException($"Failed to start watching directory: {normalizedPath}", ex);
+            }
+        }
+    }
 
-		_disposed = true;
-	}
+    public void StopWatchingDirectory(string directoryPath)
+    {
+        if (string.IsNullOrWhiteSpace(directoryPath))
+        {
+            throw new ServiceException($"'{nameof(directoryPath)}' cannot be null or whitespace.");
+        }
 
-	public void StartWatching()
-	{
-		if (_disposed)
-		{
-			throw new ObjectDisposedException(nameof(MultiSourcesLocalFileSystemWatcherService));
-		}
+        string normalizedPath;
+        try
+        {
+            normalizedPath = NormalizePath(directoryPath);
+        }
+        catch (Exception ex)
+        {
+            throw new ServiceException($"Invalid directory path: {directoryPath}", ex);
+        }
 
-		foreach (var service in _services.Values)
-		{
-			service.StartWatching();
-		}
-	}
+        lock (_syncRoot)
+        {
+            ThrowIfDisposed();
+            if (!_registrations.TryGetValue(normalizedPath, out var registration))
+            {
+                return;
+            }
 
-	public void StopWatching()
-	{
-		if (_disposed)
-		{
-			return;
-		}
+            registration.ReferenceCount--;
+            if (registration.ReferenceCount > 0)
+            {
+                return;
+            }
 
-		foreach (var service in _services.Values)
-		{
-			service.StopWatching();
-		}
-	}
+            _registrations.Remove(normalizedPath);
+            registration.Dispose();
+        }
+    }
 
-	public void StartWatchingDirectory(string directoryPath)
-	{
-		if (_disposed)
-		{
-			throw new ObjectDisposedException(nameof(MultiSourcesLocalFileSystemWatcherService));
-		}
+    public void ClearWatchers()
+    {
+        lock (_syncRoot)
+        {
+            ThrowIfDisposed();
+            DisposeRegistrations();
+        }
+    }
 
-		if (string.IsNullOrWhiteSpace(directoryPath))
-		{
-			throw new ServiceException($"'{nameof(directoryPath)}' cannot be null or whitespace.");
-		}
+    private void DisposeRegistrations()
+    {
+        foreach (var registration in _registrations.Values)
+        {
+            registration.Dispose();
+        }
 
-		if (!Directory.Exists(directoryPath))
-		{
-			throw new ServiceException($"{directoryPath} is not found.");
-		}
+        _registrations.Clear();
+    }
 
-		if (_services.ContainsKey(directoryPath))
-		{
-			return;
-		}
+    private void ThrowIfDisposed()
+    {
+        if (_disposed)
+        {
+            throw new ObjectDisposedException(nameof(MultiSourcesLocalFileSystemWatcherService));
+        }
+    }
 
-		var parentDirectoryAlreadyWatched = _services.Keys.Any(path =>
-			                                                       directoryPath.StartsWith(path, StringComparison.OrdinalIgnoreCase));
+    private static string NormalizeExistingDirectoryPath(string directoryPath)
+    {
+        if (string.IsNullOrWhiteSpace(directoryPath))
+        {
+            throw new ServiceException($"'{nameof(directoryPath)}' cannot be null or whitespace.");
+        }
 
-		if (parentDirectoryAlreadyWatched)
-		{
-			return;
-		}
+        string normalizedPath;
+        try
+        {
+            normalizedPath = NormalizePath(directoryPath);
+        }
+        catch (Exception ex)
+        {
+            throw new ServiceException($"Invalid directory path: {directoryPath}", ex);
+        }
 
-		try
-		{
-			var service = new LocalFileSystemWatcherService();
-			if (_services.TryAdd(directoryPath, service))
-			{
-				var compositeDisposable = new CompositeDisposable
-				{
-					service.FileCreated.Subscribe(_fileCreatedSubject),
-					service.FileDeleted.Subscribe(_fileDeletedSubject),
-					service.FileRenamed.Subscribe(_fileRenamedSubject),
-					service.DirectoryCreated.Subscribe(_directoryCreatedSubject),
-					service.DirectoryDeleted.Subscribe(_directoryDeletedSubject),
-					service.DirectoryRenamed.Subscribe(_directoryRenamedSubject)
-				};
+        if (!Directory.Exists(normalizedPath))
+        {
+            throw new ServiceException($"{normalizedPath} is not found.");
+        }
 
-				_subscriptions.TryAdd(directoryPath, compositeDisposable);
-				service.StartWatchingDirectory(directoryPath);
-			}
-			else
-			{
-				service.Dispose();
-			}
-		}
-		catch (Exception ex)
-		{
-			throw new ServiceException($"Failed to start watching directory: {directoryPath}", ex);
-		}
-	}
+        return normalizedPath;
+    }
 
-	public void StopWatchingDirectory(string directoryPath)
-	{
-		if (_disposed)
-		{
-			throw new ObjectDisposedException(nameof(MultiSourcesLocalFileSystemWatcherService));
-		}
+    private static string NormalizePath(string path)
+    {
+        return Path.TrimEndingDirectorySeparator(Path.GetFullPath(path));
+    }
 
-		if (string.IsNullOrWhiteSpace(directoryPath))
-		{
-			throw new ServiceException($"'{nameof(directoryPath)}' cannot be null or whitespace.");
-		}
+    private sealed class WatchRegistration(
+        LocalFileSystemWatcherService service,
+        CompositeDisposable subscriptions) : IDisposable
+    {
+        public LocalFileSystemWatcherService Service { get; } = service;
 
-		if (_services.TryRemove(directoryPath, out var service))
-		{
-			if (_subscriptions.TryRemove(directoryPath, out var disposable))
-			{
-				disposable.Dispose();
-			}
+        public int ReferenceCount { get; set; } = 1;
 
-			service.StopWatching();
-			service.Dispose();
-		}
-	}
-
-	public void ClearWatchers()
-	{
-		if (_disposed)
-		{
-			throw new ObjectDisposedException(nameof(MultiSourcesLocalFileSystemWatcherService));
-		}
-
-		foreach (var service in _services.Values)
-		{
-			service.Dispose();
-		}
-
-		_services.Clear();
-
-		foreach (var subscription in _subscriptions.Values)
-		{
-			subscription.Dispose();
-		}
-
-		_subscriptions.Clear();
-	}
+        public void Dispose()
+        {
+            subscriptions.Dispose();
+            Service.StopWatching();
+            Service.Dispose();
+        }
+    }
 }

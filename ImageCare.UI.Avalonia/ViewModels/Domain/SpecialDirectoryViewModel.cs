@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Collections.Specialized;
 
 using ImageCare.Core.Services.FileSystemService;
 using ImageCare.Core.Services.FolderService;
@@ -19,5 +20,15 @@ internal sealed class SpecialDirectoryViewModel : DriveViewModel
                                      IFileSystemService fileSystemService,
                                      IMapper mapper,
                                      ILogger logger)
-        : base(name, path, children, folderService, fileSystemService, mapper, logger) { }
+        : base(name, path, children, folderService, fileSystemService, mapper, logger)
+    {
+        ChildFileSystemItems.CollectionChanged += OnChildrenChanged;
+    }
+
+    public int ItemCount => ChildFileSystemItems.Count;
+
+    private void OnChildrenChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        RaisePropertyChanged(nameof(ItemCount));
+    }
 }

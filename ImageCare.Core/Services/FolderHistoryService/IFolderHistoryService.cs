@@ -4,7 +4,15 @@ namespace ImageCare.Core.Services.FolderHistoryService;
 
 public interface IFolderHistoryService
 {
+    event EventHandler? HistoryChanged;
+
     void AddFolderToHistory(string folderPath);
+
+    void AddFolderToPopular(string folderPath);
+
+    void RemoveFolderFromPopular(string folderPath);
+
+    IReadOnlyList<string> GetPopularFolders();
 
     IReadOnlyList<string> GetRecentFolders();
 

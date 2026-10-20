@@ -50,5 +50,8 @@ public sealed class Configuration
     public List<string> RecentFolderPaths { get; set; } = new();
 
 
+    public List<string> PopularFolderPaths { get; set; } = new();
+
+
     public List<string> SmartFolderPaths { get; set; } = new();
 }

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
@@ -13,8 +14,10 @@ using ImageCare.Core.Services.ConfigurationService;
 using ImageCare.Core.Services.DrivesWatcherService;
 using ImageCare.Core.Services.FileSystemService;
 using ImageCare.Core.Services.FileSystemWatcherService;
+using ImageCare.Core.Services.FolderHistoryService;
 using ImageCare.Core.Services.FolderService;
 using ImageCare.UI.Avalonia.Localization;
+using ImageCare.UI.Avalonia.Services;
 using ImageCare.UI.Avalonia.ViewModels.Domain;
 
 using MapsterMapper;
@@ -27,10 +30,13 @@ namespace ImageCare.UI.Avalonia.ViewModels;
 
 internal class FoldersViewModel : NavigatedViewModelBase
 {
+    private const int RecentFoldersDisplayLimit = 10;
     private static readonly TimeSpan RestoreTimeout = TimeSpan.FromSeconds(10);
 
     private readonly LocalizationManager _localization;
     private readonly IFolderService _folderService;
+    private readonly IFolderHistoryService _folderHistoryService;
+    private readonly IFileDialogService _fileDialogService;
     private readonly IFileSystemService _fileSystemService;
     private readonly IConfigurationService _configurationService;
     private readonly IMultiSourcesFileSystemWatcherService _multiSourcesFileSystemWatcherService;
@@ -38,6 +44,10 @@ internal class FoldersViewModel : NavigatedViewModelBase
     private readonly IMapper _mapper;
     private readonly ILogger _logger;
     private readonly SynchronizationContext _synchronizationContext;
+    private readonly object _reconciliationSyncRoot = new();
+    private readonly Dictionary<string, long> _reconciliationVersions = new(
+        OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
+    private long _reconciliationVersion;
 
     private DirectoryViewModel? _selectedFileSystemItem;
     private CompositeDisposable _compositeDisposable;
@@ -52,6 +62,8 @@ internal class FoldersViewModel : NavigatedViewModelBase
     private string _searchTarget = string.Empty;
 
     public FoldersViewModel(IFolderService folderService,
+                            IFolderHistoryService folderHistoryService,
+                            IFileDialogService fileDialogService,
                             IFileSystemService fileSystemService,
                             IConfigurationService configurationService,
                             IMultiSourcesFileSystemWatcherService multiSourcesFileSystemWatcherService,
@@ -62,6 +74,8 @@ internal class FoldersViewModel : NavigatedViewModelBase
                             SynchronizationContext synchronizationContext)
     {
         _folderService = folderService ?? throw new ArgumentNullException(nameof(folderService));
+        _folderHistoryService = folderHistoryService ?? throw new ArgumentNullException(nameof(folderHistoryService));
+        _fileDialogService = fileDialogService ?? throw new ArgumentNullException(nameof(fileDialogService));
         _fileSystemService = fileSystemService ?? throw new ArgumentNullException(nameof(fileSystemService));
         _configurationService = configurationService ?? throw new ArgumentNullException(nameof(configurationService));
         _multiSourcesFileSystemWatcherService = multiSourcesFileSystemWatcherService ?? throw new ArgumentNullException(nameof(multiSourcesFileSystemWatcherService));
@@ -81,6 +95,9 @@ internal class FoldersViewModel : NavigatedViewModelBase
             .ObservesProperty(()=>IsLoading);
         ClearSearchCommand = CreateCommand(ClearSearch, CanClearSearch).ObservesProperty(() => IsInSearchSession);
         SetSearchResultCommand = CreateAsyncCommand<DirectoryViewModel>(SetSearchResultAsync);
+        AddRecentFolderCommand = CreateAsyncCommand(AddRecentFolderAsync);
+        AddFolderToRecentCommand = CreateCommand<DirectoryViewModel>(AddFolderToRecent);
+        RemoveRecentFolderCommand = CreateCommand<DirectoryViewModel>(RemoveRecentFolder);
 
         FileSystemItemViewModels = new Collections.SortedObservableCollection<DirectoryViewModel>();
         SearchResults = new ObservableCollection<DirectoryViewModel>();
@@ -97,6 +114,14 @@ internal class FoldersViewModel : NavigatedViewModelBase
     public ICommand PerformSearchCommand { get; }
 
     public ICommand ClearSearchCommand { get; }
+
+    public ICommand AddRecentFolderCommand { get; }
+
+    public ICommand AddFolderToRecentCommand { get; }
+
+    public ICommand RemoveRecentFolderCommand { get; }
+
+    public event Action<DirectoryViewModel>? RevealSelectedFolderRequested;
 
     public string SearchTarget
     {
@@ -161,6 +186,8 @@ internal class FoldersViewModel : NavigatedViewModelBase
             }
 
             FileManagerPanel = panel;
+            _folderHistoryService.HistoryChanged -= OnFolderHistoryChanged;
+            _folderHistoryService.HistoryChanged += OnFolderHistoryChanged;
 
             _compositeDisposable = new CompositeDisposable
             {
@@ -213,6 +240,7 @@ internal class FoldersViewModel : NavigatedViewModelBase
         try
         {
             ClearSearch();
+            _folderHistoryService.HistoryChanged -= OnFolderHistoryChanged;
             _compositeDisposable?.Dispose();
 
             _drivesWatcherService.StopWatching();
@@ -242,6 +270,7 @@ internal class FoldersViewModel : NavigatedViewModelBase
             var targetDirectory = await GoToFolderFromSelectedAsync(sourceDirectory, targetPath);
             SelectedFileSystemItem = targetDirectory;
             ClearSearch();
+            RevealSelectedFolderRequested?.Invoke(targetDirectory);
         }
         catch (Exception ex)
         {
@@ -336,11 +365,15 @@ internal class FoldersViewModel : NavigatedViewModelBase
 
     private void SetSelectedFileSystemItem(DirectoryViewModel? value)
     {
+        if (ReferenceEquals(_selectedFileSystemItem, value))
+        {
+            return;
+        }
+
         if (_selectedFileSystemItem != null)
         {
             _selectedFileSystemItem.IsSelected = false;
         }
-        
 
         if (SetProperty(ref _selectedFileSystemItem, value) && value != null)
         {
@@ -358,6 +391,140 @@ internal class FoldersViewModel : NavigatedViewModelBase
             {
                 _logger.Error(ex, "Failed to set selected directory: {Path}", value.Path);
             }
+        }
+    }
+
+    private async Task AddRecentFolderAsync()
+    {
+        try
+        {
+            var folderPath = await _fileDialogService.ShowOpenFolderDialogAsync(
+                _localization["Folders_SelectRecent"]);
+            if (string.IsNullOrWhiteSpace(folderPath))
+            {
+                return;
+            }
+
+            _folderHistoryService.AddFolderToPopular(folderPath);
+            _folderHistoryService.SaveHistory();
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "Failed to add a folder to Recent");
+        }
+    }
+
+    private void AddFolderToRecent(DirectoryViewModel directory)
+    {
+        if (directory == null || directory.IsRecentEntry ||
+            directory is DeviceViewModel or SpecialDirectoryViewModel)
+        {
+            return;
+        }
+
+        try
+        {
+            _folderHistoryService.AddFolderToPopular(directory.Path);
+            _folderHistoryService.SaveHistory();
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "Failed to add a folder to Recent: {Path}", directory.Path);
+        }
+    }
+
+    private void RemoveRecentFolder(DirectoryViewModel directory)
+    {
+        if (directory == null || !directory.IsPinnedPopular)
+        {
+            return;
+        }
+
+        try
+        {
+            if (ReferenceEquals(SelectedFileSystemItem, directory))
+            {
+                SelectedFileSystemItem = null;
+            }
+
+            _folderHistoryService.RemoveFolderFromPopular(directory.Path);
+            _folderHistoryService.SaveHistory();
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "Failed to remove a folder from Recent: {Path}", directory.Path);
+        }
+    }
+
+    private void OnFolderHistoryChanged(object? sender, EventArgs e)
+    {
+        _synchronizationContext.Post(_ => UpdateRecentFolderEntries(), null);
+    }
+
+    private void UpdateRecentFolderEntries()
+    {
+        try
+        {
+            var root = FileSystemItemViewModels.OfType<DeviceViewModel>().FirstOrDefault();
+            var recentFolder = root?.ChildFileSystemItems.OfType<SpecialDirectoryViewModel>().FirstOrDefault();
+            if (recentFolder == null)
+            {
+                return;
+            }
+
+            var comparer = OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
+            var pinnedPaths = (_folderHistoryService.GetPopularFolders() ?? [])
+                             .Where(path => !string.IsNullOrWhiteSpace(path))
+                             .Distinct(comparer)
+                             .ToArray();
+            var automaticPaths = (_folderHistoryService.GetSmartFolders(10) ?? [])
+                                .Select(folder => folder.Path)
+                                .Where(path => !string.IsNullOrWhiteSpace(path))
+                                .Distinct(comparer)
+                                .Take(RecentFoldersDisplayLimit);
+            var recentPaths = pinnedPaths
+                             .Concat(automaticPaths)
+                             .Distinct(comparer)
+                             .ToArray();
+
+            var staleItems = recentFolder.ChildFileSystemItems
+                                         .Where(item => !recentPaths.Any(path => PathsEqual(path, item.Path)))
+                                         .ToArray();
+            foreach (var staleItem in staleItems)
+            {
+                recentFolder.ChildFileSystemItems.Remove(staleItem);
+            }
+
+            for (var index = 0; index < recentPaths.Length; index++)
+            {
+                var path = recentPaths[index];
+                var item = recentFolder.ChildFileSystemItems.FirstOrDefault(existing => PathsEqual(existing.Path, path));
+                if (item == null)
+                {
+                    var name = Path.GetFileName(path);
+                    var model = new DirectoryModel(string.IsNullOrWhiteSpace(name) ? path : name, path);
+                    item = _mapper.Map<DirectoryViewModel>(model);
+                    item.SetFileManagerPanel(FileManagerPanel);
+                    item.SetRecentOrder(index, pinnedPaths.Any(pinnedPath => PathsEqual(pinnedPath, path)));
+                    recentFolder.ChildFileSystemItems.Add(item);
+                }
+                else
+                {
+                    item.SetRecentOrder(index, pinnedPaths.Any(pinnedPath => PathsEqual(pinnedPath, path)));
+                }
+
+                var currentIndex = recentFolder.ChildFileSystemItems.IndexOf(item);
+                if (currentIndex != index)
+                {
+                    recentFolder.ChildFileSystemItems.Move(currentIndex, index);
+                }
+            }
+
+            recentFolder.IsExpanded = true;
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "Failed to refresh Recent folders");
         }
     }
 
@@ -389,6 +556,7 @@ internal class FoldersViewModel : NavigatedViewModelBase
             rootViewModel.IsExpanded = true;
 
             FileSystemItemViewModels.Add(rootViewModel);
+            UpdateRecentFolderEntries();
 
             await RestoreLastFolderAsync(rootViewModel);
         }
@@ -408,121 +576,73 @@ internal class FoldersViewModel : NavigatedViewModelBase
 
     private void OnDirectoryCreated(DirectoryModel directoryModel)
     {
-        try
-        {
-            var parent = directoryModel.GetParent();
-            if (parent == null)
-            {
-                return;
-            }
-
-            foreach (var directoryViewModel in FileSystemItemViewModels)
-            {
-                if (directoryViewModel.FindChildByPathRecursively(parent.Path) is not { } parentViewModel)
-                {
-                    continue;
-                }
-
-                var existing = parentViewModel.ChildFileSystemItems.FirstOrDefault(child =>
-                    child.Path.Equals(directoryModel.Path, StringComparison.OrdinalIgnoreCase));
-                if (existing == null)
-                {
-                    parentViewModel.ChildFileSystemItems.Add(_mapper.Map<DirectoryViewModel>(directoryModel));
-                }
-                else
-                {
-                    existing.UpdateDirectory(directoryModel);
-                }
-
-                return;
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.Error(ex, "Failed to process directory creation: {Path}", directoryModel.Path);
-        }
+        ScheduleParentReconciliation(directoryModel, "create");
     }
 
     private void OnDirectoryRemoved(DirectoryModel directoryModel)
     {
-        try
-        {
-            var parent = directoryModel.GetParent();
-            if (parent == null)
-            {
-                return;
-            }
-
-            foreach (var directoryViewModel in FileSystemItemViewModels)
-            {
-                if (directoryViewModel.FindChildByPathRecursively(parent.Path) is { } parentViewModel)
-                {
-                    if (parentViewModel.ChildFileSystemItems.FirstOrDefault(d => d.Path.Equals(directoryModel.Path, StringComparison.OrdinalIgnoreCase)) is { } directoryViewModelForDelete)
-                    {
-                        if (directoryViewModelForDelete.Path == SelectedFileSystemItem?.Path)
-                        {
-                            SelectedFileSystemItem = null;
-                        }
-
-                        parentViewModel.ChildFileSystemItems.Remove(directoryViewModelForDelete);
-                        if (parentViewModel.IsExpanded && !parentViewModel.ChildFileSystemItems.Any())
-                        {
-                            parentViewModel.IsExpanded = false;
-                        }
-                    }
-
-                    return;
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.Error(ex, "Failed to process directory removal: {Path}", directoryModel.Path);
-        }
+        ScheduleParentReconciliation(directoryModel, "delete");
     }
 
     private void OnDirectoryRenamed(DirectoryRenamedModel directoryRenamedModel)
     {
         try
         {
-            var parent = directoryRenamedModel.OldDirectoryModel.GetParent();
-            if (parent == null)
+            var oldParent = directoryRenamedModel.OldDirectoryModel.GetParent();
+            var newParent = directoryRenamedModel.NewDirectoryModel.GetParent();
+            var parentViewModel = oldParent == null ? null : FindPhysicalDirectory(oldParent.Path);
+            if (parentViewModel != null)
             {
-                return;
-            }
-
-            foreach (var directoryViewModel in FileSystemItemViewModels)
-            {
-                if (directoryViewModel.FindChildByPathRecursively(parent.Path) is not { } parentViewModel)
-                {
-                    continue;
-                }
-
                 var renamedViewModel = parentViewModel.ChildFileSystemItems.FirstOrDefault(child =>
-                    child.Path.Equals(directoryRenamedModel.OldDirectoryModel.Path, StringComparison.OrdinalIgnoreCase));
+                    PathsEqual(child.Path, directoryRenamedModel.NewDirectoryModel.Path));
                 renamedViewModel ??= parentViewModel.ChildFileSystemItems.FirstOrDefault(child =>
-                    child.Path.Equals(directoryRenamedModel.NewDirectoryModel.Path, StringComparison.OrdinalIgnoreCase));
-                if (renamedViewModel == null)
+                    PathsEqual(child.Path, directoryRenamedModel.OldDirectoryModel.Path));
+
+                if (renamedViewModel != null &&
+                    !PathsEqual(renamedViewModel.Path, directoryRenamedModel.NewDirectoryModel.Path))
                 {
-                    return;
+                    var expandedDirectories = EnumerateExpandedSubtree(renamedViewModel)
+                                             .Select(item => _mapper.Map<DirectoryModel>(item))
+                                             .ToArray();
+                    foreach (var expandedDirectory in expandedDirectories)
+                    {
+                        _folderService.RemoveVisitingFolder(expandedDirectory, FileManagerPanel);
+                    }
+
+                    renamedViewModel.UpdateDirectory(directoryRenamedModel.NewDirectoryModel);
+
+                    foreach (var expandedDirectory in EnumerateExpandedSubtree(renamedViewModel))
+                    {
+                        _folderService.AddVisitingFolder(
+                            _mapper.Map<DirectoryModel>(expandedDirectory),
+                            FileManagerPanel);
+                    }
                 }
 
-                var selectedItem = SelectedFileSystemItem;
-                var selectedWasAffected = selectedItem != null &&
-                    (selectedItem.Path.Equals(directoryRenamedModel.OldDirectoryModel.Path, StringComparison.OrdinalIgnoreCase) ||
-                     selectedItem.Path.StartsWith(directoryRenamedModel.OldDirectoryModel.Path + System.IO.Path.DirectorySeparatorChar,
-                                                  StringComparison.OrdinalIgnoreCase));
-
-                renamedViewModel.UpdateDirectory(directoryRenamedModel.NewDirectoryModel);
                 parentViewModel.ChildFileSystemItems.RefreshSort();
 
-                if (selectedWasAffected && selectedItem != null)
+                if (SelectedFileSystemItem != null &&
+                    IsSamePathOrDescendant(
+                        directoryRenamedModel.NewDirectoryModel.Path,
+                        SelectedFileSystemItem.Path))
                 {
-                    SelectedFileSystemItem = null;
-                    SelectedFileSystemItem = selectedItem;
+                    _folderService.SetSelectedDirectory(
+                        new SelectedDirectory(
+                            SelectedFileSystemItem.Name,
+                            SelectedFileSystemItem.Path,
+                            FileManagerPanel));
+                    SaveLastDirectoryPath(SelectedFileSystemItem);
                 }
+            }
 
-                return;
+            if (oldParent != null)
+            {
+                ScheduleDirectoryReconciliation(oldParent.Path, "rename");
+            }
+
+            if (newParent != null && (oldParent == null || !PathsEqual(oldParent.Path, newParent.Path)))
+            {
+                ScheduleDirectoryReconciliation(newParent.Path, "move");
             }
         }
         catch (Exception ex)
@@ -533,6 +653,204 @@ internal class FoldersViewModel : NavigatedViewModelBase
                 directoryRenamedModel.OldDirectoryModel.Path,
                 directoryRenamedModel.NewDirectoryModel.Path);
         }
+    }
+
+    private void ScheduleParentReconciliation(DirectoryModel directoryModel, string reason)
+    {
+        try
+        {
+            var parent = directoryModel.GetParent();
+            if (parent != null)
+            {
+                ScheduleDirectoryReconciliation(parent.Path, reason);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "Failed to schedule directory reconciliation for: {Path}", directoryModel.Path);
+        }
+    }
+
+    private void ScheduleDirectoryReconciliation(string parentPath, string reason)
+    {
+        string normalizedPath;
+        try
+        {
+            normalizedPath = NormalizePath(parentPath);
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "Failed to normalize directory for reconciliation: {Path}", parentPath);
+            return;
+        }
+
+        long version;
+        lock (_reconciliationSyncRoot)
+        {
+            version = ++_reconciliationVersion;
+            _reconciliationVersions[normalizedPath] = version;
+        }
+
+        _ = ReconcileDirectoryChildrenAsync(normalizedPath, version, reason);
+    }
+
+    private async Task ReconcileDirectoryChildrenAsync(string parentPath, long version, string reason)
+    {
+        try
+        {
+            await Task.Delay(150);
+
+            lock (_reconciliationSyncRoot)
+            {
+                if (!_reconciliationVersions.TryGetValue(parentPath, out var currentVersion) ||
+                    currentVersion != version)
+                {
+                    return;
+                }
+            }
+
+            if (!await Task.Run(() => _fileSystemService.DirectoryExists(parentPath)))
+            {
+                return;
+            }
+
+            var actualDirectory = await _folderService.GetDirectoryModelAsync(parentPath);
+            _synchronizationContext.Post(
+                _ => ApplyDirectoryReconciliation(parentPath, actualDirectory, version),
+                null);
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(
+                ex,
+                "Failed to reconcile directory after {Reason}: {Path}",
+                reason,
+                parentPath);
+        }
+    }
+
+    private void ApplyDirectoryReconciliation(string parentPath, DirectoryModel actualDirectory, long version)
+    {
+        lock (_reconciliationSyncRoot)
+        {
+            if (!_reconciliationVersions.TryGetValue(parentPath, out var currentVersion) ||
+                currentVersion != version)
+            {
+                return;
+            }
+
+            _reconciliationVersions.Remove(parentPath);
+        }
+
+        var parentViewModel = FindPhysicalDirectory(parentPath);
+        if (parentViewModel == null)
+        {
+            return;
+        }
+
+        if (!parentViewModel.IsExpanded)
+        {
+            parentViewModel.InvalidateChildren();
+            return;
+        }
+
+        var existingItems = parentViewModel.ChildFileSystemItems.ToArray();
+        var retainedItems = new HashSet<DirectoryViewModel>();
+
+        foreach (var actualChild in actualDirectory.DirectoryModels)
+        {
+            var candidates = existingItems.Where(item => PathsEqual(item.Path, actualChild.Path)).ToArray();
+            var canonicalItem = candidates.FirstOrDefault(item => item.IsSelected || item.IsEditing)
+                                ?? candidates.FirstOrDefault();
+            if (canonicalItem == null)
+            {
+                canonicalItem = _mapper.Map<DirectoryViewModel>(actualChild);
+                canonicalItem.SetFileManagerPanel(FileManagerPanel);
+                parentViewModel.ChildFileSystemItems.Add(canonicalItem);
+            }
+            else
+            {
+                if (!PathsEqual(canonicalItem.Path, actualChild.Path) ||
+                    !string.Equals(canonicalItem.Name, actualChild.Name, StringComparison.Ordinal))
+                {
+                    canonicalItem.UpdateDirectory(actualChild);
+                }
+
+                canonicalItem.HasSupportedMedia = actualChild.HasSupportedMedia;
+            }
+
+            retainedItems.Add(canonicalItem);
+        }
+
+        foreach (var staleItem in existingItems.Where(item => !retainedItems.Contains(item)))
+        {
+            if (SelectedFileSystemItem != null &&
+                IsSamePathOrDescendant(staleItem.Path, SelectedFileSystemItem.Path))
+            {
+                SelectedFileSystemItem = null;
+            }
+
+            UnregisterExpandedSubtree(staleItem);
+            parentViewModel.ChildFileSystemItems.Remove(staleItem);
+        }
+
+        parentViewModel.ChildFileSystemItems.RefreshSort();
+    }
+
+    private void UnregisterExpandedSubtree(DirectoryViewModel root)
+    {
+        foreach (var directory in EnumerateExpandedSubtree(root))
+        {
+            _folderService.RemoveVisitingFolder(
+                _mapper.Map<DirectoryModel>(directory),
+                FileManagerPanel);
+        }
+    }
+
+    private static IEnumerable<DirectoryViewModel> EnumerateExpandedSubtree(DirectoryViewModel root)
+    {
+        var pending = new Stack<DirectoryViewModel>();
+        pending.Push(root);
+        while (pending.Count > 0)
+        {
+            var current = pending.Pop();
+            if (current.IsExpanded)
+            {
+                yield return current;
+            }
+
+            foreach (var child in current.ChildFileSystemItems)
+            {
+                pending.Push(child);
+            }
+        }
+    }
+
+    private DirectoryViewModel? FindPhysicalDirectory(string path)
+    {
+        var root = FileSystemItemViewModels.OfType<DeviceViewModel>().FirstOrDefault();
+        if (root == null)
+        {
+            return null;
+        }
+
+        var pending = new Stack<DirectoryViewModel>(
+            root.ChildFileSystemItems.Where(item => item is not SpecialDirectoryViewModel));
+        while (pending.Count > 0)
+        {
+            var current = pending.Pop();
+            if (PathsEqual(current.Path, path))
+            {
+                return current;
+            }
+
+            foreach (var child in current.ChildFileSystemItems)
+            {
+                pending.Push(child);
+            }
+        }
+
+        return null;
     }
 
     private void OnDriveUnmounted(string driveName)
@@ -705,7 +1023,9 @@ internal class FoldersViewModel : NavigatedViewModelBase
                 return;
             }
 
-            SelectedFileSystemItem = await GoToFolderFromSelectedAsync(drive, targetPath, cancellationToken);
+            var restoredFolder = await GoToFolderFromSelectedAsync(drive, targetPath, cancellationToken);
+            SelectedFileSystemItem = restoredFolder;
+            RevealSelectedFolderRequested?.Invoke(restoredFolder);
         }
         catch (OperationCanceledException)
         {

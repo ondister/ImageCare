@@ -398,20 +398,36 @@ public sealed class LocalFileSystemFolderService : IFolderService, IDisposable
 
     private async Task<DirectoryModel> GetSmartFolderAsync()
     {
-        var rootFolder = new SpecialDirectoryModel("Recent", DirectoryModel.RootPath);
-        var cachedSmartFolders = _folderHistoryService.GetSmartFolders(10);
+        var rootFolder = new SpecialDirectoryModel("Popular", DirectoryModel.RootPath);
+        var pathComparer = OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
+        var addedPaths = new HashSet<string>(pathComparer);
 
-        foreach (var cachedSmartFolder in cachedSmartFolders)
+        foreach (var path in _folderHistoryService.GetPopularFolders() ?? [])
         {
-            // History entries are cached and shared by both file-manager panels.
-            // Build a panel-specific model so preview loading never mutates the cache concurrently.
-            var smartFolder = new SmartDirectoryModel(
-                cachedSmartFolder.Name,
-                cachedSmartFolder.Path,
-                cachedSmartFolder.MatchCount);
+            if (!_fileSystemService.DirectoryExists(path) || !addedPaths.Add(path))
+            {
+                continue;
+            }
 
-            await GetCustomDirectoriesLevelAsync(smartFolder, true);
-            rootFolder.AddDirectory(smartFolder);
+            var name = Path.GetFileName(path);
+            var popularFolder = new DirectoryModel(string.IsNullOrWhiteSpace(name) ? path : name, path);
+            await GetCustomDirectoriesLevelAsync(popularFolder, true);
+            rootFolder.AddDirectory(popularFolder);
+        }
+
+        foreach (var smartFolder in _folderHistoryService.GetSmartFolders(10) ?? [])
+        {
+            if (!addedPaths.Add(smartFolder.Path))
+            {
+                continue;
+            }
+
+            var popularFolder = new SmartDirectoryModel(
+                smartFolder.Name,
+                smartFolder.Path,
+                smartFolder.MatchCount);
+            await GetCustomDirectoriesLevelAsync(popularFolder, true);
+            rootFolder.AddDirectory(popularFolder);
         }
 
         return rootFolder;
