@@ -160,6 +160,7 @@ public class App : PrismApplication
         containerRegistry.RegisterSingleton<RenameFileWindowService>();
         containerRegistry.RegisterSingleton<FileTransferCoordinator>();
         containerRegistry.RegisterSingleton<FileTransferOperationState>();
+        containerRegistry.RegisterSingleton<TrayAnalysisProgressService>();
         containerRegistry.RegisterSingleton<ImageViewerWindowService>();
         containerRegistry.RegisterSingleton<SettingsWindowService>();
 

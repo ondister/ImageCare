@@ -19,8 +19,39 @@
 
     <Grid RowDefinitions="Auto,*"
           Margin="{StaticResource MarginAll.Small}">
-        <views:TimelineView Grid.Row="0"
-                            DataContext="{Binding TimelineVm}" />
+        <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
+            <views:TimelineView Grid.Column="0"
+                                DataContext="{Binding TimelineVm}" />
+            <Button Grid.Column="1"
+                    Width="32"
+                    Height="32"
+                    Padding="4"
+                    Margin="2,0,0,0"
+                    VerticalAlignment="Center"
+                    Command="{Binding ToggleSortDirectionCommand}"
+                    IsEnabled="{Binding CanChangeSort}">
+                <Grid>
+                    <TextBlock Text="↓"
+                               FontSize="18"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"
+                               IsVisible="{Binding !IsSortAscending}" />
+                    <TextBlock Text="↑"
+                               FontSize="18"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"
+                               IsVisible="{Binding IsSortAscending}" />
+                </Grid>
+                <ToolTip.Tip>
+                    <Grid>
+                        <TextBlock Text="{localization:Loc Sort_NewestFirst}"
+                                   IsVisible="{Binding !IsSortAscending}" />
+                        <TextBlock Text="{localization:Loc Sort_OldestFirst}"
+                                   IsVisible="{Binding IsSortAscending}" />
+                    </Grid>
+                </ToolTip.Tip>
+            </Button>
+        </Grid>
 
         <TabControl Grid.Row="1">
             <TabItem Header="{localization:Loc Overview_Files}">

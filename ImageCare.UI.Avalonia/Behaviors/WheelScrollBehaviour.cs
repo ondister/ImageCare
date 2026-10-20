@@ -52,13 +52,17 @@ public sealed class WheelScrollBehaviour
         }
 
         var maximumOffset = Math.Max(0, scrollViewer.Extent.Width - scrollViewer.Viewport.Width);
-        var targetOffset = Math.Clamp(scrollViewer.Offset.X - wheelDelta * 40, 0, maximumOffset);
-        if (Math.Abs(targetOffset - scrollViewer.Offset.X) < 0.01)
+        if (maximumOffset <= 0)
         {
             return;
         }
 
-        scrollViewer.Offset = new Vector(targetOffset, scrollViewer.Offset.Y);
+        var targetOffset = Math.Clamp(scrollViewer.Offset.X - wheelDelta * 40, 0, maximumOffset);
+        if (Math.Abs(targetOffset - scrollViewer.Offset.X) >= 0.01)
+        {
+            scrollViewer.Offset = new Vector(targetOffset, scrollViewer.Offset.Y);
+        }
+
         e.Handled = true;
     }
 }

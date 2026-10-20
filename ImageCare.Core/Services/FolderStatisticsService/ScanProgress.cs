@@ -5,4 +5,5 @@ public record ScanProgress(
     int ProcessedFiles = 0,
     int BucketsCount = 0,
     int TotalFiles = 0,
+    int CandidateFiles = 0,
     Exception? Error = null);

@@ -17,6 +17,15 @@ public sealed class Configuration
     public bool TimelineExpanded { get; set; } = true;
 
 
+    public MediaSortDirection LeftPreviewSortDirection { get; set; } = MediaSortDirection.NewestFirst;
+
+
+    public MediaSortDirection RightPreviewSortDirection { get; set; } = MediaSortDirection.NewestFirst;
+
+
+    public MediaSortDirection FolderOverviewSortDirection { get; set; } = MediaSortDirection.NewestFirst;
+
+
     public bool RestoreLastFoldersOnStartup { get; set; } = true;
 
 

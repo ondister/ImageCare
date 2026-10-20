@@ -7,6 +7,7 @@ namespace ImageCare.Core.Domain.Configuration
 {
     [JsonSourceGenerationOptions(AllowTrailingCommas = true, WriteIndented = true)]
     [JsonSerializable(typeof(Configuration))]
+    [JsonSerializable(typeof(MediaSortDirection))]
     [JsonSerializable(typeof(FileApplicationAssociation))]
     [JsonSerializable(typeof(List<FileApplicationAssociation>))]
     [JsonSerializable(typeof(List<string>))]

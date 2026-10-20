@@ -13,6 +13,7 @@ using DynamicData;
 using ImageCare.Core.Domain.Folders;
 using ImageCare.Core.Services.ConfigurationService;
 using ImageCare.Core.Services.FolderStatisticsService;
+using ImageCare.UI.Avalonia.Services;
 using ImageCare.UI.Avalonia.ViewModels.Domain;
 
 namespace ImageCare.UI.Avalonia.ViewModels;
@@ -26,18 +27,25 @@ internal class TimelineViewModel : ViewModelBase, IDisposable
     private readonly CompositeDisposable _dateStatDisposables = new();
     private readonly IFolderStatisticsService _folderStatisticsService;
     private readonly IConfigurationService _configurationService;
+    private readonly TrayAnalysisProgressService _trayAnalysisProgressService;
+    private readonly Guid _scanId = Guid.NewGuid();
     private readonly SourceCache<DateStatViewModel, DateTime> _dateStatsCache;
     private int _totalFilesCount;
+    private int _analysisProcessedFiles;
+    private int _analysisCandidateFiles;
     private bool _isLoading;
+    private bool _isInitialScanComplete;
     private bool _isExpanded;
 
     public TimelineViewModel(
         IFolderStatisticsService folderStatisticsService,
         IConfigurationService configurationService,
+        TrayAnalysisProgressService trayAnalysisProgressService,
         SynchronizationContext synchronizationContext)
     {
         _folderStatisticsService = folderStatisticsService ?? throw new ArgumentNullException(nameof(folderStatisticsService));
         _configurationService = configurationService ?? throw new ArgumentNullException(nameof(configurationService));
+        _trayAnalysisProgressService = trayAnalysisProgressService ?? throw new ArgumentNullException(nameof(trayAnalysisProgressService));
         _synchronizationContext = synchronizationContext ?? throw new ArgumentNullException(nameof(synchronizationContext));
         _isExpanded = _configurationService.Configuration.Value.TimelineExpanded;
 
@@ -97,6 +105,16 @@ internal class TimelineViewModel : ViewModelBase, IDisposable
         private set => SetProperty(ref _isLoading, value);
     }
 
+    public bool IsInitialScanComplete
+    {
+        get => _isInitialScanComplete;
+        private set => SetProperty(ref _isInitialScanComplete, value);
+    }
+
+    public string AnalysisProgressText => _analysisCandidateFiles > 0
+        ? $"{_analysisProcessedFiles}/{_analysisCandidateFiles}"
+        : string.Empty;
+
     public void Dispose()
     {
         _dateSelectedSubject.Dispose();
@@ -126,6 +144,10 @@ internal class TimelineViewModel : ViewModelBase, IDisposable
                 _dateStatsCache.Clear();
                 TotalFilesCount = 0;
                 IsLoading = false;
+                IsInitialScanComplete = false;
+                _analysisProcessedFiles = 0;
+                _analysisCandidateFiles = 0;
+                RaisePropertyChanged(nameof(AnalysisProgressText));
             },
             null);
     }
@@ -202,19 +224,28 @@ internal class TimelineViewModel : ViewModelBase, IDisposable
 
     private void OnScanProgressChanged(ScanProgress progress)
     {
+        _trayAnalysisProgressService.Update(_scanId, progress);
         _synchronizationContext.Post(
             _ =>
             {
+                _analysisProcessedFiles = progress.ProcessedFiles;
+                _analysisCandidateFiles = progress.CandidateFiles;
+                RaisePropertyChanged(nameof(AnalysisProgressText));
+
                 switch (progress.Status)
                 {
                     case ScanStatus.InitialScanStarted:
                         IsLoading = true;
+                        IsInitialScanComplete = false;
                         break;
                     case ScanStatus.InitialScanCompleted:
                         IsLoading = false;
+                        IsInitialScanComplete = true;
                         break;
                     case ScanStatus.ErrorOccurred:
+                    case ScanStatus.Idle:
                         IsLoading = false;
+                        IsInitialScanComplete = false;
                         break;
                 }
             },

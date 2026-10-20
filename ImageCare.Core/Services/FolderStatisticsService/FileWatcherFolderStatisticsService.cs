@@ -162,10 +162,15 @@ public sealed class FileWatcherFolderStatisticsService : IFolderStatisticsServic
         _currentTotalFiles = 0;
         _totalFilesSubject.OnNext(0);
 
-
         try
         {
             var fileModels = files.ToList();
+            var candidateFiles = fileModels.Count;
+            _progressSubject.OnNext(
+                new ScanProgress(
+                    ScanStatus.InitialScanStarted,
+                    CandidateFiles: candidateFiles));
+
             await Parallel.ForEachAsync(
                               fileModels,
                               parallelOptions,
@@ -175,18 +180,18 @@ public sealed class FileWatcherFolderStatisticsService : IFolderStatisticsServic
                                   if (fileModel != null && fileModel.CreatedDateTime.HasValue)
                                   {
                                       AddOrUpdateFileInBucket(fileModel, publish: false);
-                                      var newCount = Interlocked.Increment(ref processedFiles);
+                                  }
 
-                                      // Update progress periodically
-                                      if (newCount % 100 == 0)
-                                      {
-                                          _progressSubject.OnNext(
-                                              new ScanProgress(
-                                                  ScanStatus.InitialScanStarted,
-                                                  processedFiles,
-                                                  _buckets.Count,
-                                                  _currentTotalFiles)); // Include total files in progress
-                                      }
+                                  var newCount = Interlocked.Increment(ref processedFiles);
+                                  if (newCount % 10 == 0 || newCount == candidateFiles)
+                                  {
+                                      _progressSubject.OnNext(
+                                          new ScanProgress(
+                                              ScanStatus.InitialScanStarted,
+                                              newCount,
+                                              _buckets.Count,
+                                              _currentTotalFiles,
+                                              candidateFiles));
                                   }
                               })
                           .ConfigureAwait(false);
@@ -204,7 +209,8 @@ public sealed class FileWatcherFolderStatisticsService : IFolderStatisticsServic
                     ScanStatus.InitialScanCompleted,
                     processedFiles,
                     _buckets.Count,
-                    _currentTotalFiles));
+                    _currentTotalFiles,
+                    candidateFiles));
         }
         catch (OperationCanceledException)
         {

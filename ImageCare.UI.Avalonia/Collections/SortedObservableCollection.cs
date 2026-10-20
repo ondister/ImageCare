@@ -8,7 +8,7 @@ namespace ImageCare.UI.Avalonia.Collections;
 
 public class SortedObservableCollection<T> : ObservableCollection<T>
 {
-	private readonly IComparer<T> _comparer;
+	private IComparer<T> _comparer;
 
 	public SortedObservableCollection(IEnumerable<T> collection, IComparer<T>? comparer = null)
 		: this(comparer)
@@ -63,6 +63,22 @@ public class SortedObservableCollection<T> : ObservableCollection<T>
 		}
 
 		OnPropertyChanged(new System.ComponentModel.PropertyChangedEventArgs(nameof(Count)));
+		OnPropertyChanged(new System.ComponentModel.PropertyChangedEventArgs("Item[]"));
+		OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
+	}
+
+	public void SetComparer(IComparer<T> comparer)
+	{
+		ArgumentNullException.ThrowIfNull(comparer);
+
+		_comparer = comparer;
+		var sortedItems = Items.OrderBy(item => item, _comparer).ToArray();
+		Items.Clear();
+		foreach (var item in sortedItems)
+		{
+			Items.Add(item);
+		}
+
 		OnPropertyChanged(new System.ComponentModel.PropertyChangedEventArgs("Item[]"));
 		OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
 	}

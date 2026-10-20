@@ -21,7 +21,7 @@
         </Button>
 
         <Grid ColumnDefinitions="72,*,36"
-              Height="58"
+              Height="50"
               IsVisible="{Binding IsExpanded}">
             <Grid Grid.Column="0"
                   Width="64"
@@ -35,6 +35,12 @@
                                                    HorizontalAlignment="Center"
                                                    VerticalAlignment="Center"
                                                    Foreground="{DynamicResource Brush.Accent}" />
+                <TextBlock IsVisible="{Binding IsLoading}"
+                           Text="{Binding AnalysisProgressText}"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"
+                           FontSize="8"
+                           Foreground="{DynamicResource Brush.TextPrimary}" />
                 <Button Background="{DynamicResource Brush.Accent}"
                         CornerRadius="{StaticResource BorderRadius.Small}"
                         Padding="8,4"
@@ -60,17 +66,10 @@
             </Grid>
 
             <ScrollViewer Grid.Column="1"
-                          HorizontalScrollBarVisibility="Visible"
+                          HorizontalScrollBarVisibility="Hidden"
                           VerticalScrollBarVisibility="Disabled"
-                          AllowAutoHide="True"
                           Background="Transparent"
                           behaviors:WheelScrollBehaviour.IsEnabled="True">
-                <ScrollViewer.Styles>
-                    <Style Selector="ScrollViewer > ScrollBar:horizontal">
-                        <Setter Property="Height" Value="10" />
-                        <Setter Property="Background" Value="Transparent" />
-                    </Style>
-                </ScrollViewer.Styles>
                 <ItemsControl ItemsSource="{Binding DateStatViewModels}">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>

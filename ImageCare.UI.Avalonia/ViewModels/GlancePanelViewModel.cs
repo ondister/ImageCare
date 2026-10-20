@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
 
+using ImageCare.Core.Domain.Configuration;
 using ImageCare.Core.Domain.Folders;
 using ImageCare.Core.Domain.Media;
 using ImageCare.Core.Domain.Notification;
@@ -24,6 +25,7 @@ using ImageCare.Core.Services.NotificationService;
 using ImageCare.UI.Avalonia.Collections;
 using ImageCare.UI.Avalonia.Controls;
 using ImageCare.UI.Avalonia.Localization;
+using ImageCare.UI.Avalonia.Services;
 using ImageCare.UI.Avalonia.ViewModels.Domain;
 
 using MapsterMapper;
@@ -44,6 +46,7 @@ internal class GlancePanelViewModel : ViewModelBase, IDialogAware
     private readonly IFileSystemWatcherService _fileSystemWatcherService;
     private readonly IMediaPreviewOperationsService _fileOperationsService;
     private readonly INotificationService _notificationService;
+    private readonly IConfigurationService _configurationService;
     private readonly LocalizationManager _localization;
     private readonly IMapper _mapper;
     private readonly ILogger _logger;
@@ -65,6 +68,9 @@ internal class GlancePanelViewModel : ViewModelBase, IDialogAware
     private double _panelRowHeight;
     private bool _hasDeletedFiles;
     private bool _isRestoringAll;
+    private bool _isPreviewAnalysisComplete;
+    private bool _isStatisticsAnalysisComplete;
+    private MediaSortDirection _sortDirection;
 
     public GlancePanelViewModel(IFolderStatisticsService folderStatisticsService,
                                 IFolderClusterizationService folderClusterizationService,
@@ -73,6 +79,7 @@ internal class GlancePanelViewModel : ViewModelBase, IDialogAware
                                 IFileSystemWatcherService fileSystemWatcherService,
                                 IMediaPreviewOperationsService fileOperationsService,
                                 IConfigurationService configurationService,
+                                TrayAnalysisProgressService trayAnalysisProgressService,
                                 INotificationService notificationService,
                                 LocalizationManager localization,
                                 IMapper mapper,
@@ -87,6 +94,7 @@ internal class GlancePanelViewModel : ViewModelBase, IDialogAware
         _fileSystemWatcherService = fileSystemWatcherService;
         _fileOperationsService = fileOperationsService;
         _notificationService = notificationService;
+        _configurationService = configurationService;
         _localization = localization;
         _mapper = mapper;
         _logger = logger;
@@ -94,10 +102,17 @@ internal class GlancePanelViewModel : ViewModelBase, IDialogAware
         RequestClose = requestClose;
 
         _imageLoadCts = new CancellationTokenSource();
-        ImagePreviews = new SortedObservableCollection<GlanceMediaPreviewViewModel>(new CreationDateTimeDescendingComparer());
+        _sortDirection = configurationService.Configuration.Value.FolderOverviewSortDirection;
+        ImagePreviews = new SortedObservableCollection<GlanceMediaPreviewViewModel>(
+            new CreationDateTimeComparer(_sortDirection));
         DeletedFiles = new ObservableCollection<DeletedMediaFileViewModel>();
-        TimelineVm = new TimelineViewModel(_folderStatisticsService, configurationService, _synchronizationContext);
+        TimelineVm = new TimelineViewModel(
+            _folderStatisticsService,
+            configurationService,
+            trayAnalysisProgressService,
+            _synchronizationContext);
 
+        ToggleSortDirectionCommand = CreateCommand(ToggleSortDirection);
         ZoomInCommand = CreateCommand(ZoomIn, CanZoomIn).ObservesProperty(() => ImagePreviews.Count);
         ZoomOutCommand = CreateCommand(ZoomOut, CanZoomOut).ObservesProperty(() => ImagePreviews.Count);
         RestoreAllCommand = CreateAsyncCommand(RestoreAllAsync, () => HasDeletedFiles && !IsRestoringAll)
@@ -128,6 +143,15 @@ internal class GlancePanelViewModel : ViewModelBase, IDialogAware
 
     public ICommand RestoreAllCommand { get; }
 
+    public ICommand ToggleSortDirectionCommand { get; }
+
+    public bool IsSortAscending => _sortDirection == MediaSortDirection.OldestFirst;
+
+    public bool CanChangeSort => !FilesLoading &&
+                                 _isPreviewAnalysisComplete &&
+                                 _isStatisticsAnalysisComplete &&
+                                 !string.IsNullOrWhiteSpace(SelectedFolderPath);
+
     public TimelineViewModel TimelineVm { get; }
 
     public ObservableCollection<DeletedMediaFileViewModel> DeletedFiles { get; }
@@ -147,7 +171,13 @@ internal class GlancePanelViewModel : ViewModelBase, IDialogAware
     public bool FilesLoading
     {
         get => _filesLoading;
-        set => SetProperty(ref _filesLoading, value);
+        set
+        {
+            if (SetProperty(ref _filesLoading, value))
+            {
+                RaisePropertyChanged(nameof(CanChangeSort));
+            }
+        }
     }
 
     public string Title
@@ -220,6 +250,8 @@ internal class GlancePanelViewModel : ViewModelBase, IDialogAware
         try
         {
             CancelImageLoading();
+            _folderStatisticsService.Stop();
+            _fileSystemWatcherService.StopWatching();
             ClearPreviewPanel();
             _disposable?.Dispose();
         }
@@ -256,6 +288,9 @@ internal class GlancePanelViewModel : ViewModelBase, IDialogAware
                                       .ObserveOn(_synchronizationContext)
                                       .Subscribe(RefreshDeletedFiles, onError: OnObservableError),
                 _folderClusterizationService.ClusterizationCompleted.Subscribe(OnClusterizationCompleted, onError: OnObservableError),
+                _folderStatisticsService.ScanProgress
+                                        .ObserveOn(_synchronizationContext)
+                                        .Subscribe(OnScanProgressChanged, onError: OnObservableError),
                 TimelineVm.DateSelected.Subscribe(OnTimelineDateSelected, onError: OnObservableError)
             };
 
@@ -373,8 +408,44 @@ internal class GlancePanelViewModel : ViewModelBase, IDialogAware
         ImagesPerLine++;
     }
 
+    private void ToggleSortDirection()
+    {
+        if (!CanChangeSort)
+        {
+            return;
+        }
+
+        _sortDirection = _sortDirection == MediaSortDirection.NewestFirst
+            ? MediaSortDirection.OldestFirst
+            : MediaSortDirection.NewestFirst;
+        ImagePreviews.SetComparer(new CreationDateTimeComparer(_sortDirection));
+        lock (_imagePathsLock)
+        {
+            _imagePaths?.SetComparer(new FileModelCreationDateTimeComparer(_sortDirection));
+        }
+
+        _configurationService.Configuration.Value.FolderOverviewSortDirection = _sortDirection;
+        _configurationService.SaveConfiguration();
+        RaisePropertyChanged(nameof(IsSortAscending));
+        IsScrollResetRequested = true;
+    }
+
+    private void OnScanProgressChanged(ScanProgress progress)
+    {
+        _isStatisticsAnalysisComplete = progress.Status == ScanStatus.InitialScanCompleted;
+        RaisePropertyChanged(nameof(CanChangeSort));
+    }
+
+    private void ResetAnalysisState()
+    {
+        _isPreviewAnalysisComplete = false;
+        _isStatisticsAnalysisComplete = false;
+        RaisePropertyChanged(nameof(CanChangeSort));
+    }
+
     private void ClearPreviewPanel()
     {
+        ResetAnalysisState();
         _imagePaths?.Clear();
         ImagePreviews.Clear();
         TimelineVm.Clear();
@@ -387,7 +458,8 @@ internal class GlancePanelViewModel : ViewModelBase, IDialogAware
             lock (_imagePathsLock)
             {
                 FilesLoading = true;
-                _imagePaths = new SortedObservableCollection<FileModel>(new FileModelCreationDateTimeDescendingComparer());
+                _imagePaths = new SortedObservableCollection<FileModel>(
+                    new FileModelCreationDateTimeComparer(_sortDirection));
             }
 
             var files = await _folderService.GetFileModelAsync(selectedFileSystemItem, "*");
@@ -428,6 +500,8 @@ internal class GlancePanelViewModel : ViewModelBase, IDialogAware
         {
             if (_imagePaths.Count == 0)
             {
+                _isPreviewAnalysisComplete = true;
+                RaisePropertyChanged(nameof(CanChangeSort));
                 return;
             }
 
@@ -462,6 +536,8 @@ internal class GlancePanelViewModel : ViewModelBase, IDialogAware
             }
 
             _folderClusterizationService.StartAsync(SelectedFolderPath, token);
+            _isPreviewAnalysisComplete = true;
+            RaisePropertyChanged(nameof(CanChangeSort));
         }
         catch (Exception ex)
         {

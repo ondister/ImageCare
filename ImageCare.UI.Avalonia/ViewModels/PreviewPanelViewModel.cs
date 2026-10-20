@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
 
+using ImageCare.Core.Domain.Configuration;
 using ImageCare.Core.Domain.Folders;
 using ImageCare.Core.Domain.Media;
 using ImageCare.Core.Domain.Notification;
@@ -53,6 +54,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
     private readonly IFolderStatisticsService _folderStatisticsService;
     private readonly IFolderClusterizationService _folderClusterizationService;
     private readonly INotificationService _notificationService;
+    private readonly IConfigurationService _configurationService;
     private readonly IDialogService _dialogService;
     private readonly IMapper _mapper;
     private readonly ILogger _logger;
@@ -68,6 +70,9 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
 
     private bool _isScrollResetRequested;
     private bool _filesLoading;
+    private bool _isPreviewAnalysisComplete;
+    private bool _isStatisticsAnalysisComplete;
+    private MediaSortDirection _sortDirection = MediaSortDirection.NewestFirst;
     private SelectedDirectory? _selectedDirectory;
     private int _indexInView;
 
@@ -81,6 +86,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
                                  IFolderClusterizationService folderClusterizationService,
                                  INotificationService notificationService,
                                  IConfigurationService configurationService,
+                                 TrayAnalysisProgressService trayAnalysisProgressService,
                                  IDialogService dialogService,
                                  IMapper mapper,
                                  ILogger logger,
@@ -96,6 +102,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
         _folderStatisticsService = folderStatisticsService;
         _folderClusterizationService = folderClusterizationService;
         _notificationService = notificationService;
+        _configurationService = configurationService;
         _dialogService = dialogService;
         _mapper = mapper;
         _logger = logger;
@@ -105,12 +112,18 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
         CopyImagePreviewCommand = CreateAsyncCommand(CopyImagePreviewAsync);
         MoveImagePreviewCommand = CreateAsyncCommand(MoveImagePreviewAsync);
         DeleteImagePreviewCommand = CreateAsyncCommand(DeleteImagePreview);
+        ToggleSortDirectionCommand = CreateCommand(ToggleSortDirection);
 
-        ImagePreviews = new SortedObservableCollection<MediaPreviewViewModel>(new CreationDateTimeDescendingComparer());
+        ImagePreviews = new SortedObservableCollection<MediaPreviewViewModel>(
+            new CreationDateTimeComparer(_sortDirection));
 
         _folderSelectedCancellationTokenSource = new CancellationTokenSource();
 
-        TimelineVm = new TimelineViewModel(_folderStatisticsService, configurationService, _synchronizationContext);
+        TimelineVm = new TimelineViewModel(
+            _folderStatisticsService,
+            configurationService,
+            trayAnalysisProgressService,
+            _synchronizationContext);
     }
 
     // Used by HorizontalScrollBehavior
@@ -123,7 +136,13 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
     public bool FilesLoading
     {
         get => _filesLoading;
-        set => SetProperty(ref _filesLoading, value);
+        set
+        {
+            if (SetProperty(ref _filesLoading, value))
+            {
+                RaisePropertyChanged(nameof(CanChangeSort));
+            }
+        }
     }
 
     public SortedObservableCollection<MediaPreviewViewModel> ImagePreviews { get; }
@@ -162,6 +181,15 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
 
     public ICommand DeleteImagePreviewCommand { get; }
 
+    public ICommand ToggleSortDirectionCommand { get; }
+
+    public bool IsSortAscending => _sortDirection == MediaSortDirection.OldestFirst;
+
+    public bool CanChangeSort => !FilesLoading &&
+                                 _isPreviewAnalysisComplete &&
+                                 _isStatisticsAnalysisComplete &&
+                                 !string.IsNullOrWhiteSpace(SelectedFolderPath);
+
     public int IndexInView
     {
         get => _indexInView;
@@ -176,6 +204,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
     public override void OnNavigatedTo(NavigationContext navigationContext)
     {
         FileManagerPanel = (FileManagerPanel)navigationContext.Parameters["panel"];
+        ApplySortDirection(GetSavedSortDirection(), save: false);
 
         _disposable?.Dispose();
         _folderSelectedCancellationTokenSource.Dispose();
@@ -202,6 +231,9 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
             _folderService.FileSystemItemSelected.Subscribe(OnFolderSelected),
             _fileOperationsService.ImagePreviewSelected.Subscribe(OnImagePreviewSelected),
             _folderClusterizationService.ClusterizationCompleted.Subscribe(OnClusterizationCompleted),
+            _folderStatisticsService.ScanProgress
+                                    .ObserveOn(_synchronizationContext)
+                                    .Subscribe(OnScanProgressChanged),
             TimelineVm.DateSelected.Subscribe(OnTimelineDateSelected),
             TimelineVm.StatisticsClick.Subscribe(OnStatisticsClick)
         };
@@ -421,6 +453,73 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
         }
     }
 
+    private MediaSortDirection GetSavedSortDirection()
+    {
+        var configuration = _configurationService.Configuration.Value;
+        return FileManagerPanel switch
+        {
+            FileManagerPanel.Left => configuration.LeftPreviewSortDirection,
+            FileManagerPanel.Right => configuration.RightPreviewSortDirection,
+            _ => MediaSortDirection.NewestFirst
+        };
+    }
+
+    private void ToggleSortDirection()
+    {
+        if (!CanChangeSort)
+        {
+            return;
+        }
+
+        var direction = _sortDirection == MediaSortDirection.NewestFirst
+            ? MediaSortDirection.OldestFirst
+            : MediaSortDirection.NewestFirst;
+        ApplySortDirection(direction, save: true);
+    }
+
+    private void ApplySortDirection(MediaSortDirection direction, bool save)
+    {
+        _sortDirection = direction;
+        ImagePreviews.SetComparer(new CreationDateTimeComparer(direction));
+        lock (_imagePathsLock)
+        {
+            _imagePaths?.SetComparer(new FileModelCreationDateTimeComparer(direction));
+        }
+
+        RaisePropertyChanged(nameof(IsSortAscending));
+        IsScrollResetRequested = true;
+
+        if (!save)
+        {
+            return;
+        }
+
+        var configuration = _configurationService.Configuration.Value;
+        if (FileManagerPanel == FileManagerPanel.Left)
+        {
+            configuration.LeftPreviewSortDirection = direction;
+        }
+        else if (FileManagerPanel == FileManagerPanel.Right)
+        {
+            configuration.RightPreviewSortDirection = direction;
+        }
+
+        _configurationService.SaveConfiguration();
+    }
+
+    private void OnScanProgressChanged(ScanProgress progress)
+    {
+        _isStatisticsAnalysisComplete = progress.Status == ScanStatus.InitialScanCompleted;
+        RaisePropertyChanged(nameof(CanChangeSort));
+    }
+
+    private void ResetAnalysisState()
+    {
+        _isPreviewAnalysisComplete = false;
+        _isStatisticsAnalysisComplete = false;
+        RaisePropertyChanged(nameof(CanChangeSort));
+    }
+
     private void OnFolderSelected(SelectedDirectory selectedFileSystemItem)
     {
         
@@ -429,6 +528,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
             return;
         }
 
+        ResetAnalysisState();
         _selectedDirectory = selectedFileSystemItem;
 
         _folderStatisticsService.Stop();
@@ -474,7 +574,8 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
             lock (_imagePathsLock)
             {
                 FilesLoading = true;
-                _imagePaths = new SortedObservableCollection<FileModel>(new FileModelCreationDateTimeDescendingComparer());
+                _imagePaths = new SortedObservableCollection<FileModel>(
+                    new FileModelCreationDateTimeComparer(_sortDirection));
             }
 
             var files = await _folderService.GetFileModelAsync(selectedFileSystemItem, "*");
@@ -729,6 +830,8 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
         {
             if (_imagePaths.Count == 0)
             {
+                _isPreviewAnalysisComplete = true;
+                RaisePropertyChanged(nameof(CanChangeSort));
                 return;
             }
 
@@ -763,6 +866,8 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
             }
 
             _folderClusterizationService.StartAsync(SelectedFolderPath, token);
+            _isPreviewAnalysisComplete = true;
+            RaisePropertyChanged(nameof(CanChangeSort));
         }
         catch (OperationCanceledException)
         {

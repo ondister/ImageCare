@@ -4,6 +4,13 @@
                         x:Class="ImageCare.UI.Avalonia.App"
                         RequestedThemeVariant="Default">
 
+    <TrayIcon.Icons>
+        <TrayIcons>
+            <TrayIcon Icon="/Assets/imagecare-logo.ico"
+                      ToolTipText="ImageCare" />
+        </TrayIcons>
+    </TrayIcon.Icons>
+
     <prism:PrismApplication.Styles>
         <FluentTheme DensityStyle="Compact">
             <FluentTheme.Palettes>
