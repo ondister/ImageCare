@@ -32,6 +32,7 @@ public sealed class MediaSearchViewModel : ViewModelBase
     private readonly INotificationService _notificationService;
     private readonly LocalizationManager _localization;
     private readonly ILogger _logger;
+    private readonly Action? _navigationRequested;
     private string _text = string.Empty;
     private string _tagsText = string.Empty;
     private bool _useMinimumRating;
@@ -50,7 +51,8 @@ public sealed class MediaSearchViewModel : ViewModelBase
         IMediaPreviewOperationsService previewOperations,
         INotificationService notificationService,
         LocalizationManager localization,
-        ILogger logger)
+        ILogger logger,
+        Action? navigationRequested = null)
     {
         _annotationsService = annotationsService;
         _configurationService = configurationService;
@@ -59,8 +61,11 @@ public sealed class MediaSearchViewModel : ViewModelBase
         _notificationService = notificationService;
         _localization = localization;
         _logger = logger;
+        _navigationRequested = navigationRequested;
         _statusText = localization["Search_Ready"];
         SearchCommand = CreateAsyncCommand(SearchAsync);
+        ShowSelectedCommand = CreateAsyncCommand(ShowSelectedAsync, () => SelectedResult != null)
+            .ObservesProperty(() => SelectedResult);
         OpenSelectedCommand = CreateAsyncCommand(OpenSelectedAsync, () => SelectedResult != null)
             .ObservesProperty(() => SelectedResult);
     }
@@ -130,6 +135,8 @@ public sealed class MediaSearchViewModel : ViewModelBase
     }
 
     public ICommand SearchCommand { get; }
+
+    public ICommand ShowSelectedCommand { get; }
 
     public ICommand OpenSelectedCommand { get; }
 
@@ -202,7 +209,13 @@ public sealed class MediaSearchViewModel : ViewModelBase
         }
     }
 
-    private async Task OpenSelectedAsync(IProgress<int> progress, CancellationToken cancellationToken)
+    private Task ShowSelectedAsync(IProgress<int> progress, CancellationToken cancellationToken) =>
+        OpenSelectedAsync(navigateToFile: false, cancellationToken);
+
+    private Task OpenSelectedAsync(IProgress<int> progress, CancellationToken cancellationToken) =>
+        OpenSelectedAsync(navigateToFile: true, cancellationToken);
+
+    private async Task OpenSelectedAsync(bool navigateToFile, CancellationToken cancellationToken)
     {
         if (SelectedResult is not { } selected)
         {
@@ -229,7 +242,16 @@ public sealed class MediaSearchViewModel : ViewModelBase
 
             var lastPanel = (_previewOperations.GetLastSelectedMediaPreview() as SelectedMediaPreview)?.FileManagerPanel
                 ?? FileManagerPanel.Left;
-            _previewOperations.SetSelectedPreview(new SelectedMediaPreview(preview, lastPanel));
+            var selectedPreview = new SelectedMediaPreview(preview, lastPanel);
+            if (navigateToFile)
+            {
+                _previewOperations.RequestMediaPreviewNavigation(selectedPreview);
+                _navigationRequested?.Invoke();
+            }
+            else
+            {
+                _previewOperations.SetSelectedPreview(selectedPreview);
+            }
         }
         catch (OperationCanceledException)
         {

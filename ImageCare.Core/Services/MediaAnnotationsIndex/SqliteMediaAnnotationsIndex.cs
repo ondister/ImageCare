@@ -145,9 +145,8 @@ public sealed class SqliteMediaAnnotationsIndex : IMediaAnnotationsIndex
             var rootKey = GetPathKey(NormalizePath(query.RootPath));
             conditions.Add("(m.path_key = @root OR m.path_key LIKE @rootPrefix ESCAPE '\\')");
             command.Parameters.AddWithValue("@root", rootKey);
-            command.Parameters.AddWithValue(
-                "@rootPrefix",
-                EscapeLike(Path.TrimEndingDirectorySeparator(rootKey)) + Path.DirectorySeparatorChar + "%");
+            var rootPrefix = Path.TrimEndingDirectorySeparator(rootKey) + Path.DirectorySeparatorChar;
+            command.Parameters.AddWithValue("@rootPrefix", EscapeLike(rootPrefix) + "%");
         }
 
         if (query.MinimumRating is not null)
@@ -383,7 +382,8 @@ public sealed class SqliteMediaAnnotationsIndex : IMediaAnnotationsIndex
     public async Task RebuildAsync(
         IEnumerable<string> roots,
         IProgress<AnnotationsReconciliationStatus>? progress = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        bool force = false)
     {
         ArgumentNullException.ThrowIfNull(roots);
         await InitializeAsync(cancellationToken).ConfigureAwait(false);
@@ -446,7 +446,7 @@ public sealed class SqliteMediaAnnotationsIndex : IMediaAnnotationsIndex
                         processed));
                     try
                     {
-                        if (existing.TryGetValue(normalizedPath, out var indexed)
+                        if (!force && existing.TryGetValue(normalizedPath, out var indexed)
                             && IsSourceStateUnchanged(normalizedPath, indexed))
                         {
                             continue;
@@ -460,7 +460,7 @@ public sealed class SqliteMediaAnnotationsIndex : IMediaAnnotationsIndex
                     {
                         throw;
                     }
-                    catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or XmlException)
+                    catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or XmlException or InvalidDataException)
                     {
                         // A per-file failure does not abort the root or remove its existing row.
                     }

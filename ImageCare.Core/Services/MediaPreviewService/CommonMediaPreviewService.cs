@@ -15,7 +15,7 @@ namespace ImageCare.Core.Services.MediaPreviewService;
 public sealed class CommonMediaPreviewService : IMediaPreviewService, IDisposable
 {
     private const string ExceptionMessage = "Unexpected exception in Image service";
-    private const int MaxMetadataCacheSize = 10000;
+    private const int MaxMetadataCacheSize = 512;
 
     private readonly AsyncRetryPolicy _fileOperationsRetryPolicy;
     private readonly MediaPreviewProvidersFactory _previewProvidersFactory;
@@ -28,10 +28,10 @@ public sealed class CommonMediaPreviewService : IMediaPreviewService, IDisposabl
         _cachedMetadata = new ConcurrentDictionary<string, IMediaMetadata>();
 
         _fileOperationsRetryPolicy = Policy
-                                     .Handle<Exception>()
+                                     .Handle<MediaPreviewProviderException>(exception => exception.InnerException is IOException)
                                      .WaitAndRetryAsync(
-                                         retryCount: 6,
-                                         sleepDurationProvider: retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt - 1)));
+                                         retryCount: 2,
+                                         sleepDurationProvider: retryAttempt => TimeSpan.FromMilliseconds(150 * retryAttempt));
     }
 
     public void Dispose()
@@ -45,12 +45,11 @@ public sealed class CommonMediaPreviewService : IMediaPreviewService, IDisposabl
                                                       MediaPreviewSize imagePreviewSize,
                                                       CancellationToken cancellationToken = default)
     {
-        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
-            cancellationToken,
-            _disposalTokenSource.Token);
-
         try
         {
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
+                cancellationToken,
+                _disposalTokenSource.Token);
             return await _fileOperationsRetryPolicy.ExecuteAsync(
                        async ct =>
                        {
@@ -67,14 +66,21 @@ public sealed class CommonMediaPreviewService : IMediaPreviewService, IDisposabl
         }
     }
 
-    public async Task<MediaPreview?> GetMediaPreviewAsync(string imagePath)
+    public async Task<MediaPreview?> GetMediaPreviewAsync(
+        string imagePath,
+        CancellationToken cancellationToken = default)
     {
         try
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var fileInfo = new FileInfo(imagePath);
             var fileModel = new FileModel(fileInfo.Name, fileInfo.FullName, fileInfo.LastWriteTime);
 
-            return await CreateMediaPreviewAsync(fileModel);
+            return await GetMediaPreviewAsync(fileModel, cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception exception)
         {
@@ -82,7 +88,23 @@ public sealed class CommonMediaPreviewService : IMediaPreviewService, IDisposabl
         }
     }
 
-    public async Task<IMediaMetadata> GetMediaMetadataAsync(MediaPreview mediaPreview)
+    public Task<MediaPreview?> GetMediaPreviewAsync(
+        FileModel fileModel,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(fileModel);
+        cancellationToken.ThrowIfCancellationRequested();
+        var detectedFormat = MediaFormat.Create(fileModel);
+        var enabledFormat = _previewProvidersFactory.Capabilities.Supports(detectedFormat)
+            ? detectedFormat
+            : MediaFormat.MediaFormatUnknown;
+        MediaPreview result = new(fileModel.Name, fileModel.FullName, enabledFormat, 200);
+        return Task.FromResult<MediaPreview?>(result);
+    }
+
+    public async Task<IMediaMetadata> GetMediaMetadataAsync(
+        MediaPreview mediaPreview,
+        CancellationToken cancellationToken = default)
     {
         if (_cachedMetadata.TryGetValue(mediaPreview.Url, out var cachedMetadata))
         {
@@ -91,6 +113,9 @@ public sealed class CommonMediaPreviewService : IMediaPreviewService, IDisposabl
 
         try
         {
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
+                cancellationToken,
+                _disposalTokenSource.Token);
             var metadata = await _fileOperationsRetryPolicy.ExecuteAsync(
                                async ct =>
                                {
@@ -99,7 +124,7 @@ public sealed class CommonMediaPreviewService : IMediaPreviewService, IDisposabl
                                               () => previewProvider.GetMediaMetadata(mediaPreview.Url),
                                               ct);
                                },
-                               _disposalTokenSource.Token);
+                               linkedCts.Token);
 
             if (_cachedMetadata.Count >= MaxMetadataCacheSize)
             {
@@ -129,15 +154,4 @@ public sealed class CommonMediaPreviewService : IMediaPreviewService, IDisposabl
         }
     }
 
-    private async Task<MediaPreview> CreateMediaPreviewAsync(FileModel fileModel)
-    {
-        return await Task.Run(() =>
-        {
-            var detectedFormat = MediaFormat.Create(fileModel);
-            var enabledFormat = _previewProvidersFactory.Capabilities.Supports(detectedFormat)
-                                    ? detectedFormat
-                                    : MediaFormat.MediaFormatUnknown;
-            return new MediaPreview(fileModel.Name, fileModel.FullName, enabledFormat, 200);
-        });
-    }
 }

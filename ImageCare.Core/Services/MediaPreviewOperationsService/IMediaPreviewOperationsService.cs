@@ -7,6 +7,8 @@ public interface IMediaPreviewOperationsService
 {
     IObservable<SelectedMediaPreview> ImagePreviewSelected { get; }
 
+    IObservable<SelectedMediaPreview> MediaPreviewNavigationRequested { get; }
+
     IObservable<MediaFileOperationCompleted> FileOperationCompleted { get; }
 
     Task<OperationResult> CopyImagePreviewToDirectoryAsync(
@@ -46,6 +48,8 @@ public interface IMediaPreviewOperationsService
     Task<OperationResult> PermanentlyDeleteAsync(string bufferPath);
 
     void SetSelectedPreview(SelectedMediaPreview selectedImagePreview);
+
+    void RequestMediaPreviewNavigation(SelectedMediaPreview selectedImagePreview);
 
     void OpenInExternalProcess(MediaPreview mediaPreview, string pathToExecutable);
 

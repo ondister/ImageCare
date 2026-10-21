@@ -1,8 +1,10 @@
 using System;
+using System.Linq;
 
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.VisualTree;
 
 namespace ImageCare.UI.Avalonia.Controls;
 
@@ -29,7 +31,8 @@ public class PreviewsListBox : ListBox
 
         container.Focus();
 
-        if (Parent is not ScrollViewer scrollViewer)
+        var scrollViewer = this.GetVisualAncestors().OfType<ScrollViewer>().FirstOrDefault();
+        if (scrollViewer == null)
         {
             return;
         }

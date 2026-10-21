@@ -22,6 +22,7 @@ public sealed class WindowsMediaPreviewOperationsService : IMediaPreviewOperatio
     private const string DeletionManifestFileName = "deletion-manifest.json";
 
     private readonly Subject<SelectedMediaPreview> _selectedImagePreviewSubject;
+    private readonly Subject<SelectedMediaPreview> _mediaPreviewNavigationRequestedSubject;
     private readonly Subject<MediaFileOperationCompleted> _fileOperationCompletedSubject;
     private readonly BehaviorSubject<IReadOnlyList<DeletedMediaFile>> _deletedFilesSubject;
     private readonly IFileSystemService _fileSystemService;
@@ -42,12 +43,16 @@ public sealed class WindowsMediaPreviewOperationsService : IMediaPreviewOperatio
         _processService = processService ?? throw new ArgumentNullException(nameof(processService));
         _configurationService = configurationService;
         _selectedImagePreviewSubject = new Subject<SelectedMediaPreview>();
+        _mediaPreviewNavigationRequestedSubject = new Subject<SelectedMediaPreview>();
         _fileOperationCompletedSubject = new Subject<MediaFileOperationCompleted>();
         LoadDeletionManifest();
         _deletedFilesSubject = new BehaviorSubject<IReadOnlyList<DeletedMediaFile>>(CreateDeletedFilesSnapshot());
     }
 
     public IObservable<SelectedMediaPreview> ImagePreviewSelected => _selectedImagePreviewSubject.AsObservable();
+
+    public IObservable<SelectedMediaPreview> MediaPreviewNavigationRequested =>
+        _mediaPreviewNavigationRequestedSubject.AsObservable();
 
     public IObservable<MediaFileOperationCompleted> FileOperationCompleted =>
         _fileOperationCompletedSubject.AsObservable();
@@ -79,6 +84,7 @@ public sealed class WindowsMediaPreviewOperationsService : IMediaPreviewOperatio
     public void Dispose()
     {
         _selectedImagePreviewSubject.Dispose();
+        _mediaPreviewNavigationRequestedSubject.Dispose();
         _fileOperationCompletedSubject.Dispose();
         _deletedFilesSubject.Dispose();
     }
@@ -452,6 +458,11 @@ public sealed class WindowsMediaPreviewOperationsService : IMediaPreviewOperatio
 
         _lastSelectedMediaPreview = selectedImagePreview;
         _selectedImagePreviewSubject.OnNext(selectedImagePreview);
+    }
+
+    public void RequestMediaPreviewNavigation(SelectedMediaPreview selectedImagePreview)
+    {
+        _mediaPreviewNavigationRequestedSubject.OnNext(selectedImagePreview);
     }
 
     public void OpenInExternalProcess(MediaPreview mediaPreview, string pathToExecutable)

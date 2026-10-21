@@ -25,6 +25,10 @@ namespace ImageCare.UI.Avalonia.ViewModels.Domain;
 
 internal class MediaPreviewViewModel : ViewModelBase, IComparable<MediaPreviewViewModel>
 {
+    private const int PreviewDecodeWidth = 512;
+    private static readonly SemaphoreSlim PreviewDecodeGate = new(4, 4);
+
+    private readonly SemaphoreSlim _previewLoadGate = new(1, 1);
     private readonly IMediaPreviewService _imageService;
     private readonly IMediaPreviewOperationsService _fileOperationsService;
     private readonly INotificationService _notificationService;
@@ -120,8 +124,22 @@ internal class MediaPreviewViewModel : ViewModelBase, IComparable<MediaPreviewVi
     public Bitmap? PreviewBitmap
     {
         get => _previewBitmap;
-        set => SetProperty(ref _previewBitmap, value);
+        set
+        {
+            if (ReferenceEquals(_previewBitmap, value))
+            {
+                return;
+            }
+
+            var previous = _previewBitmap;
+            if (SetProperty(ref _previewBitmap, value))
+            {
+                previous?.Dispose();
+            }
+        }
     }
+
+    public void UnloadPreview() => PreviewBitmap = null;
 
     public int MaxImageHeight
     {
@@ -246,16 +264,38 @@ internal class MediaPreviewViewModel : ViewModelBase, IComparable<MediaPreviewVi
 
     public async Task LoadPreviewAsync(CancellationToken token)
     {
-        IsLoading = true;
-
+        await _previewLoadGate.WaitAsync(token);
+        Bitmap? decodedBitmap = null;
         try
         {
-            await using var imageStream = await _imageService.GetJpegImageStreamAsync(_mapper.Map<MediaPreview>(this), MediaPreviewSize.Medium, token);
-            PreviewBitmap = await Task.Run(() =>new Bitmap(imageStream), token);
+            if (PreviewBitmap != null)
+            {
+                return;
+            }
+
+            IsLoading = true;
+            await PreviewDecodeGate.WaitAsync(token);
+            try
+            {
+                await using var imageStream = await _imageService.GetJpegImageStreamAsync(
+                    _mapper.Map<MediaPreview>(this),
+                    MediaPreviewSize.Medium,
+                    token);
+                decodedBitmap = await Task.Run(
+                    () => Bitmap.DecodeToWidth(imageStream, PreviewDecodeWidth, BitmapInterpolationMode.MediumQuality),
+                    token);
+                token.ThrowIfCancellationRequested();
+                PreviewBitmap = decodedBitmap;
+                decodedBitmap = null;
+            }
+            finally
+            {
+                PreviewDecodeGate.Release();
+            }
         }
         catch (OperationCanceledException)
         {
-            // Ignored
+            // Expected when the item leaves the viewport or the folder changes.
         }
         catch (Exception exception)
         {
@@ -263,7 +303,9 @@ internal class MediaPreviewViewModel : ViewModelBase, IComparable<MediaPreviewVi
         }
         finally
         {
+            decodedBitmap?.Dispose();
             IsLoading = false;
+            _previewLoadGate.Release();
         }
     }
 

@@ -31,5 +31,6 @@ public interface IMediaAnnotationsIndex
     Task RebuildAsync(
         IEnumerable<string> roots,
         IProgress<AnnotationsReconciliationStatus>? progress = null,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default,
+        bool force = false);
 }

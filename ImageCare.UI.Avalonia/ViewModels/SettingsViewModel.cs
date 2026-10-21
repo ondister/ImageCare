@@ -583,9 +583,15 @@ public sealed class SettingsViewModel : ViewModelBase
     {
         try
         {
+            if (MediaSearchRootPaths.Count == 0)
+            {
+                AnnotationsStatus = _localization["Search_NoRoots"];
+                return;
+            }
+
             IsAnnotationsBusy = true;
             AnnotationsStatus = _localization["Annotations_Rebuilding"];
-            await _annotationsService.RegisterRootsAsync(MediaSearchRootPaths, cancellationToken);
+            await _annotationsService.RebuildRootsAsync(MediaSearchRootPaths, cancellationToken);
             await RefreshAvailableTagsAsync(cancellationToken);
         }
         finally

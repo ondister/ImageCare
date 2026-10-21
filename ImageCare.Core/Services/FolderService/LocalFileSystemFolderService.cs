@@ -112,7 +112,8 @@ public sealed class LocalFileSystemFolderService : IFolderService, IDisposable
             }
 
             var files = _fileSystemService.EnumerateFiles(directoryPath, searchPattern, SearchOption.TopDirectoryOnly)
-                                          .Where(f => f.CreatedDateTime.HasValue);
+                                          .Where(f => f.CreatedDateTime.HasValue)
+                                          .ToArray();
 
             return files;
         });

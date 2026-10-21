@@ -176,7 +176,8 @@
   <data name="Search_Rating" xml:space="preserve"><value>Рейтинг</value></data>
   <data name="Search_Tags" xml:space="preserve"><value>Теги</value></data>
   <data name="Search_Path" xml:space="preserve"><value>Путь</value></data>
-  <data name="Search_OpenSelected" xml:space="preserve"><value>Открыть выбранное</value></data>
+  <data name="Search_ShowSelected" xml:space="preserve"><value>Показать</value></data>
+  <data name="Search_OpenSelected" xml:space="preserve"><value>Перейти</value></data>
   <data name="Search_FileMissing" xml:space="preserve"><value>Файл из индекса больше не существует</value></data>
   <data name="Search_OpenFailed" xml:space="preserve"><value>Не удалось открыть изображение из индекса</value></data>
 </root>

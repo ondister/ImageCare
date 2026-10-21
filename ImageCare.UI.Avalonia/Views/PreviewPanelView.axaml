@@ -54,39 +54,57 @@
             </Button>
         </Grid>
 
-        <Border Grid.Row="1" Margin="2,4" Padding="8,4" CornerRadius="4"
+        <Border Grid.Row="1" Margin="2,3" Padding="6,3" CornerRadius="4"
                 Background="{DynamicResource Brush.PreviewSurface}"
                 IsVisible="{Binding HasAnnotatableSelection}"
-                IsEnabled="{Binding CanEditAnnotations}">
-            <Grid ColumnDefinitions="Auto,70,Auto,180,Auto,*,Auto" ColumnSpacing="6">
-                <TextBlock Grid.Column="0" Text="{localization:Loc Annotations_Rating}" VerticalAlignment="Center" />
-                <ComboBox Grid.Column="1" SelectedIndex="{Binding SelectedRating, Mode=TwoWay}" MinWidth="105">
-                    <ComboBoxItem Content="{localization:Loc Annotations_Unrated}" />
-                    <ComboBoxItem Content="★" />
-                    <ComboBoxItem Content="★★" />
-                    <ComboBoxItem Content="★★★" />
-                    <ComboBoxItem Content="★★★★" />
-                    <ComboBoxItem Content="★★★★★" />
-                </ComboBox>
-                <Button Grid.Column="2" Content="{localization:Loc Common_Save}" Command="{Binding SaveRatingCommand}" />
-                <ComboBox Grid.Column="3" ItemsSource="{Binding AvailableAnnotationTags}" Text="{Binding NewTag}"
-                          IsEditable="True" />
-                <Button Grid.Column="4" Content="{localization:Loc Settings_Add}" Command="{Binding AddTagCommand}" />
-                <ItemsControl Grid.Column="5" ItemsSource="{Binding CurrentTags}" VerticalAlignment="Center">
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate><WrapPanel Orientation="Horizontal" /></ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <Button Margin="2,0" Padding="5,1"
-                                    Content="{Binding}"
-                                    Command="{Binding $parent[UserControl].DataContext.RemoveTagCommand}"
-                                    CommandParameter="{Binding}" />
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-                <TextBlock Grid.Column="6" Text="{Binding AnnotationEditorStatus}" Opacity="0.7" VerticalAlignment="Center" />
-            </Grid>
+                IsEnabled="{Binding CanEditAnnotations}"
+                ToolTip.Tip="{Binding AnnotationEditorStatus}">
+            <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                          VerticalScrollBarVisibility="Disabled">
+                <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                    <TextBlock Text="{localization:Loc Annotations_Rating}" VerticalAlignment="Center" />
+                    <ComboBox SelectedIndex="{Binding SelectedRating, Mode=TwoWay}" Width="100">
+                        <ComboBoxItem Content="{localization:Loc Annotations_Unrated}" />
+                        <ComboBoxItem Content="★" />
+                        <ComboBoxItem Content="★★" />
+                        <ComboBoxItem Content="★★★" />
+                        <ComboBoxItem Content="★★★★" />
+                        <ComboBoxItem Content="★★★★★" />
+                    </ComboBox>
+                    <Button Width="32" MinWidth="32" Padding="4"
+                            Content="✓"
+                            Command="{Binding SaveRatingCommand}"
+                            ToolTip.Tip="{localization:Loc Common_Save}" />
+                    <ComboBox Width="120"
+                              ItemsSource="{Binding AvailableAnnotationTags}"
+                              Text="{Binding NewTag}"
+                              IsEditable="True" />
+                    <Button Width="32" MinWidth="32" Padding="4"
+                            Content="+"
+                            Command="{Binding AddTagCommand}"
+                            ToolTip.Tip="{localization:Loc Settings_Add}" />
+                    <ItemsControl ItemsSource="{Binding CurrentTags}" VerticalAlignment="Center">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Orientation="Horizontal" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Button Margin="2,0" Padding="5,1"
+                                        Content="{Binding}"
+                                        Command="{Binding $parent[UserControl].DataContext.RemoveTagCommand}"
+                                        CommandParameter="{Binding}" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <TextBlock MaxWidth="90"
+                               Text="{Binding AnnotationEditorStatus}"
+                               Opacity="0.7"
+                               TextTrimming="CharacterEllipsis"
+                               VerticalAlignment="Center" />
+                </StackPanel>
+            </ScrollViewer>
         </Border>
 
         <TextBlock Grid.Row="2"
@@ -97,23 +115,23 @@
                    Foreground="{DynamicResource Brush.TextPrimary}"
                    IsVisible="{Binding FilesLoading}" />
 
-        <ScrollViewer Grid.Row="2"
-                      HorizontalScrollBarVisibility="Auto"
-                      VerticalScrollBarVisibility="Disabled"
-                      behaviors:HorizontalScrollBehavior.IsEnabled="True"
-                      behaviors:HorizontalScrollBehavior.IsScrollResetRequested="{Binding IsScrollResetRequested, Mode=TwoWay}">
-            <controls:PreviewsListBox ItemsSource="{Binding ImagePreviews}"
-                                      SelectedItem="{Binding SelectedPreview, Mode=TwoWay}"
-                                      SelectionMode="Single"
-                                      ItemContainerTheme="{StaticResource PreviewListBoxItem}"
-                                      Padding="0"
-                                      BorderThickness="0"
-                                      Theme="{StaticResource PreviewsListBox}"
-                                      behaviors:PreviewDragDropBehavior.DropHandler="{Binding ImagePreviewDropHandler}"
-                                      behaviors:ScrollToIndexBehavior.TargetIndex="{Binding IndexInView, Mode=TwoWay}">
+        <controls:PreviewsListBox Grid.Row="2"
+                                  ItemsSource="{Binding ImagePreviews}"
+                                  SelectedItem="{Binding SelectedPreview, Mode=TwoWay}"
+                                  SelectionMode="Single"
+                                  ItemContainerTheme="{StaticResource PreviewListBoxItem}"
+                                  Padding="0"
+                                  BorderThickness="0"
+                                  Theme="{StaticResource PreviewsListBox}"
+                                  ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                                  ScrollViewer.VerticalScrollBarVisibility="Disabled"
+                                  behaviors:HorizontalScrollBehavior.IsEnabled="True"
+                                  behaviors:HorizontalScrollBehavior.IsScrollResetRequested="{Binding IsScrollResetRequested, Mode=TwoWay}"
+                                  behaviors:PreviewDragDropBehavior.DropHandler="{Binding ImagePreviewDropHandler}"
+                                  behaviors:ScrollToIndexBehavior.TargetIndex="{Binding IndexInView, Mode=TwoWay}">
                 <controls:PreviewsListBox.ItemsPanel>
                     <ItemsPanelTemplate>
-                        <StackPanel Orientation="Horizontal" />
+                        <VirtualizingStackPanel Orientation="Horizontal" CacheLength="0.5" />
                     </ItemsPanelTemplate>
                 </controls:PreviewsListBox.ItemsPanel>
 
@@ -133,11 +151,9 @@
                 <controls:PreviewsListBox.ItemTemplate>
                     <DataTemplate DataType="domain:MediaPreviewViewModel">
                         <controls:MediaPreviewCard Width="270"
-                                                   Height="300"
-                                                   VerticalAlignment="Center" />
+                                                   VerticalAlignment="Stretch" />
                     </DataTemplate>
                 </controls:PreviewsListBox.ItemTemplate>
-            </controls:PreviewsListBox>
-        </ScrollViewer>
+        </controls:PreviewsListBox>
     </Grid>
 </UserControl>

@@ -10,12 +10,14 @@ using System.Threading.Tasks;
 using System.Windows.Input;
 
 using ImageCare.Core.Domain.Folders;
+using ImageCare.Core.Domain.Preview;
 using ImageCare.Core.Services.ConfigurationService;
 using ImageCare.Core.Services.DrivesWatcherService;
 using ImageCare.Core.Services.FileSystemService;
 using ImageCare.Core.Services.FileSystemWatcherService;
 using ImageCare.Core.Services.FolderHistoryService;
 using ImageCare.Core.Services.FolderService;
+using ImageCare.Core.Services.MediaPreviewOperationsService;
 using ImageCare.UI.Avalonia.Localization;
 using ImageCare.UI.Avalonia.Services;
 using ImageCare.UI.Avalonia.ViewModels.Domain;
@@ -35,6 +37,7 @@ internal class FoldersViewModel : NavigatedViewModelBase
 
     private readonly LocalizationManager _localization;
     private readonly IFolderService _folderService;
+    private readonly IMediaPreviewOperationsService _mediaPreviewOperations;
     private readonly IFolderHistoryService _folderHistoryService;
     private readonly IFileDialogService _fileDialogService;
     private readonly IFileSystemService _fileSystemService;
@@ -52,6 +55,7 @@ internal class FoldersViewModel : NavigatedViewModelBase
     private DirectoryViewModel? _selectedFileSystemItem;
     private CompositeDisposable _compositeDisposable;
     private CancellationTokenSource? _searchCancellationTokenSource;
+    private CancellationTokenSource? _mediaNavigationCancellationTokenSource;
 
     private string? _searchText;
     private bool _isLoading;
@@ -62,6 +66,7 @@ internal class FoldersViewModel : NavigatedViewModelBase
     private string _searchTarget = string.Empty;
 
     public FoldersViewModel(IFolderService folderService,
+                            IMediaPreviewOperationsService mediaPreviewOperations,
                             IFolderHistoryService folderHistoryService,
                             IFileDialogService fileDialogService,
                             IFileSystemService fileSystemService,
@@ -74,6 +79,7 @@ internal class FoldersViewModel : NavigatedViewModelBase
                             SynchronizationContext synchronizationContext)
     {
         _folderService = folderService ?? throw new ArgumentNullException(nameof(folderService));
+        _mediaPreviewOperations = mediaPreviewOperations ?? throw new ArgumentNullException(nameof(mediaPreviewOperations));
         _folderHistoryService = folderHistoryService ?? throw new ArgumentNullException(nameof(folderHistoryService));
         _fileDialogService = fileDialogService ?? throw new ArgumentNullException(nameof(fileDialogService));
         _fileSystemService = fileSystemService ?? throw new ArgumentNullException(nameof(fileSystemService));
@@ -191,6 +197,9 @@ internal class FoldersViewModel : NavigatedViewModelBase
 
             _compositeDisposable = new CompositeDisposable
             {
+                _mediaPreviewOperations.MediaPreviewNavigationRequested
+                                       .ObserveOn(_synchronizationContext)
+                                       .Subscribe(OnMediaPreviewNavigationRequested, OnObservableError),
                 _drivesWatcherService.DriveMounted
                                      .ObserveOn(_synchronizationContext)
                                      .Subscribe(OnDriveMounted, OnObservableError),
@@ -245,6 +254,7 @@ internal class FoldersViewModel : NavigatedViewModelBase
         try
         {
             ClearSearch();
+            _mediaNavigationCancellationTokenSource?.Cancel();
             _folderHistoryService.HistoryChanged -= OnFolderHistoryChanged;
             _compositeDisposable?.Dispose();
 
@@ -257,6 +267,94 @@ internal class FoldersViewModel : NavigatedViewModelBase
         catch (Exception ex)
         {
             _logger.Error(ex, "Error during FoldersViewModel cleanup");
+        }
+    }
+
+    private void OnMediaPreviewNavigationRequested(SelectedMediaPreview requestedPreview)
+    {
+        if (requestedPreview.FileManagerPanel != FileManagerPanel ||
+            string.IsNullOrWhiteSpace(requestedPreview.Url))
+        {
+            return;
+        }
+
+        var directoryPath = Path.GetDirectoryName(requestedPreview.Url);
+        if (string.IsNullOrWhiteSpace(directoryPath) ||
+            (SelectedFileSystemItem != null && PathsEqual(SelectedFileSystemItem.Path, directoryPath)))
+        {
+            return;
+        }
+
+        _mediaNavigationCancellationTokenSource?.Cancel();
+        var cancellation = new CancellationTokenSource();
+        _mediaNavigationCancellationTokenSource = cancellation;
+        _ = NavigateToMediaFolderAsync(directoryPath, cancellation);
+    }
+
+    private async Task NavigateToMediaFolderAsync(
+        string directoryPath,
+        CancellationTokenSource cancellation)
+    {
+        var cancellationToken = cancellation.Token;
+        try
+        {
+            var directoryExists = await Task.Run(
+                () => _fileSystemService.DirectoryExists(directoryPath),
+                cancellationToken);
+            if (!directoryExists)
+            {
+                return;
+            }
+
+            var root = FileSystemItemViewModels.OfType<DeviceViewModel>().FirstOrDefault();
+            if (root == null)
+            {
+                _logger.Warning("Cannot navigate to media folder before folder tree is loaded: {Path}", directoryPath);
+                return;
+            }
+
+            var targetPath = NormalizePath(directoryPath);
+            var drive = root.ChildFileSystemItems
+                            .OfType<DriveViewModel>()
+                            .Where(item => item is not SpecialDirectoryViewModel)
+                            .Where(item => IsSamePathOrDescendant(item.Path, targetPath))
+                            .OrderByDescending(item => NormalizePath(item.Path).Length)
+                            .FirstOrDefault();
+            if (drive == null)
+            {
+                _logger.Warning(
+                    "Cannot navigate to media folder because its drive is unavailable: {Path}, panel: {Panel}",
+                    directoryPath,
+                    FileManagerPanel);
+                return;
+            }
+
+            var targetDirectory = await GoToFolderFromSelectedAsync(drive, targetPath, cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!ReferenceEquals(_mediaNavigationCancellationTokenSource, cancellation))
+            {
+                return;
+            }
+
+            SelectedFileSystemItem = targetDirectory;
+            RevealSelectedFolderRequested?.Invoke(targetDirectory);
+        }
+        catch (OperationCanceledException)
+        {
+            // A newer media navigation request replaced this one.
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "Failed to navigate to media folder: {Path}", directoryPath);
+        }
+        finally
+        {
+            if (ReferenceEquals(_mediaNavigationCancellationTokenSource, cancellation))
+            {
+                _mediaNavigationCancellationTokenSource = null;
+            }
+
+            cancellation.Dispose();
         }
     }
 

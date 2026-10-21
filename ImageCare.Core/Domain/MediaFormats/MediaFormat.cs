@@ -109,7 +109,8 @@ public sealed class MediaFormat : IEquatable<MediaFormat>
 
 	internal static MediaFormat Create(FileModel fileModel)
 	{
-		var fileInfo = new FileInfo(fileModel.FullName);
-		return _supportedMediaFormats.GetValueOrDefault(fileInfo.Extension, MediaFormatUnknown);
+		return _supportedMediaFormats.GetValueOrDefault(
+			Path.GetExtension(fileModel.FullName),
+			MediaFormatUnknown);
 	}
 }

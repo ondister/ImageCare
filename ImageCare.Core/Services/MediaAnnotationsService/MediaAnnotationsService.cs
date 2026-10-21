@@ -157,6 +157,23 @@ public sealed class MediaAnnotationsService : IMediaAnnotationsService
         }
     }
 
+    public async Task RebuildRootsAsync(
+        IEnumerable<string> roots,
+        CancellationToken cancellationToken = default)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        ArgumentNullException.ThrowIfNull(roots);
+        var registered = roots
+            .Where(root => !string.IsNullOrWhiteSpace(root))
+            .Select(RegisterRoot)
+            .Distinct(PathComparer)
+            .ToArray();
+        if (registered.Length > 0)
+        {
+            await RunReconciliationAsync(registered, cancellationToken, force: true).ConfigureAwait(false);
+        }
+    }
+
     public Task ReconcileRegisteredRootsAsync(CancellationToken cancellationToken = default)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
@@ -261,7 +278,8 @@ public sealed class MediaAnnotationsService : IMediaAnnotationsService
 
     private async Task RunReconciliationAsync(
         IReadOnlyCollection<string> roots,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        bool force = false)
     {
         if (roots.Count == 0)
         {
@@ -276,7 +294,7 @@ public sealed class MediaAnnotationsService : IMediaAnnotationsService
                 null,
                 0));
             var progress = new DirectProgress<AnnotationsReconciliationStatus>(_status.OnNext);
-            await _index.RebuildAsync(roots, progress, cancellationToken).ConfigureAwait(false);
+            await _index.RebuildAsync(roots, progress, cancellationToken, force).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {

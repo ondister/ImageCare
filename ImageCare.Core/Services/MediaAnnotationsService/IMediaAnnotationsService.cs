@@ -36,6 +36,8 @@ public interface IMediaAnnotationsService : IAsyncDisposable
 
     Task RegisterRootsAsync(IEnumerable<string> roots, CancellationToken cancellationToken = default);
 
+    Task RebuildRootsAsync(IEnumerable<string> roots, CancellationToken cancellationToken = default);
+
     Task ReconcileRegisteredRootsAsync(CancellationToken cancellationToken = default);
 
     Task StartBackgroundReconciliationAsync(

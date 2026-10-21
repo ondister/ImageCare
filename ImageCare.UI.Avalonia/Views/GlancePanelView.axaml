@@ -56,45 +56,50 @@
         <TabControl Grid.Row="1">
             <TabItem Header="{localization:Loc Overview_Files}">
                 <Grid RowDefinitions="*,Auto">
-                    <ScrollViewer Grid.Row="0"
-                                  HorizontalScrollBarVisibility="Disabled"
-                                  VerticalScrollBarVisibility="Auto"
-                                  behaviors:VerticalScrollBehavior.IsEnabled="True"
-                                  behaviors:VerticalScrollBehavior.IsScrollResetRequested="{Binding IsScrollResetRequested, Mode=TwoWay}">
-                        <ListBox ItemsSource="{Binding ImagePreviews}"
-                                 SelectedItem="{Binding SelectedPreview, Mode=TwoWay}"
-                                 SelectionMode="Single"
-                                 ItemContainerTheme="{StaticResource PreviewListBoxItem}"
-                                 Padding="0"
-                                 BorderThickness="0"
-                                 Theme="{StaticResource PreviewsListBox}">
-                            <ItemsControl.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <controls:FixedWrapPanel ItemsPerLine="{Binding ImagesPerLine}"
-                                                             AspectRatio="{Binding SelectedAspectRatio.AspectRatio}"
-                                                             RowHeight="{Binding PanelRowHeight, Mode=OneWayToSource}" />
-                                </ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
-                            <ListBox.Styles>
-                                <Style Selector="ListBoxItem">
-                                    <Setter Property="Margin" Value="1" />
-                                    <Setter Property="Padding" Value="0" />
-                                    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                                    <Setter Property="VerticalContentAlignment" Value="Stretch" />
-                                    <Setter Property="Background" Value="Transparent" />
-                                </Style>
-                                <Style Selector="ListBoxItem:selected">
-                                    <Setter Property="Background" Value="Transparent" />
-                                </Style>
-                            </ListBox.Styles>
-                            <ListBox.ItemTemplate>
-                                <DataTemplate DataType="domain:GlanceMediaPreviewViewModel">
-                                    <controls:MediaPreviewCard HorizontalAlignment="Stretch"
-                                                               VerticalAlignment="Stretch" />
-                                </DataTemplate>
-                            </ListBox.ItemTemplate>
-                        </ListBox>
-                    </ScrollViewer>
+                    <ListBox Grid.Row="0"
+                             ItemsSource="{Binding PreviewRows}"
+                             Padding="0"
+                             BorderThickness="0"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                             ScrollViewer.VerticalScrollBarVisibility="Auto"
+                             behaviors:VerticalScrollBehavior.IsEnabled="True"
+                             behaviors:VerticalScrollBehavior.IsScrollResetRequested="{Binding IsScrollResetRequested, Mode=TwoWay}">
+                        <ListBox.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <VirtualizingStackPanel CacheLength="0.5" />
+                            </ItemsPanelTemplate>
+                        </ListBox.ItemsPanel>
+                        <ListBox.Styles>
+                            <Style Selector="ListBoxItem">
+                                <Setter Property="Margin" Value="0" />
+                                <Setter Property="Padding" Value="0" />
+                                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                <Setter Property="Background" Value="Transparent" />
+                                <Setter Property="IsHitTestVisible" Value="True" />
+                            </Style>
+                        </ListBox.Styles>
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <ItemsControl ItemsSource="{Binding}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <controls:FixedWrapPanel ItemsPerLine="{Binding $parent[UserControl].DataContext.ImagesPerLine}"
+                                                                     AspectRatio="{Binding $parent[UserControl].DataContext.SelectedAspectRatio.AspectRatio}"
+                                                                     RowHeight="{Binding $parent[UserControl].DataContext.PanelRowHeight, Mode=OneWayToSource}" />
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate DataType="domain:GlanceMediaPreviewViewModel">
+                                            <controls:MediaPreviewCard HorizontalAlignment="Stretch"
+                                                                       VerticalAlignment="Stretch"
+                                                                       SelectCommand="{Binding $parent[UserControl].DataContext.SelectPreviewCommand}"
+                                                                       SelectCommandParameter="{Binding}" />
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
 
                     <Grid Grid.Row="1"
                           ColumnDefinitions="Auto,Auto"

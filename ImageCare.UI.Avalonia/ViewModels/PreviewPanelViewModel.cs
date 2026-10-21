@@ -68,6 +68,8 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
     private readonly SynchronizationContext _synchronizationContext;
 
     private readonly object _imagePathsLock = new();
+    private readonly object _loadedPreviewsLock = new();
+    private readonly HashSet<MediaPreviewViewModel> _loadedPreviews = [];
     private MediaPreviewViewModel? _selectedPreview;
     private CompositeDisposable? _disposable;
 
@@ -90,6 +92,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
     private string _annotationEditorStatus = string.Empty;
     private bool _isSavingAnnotations;
     private bool _isLoadingSelectedAnnotations;
+    private string? _navigationTargetPath;
 
     public PreviewPanelViewModel(IMediaPreviewService imageService,
                                  IFolderService folderService,
@@ -272,8 +275,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
     public bool IsSortAscending => _sortDirection == MediaSortDirection.OldestFirst;
 
     public bool CanChangeSort => !FilesLoading &&
-                                 _isPreviewAnalysisComplete &&
-                                 _isStatisticsAnalysisComplete &&
+                                 ImagePreviews.Count > 0 &&
                                  !string.IsNullOrWhiteSpace(SelectedFolderPath);
 
     public int IndexInView
@@ -325,8 +327,13 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
                                   .ObserveOn(_synchronizationContext)
                                   .Subscribe(OnFileOperationCompleted),
             _folderService.FileSystemItemSelected.Subscribe(OnFolderSelected),
+            _fileOperationsService.MediaPreviewNavigationRequested
+                                  .ObserveOn(_synchronizationContext)
+                                  .Subscribe(OnMediaPreviewNavigationRequested),
             _fileOperationsService.ImagePreviewSelected.Subscribe(OnImagePreviewSelected),
-            _folderClusterizationService.ClusterizationCompleted.Subscribe(OnClusterizationCompleted),
+            _folderClusterizationService.ClusterizationCompleted
+                                        .ObserveOn(_synchronizationContext)
+                                        .Subscribe(OnClusterizationCompleted),
             _folderStatisticsService.ScanProgress
                                     .ObserveOn(_synchronizationContext)
                                     .Subscribe(OnScanProgressChanged),
@@ -394,6 +401,10 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
                     await LoadImageAsync(i, token);
                 }
             }
+
+            UnloadPreviewsOutsideRange(
+                Math.Max(0, loadStartIndex - PreloadCount),
+                Math.Min(ImagePreviews.Count - 1, loadEndIndex + PreloadCount));
         }
         catch (OperationCanceledException)
         {
@@ -402,6 +413,30 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
         catch (Exception ex)
         {
             _logger.Error(ex, "Scroll handling error");
+        }
+    }
+
+    private void UnloadPreviewsOutsideRange(int startIndex, int endIndex)
+    {
+        HashSet<MediaPreviewViewModel> retained = [];
+        for (var index = startIndex; index <= endIndex; index++)
+        {
+            retained.Add(ImagePreviews[index]);
+        }
+
+        MediaPreviewViewModel[] toUnload;
+        lock (_loadedPreviewsLock)
+        {
+            toUnload = _loadedPreviews.Where(preview => !retained.Contains(preview)).ToArray();
+            foreach (var preview in toUnload)
+            {
+                _loadedPreviews.Remove(preview);
+            }
+        }
+
+        foreach (var preview in toUnload)
+        {
+            preview.UnloadPreview();
         }
     }
 
@@ -620,10 +655,18 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
 
     private void OnFolderSelected(SelectedDirectory selectedFileSystemItem)
     {
-        
         if (selectedFileSystemItem.FileManagerPanel != FileManagerPanel)
         {
             return;
+        }
+
+        var navigationDirectory = string.IsNullOrWhiteSpace(_navigationTargetPath)
+            ? null
+            : Path.GetDirectoryName(_navigationTargetPath);
+        if (!string.IsNullOrWhiteSpace(navigationDirectory) &&
+            !PathsEqual(navigationDirectory, selectedFileSystemItem.Path))
+        {
+            _navigationTargetPath = null;
         }
 
         ResetAnalysisState();
@@ -938,6 +981,12 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
 
             var indexToRemove = ImagePreviews.IndexOf(imagePreviewViewModel);
             var wasSelected = ReferenceEquals(SelectedPreview, imagePreviewViewModel);
+            imagePreviewViewModel.UnloadPreview();
+            lock (_loadedPreviewsLock)
+            {
+                _loadedPreviews.Remove(imagePreviewViewModel);
+            }
+
             ImagePreviews.Remove(imagePreviewViewModel);
 
             if (wasSelected)
@@ -970,11 +1019,66 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
     private void ClearPreviewPanel()
     {
         _imagePaths?.Clear();
+        foreach (var preview in ImagePreviews)
+        {
+            preview.UnloadPreview();
+        }
+
+        lock (_loadedPreviewsLock)
+        {
+            _loadedPreviews.Clear();
+        }
+
         ImagePreviews.Clear();
         SelectedPreview = null;
         TimelineVm.Clear();
         _annotationsByPath = new Dictionary<string, IndexedMediaAnnotations>(
             OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
+    }
+
+    private void OnMediaPreviewNavigationRequested(SelectedMediaPreview requestedPreview)
+    {
+        if (requestedPreview.FileManagerPanel != FileManagerPanel ||
+            string.IsNullOrWhiteSpace(requestedPreview.Url))
+        {
+            return;
+        }
+
+        _navigationTargetPath = requestedPreview.Url;
+        var targetDirectory = Path.GetDirectoryName(requestedPreview.Url);
+        if (!string.IsNullOrWhiteSpace(targetDirectory) &&
+            !string.IsNullOrWhiteSpace(SelectedFolderPath) &&
+            PathsEqual(targetDirectory, SelectedFolderPath))
+        {
+            TrySelectNavigationTarget(_isPreviewAnalysisComplete);
+        }
+    }
+
+    private void TrySelectNavigationTarget(bool finalize)
+    {
+        if (string.IsNullOrWhiteSpace(_navigationTargetPath))
+        {
+            return;
+        }
+
+        var target = ImagePreviews.FirstOrDefault(preview => PathsEqual(preview.Url, _navigationTargetPath));
+        if (target != null)
+        {
+            var index = ImagePreviews.IndexOf(target);
+            if (!ReferenceEquals(SelectedPreview, target))
+            {
+                SelectedPreview = target;
+                _ = LoadImageAsync(index, _folderSelectedCancellationTokenSource.Token);
+            }
+
+            IndexInView = -1;
+            IndexInView = index;
+        }
+
+        if (finalize)
+        {
+            _navigationTargetPath = null;
+        }
     }
 
     private void OnImagePreviewSelected(SelectedMediaPreview selectedImagePreview)
@@ -991,26 +1095,31 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
         {
             if (_imagePaths.Count == 0)
             {
+                TrySelectNavigationTarget(finalize: true);
                 _isPreviewAnalysisComplete = true;
                 RaisePropertyChanged(nameof(CanChangeSort));
                 return;
             }
 
             var initialCount = Math.Min(PreloadCount * 2, _imagePaths.Count);
-
-            var firstChunk = true;
-            foreach (var chunk in _imagePaths.Chunk(initialCount))
+            FileModel[] pathSnapshot;
+            lock (_imagePathsLock)
             {
-                if (token.IsCancellationRequested)
-                {
-                    return;
-                }
+                pathSnapshot = _imagePaths.ToArray();
+            }
 
-                if (firstChunk)
+            var batchSize = Math.Max(1, initialCount);
+            for (var offset = 0; offset < pathSnapshot.Length;)
+            {
+                token.ThrowIfCancellationRequested();
+                var count = Math.Min(batchSize, pathSnapshot.Length - offset);
+                var chunk = new FileModel[count];
+                Array.Copy(pathSnapshot, offset, chunk, 0, count);
+                await LoadChunkAsync(chunk, token);
+
+                if (offset == 0)
                 {
-                    firstChunk = false;
-                    await LoadChunkAsync(chunk, token);
-                    for (var i = 0; i < initialCount; i++)
+                    for (var i = 0; i < count; i++)
                     {
                         if (token.IsCancellationRequested)
                         {
@@ -1020,15 +1129,19 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
                         _ = LoadImageAsync(i, token);
                     }
                 }
-                else
-                {
-                    await LoadChunkAsync(chunk, token);
-                }
+
+                offset += count;
+                batchSize = Math.Min(batchSize * 2, 4_096);
             }
 
-            _folderClusterizationService.StartAsync(SelectedFolderPath, token);
+            if (_imagePaths.Count <= 5_000)
+            {
+                _folderClusterizationService.StartAsync(SelectedFolderPath, token);
+            }
+
             _isPreviewAnalysisComplete = true;
             RaisePropertyChanged(nameof(CanChangeSort));
+            _synchronizationContext.Post(_ => TrySelectNavigationTarget(finalize: true), null);
         }
         catch (OperationCanceledException)
         {
@@ -1049,22 +1162,18 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
             new ParallelOptions { MaxDegreeOfParallelism = 4, CancellationToken = token },
             async (fileModel, cancellationToken) =>
             {
-                var previewImage = await _imageService.GetMediaPreviewAsync(fileModel.FullName).ConfigureAwait(false);
+                var previewImage = await _imageService.GetMediaPreviewAsync(
+                    fileModel,
+                    cancellationToken).ConfigureAwait(false);
                 if (previewImage == null)
                 {
                     return;
                 }
 
-                var metadata = await _imageService.GetMediaMetadataAsync(previewImage).ConfigureAwait(false);
-                cancellationToken.ThrowIfCancellationRequested();
-
                 var mediaPreviewViewModel = _mapper.Map<MediaPreviewViewModel>(previewImage);
                 ApplyCachedAnnotations(mediaPreviewViewModel);
-                mediaPreviewViewModel.FileDate = metadata.CreationDateTime;
-                mediaPreviewViewModel.MetadataString = metadata.GetString();
-                mediaPreviewViewModel.DateTimeString = metadata.CreationDateTime.ToString("dd.MM.yyyy HH:mm");
-                mediaPreviewViewModel.Metadata = metadata;
-                mediaPreviewViewModel.RotateAngle = metadata.Orientation.ToRotationAngle();
+                mediaPreviewViewModel.FileDate = fileModel.CreatedDateTime ?? DateTime.MinValue;
+                mediaPreviewViewModel.DateTimeString = mediaPreviewViewModel.FileDate.ToString("dd.MM.yyyy HH:mm");
                 previews.Add(mediaPreviewViewModel);
             }).ConfigureAwait(false);
 
@@ -1085,6 +1194,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
                         .Where(preview => existingPaths.Add(preview.Url))
                         .ToArray();
                     ImagePreviews.AddRange(newPreviews);
+                    TrySelectNavigationTarget(finalize: false);
                 }
                 finally
                 {
@@ -1113,20 +1223,27 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
             token.ThrowIfCancellationRequested();
 
             var imagePath = previewVm.Url;
-            var mediaPreview = await _imageService.GetMediaPreviewAsync(imagePath);
+            var mediaPreview = await _imageService.GetMediaPreviewAsync(imagePath, token);
 
             if (mediaPreview == null)
             {
                 return;
             }
 
-            var metadata = await _imageService.GetMediaMetadataAsync(mediaPreview);
+            var metadata = await _imageService.GetMediaMetadataAsync(mediaPreview, token);
             previewVm.MetadataString = metadata.GetString();
             previewVm.DateTimeString = metadata.CreationDateTime.ToString("dd.MM.yyyy HH:mm");
             previewVm.Metadata = metadata;
             previewVm.RotateAngle = metadata.Orientation.ToRotationAngle();
 
             await previewVm.LoadPreviewAsync(token);
+            if (previewVm.PreviewBitmap != null)
+            {
+                lock (_loadedPreviewsLock)
+                {
+                    _loadedPreviews.Add(previewVm);
+                }
+            }
         }
         catch (OperationCanceledException)
         {

@@ -176,7 +176,8 @@
   <data name="Search_Rating" xml:space="preserve"><value>Rating</value></data>
   <data name="Search_Tags" xml:space="preserve"><value>Tags</value></data>
   <data name="Search_Path" xml:space="preserve"><value>Path</value></data>
-  <data name="Search_OpenSelected" xml:space="preserve"><value>Open selected</value></data>
+  <data name="Search_ShowSelected" xml:space="preserve"><value>Show</value></data>
+  <data name="Search_OpenSelected" xml:space="preserve"><value>Go to</value></data>
   <data name="Search_FileMissing" xml:space="preserve"><value>The indexed file no longer exists</value></data>
   <data name="Search_OpenFailed" xml:space="preserve"><value>Could not open the indexed image</value></data>
 </root>
