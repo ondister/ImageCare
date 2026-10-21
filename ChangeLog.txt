@@ -1,3 +1,0 @@
-v0.1.2 - 02.11.2025
-* Added configuration gui
-* Added russian readme

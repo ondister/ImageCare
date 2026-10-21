@@ -14,11 +14,16 @@ For example, a birdwatcher returns from the field with a memory card containing 
 - Folder overview with a timeline, adjustable grid, sorting, and restored-file list.
 - Time-based image clustering marks related shooting sessions with colored frames in folders containing up to 5,000 media files.
 - Preview extraction and metadata reading for JPEG, RAW images, and MP4 video.
+- Shooting-location map for a selected geotagged Canon CR3 image, with a marker and coordinate copying.
 - Ratings and tags stored in XMP sidecar files.
+- Tag dictionaries can be imported from UTF-8 text files; `tags-example.txt` contains an alphabetical list of 325 bird species recorded in Belarus.
 - Indexed search by file properties, rating, and tags.
 - Configurable copy, move, delete, drag-and-drop, and external viewer actions.
 - Safe deletion buffer with file restoration.
 - English and Russian interface.
+
+## Photo location map
+The map shows only the currently selected image, not every image in the folder. ImageCare currently reads GPS coordinates from Canon CR3 files only. Loading the OpenStreetMap background requires an internet connection.
 
 ## Supported formats
 
@@ -87,3 +92,7 @@ dotnet publish ImageCare.UI.Avalonia/ImageCare.UI.Avalonia.csproj --configuratio
 | Choose the active preview folder | Select a directory in the left or right folder panel |
 
 Before processing an important collection, verify the configured copy, move, and safe-deletion behavior on copies of several files.
+
+## Co-authors
+
+- `GPT-5.6-sol`, code and documentation co-author.

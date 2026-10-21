@@ -508,7 +508,7 @@ public sealed class XmpMediaAnnotationsStorageService : IMediaAnnotationsStorage
         {
             var retained = existingItems.FirstOrDefault(item =>
                 !retainedItems.Contains(item)
-                && string.Equals(ReadListItemValue(item), tag, StringComparison.Ordinal));
+                && string.Equals(ReadListItemValue(item), tag, StringComparison.OrdinalIgnoreCase));
             if (retained is not null)
             {
                 retainedItems.Add(retained);

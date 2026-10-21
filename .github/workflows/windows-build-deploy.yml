@@ -121,7 +121,7 @@ jobs:
         run: |
           zsh scripts/publish-macos-arm64.sh
           tar -czf "artifacts/ImageCare-${{ github.ref_name }}-macOS-arm64.tar.gz" \
-            -C artifacts/macos-arm64 ImageCare.app
+            -C artifacts/macos-arm64 ImageCare.app tags-example.txt
 
       - name: Upload macOS build
         uses: actions/upload-artifact@v4

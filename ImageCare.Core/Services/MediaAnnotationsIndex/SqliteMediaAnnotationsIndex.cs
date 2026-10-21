@@ -751,7 +751,7 @@ public sealed class SqliteMediaAnnotationsIndex : IMediaAnnotationsIndex
             command.CommandText = """
                 INSERT INTO tags (name, normalized_name)
                 VALUES (@name, @normalizedName)
-                ON CONFLICT(normalized_name) DO UPDATE SET name = excluded.name;
+                ON CONFLICT(normalized_name) DO NOTHING;
                 INSERT OR IGNORE INTO media_tags (media_id, tag_id)
                 SELECT @mediaId, id FROM tags WHERE normalized_name = @normalizedName;
                 """;

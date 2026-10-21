@@ -142,8 +142,13 @@
   <data name="Annotations_RootRemoved" xml:space="preserve"><value>Папка удалена из настроенных корней поиска. Метаданные изображений не изменены.</value></data>
   <data name="Annotations_Rebuilding" xml:space="preserve"><value>Сканирование папок индекса…</value></data>
   <data name="Annotations_TagsTitle" xml:space="preserve"><value>Доступные теги</value></data>
-  <data name="Annotations_TagsDescription" xml:space="preserve"><value>Список объединяет закреплённые теги и теги из индекса. Удаление закреплённого тега не удаляет его из изображений.</value></data>
+  <data name="Annotations_TagsDescription" xml:space="preserve"><value>Список объединяет закреплённые теги и теги из индекса. Импортируйте текстовый файл UTF-8: один тег на строку; пустые строки и строки с # пропускаются. Удаление закреплённого тега не удаляет его из изображений.</value></data>
   <data name="Annotations_NewTag" xml:space="preserve"><value>Добавить любой тег</value></data>
+  <data name="Annotations_ImportTags" xml:space="preserve"><value>Загрузить из файла</value></data>
+  <data name="Annotations_SelectTagsFile" xml:space="preserve"><value>Выберите список тегов</value></data>
+  <data name="Annotations_TextFiles" xml:space="preserve"><value>Текстовые файлы</value></data>
+  <data name="Annotations_TagsImported" xml:space="preserve"><value>Добавлено новых тегов: {0}.</value></data>
+  <data name="Annotations_TagsImportFailed" xml:space="preserve"><value>Не удалось загрузить теги: {0}</value></data>
   <data name="Annotations_StatusReady" xml:space="preserve"><value>Индекс изображений готов.</value></data>
   <data name="Annotations_StatusRunning" xml:space="preserve"><value>Сканирование изображений: обработано {0}.</value></data>
   <data name="Annotations_StatusCompleted" xml:space="preserve"><value>Сканирование завершено: обработано изображений — {0}.</value></data>

@@ -239,11 +239,15 @@
                 <StackPanel Grid.Row="2" Spacing="6">
                     <TextBlock Text="{localization:Loc Annotations_TagsTitle}" FontWeight="Bold" FontSize="{DynamicResource Font.Size.SectionHeader}" />
                     <TextBlock Text="{localization:Loc Annotations_TagsDescription}" Opacity="0.7" TextWrapping="Wrap" />
-                    <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                    <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
                         <TextBox Grid.Column="0" Text="{Binding NewPinnedTag}" PlaceholderText="{localization:Loc Annotations_NewTag}" />
                         <Button Grid.Column="1" Content="{localization:Loc Settings_Add}" Command="{Binding AddPinnedTagCommand}" />
                         <Button Grid.Column="2" Content="{localization:Loc Settings_RemoveSelected}" Command="{Binding RemovePinnedTagCommand}" />
+                        <Button Grid.Column="3" Content="{localization:Loc Annotations_ImportTags}" Command="{Binding ImportPinnedTagsCommand}" />
                     </Grid>
+                    <TextBlock Text="{Binding TagImportStatus}"
+                               Opacity="0.7"
+                               TextWrapping="Wrap" />
                 </StackPanel>
 
                 <ListBox Grid.Row="3" ItemsSource="{Binding AvailableTags}" SelectedItem="{Binding SelectedPinnedTag}" MinHeight="120" />

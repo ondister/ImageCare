@@ -24,6 +24,9 @@
     <AvaloniaResource Remove="Assets\birdPoint.png" />
     <Content Include="Assets\imagecare-logo.ico" />
     <EmbeddedResource Include="Assets\birdPoint.png" />
+    <None Update="tags-example.txt"
+          CopyToOutputDirectory="PreserveNewest"
+          CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

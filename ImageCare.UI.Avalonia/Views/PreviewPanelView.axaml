@@ -13,6 +13,14 @@
              x:DataType="viewModels:PreviewPanelViewModel"
              FontSize="{StaticResource Font.Size.Small}">
 
+    <UserControl.Styles>
+        <Style Selector="ComboBox.compactTagCombo /template/ TextBox#PART_EditableTextBox">
+            <Setter Property="MinHeight" Value="0" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+    </UserControl.Styles>
+
     <UserControl.KeyBindings>
         <KeyBinding Command="{Binding CopyImagePreviewCommand}" Gesture="F5" />
         <KeyBinding Command="{Binding MoveImagePreviewCommand}" Gesture="F6" />
@@ -86,14 +94,16 @@
                             ToolTip.Tip="{localization:Loc Common_Save}">
                         <iconPacks:PackIconLucide Kind="Save" Width="10" Height="10" />
                     </Button>
-                    <ComboBox Width="120"
+                    <ComboBox Classes="compactTagCombo"
+                              Width="120"
                               Height="16"
                               MinHeight="16"
                               Padding="4,0"
                               FontSize="10"
                               ItemsSource="{Binding AvailableAnnotationTags}"
                               Text="{Binding NewTag}"
-                              IsEditable="True" />
+                              IsEditable="True"
+                              behaviors:ComboBoxSearchBehavior.IsEnabled="True" />
                     <Button Classes="IconButton"
                             Width="16"
                             Height="16"

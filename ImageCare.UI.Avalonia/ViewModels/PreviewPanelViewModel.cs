@@ -89,6 +89,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
         OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
     private int _selectedRating;
     private string _newTag = string.Empty;
+    private string[] _allAvailableAnnotationTags = [];
     private string _annotationEditorStatus = string.Empty;
     private bool _isSavingAnnotations;
     private bool _isLoadingSelectedAnnotations;
@@ -233,7 +234,13 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
     public string NewTag
     {
         get => _newTag;
-        set => SetProperty(ref _newTag, value ?? string.Empty);
+        set
+        {
+            if (SetProperty(ref _newTag, value ?? string.Empty))
+            {
+                ApplyAvailableAnnotationTagFilter();
+            }
+        }
     }
 
     public string AnnotationEditorStatus
@@ -1571,20 +1578,33 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
                 .Select(MediaAnnotations.NormalizeTag)
                 .Where(tag => tag.Length > 0)
                 .Distinct(StringComparer.OrdinalIgnoreCase)
-                .OrderBy(tag => tag, StringComparer.OrdinalIgnoreCase)
+                .OrderBy(tag => tag, StringComparer.Create(_localization.Culture, ignoreCase: true))
+                .ThenBy(tag => tag, StringComparer.Ordinal)
                 .ToArray();
             _synchronizationContext.Post(_ =>
             {
-                AvailableAnnotationTags.Clear();
-                foreach (var tag in tags)
-                {
-                    AvailableAnnotationTags.Add(tag);
-                }
+                _allAvailableAnnotationTags = tags;
+                ApplyAvailableAnnotationTagFilter();
             }, null);
         }
         catch (Exception exception)
         {
             _logger.Error(exception, "Failed to load available annotation tags");
+        }
+    }
+
+    private void ApplyAvailableAnnotationTagFilter()
+    {
+        var prefix = MediaAnnotations.NormalizeTag(NewTag);
+        var filteredTags = prefix.Length == 0
+            ? _allAvailableAnnotationTags
+            : _allAvailableAnnotationTags
+                .Where(tag => tag.StartsWith(prefix, StringComparison.OrdinalIgnoreCase));
+
+        AvailableAnnotationTags.Clear();
+        foreach (var tag in filteredTags)
+        {
+            AvailableAnnotationTags.Add(tag);
         }
     }
 

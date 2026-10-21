@@ -49,6 +49,7 @@ public sealed class SettingsViewModel : ViewModelBase
     private string? _selectedMediaSearchRoot;
     private string? _selectedPinnedTag;
     private string _newPinnedTag = string.Empty;
+    private string _tagImportStatus = string.Empty;
     private string _annotationsStatus = string.Empty;
     private bool _isAnnotationsBusy;
 
@@ -100,6 +101,7 @@ public sealed class SettingsViewModel : ViewModelBase
             .ObservesProperty(() => NewPinnedTag);
         RemovePinnedTagCommand = CreateCommand(RemovePinnedTag, () => SelectedPinnedTag != null)
             .ObservesProperty(() => SelectedPinnedTag);
+        ImportPinnedTagsCommand = CreateAsyncCommand(ImportPinnedTagsAsync, OnCommandException);
 
         _newExtension = SupportedExtensions.FirstOrDefault(extension =>
             extension.Equals(".jpg", StringComparison.OrdinalIgnoreCase))
@@ -311,6 +313,12 @@ public sealed class SettingsViewModel : ViewModelBase
         set => SetProperty(ref _newPinnedTag, value ?? string.Empty);
     }
 
+    public string TagImportStatus
+    {
+        get => _tagImportStatus;
+        private set => SetProperty(ref _tagImportStatus, value);
+    }
+
     public string AnnotationsStatus
     {
         get => _annotationsStatus;
@@ -333,6 +341,8 @@ public sealed class SettingsViewModel : ViewModelBase
 
     public ICommand RemovePinnedTagCommand { get; }
 
+    public ICommand ImportPinnedTagsCommand { get; }
+
     public void Close()
     {
         try
@@ -354,6 +364,11 @@ public sealed class SettingsViewModel : ViewModelBase
         try
         {
             var configuration = _configService.Configuration.Value;
+            TagImportStatus = string.Empty;
+            if (NormalizePinnedTags(configuration))
+            {
+                SaveConfiguration();
+            }
 
             _selectedLanguage = AvailableLanguages.FirstOrDefault(language =>
                 string.Equals(language.Name, _localization.Culture.Name, StringComparison.OrdinalIgnoreCase));
@@ -613,6 +628,59 @@ public sealed class SettingsViewModel : ViewModelBase
         }
     }
 
+    private async Task ImportPinnedTagsAsync(
+        IProgress<int> progress,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var filePath = await _fileDialogService.ShowOpenFileDialogAsync(
+                _localization["Annotations_SelectTagsFile"],
+                (_localization["Annotations_TextFiles"], ["*.txt"]),
+                (_localization["Settings_AllFiles"], ["*"]));
+            if (string.IsNullOrWhiteSpace(filePath))
+            {
+                return;
+            }
+
+            cancellationToken.ThrowIfCancellationRequested();
+            var lines = await File.ReadAllLinesAsync(filePath, cancellationToken);
+            var importedTags = lines
+                .Where(line => !line.TrimStart().StartsWith('#'));
+            var configuration = _configService.Configuration.Value;
+            var existingTags = new MediaAnnotations(0, configuration.PinnedTags).Tags;
+            var existingSet = existingTags.ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var mergedTags = new MediaAnnotations(0, existingTags.Concat(importedTags)).Tags;
+            var addedCount = mergedTags.Count(tag => !existingSet.Contains(tag));
+
+            configuration.PinnedTags = mergedTags.ToList();
+            SaveConfiguration();
+            await RefreshAvailableTagsAsync(cancellationToken);
+            TagImportStatus = _localization.Get("Annotations_TagsImported", addedCount);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception exception)
+        {
+            _logger.Error(exception, "Failed to import annotation tags");
+            TagImportStatus = _localization.Get("Annotations_TagsImportFailed", exception.Message);
+        }
+    }
+
+    private bool NormalizePinnedTags(Configuration configuration)
+    {
+        var existing = configuration.PinnedTags ?? [];
+        var normalized = new MediaAnnotations(0, existing).Tags.ToList();
+        if (normalized.SequenceEqual(existing, StringComparer.Ordinal))
+        {
+            return false;
+        }
+
+        configuration.PinnedTags = normalized;
+        return true;
+    }
+
     private void AddPinnedTag()
     {
         var normalized = MediaAnnotations.NormalizeTag(NewPinnedTag);
@@ -625,7 +693,7 @@ public sealed class SettingsViewModel : ViewModelBase
         if (!pinned.Contains(normalized, StringComparer.OrdinalIgnoreCase))
         {
             pinned.Add(normalized);
-            pinned.Sort(StringComparer.OrdinalIgnoreCase);
+            pinned.Sort(StringComparer.Create(_localization.Culture, ignoreCase: true));
             SaveConfiguration();
         }
 
@@ -657,7 +725,8 @@ public sealed class SettingsViewModel : ViewModelBase
                 .Where(tag => !string.IsNullOrWhiteSpace(tag))
                 .Select(MediaAnnotations.NormalizeTag)
                 .Distinct(StringComparer.OrdinalIgnoreCase)
-                .OrderBy(tag => tag, StringComparer.OrdinalIgnoreCase)
+                .OrderBy(tag => tag, StringComparer.Create(_localization.Culture, ignoreCase: true))
+                .ThenBy(tag => tag, StringComparer.Ordinal)
                 .ToArray();
             AvailableTags.Clear();
             foreach (var tag in tags)

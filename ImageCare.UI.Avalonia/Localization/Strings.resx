@@ -142,8 +142,13 @@
   <data name="Annotations_RootRemoved" xml:space="preserve"><value>The folder was removed from configured search roots. Existing metadata was not changed.</value></data>
   <data name="Annotations_Rebuilding" xml:space="preserve"><value>Scanning indexed folders…</value></data>
   <data name="Annotations_TagsTitle" xml:space="preserve"><value>Available tags</value></data>
-  <data name="Annotations_TagsDescription" xml:space="preserve"><value>The list combines pinned vocabulary and tags found in the index. Removing a pinned tag does not remove it from images.</value></data>
+  <data name="Annotations_TagsDescription" xml:space="preserve"><value>The list combines pinned vocabulary and tags found in the index. Import a UTF-8 text file with one tag per line; empty lines and lines starting with # are ignored. Removing a pinned tag does not remove it from images.</value></data>
   <data name="Annotations_NewTag" xml:space="preserve"><value>Add any tag</value></data>
+  <data name="Annotations_ImportTags" xml:space="preserve"><value>Import from file</value></data>
+  <data name="Annotations_SelectTagsFile" xml:space="preserve"><value>Select a tag list</value></data>
+  <data name="Annotations_TextFiles" xml:space="preserve"><value>Text files</value></data>
+  <data name="Annotations_TagsImported" xml:space="preserve"><value>Imported {0} new tags.</value></data>
+  <data name="Annotations_TagsImportFailed" xml:space="preserve"><value>Could not import tags: {0}</value></data>
   <data name="Annotations_StatusReady" xml:space="preserve"><value>The media index is ready.</value></data>
   <data name="Annotations_StatusRunning" xml:space="preserve"><value>Scanning images: {0} processed.</value></data>
   <data name="Annotations_StatusCompleted" xml:space="preserve"><value>Scan completed: {0} images processed.</value></data>
