@@ -58,7 +58,7 @@ internal class GlancePanelViewModel : ViewModelBase, IDialogAware
     private SortedObservableCollection<FileModel> _imagePaths;
 
     private CompositeDisposable? _disposable;
-    private CancellationTokenSource _currentScrollCancellation = new();
+    private readonly LatestOperationCancellation _scrollCancellation = new();
     private CancellationTokenSource _imageLoadCts;
     private string _title;
     private int _imagesPerLine = 3;
@@ -277,6 +277,7 @@ internal class GlancePanelViewModel : ViewModelBase, IDialogAware
         try
         {
             CancelImageLoading();
+            _scrollCancellation.Cancel();
             _folderStatisticsService.Stop();
             _fileSystemWatcherService.StopWatching();
             ClearPreviewPanel();
@@ -367,13 +368,10 @@ internal class GlancePanelViewModel : ViewModelBase, IDialogAware
             return;
         }
 
-        await _currentScrollCancellation.CancelAsync();
-        _currentScrollCancellation.Dispose();
-        _currentScrollCancellation = new CancellationTokenSource();
-        var token = _currentScrollCancellation.Token;
-
         try
         {
+            using var operation = _scrollCancellation.Begin();
+            var token = operation.Token;
             var firstVisibleRow = (int)(offsetY / PanelRowHeight);
             var lastVisibleRow = (int)((offsetY + viewportHeight) / PanelRowHeight);
 
@@ -387,10 +385,7 @@ internal class GlancePanelViewModel : ViewModelBase, IDialogAware
 
             for (var i = firstVisibleIndex; i <= lastVisibleIndex; i++)
             {
-                if (token.IsCancellationRequested)
-                {
-                    return;
-                }
+                token.ThrowIfCancellationRequested();
 
                 if (i >= 0 && i < ImagePreviews.Count && ImagePreviews[i].PreviewBitmap == null)
                 {
@@ -398,13 +393,14 @@ internal class GlancePanelViewModel : ViewModelBase, IDialogAware
                 }
             }
 
+            token.ThrowIfCancellationRequested();
             UnloadPreviewsOutsideRange(
                 Math.Max(0, firstVisibleIndex - ImagesPerLine * 2),
                 Math.Min(ImagePreviews.Count - 1, lastVisibleIndex + ImagesPerLine * 2));
         }
         catch (OperationCanceledException)
         {
-            // Ignored
+            // Expected when a newer scroll request supersedes this one.
         }
         catch (Exception ex)
         {
@@ -1049,7 +1045,7 @@ internal class GlancePanelViewModel : ViewModelBase, IDialogAware
                 var indexToLoad = indexToRemove + PreloadRowsCount * ImagesPerLine;
                 if (ImagePreviews.Count > indexToLoad)
                 {
-                    _ = LoadImageAsync(indexToLoad, _currentScrollCancellation.Token);
+                    _ = LoadImageAsync(indexToLoad);
                 }
             }
         }

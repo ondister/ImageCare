@@ -76,7 +76,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
     private CancellationTokenSource _folderSelectedCancellationTokenSource;
     private CancellationTokenSource? _selectedAnnotationCancellation;
     private SortedObservableCollection<FileModel> _imagePaths;
-    private CancellationTokenSource _currentScrollCancellation = new();
+    private readonly LatestOperationCancellation _scrollCancellation = new();
 
     private bool _isScrollResetRequested;
     private bool _filesLoading;
@@ -346,6 +346,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
     public override void OnNavigatedFrom(NavigationContext navigationContext)
     {
         _disposable?.Dispose();
+        _scrollCancellation.Cancel();
         _selectedAnnotationCancellation?.Cancel();
         _folderSelectedCancellationTokenSource.Cancel();
         _folderSelectedCancellationTokenSource.Dispose();
@@ -353,28 +354,16 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
 
     internal async Task HandleScrollAsync(double horizontalOffset, double viewportWidth)
     {
-        var nextCancellation = new CancellationTokenSource();
-        var previousCancellation = Interlocked.Exchange(ref _currentScrollCancellation, nextCancellation);
-
         try
         {
-            await previousCancellation.CancelAsync();
-        }
-        finally
-        {
-            previousCancellation.Dispose();
-        }
-
-        var token = nextCancellation.Token;
-
-        try
-        {
+            using var operation = _scrollCancellation.Begin();
+            var token = operation.Token;
             var totalContentCount = ImagePreviews.Count * MaxItemWidth;
 
             var firstVisibleIndex = (int)(horizontalOffset / MaxItemWidth);
             var lastVisibleIndex = (int)((horizontalOffset + viewportWidth) / MaxItemWidth);
 
-            var epsilon = 2;
+            const int epsilon = 2;
 
             firstVisibleIndex = Math.Max(0, firstVisibleIndex - epsilon);
             lastVisibleIndex = Math.Min(ImagePreviews.Count - 1, lastVisibleIndex + epsilon);
@@ -391,10 +380,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
 
             for (var i = loadStartIndex; i <= loadEndIndex; i++)
             {
-                if (token.IsCancellationRequested)
-                {
-                    return;
-                }
+                token.ThrowIfCancellationRequested();
 
                 if (ImagePreviews[i].PreviewBitmap == null)
                 {
@@ -402,13 +388,14 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
                 }
             }
 
+            token.ThrowIfCancellationRequested();
             UnloadPreviewsOutsideRange(
                 Math.Max(0, loadStartIndex - PreloadCount),
                 Math.Min(ImagePreviews.Count - 1, loadEndIndex + PreloadCount));
         }
         catch (OperationCanceledException)
         {
-            // Ignored
+            // Expected when a newer scroll request supersedes this one.
         }
         catch (Exception ex)
         {
@@ -1007,7 +994,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
             var indexToLoad = indexToRemove + PreloadCount;
             if (ImagePreviews.Count > indexToLoad)
             {
-                _ = LoadImageAsync(indexToLoad, _currentScrollCancellation.Token);
+                _ = LoadImageAsync(indexToLoad);
             }
         }
         catch (Exception ex)
@@ -1678,6 +1665,8 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
     {
         try
         {
+            using var operation = _scrollCancellation.Begin();
+            var token = operation.Token;
             var targetPreview = ImagePreviews.FirstOrDefault(p =>
                                                                  p.FileDate.Date == dateTime.Date);
 
@@ -1687,11 +1676,6 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
             }
 
             var index = ImagePreviews.IndexOf(targetPreview);
-
-            await _currentScrollCancellation.CancelAsync();
-            _currentScrollCancellation.Dispose();
-            _currentScrollCancellation = new CancellationTokenSource();
-            var token = _currentScrollCancellation.Token;
 
             // Load range nearby item
             var start = Math.Max(0, index - PreloadCount / 2);
@@ -1730,6 +1714,10 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
                 token);
 
             await Task.WhenAll(leftLineTask, rightLineTask);
+        }
+        catch (OperationCanceledException)
+        {
+            // Expected when scrolling or a newer timeline selection supersedes this request.
         }
         catch (Exception ex)
         {
