@@ -275,7 +275,7 @@ public sealed class WindowsFileSystemService : IFileSystemService
             }
 
             var error = Marshal.GetLastWin32Error();
-            if (error == ErrorNoMoreFiles)
+            if (error is ErrorNoMoreFiles or ErrorHandleEof)
             {
                 break;
             }

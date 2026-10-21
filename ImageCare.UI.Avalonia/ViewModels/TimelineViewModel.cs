@@ -29,6 +29,7 @@ internal class TimelineViewModel : ViewModelBase, IDisposable
     private readonly IConfigurationService _configurationService;
     private readonly TrayAnalysisProgressService _trayAnalysisProgressService;
     private readonly Guid _scanId = Guid.NewGuid();
+    private readonly Dictionary<DateTime, string> _representativeFilePaths = [];
     private readonly SourceCache<DateStatViewModel, DateTime> _dateStatsCache;
     private int _totalFilesCount;
     private int _analysisProcessedFiles;
@@ -89,6 +90,9 @@ internal class TimelineViewModel : ViewModelBase, IDisposable
 
     public IObservable<DateTime> DateSelected => _dateSelectedSubject.AsObservable();
 
+    public string? GetRepresentativeFilePath(DateTime date) =>
+        _representativeFilePaths.GetValueOrDefault(date.Date);
+
     public IObservable<Unit> StatisticsClick => _statisticsClickSubject.AsObservable();
 
     public IReadOnlyCollection<DateStatViewModel> DateStatViewModels { get; }
@@ -142,6 +146,7 @@ internal class TimelineViewModel : ViewModelBase, IDisposable
                 _dateStatDisposables.Dispose();
                 DisposeDateStats();
                 _dateStatsCache.Clear();
+                _representativeFilePaths.Clear();
                 TotalFilesCount = 0;
                 IsLoading = false;
                 IsInitialScanComplete = false;
@@ -186,6 +191,7 @@ internal class TimelineViewModel : ViewModelBase, IDisposable
                         var existing = innerCache.Lookup(bucket.Date);
                         if (bucket.FilesCount == 0)
                         {
+                            _representativeFilePaths.Remove(bucket.Date.Date);
                             if (existing.HasValue)
                             {
                                 existing.Value.Dispose();
@@ -193,6 +199,12 @@ internal class TimelineViewModel : ViewModelBase, IDisposable
                             }
 
                             continue;
+                        }
+
+                        var representativeFilePath = bucket.Files.Keys.FirstOrDefault();
+                        if (representativeFilePath != null)
+                        {
+                            _representativeFilePaths[bucket.Date.Date] = representativeFilePath;
                         }
 
                         if (existing.HasValue)

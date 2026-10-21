@@ -6,6 +6,7 @@
              xmlns:controls="clr-namespace:ImageCare.UI.Avalonia.Controls"
              xmlns:behaviors="clr-namespace:ImageCare.UI.Avalonia.Behaviors"
              xmlns:views="clr-namespace:ImageCare.UI.Avalonia.Views"
+             xmlns:iconPacks="https://github.com/MahApps/IconPacks.Avalonia"
              xmlns:localization="clr-namespace:ImageCare.UI.Avalonia.Localization"
              prism:ViewModelLocator.AutoWireViewModel="True"
              x:Class="ImageCare.UI.Avalonia.Views.PreviewPanelView"
@@ -61,9 +62,13 @@
                 ToolTip.Tip="{Binding AnnotationEditorStatus}">
             <ScrollViewer HorizontalScrollBarVisibility="Auto"
                           VerticalScrollBarVisibility="Disabled">
-                <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                    <TextBlock Text="{localization:Loc Annotations_Rating}" VerticalAlignment="Center" />
-                    <ComboBox SelectedIndex="{Binding SelectedRating, Mode=TwoWay}" Width="100">
+                <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                    <ComboBox SelectedIndex="{Binding SelectedRating, Mode=TwoWay}"
+                              Width="120"
+                              Height="16"
+                              MinHeight="16"
+                              Padding="4,0"
+                              FontSize="10">
                         <ComboBoxItem Content="{localization:Loc Annotations_Unrated}" />
                         <ComboBoxItem Content="★" />
                         <ComboBoxItem Content="★★" />
@@ -71,18 +76,34 @@
                         <ComboBoxItem Content="★★★★" />
                         <ComboBoxItem Content="★★★★★" />
                     </ComboBox>
-                    <Button Width="32" MinWidth="32" Padding="4"
-                            Content="✓"
+                    <Button Classes="IconButton"
+                            Width="16"
+                            Height="16"
+                            MinWidth="16"
+                            MinHeight="16"
+                            Padding="2"
                             Command="{Binding SaveRatingCommand}"
-                            ToolTip.Tip="{localization:Loc Common_Save}" />
+                            ToolTip.Tip="{localization:Loc Common_Save}">
+                        <iconPacks:PackIconLucide Kind="Save" Width="10" Height="10" />
+                    </Button>
                     <ComboBox Width="120"
+                              Height="16"
+                              MinHeight="16"
+                              Padding="4,0"
+                              FontSize="10"
                               ItemsSource="{Binding AvailableAnnotationTags}"
                               Text="{Binding NewTag}"
                               IsEditable="True" />
-                    <Button Width="32" MinWidth="32" Padding="4"
-                            Content="+"
+                    <Button Classes="IconButton"
+                            Width="16"
+                            Height="16"
+                            MinWidth="16"
+                            MinHeight="16"
+                            Padding="2"
                             Command="{Binding AddTagCommand}"
-                            ToolTip.Tip="{localization:Loc Settings_Add}" />
+                            ToolTip.Tip="{localization:Loc Settings_Add}">
+                        <iconPacks:PackIconLucide Kind="Tag" Width="10" Height="10" />
+                    </Button>
                     <ItemsControl ItemsSource="{Binding CurrentTags}" VerticalAlignment="Center">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>

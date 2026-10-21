@@ -62,6 +62,7 @@
                              BorderThickness="0"
                              ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                              ScrollViewer.VerticalScrollBarVisibility="Auto"
+                             behaviors:ScrollToIndexBehavior.TargetIndex="{Binding ScrollTargetRowIndex}"
                              behaviors:VerticalScrollBehavior.IsEnabled="True"
                              behaviors:VerticalScrollBehavior.IsScrollResetRequested="{Binding IsScrollResetRequested, Mode=TwoWay}">
                         <ListBox.ItemsPanel>
@@ -171,8 +172,19 @@
                                         Margin="2"
                                         BorderThickness="0,0,0,1"
                                         BorderBrush="{DynamicResource Brush.Splitter}">
-                                    <Grid ColumnDefinitions="*,Auto">
-                                        <StackPanel Grid.Column="0" Spacing="3">
+                                    <Grid ColumnDefinitions="64,*,Auto">
+                                        <Border Grid.Column="0"
+                                                Width="56"
+                                                Height="56"
+                                                CornerRadius="4"
+                                                ClipToBounds="True"
+                                                Background="{DynamicResource Brush.PreviewSurface}"
+                                                HorizontalAlignment="Center"
+                                                VerticalAlignment="Center">
+                                            <Image Source="{Binding PreviewBitmap}"
+                                                   Stretch="UniformToFill" />
+                                        </Border>
+                                        <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center">
                                             <TextBlock Text="{Binding FileName}"
                                                        FontWeight="SemiBold"
                                                        TextTrimming="CharacterEllipsis" />
@@ -185,7 +197,7 @@
                                                 <TextBlock Text="{Binding DeletedAt}" />
                                             </StackPanel>
                                         </StackPanel>
-                                        <Button Grid.Column="1"
+                                        <Button Grid.Column="2"
                                                 Margin="8,0,0,0"
                                                 VerticalAlignment="Center"
                                                 Command="{Binding RestoreCommand}">

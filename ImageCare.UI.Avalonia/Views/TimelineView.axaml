@@ -78,41 +78,50 @@
                     </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
                         <DataTemplate DataType="domain:DateStatViewModel">
-                            <Button Command="{Binding ColumnClickCommand}"
-                                    CommandParameter="{Binding}"
-                                    Margin="0"
-                                    Width="38"
-                                    Height="46"
-                                    Padding="0"
-                                    Background="Transparent"
-                                    Cursor="Hand">
-                                <Button.Styles>
-                                    <Style Selector="Button /template/ ContentPresenter">
-                                        <Setter Property="Background" Value="Transparent" />
-                                    </Style>
-                                    <Style Selector="Button:pointerover /template/ ContentPresenter">
-                                        <Setter Property="Background" Value="{DynamicResource Brush.AccentSubtle}" />
-                                    </Style>
-                                </Button.Styles>
-                                <Grid RowDefinitions="*,Auto">
-                                    <Rectangle Grid.Row="0"
-                                               Fill="{DynamicResource Brush.Accent}"
-                                               VerticalAlignment="Bottom"
-                                               Height="{Binding NormalizedHeight}"
-                                               Width="34" />
-                                    <TextBlock Grid.Row="1"
-                                               Text="{Binding DisplayText}"
-                                               HorizontalAlignment="Center"
-                                               FontSize="{StaticResource Font.Size.Small}"
-                                               Foreground="{DynamicResource Brush.TextPrimary}" />
-                                </Grid>
-                                <ToolTip.Tip>
-                                    <StackPanel>
-                                        <TextBlock Text="{Binding Date, StringFormat='{}{0:dd MMMM yyyy}'}" />
-                                        <TextBlock Text="{Binding Count}" />
-                                    </StackPanel>
-                                </ToolTip.Tip>
-                            </Button>
+                            <Grid ColumnDefinitions="Auto,Auto">
+                                <Rectangle Grid.Column="0"
+                                           Width="2"
+                                           Margin="5,4"
+                                           Fill="{DynamicResource Brush.Accent}"
+                                           Opacity="0.55"
+                                           IsVisible="{Binding IsLastInMonthYear}" />
+                                <Button Grid.Column="1"
+                                        Command="{Binding ColumnClickCommand}"
+                                        CommandParameter="{Binding}"
+                                        Margin="0"
+                                        Width="38"
+                                        Height="46"
+                                        Padding="0"
+                                        Background="Transparent"
+                                        Cursor="Hand">
+                                    <Button.Styles>
+                                        <Style Selector="Button /template/ ContentPresenter">
+                                            <Setter Property="Background" Value="Transparent" />
+                                        </Style>
+                                        <Style Selector="Button:pointerover /template/ ContentPresenter">
+                                            <Setter Property="Background" Value="{DynamicResource Brush.AccentSubtle}" />
+                                        </Style>
+                                    </Button.Styles>
+                                    <Grid RowDefinitions="*,Auto">
+                                        <Rectangle Grid.Row="0"
+                                                   Fill="{DynamicResource Brush.Accent}"
+                                                   VerticalAlignment="Bottom"
+                                                   Height="{Binding NormalizedHeight}"
+                                                   Width="34" />
+                                        <TextBlock Grid.Row="1"
+                                                   Text="{Binding DisplayText}"
+                                                   HorizontalAlignment="Center"
+                                                   FontSize="{StaticResource Font.Size.Small}"
+                                                   Foreground="{DynamicResource Brush.TextPrimary}" />
+                                    </Grid>
+                                    <ToolTip.Tip>
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding Date, StringFormat='{}{0:dd MMMM yyyy}'}" />
+                                            <TextBlock Text="{Binding Count}" />
+                                        </StackPanel>
+                                    </ToolTip.Tip>
+                                </Button>
+                            </Grid>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>

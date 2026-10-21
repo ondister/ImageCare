@@ -68,6 +68,7 @@ internal class GlancePanelViewModel : ViewModelBase, IDialogAware
     private AspectRatioViewModel _selectedAspectRatio;
     private GlanceMediaPreviewViewModel? _selectedPreview;
     private bool _isScrollResetRequested;
+    private int _scrollTargetRowIndex = -1;
     private double _panelRowHeight;
     private bool _hasDeletedFiles;
     private bool _isRestoringAll;
@@ -257,6 +258,13 @@ internal class GlancePanelViewModel : ViewModelBase, IDialogAware
         set => SetProperty(ref _isScrollResetRequested, value);
     }
 
+    // Used by ScrollToIndexBehavior. The index addresses PreviewRows, not individual previews.
+    public int ScrollTargetRowIndex
+    {
+        get => _scrollTargetRowIndex;
+        private set => SetProperty(ref _scrollTargetRowIndex, value);
+    }
+
     /// <inheritdoc />
     public bool CanCloseDialog()
     {
@@ -272,6 +280,7 @@ internal class GlancePanelViewModel : ViewModelBase, IDialogAware
             _folderStatisticsService.Stop();
             _fileSystemWatcherService.StopWatching();
             ClearPreviewPanel();
+            ClearDeletedFiles();
             _disposable?.Dispose();
         }
         catch (Exception ex)
@@ -762,62 +771,43 @@ internal class GlancePanelViewModel : ViewModelBase, IDialogAware
     {
         try
         {
-            var targetPreview = ImagePreviews.FirstOrDefault(p =>
-                                                                 p.FileDate.Date == dateTime.Date);
+            var representativeFilePath = TimelineVm.GetRepresentativeFilePath(dateTime);
+            GlanceMediaPreviewViewModel? targetPreview = null;
+            if (!string.IsNullOrWhiteSpace(representativeFilePath))
+            {
+                targetPreview = ImagePreviews.FirstOrDefault(
+                    preview => PathsEqual(preview.Url, representativeFilePath));
+                if (targetPreview == null)
+                {
+                    await CreateImagePreviewFromPathAsync(representativeFilePath, false);
+                    targetPreview = ImagePreviews.FirstOrDefault(
+                        preview => PathsEqual(preview.Url, representativeFilePath));
+                }
+            }
 
+            targetPreview ??= ImagePreviews.FirstOrDefault(
+                preview => preview.FileDate.Date == dateTime.Date);
             if (targetPreview == null)
             {
+                _logger.Warning("No overview image found for timeline date {Date}", dateTime.Date);
                 return;
             }
 
             var index = ImagePreviews.IndexOf(targetPreview);
-
-            await _currentScrollCancellation.CancelAsync();
-            _currentScrollCancellation.Dispose();
-            _currentScrollCancellation = new CancellationTokenSource();
-            var token = _currentScrollCancellation.Token;
-
-            // Load range nearby item
-            var start = Math.Max(0, index - PreloadRowsCount / 2);
-            var end = Math.Min(ImagePreviews.Count - 1, index + PreloadRowsCount / 2);
-
-            await LoadImageAsync(index, token);
             SelectedPreview = targetPreview;
+            IsScrollResetRequested = true;
+            ScrollTargetRowIndex = -1;
+            ScrollTargetRowIndex = index / Math.Max(1, ImagesPerLine);
 
-            var upRowsTask = Task.Run(
-                async () =>
-                {
-                    for (var i = index - 1; i >= start; i--)
-                    {
-                        if (token.IsCancellationRequested)
-                        {
-                            return;
-                        }
-
-                        await LoadImageAsync(i, token);
-                    }
-                },
-                token);
-            var downRowsTask = Task.Run(
-                async () =>
-                {
-                    for (var i = index; i <= end; i++)
-                    {
-                        if (token.IsCancellationRequested)
-                        {
-                            return;
-                        }
-
-                        await LoadImageAsync(i, token);
-                    }
-                },
-                token);
-
-            await Task.WhenAll(upRowsTask, downRowsTask);
+            await LoadImageAsync(index, _imageLoadCts.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            // Expected when the overview closes or switches folders.
         }
         catch (Exception ex)
         {
-            _logger.Error($"Date selection failed: {dateTime}", ex);
+            _logger.Error(ex, "Date selection failed: {Date}", dateTime);
         }
     }
 
@@ -1085,13 +1075,30 @@ internal class GlancePanelViewModel : ViewModelBase, IDialogAware
 
     private void RefreshDeletedFiles(IReadOnlyList<DeletedMediaFile> deletedFiles)
     {
-        DeletedFiles.Clear();
+        ClearDeletedFiles();
         foreach (var deletedFile in deletedFiles)
         {
-            DeletedFiles.Add(new DeletedMediaFileViewModel(deletedFile, RestoreDeletedFileAsync));
+            var viewModel = new DeletedMediaFileViewModel(
+                deletedFile,
+                RestoreDeletedFileAsync,
+                _imageService,
+                _logger);
+            DeletedFiles.Add(viewModel);
+            _ = viewModel.LoadPreviewAsync();
         }
 
         HasDeletedFiles = DeletedFiles.Count > 0;
+    }
+
+    private void ClearDeletedFiles()
+    {
+        foreach (var deletedFile in DeletedFiles)
+        {
+            deletedFile.Dispose();
+        }
+
+        DeletedFiles.Clear();
+        HasDeletedFiles = false;
     }
 
     private async Task RestoreDeletedFileAsync(DeletedMediaFile deletedFile)

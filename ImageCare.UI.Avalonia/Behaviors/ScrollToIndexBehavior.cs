@@ -27,6 +27,14 @@ internal sealed class ScrollToIndexBehavior
             return;
         }
 
-        Dispatcher.UIThread.Post(() => listBox.ScrollIntoView(index), DispatcherPriority.Loaded);
+        Dispatcher.UIThread.Post(
+            () =>
+            {
+                listBox.ScrollIntoView(index);
+                Dispatcher.UIThread.Post(
+                    () => listBox.ScrollIntoView(index),
+                    DispatcherPriority.Background);
+            },
+            DispatcherPriority.Loaded);
     }
 }
