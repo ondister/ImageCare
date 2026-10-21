@@ -217,7 +217,12 @@ internal class FoldersViewModel : NavigatedViewModelBase
                 _multiSourcesFileSystemWatcherService.DirectoryRenamed
                                                      .DistinctUntilChanged(folder => folder.NewDirectoryModel.Path)
                                                      .ObserveOn(_synchronizationContext)
-                                                     .Subscribe(OnDirectoryRenamed, OnObservableError)
+                                                     .Subscribe(OnDirectoryRenamed, OnObservableError),
+                _multiSourcesFileSystemWatcherService.RescanRequested
+                                                     .ObserveOn(_synchronizationContext)
+                                                     .Subscribe(
+                                                         path => ScheduleDirectoryReconciliation(path, "watcher-overflow"),
+                                                         OnObservableError)
             };
 
             _drivesWatcherService.StartWatching();

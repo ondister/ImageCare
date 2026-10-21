@@ -170,7 +170,7 @@
                 </Grid>
 
                 <Grid Grid.Row="1"
-                      RowDefinitions="Auto,Auto"
+                      RowDefinitions="Auto,Auto,Auto"
                       Margin="8,6">
                     <TextBlock Grid.Row="0"
                                Text="{Binding Title}"
@@ -193,6 +193,12 @@
                                    TextTrimming="CharacterEllipsis"
                                    TextWrapping="NoWrap"
                                    VerticalAlignment="Center" />
+                    </Grid>
+                    <Grid Grid.Row="2" Margin="0,3,0,0" ColumnDefinitions="Auto,*">
+                        <TextBlock Grid.Column="0" Text="{Binding RatingStars}" FontSize="{StaticResource Font.Size.Micro}"
+                                   Foreground="{DynamicResource Brush.Accent}" />
+                        <TextBlock Grid.Column="1" Margin="8,0,0,0" Text="{Binding TagSummary}"
+                                   FontSize="{StaticResource Font.Size.Micro}" TextTrimming="CharacterEllipsis" />
                     </Grid>
                 </Grid>
             </Grid>

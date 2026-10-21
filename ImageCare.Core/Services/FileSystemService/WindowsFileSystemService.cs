@@ -1,4 +1,8 @@
-﻿using ImageCare.Core.Domain.Folders;
+﻿using System.ComponentModel;
+using System.Runtime.InteropServices;
+using System.Security.AccessControl;
+
+using ImageCare.Core.Domain.Folders;
 using ImageCare.Core.Exceptions;
 using ImageCare.Core.Services.FileSystemService.Windows;
 
@@ -117,12 +121,54 @@ public sealed class WindowsFileSystemService : IFileSystemService
     public void CopyFileMetadata(string source, string destination)
     {
         var sourceInfo = new FileInfo(source);
+        sourceInfo.Refresh();
+        if (!sourceInfo.Exists)
+        {
+            throw new FileNotFoundException("Metadata source file was not found.", source);
+        }
 
-        // Copy file attributes and timestamps
-        File.SetAttributes(destination, sourceInfo.Attributes);
-        File.SetCreationTime(destination, sourceInfo.CreationTime);
-        File.SetLastWriteTime(destination, sourceInfo.LastWriteTime);
-        File.SetLastAccessTime(destination, sourceInfo.LastAccessTime);
+        var attributes = sourceInfo.Attributes;
+        var creationTimeUtc = sourceInfo.CreationTimeUtc;
+        var lastWriteTimeUtc = sourceInfo.LastWriteTimeUtc;
+        var lastAccessTimeUtc = sourceInfo.LastAccessTimeUtc;
+
+        if (OperatingSystem.IsWindows())
+        {
+            CopyAlternateDataStreams(source, destination);
+
+            var destinationInfo = new FileInfo(destination);
+            const AccessControlSections requiredSections =
+                AccessControlSections.Access
+                | AccessControlSections.Owner
+                | AccessControlSections.Group;
+            var sourceRequiredSecurity = sourceInfo.GetAccessControl(requiredSections);
+            var requiredSecurity = new FileSecurity();
+            requiredSecurity.SetSecurityDescriptorBinaryForm(
+                sourceRequiredSecurity.GetSecurityDescriptorBinaryForm(),
+                requiredSections);
+            destinationInfo.SetAccessControl(requiredSecurity);
+
+            try
+            {
+                var sourceAuditSecurity = sourceInfo.GetAccessControl(AccessControlSections.Audit);
+                var auditSecurity = new FileSecurity();
+                auditSecurity.SetSecurityDescriptorBinaryForm(
+                    sourceAuditSecurity.GetSecurityDescriptorBinaryForm(),
+                    AccessControlSections.Audit);
+                destinationInfo.SetAccessControl(auditSecurity);
+            }
+            catch (Exception exception) when (IsAuditMetadataUnavailable(exception))
+            {
+                // Reading or applying SACLs requires an elevated security privilege that is
+                // commonly unavailable to desktop applications. DACL/owner/group failures are
+                // intentionally not caught because replacement must not proceed without them.
+            }
+        }
+
+        File.SetCreationTimeUtc(destination, creationTimeUtc);
+        File.SetLastWriteTimeUtc(destination, lastWriteTimeUtc);
+        File.SetLastAccessTimeUtc(destination, lastAccessTimeUtc);
+        File.SetAttributes(destination, attributes);
     }
 
     public void CopyDirectoryMetadata(string source, string destination)
@@ -198,6 +244,103 @@ public sealed class WindowsFileSystemService : IFileSystemService
         {
             throw new ServiceException($"Failed to rename folder from '{path}' to '{newName}'", ex);
         }
+    }
+
+    private static void CopyAlternateDataStreams(string source, string destination)
+    {
+        var streamData = new Win32FindStreamData();
+        using var findHandle = FindFirstStreamW(source, 0, streamData, 0);
+        if (findHandle.IsInvalid)
+        {
+            var error = Marshal.GetLastWin32Error();
+            if (error is ErrorHandleEof or ErrorInvalidFunction or ErrorNotSupported)
+            {
+                return;
+            }
+
+            throw new Win32Exception(error, $"Failed to enumerate alternate data streams for '{source}'.");
+        }
+
+        while (true)
+        {
+            var streamName = streamData.StreamName;
+            if (!string.Equals(streamName, DefaultDataStreamName, StringComparison.OrdinalIgnoreCase))
+            {
+                CopyAlternateDataStream(source, destination, streamName);
+            }
+
+            if (FindNextStreamW(findHandle, streamData))
+            {
+                continue;
+            }
+
+            var error = Marshal.GetLastWin32Error();
+            if (error == ErrorNoMoreFiles)
+            {
+                break;
+            }
+
+            throw new Win32Exception(error, $"Failed to enumerate alternate data streams for '{source}'.");
+        }
+    }
+
+    private static void CopyAlternateDataStream(string source, string destination, string streamName)
+    {
+        // FindFirstStreamW returns names such as ":metadata:$DATA". Appending the full
+        // stream name addresses that stream without ever reopening or copying "::$DATA".
+        using var input = new FileStream(
+            source + streamName,
+            FileMode.Open,
+            FileAccess.Read,
+            FileShare.Read,
+            64 * 1024,
+            FileOptions.SequentialScan);
+        using var output = new FileStream(
+            destination + streamName,
+            FileMode.CreateNew,
+            FileAccess.Write,
+            FileShare.None,
+            64 * 1024,
+            FileOptions.WriteThrough);
+        input.CopyTo(output);
+        output.Flush(flushToDisk: true);
+    }
+
+    private static bool IsAuditMetadataUnavailable(Exception exception) =>
+        exception is PrivilegeNotHeldException
+            or UnauthorizedAccessException
+            or PlatformNotSupportedException
+            or NotSupportedException
+        || exception is Win32Exception { NativeErrorCode: ErrorAccessDenied or ErrorPrivilegeNotHeld or ErrorNotSupported };
+
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern SafeFindHandle FindFirstStreamW(
+        string fileName,
+        int informationLevel,
+        [In] [Out] Win32FindStreamData streamData,
+        uint flags);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool FindNextStreamW(
+        SafeFindHandle findStream,
+        [In] [Out] Win32FindStreamData streamData);
+
+    private const string DefaultDataStreamName = "::$DATA";
+    private const int ErrorInvalidFunction = 1;
+    private const int ErrorAccessDenied = 5;
+    private const int ErrorNoMoreFiles = 18;
+    private const int ErrorHandleEof = 38;
+    private const int ErrorNotSupported = 50;
+    private const int ErrorPrivilegeNotHeld = 1314;
+
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+    private sealed class Win32FindStreamData
+    {
+        public long StreamSize;
+
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 296)]
+        public string StreamName = string.Empty;
     }
 
     private void ResetAttributesRecursive(string path)

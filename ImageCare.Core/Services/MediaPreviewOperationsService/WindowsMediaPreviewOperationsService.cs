@@ -11,6 +11,7 @@ using ImageCare.Core.Domain.Preview;
 using ImageCare.Core.Exceptions;
 using ImageCare.Core.Services.ConfigurationService;
 using ImageCare.Core.Services.FileSystemService;
+using ImageCare.Core.Services.MediaAnnotationsService;
 using ImageCare.Core.Services.ProcessService;
 
 namespace ImageCare.Core.Services.MediaPreviewOperationsService;
@@ -58,7 +59,7 @@ public sealed class WindowsMediaPreviewOperationsService : IMediaPreviewOperatio
     {
         lock (_safeDeleteLock)
         {
-            RemoveMissingDeletedFiles();
+            ReconcileDeletionJournal();
             return CreateDeletedFilesSnapshot();
         }
     }
@@ -69,8 +70,8 @@ public sealed class WindowsMediaPreviewOperationsService : IMediaPreviewOperatio
         {
             lock (_safeDeleteLock)
             {
-                RemoveMissingDeletedFiles();
-                return _deletedFiles.Count > 0;
+                ReconcileDeletionJournal();
+                return _deletedFiles.Any(IsUndoable);
             }
         }
     }
@@ -117,13 +118,20 @@ public sealed class WindowsMediaPreviewOperationsService : IMediaPreviewOperatio
                 throw new ServiceException($"Source file does not exist: {imagePreview.Url}");
             }
 
+            var sourceSidecarPath = XmpSidecarPath.GetExistingExternalSidecarPath(
+                imagePreview.Url,
+                _fileSystemService.FileExists);
             var fileName = GetDestinationFileName(
                 selectedFolderPath,
-                Path.GetFileName(imagePreview.Url),
-                destinationFileName);
+                imagePreview.Url,
+                destinationFileName,
+                sourceSidecarPath is not null);
             var destinationFilePath = Path.Combine(selectedFolderPath, fileName);
+            var destinationSidecarPath = sourceSidecarPath is null
+                ? null
+                : XmpSidecarPath.GetDestinationExternalSidecarPath(imagePreview.Url, destinationFilePath);
 
-            _fileSystemService.CopyFile(imagePreview.Url, destinationFilePath);
+            CopyBundle(imagePreview.Url, destinationFilePath, sourceSidecarPath, destinationSidecarPath);
             _fileOperationCompletedSubject.OnNext(
                 new MediaFileOperationCompleted(MediaFileOperationKind.Copy, imagePreview.Url, destinationFilePath));
 
@@ -174,13 +182,20 @@ public sealed class WindowsMediaPreviewOperationsService : IMediaPreviewOperatio
                 throw new ServiceException($"Source file does not exist: {imagePreview.Url}");
             }
 
+            var sourceSidecarPath = XmpSidecarPath.GetExistingExternalSidecarPath(
+                imagePreview.Url,
+                _fileSystemService.FileExists);
             var fileName = GetDestinationFileName(
                 selectedFolderPath,
-                Path.GetFileName(imagePreview.Url),
-                destinationFileName);
+                imagePreview.Url,
+                destinationFileName,
+                sourceSidecarPath is not null);
             var destinationFilePath = Path.Combine(selectedFolderPath, fileName);
+            var destinationSidecarPath = sourceSidecarPath is null
+                ? null
+                : XmpSidecarPath.GetDestinationExternalSidecarPath(imagePreview.Url, destinationFilePath);
 
-            _fileSystemService.MoveFile(imagePreview.Url, destinationFilePath);
+            MoveBundle(imagePreview.Url, destinationFilePath, sourceSidecarPath, destinationSidecarPath);
             _fileOperationCompletedSubject.OnNext(
                 new MediaFileOperationCompleted(MediaFileOperationKind.Move, imagePreview.Url, destinationFilePath));
 
@@ -198,12 +213,16 @@ public sealed class WindowsMediaPreviewOperationsService : IMediaPreviewOperatio
 
     private string GetDestinationFileName(
         string selectedFolderPath,
-        string sourceFileName,
-        string? requestedFileName)
+        string sourcePath,
+        string? requestedFileName,
+        bool hasExternalSidecar)
     {
         if (requestedFileName == null)
         {
-            return GetUniqueFileName(selectedFolderPath, sourceFileName);
+            return GetUniqueFileName(
+                selectedFolderPath,
+                Path.GetFileName(sourcePath),
+                hasExternalSidecar ? sourcePath : null);
         }
 
         if (!PortableFileNameValidator.IsValid(requestedFileName))
@@ -212,9 +231,11 @@ public sealed class WindowsMediaPreviewOperationsService : IMediaPreviewOperatio
         }
 
         var destinationFilePath = Path.Combine(selectedFolderPath, requestedFileName);
-        if (_fileSystemService.FileExists(destinationFilePath))
+        if (BundleDestinationExists(
+                destinationFilePath,
+                hasExternalSidecar ? sourcePath : null))
         {
-            throw new ServiceException($"Destination file already exists: {destinationFilePath}");
+            throw new ServiceException($"Destination file or sidecar already exists: {destinationFilePath}");
         }
 
         return requestedFileName;
@@ -229,14 +250,17 @@ public sealed class WindowsMediaPreviewOperationsService : IMediaPreviewOperatio
                 throw new ServiceException($"Media file does not exist: {imagePreview.Url}");
             }
 
+            var sourceSidecarPath = XmpSidecarPath.GetExistingExternalSidecarPath(
+                imagePreview.Url,
+                _fileSystemService.FileExists);
             var configuration = GetConfiguration();
             if (configuration.SafeDeletionEnabled)
             {
-                MoveToSafeDeleteBuffer(imagePreview.Url, configuration);
+                MoveToSafeDeleteBuffer(imagePreview.Url, sourceSidecarPath, configuration);
             }
             else
             {
-                _fileSystemService.SafeDelete(imagePreview.Url);
+                DeleteBundlePermanently(imagePreview.Url, sourceSidecarPath);
             }
 
             _fileOperationCompletedSubject.OnNext(
@@ -259,8 +283,10 @@ public sealed class WindowsMediaPreviewOperationsService : IMediaPreviewOperatio
         DeletedMediaFile? deletedFile;
         lock (_safeDeleteLock)
         {
-            RemoveMissingDeletedFiles();
-            deletedFile = _deletedFiles.MaxBy(file => file.DeletedAtUtc);
+            ReconcileDeletionJournal();
+            deletedFile = _deletedFiles
+                .Where(IsUndoable)
+                .MaxBy(file => file.DeletedAtUtc);
         }
 
         return deletedFile == null
@@ -276,9 +302,20 @@ public sealed class WindowsMediaPreviewOperationsService : IMediaPreviewOperatio
             string destinationPath;
             lock (_safeDeleteLock)
             {
-                RemoveMissingDeletedFiles();
-                deletedFile = _deletedFiles.FirstOrDefault(file => PathsEqual(file.BufferPath, bufferPath));
-                if (deletedFile == null || !_fileSystemService.FileExists(deletedFile.BufferPath))
+                ReconcileDeletionJournal();
+                deletedFile = _deletedFiles.FirstOrDefault(file =>
+                    IsUndoable(file) && PathsEqual(file.BufferPath, bufferPath));
+                if (deletedFile == null)
+                {
+                    return Task.FromResult(OperationResult.Failed);
+                }
+
+                var hasSidecar = deletedFile.OriginalSidecarPath is not null
+                    || deletedFile.BufferSidecarPath is not null;
+                if (hasSidecar
+                    && (deletedFile.OriginalSidecarPath is null
+                        || deletedFile.BufferSidecarPath is null
+                        || !_fileSystemService.FileExists(deletedFile.BufferSidecarPath)))
                 {
                     return Task.FromResult(OperationResult.Failed);
                 }
@@ -291,16 +328,62 @@ public sealed class WindowsMediaPreviewOperationsService : IMediaPreviewOperatio
                 }
 
                 destinationPath = deletedFile.OriginalPath;
-                if (_fileSystemService.FileExists(destinationPath))
+                if (BundleDestinationExists(
+                        destinationPath,
+                        hasSidecar ? deletedFile.OriginalPath : null))
                 {
                     destinationPath = Path.Combine(
                         originalDirectory,
-                        GetUniqueFileName(originalDirectory, Path.GetFileName(deletedFile.OriginalPath)));
+                        GetUniqueFileName(
+                            originalDirectory,
+                            Path.GetFileName(deletedFile.OriginalPath),
+                            hasSidecar ? deletedFile.OriginalPath : null));
                 }
 
-                MoveFileReliably(deletedFile.BufferPath, destinationPath);
-                _deletedFiles.Remove(deletedFile);
+                var destinationSidecarPath = hasSidecar
+                    ? PathsEqual(destinationPath, deletedFile.OriginalPath)
+                        ? deletedFile.OriginalSidecarPath
+                        : XmpSidecarPath.GetDestinationExternalSidecarPath(
+                            deletedFile.OriginalPath,
+                            destinationPath)
+                    : null;
+                var pendingRestore = deletedFile with
+                {
+                    State = DeletedMediaFileState.PendingRestore,
+                    RestorePath = destinationPath,
+                    RestoreSidecarPath = destinationSidecarPath
+                };
+                ReplaceDeletedFile(deletedFile, pendingRestore);
                 SaveDeletionManifest();
+                deletedFile = pendingRestore;
+
+                try
+                {
+                    MoveBundle(
+                        deletedFile.BufferPath,
+                        destinationPath,
+                        deletedFile.BufferSidecarPath,
+                        destinationSidecarPath);
+                }
+                catch
+                {
+                    ReconcilePendingRestore(deletedFile);
+                    SaveDeletionManifest();
+                    throw;
+                }
+
+                _deletedFiles.Remove(deletedFile);
+                try
+                {
+                    SaveDeletionManifest();
+                }
+                catch
+                {
+                    // The filesystem move is the restore commit. The durable PendingRestore
+                    // record lets startup remove the stale journal entry, so do not report that
+                    // the media remained deleted after it has already been restored.
+                }
+
                 PublishDeletedFiles();
             }
 
@@ -311,6 +394,10 @@ public sealed class WindowsMediaPreviewOperationsService : IMediaPreviewOperatio
                     destinationPath));
 
             return Task.FromResult(OperationResult.Success);
+        }
+        catch (ServiceException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
@@ -324,19 +411,27 @@ public sealed class WindowsMediaPreviewOperationsService : IMediaPreviewOperatio
         {
             lock (_safeDeleteLock)
             {
-                var deletedFile = _deletedFiles.FirstOrDefault(file => PathsEqual(file.BufferPath, bufferPath));
+                ReconcileDeletionJournal();
+                var deletedFile = _deletedFiles.FirstOrDefault(file =>
+                    IsUndoable(file) && PathsEqual(file.BufferPath, bufferPath));
                 if (deletedFile == null)
                 {
                     return Task.FromResult(OperationResult.Failed);
                 }
 
-                if (_fileSystemService.FileExists(deletedFile.BufferPath))
+                MarkCleanupPendingAndPersist(deletedFile);
+                ProcessCleanupPending(
+                    _deletedFiles.First(file => PathsEqual(file.BufferPath, bufferPath)));
+                try
                 {
-                    _fileSystemService.SafeDelete(deletedFile.BufferPath);
+                    SaveDeletionManifest();
+                }
+                catch
+                {
+                    // CleanupPending was persisted before media deletion. If removing the
+                    // completed tombstone cannot be persisted, startup will retry idempotently.
                 }
 
-                _deletedFiles.Remove(deletedFile);
-                SaveDeletionManifest();
                 PublishDeletedFiles();
             }
 
@@ -426,7 +521,10 @@ public sealed class WindowsMediaPreviewOperationsService : IMediaPreviewOperatio
         return _configurationService?.Configuration.Value ?? _fallbackConfiguration;
     }
 
-    private void MoveToSafeDeleteBuffer(string sourcePath, Configuration configuration)
+    private void MoveToSafeDeleteBuffer(
+        string sourcePath,
+        string? sourceSidecarPath,
+        Configuration configuration)
     {
         var bufferDirectory = configuration.SafeDeletionDirectoryPath;
         if (string.IsNullOrWhiteSpace(bufferDirectory))
@@ -448,10 +546,64 @@ public sealed class WindowsMediaPreviewOperationsService : IMediaPreviewOperatio
             }
 
             var destinationPath = CreateSafeDeletePath(bufferDirectory, Path.GetFileName(sourcePath));
-            MoveFileReliably(sourcePath, destinationPath);
-            _deletedFiles.Add(new DeletedMediaFile(sourcePath, destinationPath, DateTime.UtcNow));
-            TrimSafeDeleteBuffer(bufferDirectory, Math.Max(1, configuration.SafeDeletionMaxFileCount));
-            SaveDeletionManifest();
+            var destinationSidecarPath = sourceSidecarPath is null
+                ? null
+                : CreateSafeDeletePath(bufferDirectory, Path.GetFileName(sourceSidecarPath));
+            var deletedFile = new DeletedMediaFile(
+                sourcePath,
+                destinationPath,
+                DateTime.UtcNow,
+                sourceSidecarPath,
+                destinationSidecarPath,
+                DeletedMediaFileState.PendingDelete);
+            _deletedFiles.Add(deletedFile);
+            try
+            {
+                SaveDeletionManifest();
+            }
+            catch
+            {
+                _deletedFiles.Remove(deletedFile);
+                throw;
+            }
+
+            try
+            {
+                MoveBundle(sourcePath, destinationPath, sourceSidecarPath, destinationSidecarPath);
+            }
+            catch (Exception operationException)
+            {
+                try
+                {
+                    ReconcilePendingDelete(deletedFile);
+                    SaveDeletionManifest();
+                }
+                catch (Exception recoveryException)
+                {
+                    throw new AggregateException(
+                        "Safe deletion failed and its journal recovery could not be persisted.",
+                        operationException,
+                        recoveryException);
+                }
+
+                throw;
+            }
+
+            var committed = deletedFile with { State = DeletedMediaFileState.Committed };
+            ReplaceDeletedFile(deletedFile, committed);
+            try
+            {
+                SaveDeletionManifest();
+                TrimSafeDeleteBuffer(Math.Max(1, configuration.SafeDeletionMaxFileCount));
+                SaveDeletionManifest();
+            }
+            catch
+            {
+                // Moving media into the buffer commits deletion. PendingDelete is already
+                // durable and startup can normalize it, so post-commit journal/trim failures
+                // must not make the API report that the source media remains in place.
+            }
+
             PublishDeletedFiles();
         }
     }
@@ -470,20 +622,155 @@ public sealed class WindowsMediaPreviewOperationsService : IMediaPreviewOperatio
         }
     }
 
-    private void TrimSafeDeleteBuffer(string bufferDirectory, int maximumFileCount)
+    private void TrimSafeDeleteBuffer(int maximumFileCount)
     {
-        var managedFiles = _fileSystemService.GetFiles(bufferDirectory)
-            .Where(path => Path.GetFileName(path).StartsWith(SafeDeleteFilePrefix, StringComparison.Ordinal))
-            .OrderBy(Path.GetFileName, StringComparer.Ordinal)
+        var undoableFiles = _deletedFiles
+            .Where(IsUndoable)
+            .OrderBy(file => file.DeletedAtUtc)
             .ToArray();
-        var filesToDelete = managedFiles.Take(Math.Max(0, managedFiles.Length - maximumFileCount));
+        var filesToDelete = undoableFiles
+            .Take(Math.Max(0, undoableFiles.Length - maximumFileCount))
+            .ToArray();
 
-        foreach (var filePath in filesToDelete)
+        foreach (var deletedFile in filesToDelete)
         {
-            _fileSystemService.SafeDelete(filePath);
+            MarkCleanupPendingAndPersist(deletedFile);
+            var cleanupPending = _deletedFiles.First(file =>
+                PathsEqual(file.BufferPath, deletedFile.BufferPath));
+            ProcessCleanupPending(cleanupPending);
+            SaveDeletionManifest();
+        }
+    }
+
+    private void MarkCleanupPendingAndPersist(DeletedMediaFile deletedFile)
+    {
+        var cleanupPending = deletedFile with
+        {
+            State = DeletedMediaFileState.CleanupPending,
+            RestorePath = null,
+            RestoreSidecarPath = null
+        };
+        ReplaceDeletedFile(deletedFile, cleanupPending);
+        try
+        {
+            SaveDeletionManifest();
+        }
+        catch
+        {
+            ReplaceDeletedFile(cleanupPending, deletedFile);
+            throw;
+        }
+    }
+
+    private void ProcessCleanupPending(DeletedMediaFile deletedFile)
+    {
+        if (deletedFile.State != DeletedMediaFileState.CleanupPending)
+        {
+            return;
         }
 
-        RemoveMissingDeletedFiles();
+        if (_fileSystemService.FileExists(deletedFile.BufferPath))
+        {
+            _fileSystemService.SafeDelete(deletedFile.BufferPath);
+        }
+
+        if (_fileSystemService.FileExists(deletedFile.BufferPath))
+        {
+            return;
+        }
+
+        if (deletedFile.BufferSidecarPath is { } sidecarPath
+            && _fileSystemService.FileExists(sidecarPath))
+        {
+            try
+            {
+                _fileSystemService.SafeDelete(sidecarPath);
+            }
+            catch
+            {
+                return;
+            }
+        }
+
+        if (deletedFile.BufferSidecarPath is null
+            || !_fileSystemService.FileExists(deletedFile.BufferSidecarPath))
+        {
+            _deletedFiles.Remove(deletedFile);
+        }
+    }
+
+    private void CopyBundle(
+        string sourcePath,
+        string destinationPath,
+        string? sourceSidecarPath,
+        string? destinationSidecarPath)
+    {
+        var sidecarCreated = false;
+        var mediaCreated = false;
+        try
+        {
+            if (sourceSidecarPath is not null && destinationSidecarPath is not null)
+            {
+                _fileSystemService.CopyFile(sourceSidecarPath, destinationSidecarPath);
+                sidecarCreated = true;
+            }
+
+            _fileSystemService.CopyFile(sourcePath, destinationPath);
+            mediaCreated = true;
+        }
+        catch (Exception operationException)
+        {
+            var rollbackExceptions = new List<Exception>();
+            if (mediaCreated)
+            {
+                TryDeleteRollbackDestination(destinationPath, rollbackExceptions);
+            }
+
+            if (sidecarCreated)
+            {
+                TryDeleteRollbackDestination(destinationSidecarPath, rollbackExceptions);
+            }
+
+            ThrowWithRollbackFailures(operationException, rollbackExceptions);
+            throw;
+        }
+    }
+
+    private void MoveBundle(
+        string sourcePath,
+        string destinationPath,
+        string? sourceSidecarPath,
+        string? destinationSidecarPath)
+    {
+        var sidecarMoved = false;
+        var mediaMoved = false;
+        try
+        {
+            if (sourceSidecarPath is not null && destinationSidecarPath is not null)
+            {
+                MoveFileReliably(sourceSidecarPath, destinationSidecarPath);
+                sidecarMoved = true;
+            }
+
+            MoveFileReliably(sourcePath, destinationPath);
+            mediaMoved = true;
+        }
+        catch (Exception operationException)
+        {
+            var rollbackExceptions = new List<Exception>();
+            if (mediaMoved)
+            {
+                TryRollbackMove(destinationPath, sourcePath, rollbackExceptions);
+            }
+
+            if (sidecarMoved)
+            {
+                TryRollbackMove(destinationSidecarPath, sourceSidecarPath, rollbackExceptions);
+            }
+
+            ThrowWithRollbackFailures(operationException, rollbackExceptions);
+            throw;
+        }
     }
 
     private void MoveFileReliably(string sourcePath, string destinationPath)
@@ -494,15 +781,17 @@ public sealed class WindowsMediaPreviewOperationsService : IMediaPreviewOperatio
         }
         catch (IOException) when (!_fileSystemService.FileExists(destinationPath))
         {
+            var destinationCreated = false;
             try
             {
                 _fileSystemService.CopyFile(sourcePath, destinationPath);
+                destinationCreated = true;
                 _fileSystemService.CopyFileMetadata(sourcePath, destinationPath);
                 _fileSystemService.SafeDelete(sourcePath);
             }
             catch
             {
-                if (_fileSystemService.FileExists(destinationPath))
+                if (destinationCreated && _fileSystemService.FileExists(destinationPath))
                 {
                     _fileSystemService.SafeDelete(destinationPath);
                 }
@@ -512,14 +801,307 @@ public sealed class WindowsMediaPreviewOperationsService : IMediaPreviewOperatio
         }
     }
 
-    private void RemoveMissingDeletedFiles()
+    private void DeleteBundlePermanently(string mediaPath, string? sidecarPath)
     {
-        var removed = _deletedFiles.RemoveAll(file => !_fileSystemService.FileExists(file.BufferPath));
-        if (removed > 0)
+        // Media deletion is the commit. Failures before it remain meaningful to callers.
+        if (_fileSystemService.FileExists(mediaPath))
+        {
+            _fileSystemService.SafeDelete(mediaPath);
+        }
+
+        // Once SafeDelete returns, media deletion is committed. The abstraction reports
+        // failures by throwing; a second existence probe is unreliable for mocked/remote stores.
+
+        // Once media is gone the bundle is no longer restorable. Sidecar cleanup is idempotent
+        // and best effort; startup reconciliation retries orphan cleanup.
+        if (sidecarPath is not null && _fileSystemService.FileExists(sidecarPath))
+        {
+            try
+            {
+                _fileSystemService.SafeDelete(sidecarPath);
+            }
+            catch
+            {
+                // Do not report that committed media deletion failed because an orphan remains.
+            }
+        }
+    }
+
+    private void TryDeleteRollbackDestination(string? path, ICollection<Exception> rollbackExceptions)
+    {
+        if (path is null || !_fileSystemService.FileExists(path))
+        {
+            return;
+        }
+
+        try
+        {
+            _fileSystemService.SafeDelete(path);
+        }
+        catch (Exception ex)
+        {
+            rollbackExceptions.Add(ex);
+        }
+    }
+
+    private void TryRollbackMove(
+        string? destinationPath,
+        string? sourcePath,
+        ICollection<Exception> rollbackExceptions)
+    {
+        if (destinationPath is null || sourcePath is null || !_fileSystemService.FileExists(destinationPath))
+        {
+            return;
+        }
+
+        try
+        {
+            if (_fileSystemService.FileExists(sourcePath))
+            {
+                _fileSystemService.SafeDelete(destinationPath);
+            }
+            else
+            {
+                MoveFileReliably(destinationPath, sourcePath);
+            }
+        }
+        catch (Exception ex)
+        {
+            rollbackExceptions.Add(ex);
+        }
+    }
+
+    private static void ThrowWithRollbackFailures(
+        Exception operationException,
+        IReadOnlyCollection<Exception> rollbackExceptions)
+    {
+        if (rollbackExceptions.Count > 0)
+        {
+            throw new AggregateException(
+                "The file operation failed and one or more rollback actions also failed.",
+                new[] { operationException }.Concat(rollbackExceptions));
+        }
+    }
+
+    private void ReconcileDeletionJournal(bool publishChanges = true)
+    {
+        var before = _deletedFiles.ToArray();
+        foreach (var file in before)
+        {
+            if (!_deletedFiles.Contains(file))
+            {
+                continue;
+            }
+
+            try
+            {
+                switch (file.State)
+                {
+                    case DeletedMediaFileState.PendingDelete:
+                        ReconcilePendingDelete(file);
+                        break;
+                    case DeletedMediaFileState.PendingRestore:
+                        ReconcilePendingRestore(file);
+                        break;
+                    case DeletedMediaFileState.CleanupPending:
+                        ProcessCleanupPending(file);
+                        break;
+                    case DeletedMediaFileState.Committed when
+                        !_fileSystemService.FileExists(file.BufferPath):
+                        MarkCleanupPendingAndPersist(file);
+                        var cleanupPending = _deletedFiles.First(candidate =>
+                            PathsEqual(candidate.BufferPath, file.BufferPath));
+                        ProcessCleanupPending(cleanupPending);
+                        break;
+                }
+            }
+            catch
+            {
+                // Recovery is retried on the next startup or deleted-files query. Keep the
+                // durable phase and every known path instead of guessing after an I/O failure.
+            }
+        }
+
+        if (!before.SequenceEqual(_deletedFiles))
         {
             SaveDeletionManifest();
-            PublishDeletedFiles();
+            if (publishChanges)
+            {
+                PublishDeletedFiles();
+            }
         }
+    }
+
+    private void ReconcilePendingDelete(DeletedMediaFile file)
+    {
+        var bufferMediaExists = _fileSystemService.FileExists(file.BufferPath);
+        var originalMediaExists = _fileSystemService.FileExists(file.OriginalPath);
+        if (bufferMediaExists)
+        {
+            if (file.OriginalSidecarPath is { } originalSidecarPath
+                && file.BufferSidecarPath is { } bufferSidecarPath
+                && !_fileSystemService.FileExists(bufferSidecarPath)
+                && _fileSystemService.FileExists(originalSidecarPath))
+            {
+                MoveFileReliably(originalSidecarPath, bufferSidecarPath);
+            }
+
+            if (originalMediaExists)
+            {
+                _fileSystemService.SafeDelete(file.OriginalPath);
+                if (_fileSystemService.FileExists(file.OriginalPath))
+                {
+                    return;
+                }
+            }
+
+            // The original media is gone, so a duplicate original sidecar is no longer the
+            // only sidecar of a live source. The buffered copy remains the canonical bundle.
+            if (file.OriginalSidecarPath is { } duplicateOriginalSidecar
+                && file.BufferSidecarPath is { } canonicalBufferSidecar
+                && _fileSystemService.FileExists(duplicateOriginalSidecar)
+                && _fileSystemService.FileExists(canonicalBufferSidecar))
+            {
+                try
+                {
+                    _fileSystemService.SafeDelete(duplicateOriginalSidecar);
+                }
+                catch
+                {
+                    // A harmless duplicate can remain; the buffered sidecar is durable.
+                }
+            }
+
+            ReplaceDeletedFile(file, file with { State = DeletedMediaFileState.Committed });
+            return;
+        }
+
+        if (originalMediaExists)
+        {
+            if (file.BufferSidecarPath is { } bufferSidecarPath
+                && _fileSystemService.FileExists(bufferSidecarPath))
+            {
+                if (file.OriginalSidecarPath is { } originalSidecarPath
+                    && !_fileSystemService.FileExists(originalSidecarPath))
+                {
+                    MoveFileReliably(bufferSidecarPath, originalSidecarPath);
+                }
+                else if (file.OriginalSidecarPath is not null
+                         && _fileSystemService.FileExists(file.OriginalSidecarPath))
+                {
+                    MarkCleanupPendingAndPersist(file);
+                    var cleanupPending = _deletedFiles.First(candidate =>
+                        PathsEqual(candidate.BufferPath, file.BufferPath));
+                    ProcessCleanupPending(cleanupPending);
+                    return;
+                }
+                else
+                {
+                    // There is no known safe owner path for this sidecar. Retain the intent and
+                    // path rather than deleting the only surviving annotation artifact.
+                    return;
+                }
+            }
+
+            _deletedFiles.Remove(file);
+            return;
+        }
+
+        MarkCleanupPendingAndPersist(file);
+        var lostMediaCleanup = _deletedFiles.First(candidate =>
+            PathsEqual(candidate.BufferPath, file.BufferPath));
+        ProcessCleanupPending(lostMediaCleanup);
+    }
+
+    private void ReconcilePendingRestore(DeletedMediaFile file)
+    {
+        var destinationPath = file.RestorePath ?? file.OriginalPath;
+        var destinationSidecarPath = file.RestoreSidecarPath ?? file.OriginalSidecarPath;
+        var destinationMediaExists = _fileSystemService.FileExists(destinationPath);
+        var bufferMediaExists = _fileSystemService.FileExists(file.BufferPath);
+
+        if (destinationMediaExists && bufferMediaExists)
+        {
+            // A file may have raced into the reserved-looking destination after preflight. With
+            // no durable file identity we cannot prove that it is our cross-volume copy, so the
+            // buffer always wins. Copy a sidecar back when needed (never steal the destination's
+            // possible sidecar), keep the destination media untouched, and make Undo available.
+            if (file.BufferSidecarPath is { } bufferSidecarPath
+                && !_fileSystemService.FileExists(bufferSidecarPath)
+                && destinationSidecarPath is not null
+                && _fileSystemService.FileExists(destinationSidecarPath))
+            {
+                _fileSystemService.CopyFile(destinationSidecarPath, bufferSidecarPath);
+            }
+
+            ReplaceDeletedFile(file, file with
+            {
+                State = DeletedMediaFileState.Committed,
+                RestorePath = null,
+                RestoreSidecarPath = null
+            });
+            return;
+        }
+
+        if (destinationMediaExists)
+        {
+            if (destinationSidecarPath is not null
+                && !_fileSystemService.FileExists(destinationSidecarPath)
+                && file.BufferSidecarPath is { } bufferSidecarPath
+                && _fileSystemService.FileExists(bufferSidecarPath))
+            {
+                MoveFileReliably(bufferSidecarPath, destinationSidecarPath);
+            }
+
+            if (file.BufferSidecarPath is { } duplicateBufferSidecar
+                && _fileSystemService.FileExists(duplicateBufferSidecar))
+            {
+                MarkCleanupPendingAndPersist(file);
+                var cleanupPending = _deletedFiles.First(candidate =>
+                    PathsEqual(candidate.BufferPath, file.BufferPath));
+                ProcessCleanupPending(cleanupPending);
+                return;
+            }
+
+            _deletedFiles.Remove(file);
+            return;
+        }
+
+        if (bufferMediaExists)
+        {
+            // Deterministic partial-restore policy: if only the sidecar reached the destination,
+            // roll it back to the still-buffered media and expose the entry as undoable again.
+            if (destinationSidecarPath is not null
+                && _fileSystemService.FileExists(destinationSidecarPath))
+            {
+                if (file.BufferSidecarPath is not { } bufferSidecarPath)
+                {
+                    return;
+                }
+
+                if (_fileSystemService.FileExists(bufferSidecarPath))
+                {
+                    _fileSystemService.SafeDelete(destinationSidecarPath);
+                }
+                else
+                {
+                    MoveFileReliably(destinationSidecarPath, bufferSidecarPath);
+                }
+            }
+
+            ReplaceDeletedFile(file, file with
+            {
+                State = DeletedMediaFileState.Committed,
+                RestorePath = null,
+                RestoreSidecarPath = null
+            });
+            return;
+        }
+
+        MarkCleanupPendingAndPersist(file);
+        var missingMediaCleanup = _deletedFiles.First(candidate =>
+            PathsEqual(candidate.BufferPath, file.BufferPath));
+        ProcessCleanupPending(missingMediaCleanup);
     }
 
     private void LoadDeletionManifest()
@@ -539,12 +1121,14 @@ public sealed class WindowsMediaPreviewOperationsService : IMediaPreviewOperatio
                 ConfigurationSourceGenerationContext.Default) as List<DeletedMediaFile>;
             if (deletedFiles != null)
             {
-                _deletedFiles.AddRange(deletedFiles.Where(file => _fileSystemService.FileExists(file.BufferPath)));
+                _deletedFiles.AddRange(deletedFiles);
+                ReconcileDeletionJournal(publishChanges: false);
             }
         }
         catch
         {
-            // A damaged manifest must not prevent the application from starting.
+            // A damaged manifest or temporarily unavailable path must not prevent startup.
+            // The original file remains untouched and recovery will be retried when possible.
         }
     }
 
@@ -563,7 +1147,19 @@ public sealed class WindowsMediaPreviewOperationsService : IMediaPreviewOperatio
             _deletedFiles,
             typeof(List<DeletedMediaFile>),
             ConfigurationSourceGenerationContext.Default);
-        File.WriteAllText(temporaryPath, content);
+        var bytes = System.Text.Encoding.UTF8.GetBytes(content);
+        using (var stream = new FileStream(
+                   temporaryPath,
+                   FileMode.Create,
+                   FileAccess.Write,
+                   FileShare.None,
+                   16 * 1024,
+                   FileOptions.WriteThrough))
+        {
+            stream.Write(bytes);
+            stream.Flush(flushToDisk: true);
+        }
+
         File.Move(temporaryPath, manifestPath, true);
     }
 
@@ -580,40 +1176,79 @@ public sealed class WindowsMediaPreviewOperationsService : IMediaPreviewOperatio
 
     private IReadOnlyList<DeletedMediaFile> CreateDeletedFilesSnapshot() =>
         _deletedFiles
+            .Where(IsUndoable)
             .OrderByDescending(file => file.DeletedAtUtc)
             .ToArray();
+
+    private bool IsUndoable(DeletedMediaFile file) =>
+        file.State == DeletedMediaFileState.Committed
+        && _fileSystemService.FileExists(file.BufferPath);
+
+    private void ReplaceDeletedFile(DeletedMediaFile current, DeletedMediaFile replacement)
+    {
+        var index = _deletedFiles.IndexOf(current);
+        if (index >= 0)
+        {
+            _deletedFiles[index] = replacement;
+        }
+    }
 
     private void PublishDeletedFiles()
     {
         _deletedFilesSubject?.OnNext(CreateDeletedFilesSnapshot());
     }
 
-    private string GetUniqueFileName(string directory, string fileName)
+    private string GetUniqueFileName(
+        string directory,
+        string fileName,
+        string? sidecarOwnerMediaPath = null)
     {
         var files = _fileSystemService.GetFiles(directory);
         var existingFiles = new HashSet<string>(files, StringComparer.OrdinalIgnoreCase);
-
-        if (!existingFiles.Contains(Path.Combine(directory, fileName)))
-        {
-            return fileName;
-        }
-
         var extension = Path.GetExtension(fileName);
         var fileNameWithoutExtension = Path.GetFileNameWithoutExtension(fileName);
-        var counter = 1;
+        var counter = 0;
 
         while (true)
         {
-            var newFileName = $"{fileNameWithoutExtension} ({counter}){extension}";
-            var fullPath = Path.Combine(directory, newFileName);
-
-            if (!existingFiles.Contains(fullPath))
+            var candidateFileName = counter == 0
+                ? fileName
+                : $"{fileNameWithoutExtension} ({counter}){extension}";
+            var candidatePath = Path.Combine(directory, candidateFileName);
+            var sidecarPath = sidecarOwnerMediaPath is null
+                ? null
+                : XmpSidecarPath.GetDestinationExternalSidecarPath(
+                    sidecarOwnerMediaPath,
+                    candidatePath);
+            var destinationExists = existingFiles.Contains(candidatePath)
+                || _fileSystemService.FileExists(candidatePath)
+                || XmpSidecarPath.HasAnotherRawOwner(candidatePath)
+                || (sidecarPath is not null
+                    && (existingFiles.Contains(sidecarPath)
+                        || _fileSystemService.FileExists(sidecarPath)));
+            if (!destinationExists)
             {
-                return newFileName;
+                return candidateFileName;
             }
 
             counter++;
         }
+    }
+
+    private bool BundleDestinationExists(string destinationPath, string? sidecarOwnerMediaPath)
+    {
+        if (_fileSystemService.FileExists(destinationPath)
+            || XmpSidecarPath.HasAnotherRawOwner(destinationPath))
+        {
+            return true;
+        }
+
+        var sidecarPath = sidecarOwnerMediaPath is null
+            ? null
+            : XmpSidecarPath.GetDestinationExternalSidecarPath(
+                sidecarOwnerMediaPath,
+                destinationPath);
+        return sidecarPath is not null && _fileSystemService.FileExists(sidecarPath);
     }
 
     private static bool PathsEqual(string? left, string? right)

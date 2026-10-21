@@ -3,13 +3,17 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
+using System.Reactive.Disposables;
+using System.Reactive.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
 
+using ImageCare.Core.Domain.Annotations;
 using ImageCare.Core.Domain.Configuration;
 using ImageCare.Core.Domain.MediaFormats;
 using ImageCare.Core.Services.ConfigurationService;
+using ImageCare.Core.Services.MediaAnnotationsService;
 using ImageCare.UI.Avalonia.Localization;
 using ImageCare.UI.Avalonia.Services;
 using ImageCare.UI.Avalonia.ViewModels.Domain;
@@ -27,6 +31,9 @@ public sealed class SettingsViewModel : ViewModelBase
     private readonly IMapper _mapper;
     private readonly ILogger _logger;
     private readonly LocalizationManager _localization;
+    private readonly IMediaAnnotationsService _annotationsService;
+    private readonly SynchronizationContext _synchronizationContext;
+    private IDisposable? _annotationsStatusSubscription;
 
     private string _newExtension = string.Empty;
     private string _newApplicationPath = string.Empty;
@@ -39,16 +46,25 @@ public sealed class SettingsViewModel : ViewModelBase
     private bool _safeDeletionEnabled;
     private string _safeDeletionDirectoryPath = string.Empty;
     private int _safeDeletionMaxFileCount = 100;
+    private string? _selectedMediaSearchRoot;
+    private string? _selectedPinnedTag;
+    private string _newPinnedTag = string.Empty;
+    private string _annotationsStatus = string.Empty;
+    private bool _isAnnotationsBusy;
 
     public SettingsViewModel(
         IConfigurationService configurationService,
         IFileDialogService fileDialogService,
+        IMediaAnnotationsService annotationsService,
+        SynchronizationContext synchronizationContext,
         IMapper mapper,
         ILogger logger,
         LocalizationManager localization)
     {
         _configService = configurationService;
         _fileDialogService = fileDialogService;
+        _annotationsService = annotationsService;
+        _synchronizationContext = synchronizationContext;
         _mapper = mapper;
         _logger = logger;
         _localization = localization;
@@ -75,6 +91,15 @@ public sealed class SettingsViewModel : ViewModelBase
         ChooseSafeDeletionDirectoryCommand = CreateAsyncCommand(
             ChooseSafeDeletionDirectoryAsync,
             OnCommandException);
+        AddMediaSearchRootCommand = CreateAsyncCommand(AddMediaSearchRootAsync, OnCommandException);
+        RemoveMediaSearchRootCommand = CreateCommand(RemoveMediaSearchRoot, () => SelectedMediaSearchRoot != null)
+            .ObservesProperty(() => SelectedMediaSearchRoot);
+        RebuildMediaIndexCommand = CreateAsyncCommand(RebuildMediaIndexAsync, () => !IsAnnotationsBusy, OnCommandException)
+            .ObservesProperty(() => IsAnnotationsBusy);
+        AddPinnedTagCommand = CreateCommand(AddPinnedTag, () => !string.IsNullOrWhiteSpace(NewPinnedTag))
+            .ObservesProperty(() => NewPinnedTag);
+        RemovePinnedTagCommand = CreateCommand(RemovePinnedTag, () => SelectedPinnedTag != null)
+            .ObservesProperty(() => SelectedPinnedTag);
 
         _newExtension = SupportedExtensions.FirstOrDefault(extension =>
             extension.Equals(".jpg", StringComparison.OrdinalIgnoreCase))
@@ -264,11 +289,59 @@ public sealed class SettingsViewModel : ViewModelBase
 
     public ICommand ChooseSafeDeletionDirectoryCommand { get; }
 
+    public ObservableCollection<string> MediaSearchRootPaths { get; } = new();
+
+    public ObservableCollection<string> AvailableTags { get; } = new();
+
+    public string? SelectedMediaSearchRoot
+    {
+        get => _selectedMediaSearchRoot;
+        set => SetProperty(ref _selectedMediaSearchRoot, value);
+    }
+
+    public string? SelectedPinnedTag
+    {
+        get => _selectedPinnedTag;
+        set => SetProperty(ref _selectedPinnedTag, value);
+    }
+
+    public string NewPinnedTag
+    {
+        get => _newPinnedTag;
+        set => SetProperty(ref _newPinnedTag, value ?? string.Empty);
+    }
+
+    public string AnnotationsStatus
+    {
+        get => _annotationsStatus;
+        private set => SetProperty(ref _annotationsStatus, value);
+    }
+
+    public bool IsAnnotationsBusy
+    {
+        get => _isAnnotationsBusy;
+        private set => SetProperty(ref _isAnnotationsBusy, value);
+    }
+
+    public ICommand AddMediaSearchRootCommand { get; }
+
+    public ICommand RemoveMediaSearchRootCommand { get; }
+
+    public ICommand RebuildMediaIndexCommand { get; }
+
+    public ICommand AddPinnedTagCommand { get; }
+
+    public ICommand RemovePinnedTagCommand { get; }
+
     public void Close()
     {
         try
         {
+            _annotationsStatusSubscription?.Dispose();
+            _annotationsStatusSubscription = null;
             Associations.Clear();
+            MediaSearchRootPaths.Clear();
+            AvailableTags.Clear();
         }
         catch (Exception ex)
         {
@@ -305,6 +378,19 @@ public sealed class SettingsViewModel : ViewModelBase
                 1,
                 10_000);
             RaisePropertyChanged(nameof(SafeDeletionMaxFileCount));
+
+            MediaSearchRootPaths.Clear();
+            foreach (var root in configuration.MediaSearchRootPaths ?? [])
+            {
+                MediaSearchRootPaths.Add(root);
+            }
+
+            AnnotationsStatus = _localization["Annotations_StatusReady"];
+            _annotationsStatusSubscription?.Dispose();
+            _annotationsStatusSubscription = _annotationsService.ReconciliationStatus
+                .ObserveOn(_synchronizationContext)
+                .Subscribe(ApplyAnnotationsStatus, OnCommandException);
+            _ = RefreshAvailableTagsAsync();
 
             LoadAssociations();
         }
@@ -450,6 +536,152 @@ public sealed class SettingsViewModel : ViewModelBase
         {
             _logger.Error(ex, "Failed to select the safe deletion directory");
         }
+    }
+
+    private async Task AddMediaSearchRootAsync(
+        IProgress<int> progress,
+        CancellationToken cancellationToken = default)
+    {
+        var directoryPath = await _fileDialogService.ShowOpenFolderDialogAsync(
+            _localization["Annotations_SelectRoot"]);
+        cancellationToken.ThrowIfCancellationRequested();
+        if (string.IsNullOrWhiteSpace(directoryPath))
+        {
+            return;
+        }
+
+        var fullPath = Path.TrimEndingDirectorySeparator(Path.GetFullPath(directoryPath));
+        var comparer = OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
+        if (MediaSearchRootPaths.Contains(fullPath, comparer))
+        {
+            return;
+        }
+
+        MediaSearchRootPaths.Add(fullPath);
+        _configService.Configuration.Value.MediaSearchRootPaths = MediaSearchRootPaths.ToList();
+        SaveConfiguration();
+        _ = IndexRootInBackgroundAsync(fullPath);
+    }
+
+    private void RemoveMediaSearchRoot()
+    {
+        if (SelectedMediaSearchRoot is not { } selected)
+        {
+            return;
+        }
+
+        MediaSearchRootPaths.Remove(selected);
+        _configService.Configuration.Value.MediaSearchRootPaths = MediaSearchRootPaths.ToList();
+        SaveConfiguration();
+        SelectedMediaSearchRoot = null;
+        AnnotationsStatus = _localization["Annotations_RootRemoved"];
+    }
+
+    private async Task RebuildMediaIndexAsync(
+        IProgress<int> progress,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            IsAnnotationsBusy = true;
+            AnnotationsStatus = _localization["Annotations_Rebuilding"];
+            await _annotationsService.RegisterRootsAsync(MediaSearchRootPaths, cancellationToken);
+            await RefreshAvailableTagsAsync(cancellationToken);
+        }
+        finally
+        {
+            IsAnnotationsBusy = false;
+        }
+    }
+
+    private async Task IndexRootInBackgroundAsync(string root)
+    {
+        try
+        {
+            await _annotationsService.RegisterDirectoryAsync(root);
+            await RefreshAvailableTagsAsync();
+        }
+        catch (Exception exception)
+        {
+            _logger.Error(exception, "Failed to index media annotations root {Root}", root);
+        }
+    }
+
+    private void AddPinnedTag()
+    {
+        var normalized = MediaAnnotations.NormalizeTag(NewPinnedTag);
+        if (normalized.Length == 0)
+        {
+            return;
+        }
+
+        var pinned = _configService.Configuration.Value.PinnedTags ??= new List<string>();
+        if (!pinned.Contains(normalized, StringComparer.OrdinalIgnoreCase))
+        {
+            pinned.Add(normalized);
+            pinned.Sort(StringComparer.OrdinalIgnoreCase);
+            SaveConfiguration();
+        }
+
+        NewPinnedTag = string.Empty;
+        _ = RefreshAvailableTagsAsync();
+    }
+
+    private void RemovePinnedTag()
+    {
+        if (SelectedPinnedTag is not { } selected)
+        {
+            return;
+        }
+
+        var pinned = _configService.Configuration.Value.PinnedTags ??= new List<string>();
+        pinned.RemoveAll(tag => tag.Equals(selected, StringComparison.OrdinalIgnoreCase));
+        SaveConfiguration();
+        SelectedPinnedTag = null;
+        _ = RefreshAvailableTagsAsync();
+    }
+
+    private async Task RefreshAvailableTagsAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var indexed = await _annotationsService.GetAllTagsAsync(cancellationToken);
+            var pinned = _configService.Configuration.Value.PinnedTags ?? [];
+            var tags = pinned.Concat(indexed)
+                .Where(tag => !string.IsNullOrWhiteSpace(tag))
+                .Select(MediaAnnotations.NormalizeTag)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(tag => tag, StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+            AvailableTags.Clear();
+            foreach (var tag in tags)
+            {
+                AvailableTags.Add(tag);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception exception)
+        {
+            _logger.Error(exception, "Failed to load annotation tag vocabulary");
+        }
+    }
+
+    private void ApplyAnnotationsStatus(AnnotationsReconciliationStatus status)
+    {
+        IsAnnotationsBusy = status.State == AnnotationsReconciliationState.Running;
+        AnnotationsStatus = status.State switch
+        {
+            AnnotationsReconciliationState.Running =>
+                _localization.Get("Annotations_StatusRunning", status.ProcessedFiles),
+            AnnotationsReconciliationState.Completed =>
+                _localization.Get("Annotations_StatusCompleted", status.ProcessedFiles),
+            AnnotationsReconciliationState.Cancelled => _localization["Annotations_StatusCancelled"],
+            AnnotationsReconciliationState.Failed =>
+                _localization.Get("Annotations_StatusFailed", status.Error ?? string.Empty),
+            _ => _localization["Annotations_StatusReady"]
+        };
     }
 
     private void RestoreRecommendedApplications()

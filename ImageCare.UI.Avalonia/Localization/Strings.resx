@@ -130,4 +130,53 @@
   <data name="Overview_DeletedAt" xml:space="preserve"><value>Deleted</value></data>
   <data name="Preview_HasLocation" xml:space="preserve"><value>Location metadata is available</value></data>
   <data name="Preview_Selected" xml:space="preserve"><value>Selected image</value></data>
+  <data name="Common_Save" xml:space="preserve"><value>Save</value></data>
+  <data name="Bottom_Search" xml:space="preserve"><value>Search</value></data>
+  <data name="Annotations_SettingsTab" xml:space="preserve"><value>Annotations and search</value></data>
+  <data name="Annotations_RootsTitle" xml:space="preserve"><value>Indexed root folders</value></data>
+  <data name="Annotations_RootsDescription" xml:space="preserve"><value>Only supported image formats are indexed. Scanning runs in the background.</value></data>
+  <data name="Annotations_AddRoot" xml:space="preserve"><value>Add folder</value></data>
+  <data name="Annotations_RemoveRoot" xml:space="preserve"><value>Remove folder</value></data>
+  <data name="Annotations_Rebuild" xml:space="preserve"><value>Rescan</value></data>
+  <data name="Annotations_SelectRoot" xml:space="preserve"><value>Select an image search root folder</value></data>
+  <data name="Annotations_RootRemoved" xml:space="preserve"><value>The folder was removed from configured search roots. Existing metadata was not changed.</value></data>
+  <data name="Annotations_Rebuilding" xml:space="preserve"><value>Scanning indexed folders…</value></data>
+  <data name="Annotations_TagsTitle" xml:space="preserve"><value>Available tags</value></data>
+  <data name="Annotations_TagsDescription" xml:space="preserve"><value>The list combines pinned vocabulary and tags found in the index. Removing a pinned tag does not remove it from images.</value></data>
+  <data name="Annotations_NewTag" xml:space="preserve"><value>Add any tag</value></data>
+  <data name="Annotations_StatusReady" xml:space="preserve"><value>The media index is ready.</value></data>
+  <data name="Annotations_StatusRunning" xml:space="preserve"><value>Scanning images: {0} processed.</value></data>
+  <data name="Annotations_StatusCompleted" xml:space="preserve"><value>Scan completed: {0} images processed.</value></data>
+  <data name="Annotations_StatusCancelled" xml:space="preserve"><value>Scan cancelled.</value></data>
+  <data name="Annotations_StatusFailed" xml:space="preserve"><value>Scan failed: {0}</value></data>
+  <data name="Annotations_Rating" xml:space="preserve"><value>Rating</value></data>
+  <data name="Annotations_Unrated" xml:space="preserve"><value>Unrated</value></data>
+  <data name="Annotations_StateCached" xml:space="preserve"><value>Cached</value></data>
+  <data name="Annotations_StateCurrent" xml:space="preserve"><value>Updated</value></data>
+  <data name="Annotations_StateSaving" xml:space="preserve"><value>Saving…</value></data>
+  <data name="Annotations_StateSaved" xml:space="preserve"><value>Saved</value></data>
+  <data name="Annotations_StateError" xml:space="preserve"><value>Save failed</value></data>
+  <data name="Annotations_SaveFailed" xml:space="preserve"><value>Could not save image annotations</value></data>
+  <data name="Search_Title" xml:space="preserve"><value>Media search</value></data>
+  <data name="Search_Ready" xml:space="preserve"><value>Set filters and search the media index.</value></data>
+  <data name="Search_NoRoots" xml:space="preserve"><value>Add at least one indexed root folder in Settings.</value></data>
+  <data name="Search_TextPlaceholder" xml:space="preserve"><value>Optional file name or path</value></data>
+  <data name="Search_TagsPlaceholder" xml:space="preserve"><value>Tags separated by commas</value></data>
+  <data name="Search_Search" xml:space="preserve"><value>Search</value></data>
+  <data name="Search_MinRating" xml:space="preserve"><value>Min</value></data>
+  <data name="Search_MaxRating" xml:space="preserve"><value>Max</value></data>
+  <data name="Search_AllTags" xml:space="preserve"><value>Match all tags</value></data>
+  <data name="Search_Searching" xml:space="preserve"><value>Searching the local index…</value></data>
+  <data name="Search_NoResults" xml:space="preserve"><value>No indexed images match these filters.</value></data>
+  <data name="Search_ResultCount" xml:space="preserve"><value>Found {0} indexed images.</value></data>
+  <data name="Search_Cancelled" xml:space="preserve"><value>Search cancelled.</value></data>
+  <data name="Search_Failed" xml:space="preserve"><value>Could not search the media index.</value></data>
+  <data name="Search_InvalidRatingRange" xml:space="preserve"><value>Minimum rating cannot exceed maximum rating.</value></data>
+  <data name="Search_File" xml:space="preserve"><value>File</value></data>
+  <data name="Search_Rating" xml:space="preserve"><value>Rating</value></data>
+  <data name="Search_Tags" xml:space="preserve"><value>Tags</value></data>
+  <data name="Search_Path" xml:space="preserve"><value>Path</value></data>
+  <data name="Search_OpenSelected" xml:space="preserve"><value>Open selected</value></data>
+  <data name="Search_FileMissing" xml:space="preserve"><value>The indexed file no longer exists</value></data>
+  <data name="Search_OpenFailed" xml:space="preserve"><value>Could not open the indexed image</value></data>
 </root>

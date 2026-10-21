@@ -37,7 +37,7 @@
             BorderBrush="{DynamicResource Brush.Splitter}"
             BorderThickness="0,1,0,0"
             Background="{DynamicResource ThemeBackgroundBrush}">
-        <Grid Height="23" ColumnDefinitions="Auto,Auto,*,Auto,Auto">
+        <Grid Height="23" ColumnDefinitions="Auto,Auto,*,Auto,Auto,Auto">
             <Border Grid.Column="0"
                     Height="22"
                     Padding="6,0"
@@ -142,6 +142,15 @@
 
             <Button Grid.Column="3"
                     Classes="StatusBarButton"
+                    Command="{Binding OpenMediaSearchWindowCommand}">
+                <StackPanel Orientation="Horizontal" Spacing="3">
+                    <iconPacks:PackIconLucide Kind="Search" />
+                    <TextBlock Classes="StatusText" Text="{localization:Loc Bottom_Search}" />
+                </StackPanel>
+            </Button>
+
+            <Button Grid.Column="4"
+                    Classes="StatusBarButton"
                     Command="{Binding OpenSettingsWindowCommand}">
                 <StackPanel Orientation="Horizontal" Spacing="3">
                     <iconPacks:PackIconLucide Kind="Settings" />
@@ -149,7 +158,7 @@
                 </StackPanel>
             </Button>
 
-            <Button Grid.Column="4"
+            <Button Grid.Column="5"
                     Classes="StatusBarButton"
                     Command="{Binding OpenLogWindowCommand}">
                 <StackPanel Orientation="Horizontal" Spacing="3">

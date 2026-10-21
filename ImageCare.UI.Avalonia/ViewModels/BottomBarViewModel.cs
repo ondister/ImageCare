@@ -28,6 +28,7 @@ internal class BottomBarViewModel : NavigatedViewModelBase
 {
     private readonly IDialogService _dialogService;
     private readonly SettingsWindowService _settingsWindowService;
+    private readonly MediaSearchWindowService _mediaSearchWindowService;
     private readonly INotificationService _notificationService;
     private readonly ILogNotificationService _logNotificationService;
     private readonly IMediaPreviewOperationsService _mediaPreviewOperationsService;
@@ -50,6 +51,7 @@ internal class BottomBarViewModel : NavigatedViewModelBase
     public BottomBarViewModel(
         IDialogService dialogService,
         SettingsWindowService settingsWindowService,
+        MediaSearchWindowService mediaSearchWindowService,
         INotificationService notificationService,
         ILogNotificationService logNotificationService,
         IMediaPreviewOperationsService mediaPreviewOperationsService,
@@ -61,6 +63,7 @@ internal class BottomBarViewModel : NavigatedViewModelBase
     {
         _dialogService = dialogService ?? throw new ArgumentNullException(nameof(dialogService));
         _settingsWindowService = settingsWindowService ?? throw new ArgumentNullException(nameof(settingsWindowService));
+        _mediaSearchWindowService = mediaSearchWindowService ?? throw new ArgumentNullException(nameof(mediaSearchWindowService));
         _notificationService = notificationService ?? throw new ArgumentNullException(nameof(notificationService));
         _logNotificationService = logNotificationService ?? throw new ArgumentNullException(nameof(logNotificationService));
         _mediaPreviewOperationsService = mediaPreviewOperationsService ??
@@ -76,6 +79,7 @@ internal class BottomBarViewModel : NavigatedViewModelBase
         OpenLogWindowCommand = new DelegateCommand(OpenLogWindow, CanOpenLogWindow)
             .ObservesProperty(() => MessagesCount);
         OpenSettingsWindowCommand = new DelegateCommand(OpenSettingsWindow);
+        OpenMediaSearchWindowCommand = new DelegateCommand(OpenMediaSearchWindow);
         UndoDeleteCommand = CreateAsyncCommand(UndoDeleteAsync, () => CanUndoDelete)
             .ObservesProperty(() => CanUndoDelete);
     }
@@ -113,6 +117,8 @@ internal class BottomBarViewModel : NavigatedViewModelBase
     public ICommand OpenLogWindowCommand { get; }
 
     public ICommand OpenSettingsWindowCommand { get; }
+
+    public ICommand OpenMediaSearchWindowCommand { get; }
 
     public ICommand UndoDeleteCommand { get; }
 
@@ -200,6 +206,18 @@ internal class BottomBarViewModel : NavigatedViewModelBase
         catch (Exception ex)
         {
             _logger.Error(ex, "Failed to open log window");
+        }
+    }
+
+    private void OpenMediaSearchWindow()
+    {
+        try
+        {
+            _mediaSearchWindowService.Show();
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "Failed to open media search window");
         }
     }
 

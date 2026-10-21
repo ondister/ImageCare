@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Reactive;
 using System.Reactive.Disposables;
@@ -9,9 +10,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
 
+using ImageCare.Core.Domain.Annotations;
 using ImageCare.Core.Domain.Configuration;
 using ImageCare.Core.Domain.Folders;
 using ImageCare.Core.Domain.Media;
+using ImageCare.Core.Domain.MediaFormats;
 using ImageCare.Core.Domain.Notification;
 using ImageCare.Core.Domain.Preview;
 using ImageCare.Core.Services.ConfigurationService;
@@ -20,11 +23,13 @@ using ImageCare.Core.Services.FileSystemWatcherService;
 using ImageCare.Core.Services.FolderClusterizationService;
 using ImageCare.Core.Services.FolderService;
 using ImageCare.Core.Services.FolderStatisticsService;
+using ImageCare.Core.Services.MediaAnnotationsService;
 using ImageCare.Core.Services.MediaPreviewOperationsService;
 using ImageCare.Core.Services.MediaPreviewService;
 using ImageCare.Core.Services.NotificationService;
 using ImageCare.UI.Avalonia.Behaviors;
 using ImageCare.UI.Avalonia.Collections;
+using ImageCare.UI.Avalonia.Localization;
 using ImageCare.UI.Avalonia.Services;
 using ImageCare.UI.Avalonia.ViewModels.Domain;
 
@@ -55,6 +60,8 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
     private readonly IFolderClusterizationService _folderClusterizationService;
     private readonly INotificationService _notificationService;
     private readonly IConfigurationService _configurationService;
+    private readonly IMediaAnnotationsService _annotationsService;
+    private readonly LocalizationManager _localization;
     private readonly IDialogService _dialogService;
     private readonly IMapper _mapper;
     private readonly ILogger _logger;
@@ -65,6 +72,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
     private CompositeDisposable? _disposable;
 
     private CancellationTokenSource _folderSelectedCancellationTokenSource;
+    private CancellationTokenSource? _selectedAnnotationCancellation;
     private SortedObservableCollection<FileModel> _imagePaths;
     private CancellationTokenSource _currentScrollCancellation = new();
 
@@ -75,6 +83,13 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
     private MediaSortDirection _sortDirection = MediaSortDirection.NewestFirst;
     private SelectedDirectory? _selectedDirectory;
     private int _indexInView;
+    private Dictionary<string, IndexedMediaAnnotations> _annotationsByPath = new(
+        OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
+    private int _selectedRating;
+    private string _newTag = string.Empty;
+    private string _annotationEditorStatus = string.Empty;
+    private bool _isSavingAnnotations;
+    private bool _isLoadingSelectedAnnotations;
 
     public PreviewPanelViewModel(IMediaPreviewService imageService,
                                  IFolderService folderService,
@@ -86,6 +101,8 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
                                  IFolderClusterizationService folderClusterizationService,
                                  INotificationService notificationService,
                                  IConfigurationService configurationService,
+                                 IMediaAnnotationsService annotationsService,
+                                 LocalizationManager localization,
                                  TrayAnalysisProgressService trayAnalysisProgressService,
                                  IDialogService dialogService,
                                  IMapper mapper,
@@ -103,6 +120,8 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
         _folderClusterizationService = folderClusterizationService;
         _notificationService = notificationService;
         _configurationService = configurationService;
+        _annotationsService = annotationsService;
+        _localization = localization;
         _dialogService = dialogService;
         _mapper = mapper;
         _logger = logger;
@@ -113,6 +132,12 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
         MoveImagePreviewCommand = CreateAsyncCommand(MoveImagePreviewAsync);
         DeleteImagePreviewCommand = CreateAsyncCommand(DeleteImagePreview);
         ToggleSortDirectionCommand = CreateCommand(ToggleSortDirection);
+        SaveRatingCommand = CreateAsyncCommand(SaveRatingAsync, () => CanEditAnnotations)
+            .ObservesProperty(() => CanEditAnnotations);
+        AddTagCommand = CreateAsyncCommand(AddTagAsync, () => CanEditAnnotations && !string.IsNullOrWhiteSpace(NewTag))
+            .ObservesProperty(() => CanEditAnnotations)
+            .ObservesProperty(() => NewTag);
+        RemoveTagCommand = CreateAsyncCommand<string>(RemoveTagAsync);
 
         ImagePreviews = new SortedObservableCollection<MediaPreviewViewModel>(
             new CreationDateTimeComparer(_sortDirection));
@@ -162,11 +187,24 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
             }
 
             SetProperty(ref _selectedPreview, value);
+            _selectedAnnotationCancellation?.Cancel();
+            SetSelectedAnnotationLoading(false);
+            UpdateAnnotationEditor();
+            RaisePropertyChanged(nameof(CanEditAnnotations));
+            RaisePropertyChanged(nameof(HasAnnotatableSelection));
             if (_selectedPreview != null)
             {
                 _selectedPreview.Selected = true;
 
                 _fileOperationsService.SetSelectedPreview(new SelectedMediaPreview(_mapper.Map<MediaPreview>(_selectedPreview), FileManagerPanel));
+                if (_selectedPreview.MediaFormat.MediaType == MediaType.Image)
+                {
+                    var cancellation = CancellationTokenSource.CreateLinkedTokenSource(
+                        _folderSelectedCancellationTokenSource.Token);
+                    _selectedAnnotationCancellation = cancellation;
+                    SetSelectedAnnotationLoading(true);
+                    _ = LoadSelectedAnnotationSnapshotAsync(_selectedPreview, cancellation);
+                }
             }
         }
     }
@@ -182,6 +220,54 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
     public ICommand DeleteImagePreviewCommand { get; }
 
     public ICommand ToggleSortDirectionCommand { get; }
+
+    public int SelectedRating
+    {
+        get => _selectedRating;
+        set => SetProperty(ref _selectedRating, Math.Clamp(value, 0, 5));
+    }
+
+    public string NewTag
+    {
+        get => _newTag;
+        set => SetProperty(ref _newTag, value ?? string.Empty);
+    }
+
+    public string AnnotationEditorStatus
+    {
+        get => _annotationEditorStatus;
+        private set => SetProperty(ref _annotationEditorStatus, value);
+    }
+
+    public bool IsSavingAnnotations
+    {
+        get => _isSavingAnnotations;
+        private set
+        {
+            if (SetProperty(ref _isSavingAnnotations, value))
+            {
+                RaisePropertyChanged(nameof(CanEditAnnotations));
+                RaisePropertyChanged(nameof(HasAnnotatableSelection));
+            }
+        }
+    }
+
+    public bool CanEditAnnotations => HasAnnotatableSelection &&
+                                      !IsSavingAnnotations &&
+                                      !_isLoadingSelectedAnnotations &&
+                                      SelectedPreview?.AnnotationSnapshot != null;
+
+    public bool HasAnnotatableSelection => SelectedPreview?.MediaFormat.MediaType == MediaType.Image;
+
+    public IReadOnlyList<string> CurrentTags => SelectedPreview?.Tags ?? Array.Empty<string>();
+
+    public System.Collections.ObjectModel.ObservableCollection<string> AvailableAnnotationTags { get; } = new();
+
+    public ICommand SaveRatingCommand { get; }
+
+    public ICommand AddTagCommand { get; }
+
+    public ICommand RemoveTagCommand { get; }
 
     public bool IsSortAscending => _sortDirection == MediaSortDirection.OldestFirst;
 
@@ -217,6 +303,11 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
                                      .Where(files => files.Count > 0)
                                      .ObserveOn(_synchronizationContext)
                                      .Subscribe(OnFilesCreated),
+            _fileSystemWatcherService.FileChanged
+                                     .Buffer(TimeSpan.FromMilliseconds(150))
+                                     .Where(files => files.Count > 0)
+                                     .ObserveOn(_synchronizationContext)
+                                     .Subscribe(OnFilesChanged),
             _fileSystemWatcherService.FileDeleted
                                      .Buffer(TimeSpan.FromMilliseconds(150))
                                      .Where(files => files.Count > 0)
@@ -225,6 +316,11 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
             _fileSystemWatcherService.FileRenamed
                                      .ObserveOn(_synchronizationContext)
                                      .Subscribe(OnFileRenamed),
+            _fileSystemWatcherService.RescanRequested
+                                     .ObserveOn(_synchronizationContext)
+                                     .Subscribe(path => _ = ReconcileMediaListingAndAnnotationsAsync(
+                                         path,
+                                         _folderSelectedCancellationTokenSource.Token)),
             _fileOperationsService.FileOperationCompleted
                                   .ObserveOn(_synchronizationContext)
                                   .Subscribe(OnFileOperationCompleted),
@@ -243,6 +339,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
     public override void OnNavigatedFrom(NavigationContext navigationContext)
     {
         _disposable?.Dispose();
+        _selectedAnnotationCancellation?.Cancel();
         _folderSelectedCancellationTokenSource.Cancel();
         _folderSelectedCancellationTokenSource.Dispose();
     }
@@ -416,6 +513,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
         try
         {
             var mediaPreviewViewModel = _mapper.Map<MediaPreviewViewModel>(previewImage);
+            ApplyCachedAnnotations(mediaPreviewViewModel);
 
             var metadata = await _imageService.GetMediaMetadataAsync(previewImage);
             mediaPreviewViewModel.FileDate = metadata.CreationDateTime;
@@ -585,6 +683,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
                 ? StringComparer.OrdinalIgnoreCase
                 : StringComparer.Ordinal;
             var distinctFiles = files
+                .Where(file => MediaFormat.IsSupportedExtension(System.IO.Path.GetExtension(file.FullName)))
                 .GroupBy(file => file.FullName, pathComparer)
                 .Select(group => group.First());
             lock (_imagePathsLock)
@@ -594,6 +693,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
 
             _ = LoadInitialImagesAsync(token);
             _ = _folderStatisticsService.StartAsync(selectedFileSystemItem.Path, token);
+            _ = RefreshCacheThenReconcileAsync(selectedFileSystemItem.Path, token);
         }
         catch (OperationCanceledException)
         {
@@ -611,10 +711,16 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
 
     private void OnFilesCreated(IList<FileModel> files)
     {
+        foreach (var file in files.Where(file => IsXmpPath(file.FullName)))
+        {
+            _ = RefreshChangedAnnotationAsync(file.FullName);
+        }
+
         var pathComparer = OperatingSystem.IsWindows()
             ? StringComparer.OrdinalIgnoreCase
             : StringComparer.Ordinal;
         var newFiles = files
+            .Where(file => MediaFormat.IsSupportedExtension(System.IO.Path.GetExtension(file.FullName)))
             .Where(file =>
                 PathsEqual(System.IO.Path.GetDirectoryName(file.FullName), SelectedFolderPath) &&
                 _fileSystemService.FileExists(file.FullName))
@@ -631,6 +737,14 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
         _ = ProcessCreatedFilesAsync(newFiles);
     }
 
+    private void OnFilesChanged(IList<FileModel> files)
+    {
+        foreach (var file in files)
+        {
+            _ = RefreshChangedAnnotationAsync(file.FullName);
+        }
+    }
+
     private async Task ProcessCreatedFilesAsync(IReadOnlyList<FileModel> files)
     {
         await Parallel.ForEachAsync(
@@ -643,10 +757,26 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
     {
         try
         {
+            var sidecarPaths = files.Select(file => file.FullName).Where(IsXmpPath).ToArray();
+            foreach (var sidecarPath in sidecarPaths)
+            {
+                _ = RefreshChangedAnnotationAsync(sidecarPath);
+            }
+
+            if (sidecarPaths.Length > 0 && !string.IsNullOrWhiteSpace(SelectedFolderPath))
+            {
+                _ = ReconcileFolderAndRefreshAsync(
+                    SelectedFolderPath,
+                    _folderSelectedCancellationTokenSource.Token);
+            }
+
             var pathComparer = OperatingSystem.IsWindows()
                 ? StringComparer.OrdinalIgnoreCase
                 : StringComparer.Ordinal;
-            var deletedPaths = files.Select(file => file.FullName).ToHashSet(pathComparer);
+            var deletedPaths = files
+                .Select(file => file.FullName)
+                .Where(path => MediaFormat.IsSupportedExtension(System.IO.Path.GetExtension(path)))
+                .ToHashSet(pathComparer);
 
             lock (_imagePathsLock)
             {
@@ -668,10 +798,33 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
     {
         try
         {
-            RemoveFilePath(model.OldFileModel.FullName);
-            RemoveImagePreviewByPath(model.OldFileModel.FullName);
-            AddFilePath(model.NewFileModel);
-            _ = CreateImagePreviewFromPathAsync(model.NewFileModel.FullName, false);
+            var oldPath = model.OldFileModel.FullName;
+            var newPath = model.NewFileModel.FullName;
+            if (IsXmpPath(oldPath) || IsXmpPath(newPath))
+            {
+                _ = RefreshChangedAnnotationAsync(oldPath);
+                _ = RefreshChangedAnnotationAsync(newPath);
+                if (!string.IsNullOrWhiteSpace(SelectedFolderPath))
+                {
+                    _ = ReconcileFolderAndRefreshAsync(
+                        SelectedFolderPath,
+                        _folderSelectedCancellationTokenSource.Token);
+                }
+
+                return;
+            }
+
+            if (MediaFormat.IsSupportedExtension(System.IO.Path.GetExtension(oldPath)))
+            {
+                RemoveFilePath(oldPath);
+                RemoveImagePreviewByPath(oldPath);
+            }
+
+            if (MediaFormat.IsSupportedExtension(System.IO.Path.GetExtension(newPath)))
+            {
+                AddFilePath(model.NewFileModel);
+                _ = CreateImagePreviewFromPathAsync(newPath, false);
+            }
         }
         catch (Exception ex)
         {
@@ -691,6 +844,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
 
         if (operation.Kind is MediaFileOperationKind.Copy or MediaFileOperationKind.Move or MediaFileOperationKind.Restore &&
             operation.DestinationPath is { } destinationPath &&
+            MediaFormat.IsSupportedExtension(System.IO.Path.GetExtension(destinationPath)) &&
             PathsEqual(System.IO.Path.GetDirectoryName(destinationPath), SelectedFolderPath))
         {
             var fileModel = new FileModel(System.IO.Path.GetFileName(destinationPath), destinationPath, null);
@@ -742,7 +896,8 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
     {
         try
         {
-            if (!_fileSystemService.FileExists(filePath))
+            if (!MediaFormat.IsSupportedExtension(System.IO.Path.GetExtension(filePath)) ||
+                !_fileSystemService.FileExists(filePath))
             {
                 return;
             }
@@ -760,6 +915,10 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
             }
 
             await AddImagePreviewAsync(imagePreview);
+            if (imagePreview.MediaFormat.MediaType == MediaType.Image)
+            {
+                _ = RefreshChangedAnnotationAsync(filePath);
+            }
         }
         catch (Exception ex)
         {
@@ -814,6 +973,8 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
         ImagePreviews.Clear();
         SelectedPreview = null;
         TimelineVm.Clear();
+        _annotationsByPath = new Dictionary<string, IndexedMediaAnnotations>(
+            OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
     }
 
     private void OnImagePreviewSelected(SelectedMediaPreview selectedImagePreview)
@@ -898,6 +1059,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
                 cancellationToken.ThrowIfCancellationRequested();
 
                 var mediaPreviewViewModel = _mapper.Map<MediaPreviewViewModel>(previewImage);
+                ApplyCachedAnnotations(mediaPreviewViewModel);
                 mediaPreviewViewModel.FileDate = metadata.CreationDateTime;
                 mediaPreviewViewModel.MetadataString = metadata.GetString();
                 mediaPreviewViewModel.DateTimeString = metadata.CreationDateTime.ToString("dd.MM.yyyy HH:mm");
@@ -973,6 +1135,425 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
         catch (Exception ex)
         {
             _logger.Error($"Failed to load image: {previewVm.Url}", ex);
+        }
+    }
+
+    private async Task RefreshCacheThenReconcileAsync(string directoryPath, CancellationToken token)
+    {
+        await RefreshCachedAnnotationsAsync(directoryPath, token).ConfigureAwait(false);
+        token.ThrowIfCancellationRequested();
+        if (PathsEqual(SelectedFolderPath, directoryPath))
+        {
+            await ReconcileFolderAndRefreshAsync(directoryPath, token).ConfigureAwait(false);
+        }
+    }
+
+    private async Task RefreshCachedAnnotationsAsync(string directoryPath, CancellationToken token)
+    {
+        if (string.IsNullOrWhiteSpace(directoryPath) || directoryPath == DirectoryModel.RootPath)
+        {
+            return;
+        }
+
+        try
+        {
+            var cached = await _annotationsService.GetDirectoryAsync(directoryPath, token).ConfigureAwait(false);
+            var cachedByPath = cached.ToDictionary(
+                item => item.MediaPath,
+                OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
+            token.ThrowIfCancellationRequested();
+            var applied = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            _synchronizationContext.Post(_ =>
+            {
+                try
+                {
+                    if (!token.IsCancellationRequested && PathsEqual(SelectedFolderPath, directoryPath))
+                    {
+                        _annotationsByPath = cachedByPath;
+                        foreach (var preview in ImagePreviews)
+                        {
+                            ApplyCachedAnnotations(preview);
+                        }
+
+                        UpdateAnnotationEditor();
+                    }
+                }
+                finally
+                {
+                    applied.TrySetResult();
+                }
+            }, null);
+            await applied.Task.WaitAsync(token).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            _logger.Error(exception, "Failed to read cached annotations for {Directory}", directoryPath);
+        }
+    }
+
+    private async Task ReconcileMediaListingAndAnnotationsAsync(string directoryPath, CancellationToken token)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(directoryPath)
+                || !PathsEqual(SelectedFolderPath, directoryPath)
+                || !_fileSystemService.DirectoryExists(directoryPath))
+            {
+                return;
+            }
+
+            var files = await Task.Run(
+                () => _fileSystemService.GetFiles(directoryPath)
+                    .Where(path => MediaFormat.IsSupportedExtension(Path.GetExtension(path)))
+                    .Select(path => new FileModel(Path.GetFileName(path), path, File.GetLastWriteTime(path)))
+                    .ToArray(),
+                token).ConfigureAwait(false);
+            token.ThrowIfCancellationRequested();
+            if (!PathsEqual(SelectedFolderPath, directoryPath))
+            {
+                return;
+            }
+
+            var comparer = OperatingSystem.IsWindows()
+                ? StringComparer.OrdinalIgnoreCase
+                : StringComparer.Ordinal;
+            var actual = files.ToDictionary(file => file.FullName, comparer);
+            string[] stale;
+            FileModel[] missing;
+            lock (_imagePathsLock)
+            {
+                stale = _imagePaths.Select(file => file.FullName)
+                    .Where(path => !actual.ContainsKey(path))
+                    .ToArray();
+                var known = _imagePaths.Select(file => file.FullName).ToHashSet(comparer);
+                missing = files.Where(file => !known.Contains(file.FullName)).ToArray();
+            }
+
+            var applied = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            _synchronizationContext.Post(_ =>
+            {
+                try
+                {
+                    if (token.IsCancellationRequested || !PathsEqual(SelectedFolderPath, directoryPath))
+                    {
+                        return;
+                    }
+
+                    foreach (var path in stale.Where(path => !_fileSystemService.FileExists(path)))
+                    {
+                        RemoveFilePath(path);
+                        RemoveImagePreviewByPath(path);
+                    }
+
+                    foreach (var file in missing.Where(file => _fileSystemService.FileExists(file.FullName)))
+                    {
+                        AddFilePath(file);
+                        _ = CreateImagePreviewFromPathAsync(file.FullName, true);
+                    }
+                }
+                finally
+                {
+                    applied.TrySetResult();
+                }
+            }, null);
+            await applied.Task.WaitAsync(token).ConfigureAwait(false);
+            await ReconcileFolderAndRefreshAsync(directoryPath, token).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (token.IsCancellationRequested)
+        {
+        }
+        catch (Exception exception)
+        {
+            _logger.Error(exception, "Failed to reconcile media listing for {Directory}", directoryPath);
+        }
+    }
+
+    private async Task ReconcileFolderAndRefreshAsync(string directoryPath, CancellationToken token)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(directoryPath) || directoryPath == DirectoryModel.RootPath)
+            {
+                return;
+            }
+
+            await _annotationsService.RefreshDirectoryAsync(directoryPath, token).ConfigureAwait(false);
+            var refreshed = await _annotationsService.GetDirectoryAsync(directoryPath, token).ConfigureAwait(false);
+            var refreshedByPath = refreshed.ToDictionary(
+                item => item.MediaPath,
+                OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
+            _synchronizationContext.Post(_ =>
+            {
+                if (!PathsEqual(SelectedFolderPath, directoryPath))
+                {
+                    return;
+                }
+
+                _annotationsByPath = refreshedByPath;
+                foreach (var preview in ImagePreviews)
+                {
+                    ApplyCachedAnnotations(preview);
+                }
+
+                UpdateAnnotationEditor();
+            }, null);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception exception)
+        {
+            _logger.Error(exception, "Failed to reconcile annotations for {Directory}", directoryPath);
+        }
+    }
+
+    private void ApplyCachedAnnotations(MediaPreviewViewModel preview)
+    {
+        if (preview.MediaFormat.MediaType != MediaType.Image)
+        {
+            return;
+        }
+
+        if (ReferenceEquals(preview, SelectedPreview) && preview.AnnotationSnapshot is { } currentSnapshot)
+        {
+            preview.ApplyAnnotations(
+                currentSnapshot.Annotations,
+                _localization["Annotations_StateCurrent"],
+                currentSnapshot);
+            return;
+        }
+
+        var annotations = _annotationsByPath.TryGetValue(preview.Url, out var indexed)
+            ? indexed.Annotations
+            : MediaAnnotations.Empty;
+        preview.ApplyAnnotations(annotations, _localization["Annotations_StateCached"]);
+    }
+
+    private async Task RefreshChangedAnnotationAsync(string changedPath)
+    {
+        try
+        {
+            var ownerPath = ResolveAnnotationOwnerPath(changedPath);
+            if (ownerPath == null || !File.Exists(ownerPath))
+            {
+                return;
+            }
+
+            var snapshot = await _annotationsService.GetSnapshotAsync(ownerPath).ConfigureAwait(false);
+            _synchronizationContext.Post(_ =>
+            {
+                var preview = ImagePreviews.FirstOrDefault(item => PathsEqual(item.Url, ownerPath));
+                if (preview == null)
+                {
+                    return;
+                }
+
+                preview.ApplyAnnotations(snapshot.Annotations, _localization["Annotations_StateCurrent"], snapshot);
+                if (ReferenceEquals(preview, SelectedPreview))
+                {
+                    UpdateAnnotationEditor();
+                }
+            }, null);
+        }
+        catch (Exception exception)
+        {
+            _logger.Error(exception, "Failed to refresh changed annotations for {Path}", changedPath);
+        }
+    }
+
+    private string? ResolveAnnotationOwnerPath(string changedPath)
+    {
+        if (!IsXmpPath(changedPath))
+        {
+            return ImagePreviews.FirstOrDefault(preview => PathsEqual(preview.Url, changedPath))?.Url;
+        }
+
+        var owners = ImagePreviews
+            .Where(preview => preview.MediaFormat.MediaType == MediaType.Image)
+            .Select(preview => new
+            {
+                preview.Url,
+                Sidecar = XmpSidecarPath.GetExternalSidecarPath(preview.Url)
+            })
+            .Where(candidate => PathsEqual(candidate.Sidecar, changedPath))
+            .Select(candidate => candidate.Url)
+            .ToArray();
+        if (owners.Length > 1)
+        {
+            _logger.Warning(
+                "Skipped ambiguous XMP watcher refresh for {Sidecar}; owners: {Owners}",
+                changedPath,
+                string.Join(", ", owners));
+            if (!string.IsNullOrWhiteSpace(SelectedFolderPath))
+            {
+                _ = ReconcileFolderAndRefreshAsync(
+                    SelectedFolderPath,
+                    _folderSelectedCancellationTokenSource.Token);
+            }
+
+            return null;
+        }
+
+        return owners.FirstOrDefault();
+    }
+
+    private static bool IsXmpPath(string path) =>
+        Path.GetExtension(path).Equals(".xmp", StringComparison.OrdinalIgnoreCase);
+
+    private async Task LoadSelectedAnnotationSnapshotAsync(
+        MediaPreviewViewModel preview,
+        CancellationTokenSource cancellation)
+    {
+        try
+        {
+            var snapshot = await _annotationsService.GetSnapshotAsync(preview.Url, cancellation.Token);
+            cancellation.Token.ThrowIfCancellationRequested();
+            if (ReferenceEquals(preview, SelectedPreview) && PathsEqual(preview.Url, snapshot.MediaPath))
+            {
+                preview.ApplyAnnotations(snapshot.Annotations, _localization["Annotations_StateCurrent"], snapshot);
+                UpdateAnnotationEditor();
+            }
+        }
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+        {
+        }
+        catch (Exception exception)
+        {
+            _logger.Error(exception, "Failed to load current annotations for selected image {Path}", preview.Url);
+        }
+        finally
+        {
+            if (ReferenceEquals(_selectedAnnotationCancellation, cancellation))
+            {
+                _selectedAnnotationCancellation = null;
+                SetSelectedAnnotationLoading(false);
+                UpdateAnnotationEditor();
+            }
+
+            cancellation.Dispose();
+        }
+    }
+
+    private void SetSelectedAnnotationLoading(bool value)
+    {
+        if (_isLoadingSelectedAnnotations == value)
+        {
+            return;
+        }
+
+        _isLoadingSelectedAnnotations = value;
+        RaisePropertyChanged(nameof(CanEditAnnotations));
+    }
+
+    private void UpdateAnnotationEditor()
+    {
+        SelectedRating = SelectedPreview?.Rating ?? 0;
+        AnnotationEditorStatus = SelectedPreview?.AnnotationState ?? string.Empty;
+        RaisePropertyChanged(nameof(CurrentTags));
+        _ = RefreshAvailableAnnotationTagsAsync();
+    }
+
+    private async Task RefreshAvailableAnnotationTagsAsync()
+    {
+        try
+        {
+            var indexedTags = await _annotationsService.GetAllTagsAsync();
+            var pinnedTags = _configurationService.Configuration.Value.PinnedTags ?? [];
+            var tags = pinnedTags.Concat(indexedTags)
+                .Select(MediaAnnotations.NormalizeTag)
+                .Where(tag => tag.Length > 0)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(tag => tag, StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+            _synchronizationContext.Post(_ =>
+            {
+                AvailableAnnotationTags.Clear();
+                foreach (var tag in tags)
+                {
+                    AvailableAnnotationTags.Add(tag);
+                }
+            }, null);
+        }
+        catch (Exception exception)
+        {
+            _logger.Error(exception, "Failed to load available annotation tags");
+        }
+    }
+
+    private Task SaveRatingAsync(IProgress<int> progress, CancellationToken token) =>
+        SaveSelectedAnnotationsAsync(SelectedRating, CurrentTags, token);
+
+    private async Task AddTagAsync(IProgress<int> progress, CancellationToken token)
+    {
+        var normalized = MediaAnnotations.NormalizeTag(NewTag);
+        if (normalized.Length == 0)
+        {
+            return;
+        }
+
+        await SaveSelectedAnnotationsAsync(SelectedRating, CurrentTags.Append(normalized), token);
+        NewTag = string.Empty;
+    }
+
+    private Task RemoveTagAsync(string tag) =>
+        SaveSelectedAnnotationsAsync(
+            SelectedRating,
+            CurrentTags.Where(current => !current.Equals(tag, StringComparison.OrdinalIgnoreCase)),
+            CancellationToken.None);
+
+    private async Task SaveSelectedAnnotationsAsync(
+        int rating,
+        IEnumerable<string> tags,
+        CancellationToken token)
+    {
+        var preview = SelectedPreview;
+        if (preview == null ||
+            preview.MediaFormat.MediaType != MediaType.Image ||
+            preview.AnnotationSnapshot == null ||
+            IsSavingAnnotations ||
+            _isLoadingSelectedAnnotations)
+        {
+            return;
+        }
+
+        var previous = new MediaAnnotations(preview.Rating, preview.Tags);
+        var updated = new MediaAnnotations(rating, tags);
+        try
+        {
+            IsSavingAnnotations = true;
+            preview.IsAnnotationsSaving = true;
+            preview.ApplyAnnotations(updated, _localization["Annotations_StateSaving"], preview.AnnotationSnapshot);
+            UpdateAnnotationEditor();
+            var snapshot = await _annotationsService.SaveAsync(
+                preview.Url,
+                updated,
+                preview.AnnotationSnapshot?.FileState,
+                token);
+            preview.ApplyAnnotations(snapshot.Annotations, _localization["Annotations_StateSaved"], snapshot);
+            AnnotationEditorStatus = preview.AnnotationState;
+            RaisePropertyChanged(nameof(CurrentTags));
+            await RefreshAvailableAnnotationTagsAsync();
+        }
+        catch (OperationCanceledException)
+        {
+            preview.ApplyAnnotations(previous, _localization["Annotations_StateCached"], preview.AnnotationSnapshot);
+        }
+        catch (Exception exception)
+        {
+            preview.ApplyAnnotations(previous, _localization["Annotations_StateError"], preview.AnnotationSnapshot);
+            _logger.Error(exception, "Failed to save annotations for {Path}", preview.Url);
+            _notificationService.SendNotification(
+                new ErrorNotification(_localization["Annotations_SaveFailed"], exception.Message));
+        }
+        finally
+        {
+            preview.IsAnnotationsSaving = false;
+            IsSavingAnnotations = false;
+            UpdateAnnotationEditor();
         }
     }
 

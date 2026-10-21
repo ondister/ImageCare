@@ -42,6 +42,7 @@ public class MultiSourcesLocalFileSystemWatcherServiceTests
 		Assert.Multiple(() =>
 		{
 			Assert.That(_service.FileCreated, Is.Not.Null);
+			Assert.That(_service.FileChanged, Is.Not.Null);
 			Assert.That(_service.FileDeleted, Is.Not.Null);
 			Assert.That(_service.FileRenamed, Is.Not.Null);
 			Assert.That(_service.DirectoryCreated, Is.Not.Null);
@@ -55,7 +56,13 @@ public class MultiSourcesLocalFileSystemWatcherServiceTests
 	{
 		_service.StartWatchingDirectory(_testDirectory1);
 		_service.StartWatching();
+		string? receivedChangedPath = null;
+		using var subscription = _service.FileChanged.Subscribe(model => receivedChangedPath = model.FullName);
+		var testFilePath = Path.Combine(_testDirectory1, "testfile.txt");
 
+		File.WriteAllText(testFilePath, "test content");
+
+		Assert.That(() => receivedChangedPath, Is.EqualTo(testFilePath).After(2000, 50));
 		Assert.DoesNotThrow(() => _service.StopWatching());
 	}
 

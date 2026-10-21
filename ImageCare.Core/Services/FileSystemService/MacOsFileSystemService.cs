@@ -1,10 +1,18 @@
+using System.ComponentModel;
+using System.Runtime.InteropServices;
+
 using ImageCare.Core.Domain.Folders;
 using ImageCare.Core.Exceptions;
 
 namespace ImageCare.Core.Services.FileSystemService;
 
-public sealed class MacOsFileSystemService : IFileSystemService
+public sealed partial class MacOsFileSystemService : IFileSystemService
 {
+    private const uint CopyFileMetadataFlags = 0x00000007;
+
+    [LibraryImport("/usr/lib/libSystem.B.dylib", EntryPoint = "copyfile", SetLastError = true,
+        StringMarshalling = StringMarshalling.Utf8)]
+    private static partial int CopyFileNative(string source, string destination, IntPtr state, uint flags);
     public bool FileExists(string path) => File.Exists(path);
 
     public bool DirectoryExists(string path) => Directory.Exists(path);
@@ -70,6 +78,46 @@ public sealed class MacOsFileSystemService : IFileSystemService
     public void CopyFileMetadata(string source, string destination)
     {
         var sourceInfo = new FileInfo(source);
+        sourceInfo.Refresh();
+        if (!sourceInfo.Exists)
+        {
+            throw new FileNotFoundException("Metadata source file was not found.", source);
+        }
+
+        if (OperatingSystem.IsMacOS())
+        {
+            try
+            {
+                if (CopyFileNative(source, destination, IntPtr.Zero, CopyFileMetadataFlags) != 0)
+                {
+                    throw new IOException(
+                        $"Failed to copy macOS metadata from '{source}' to '{destination}'.",
+                        new Win32Exception(Marshal.GetLastPInvokeError()));
+                }
+            }
+            catch (Exception exception) when (exception is DllNotFoundException or EntryPointNotFoundException)
+            {
+                CopyManagedFileMetadata(sourceInfo, destination);
+                return;
+            }
+        }
+        else
+        {
+            CopyManagedFileMetadata(sourceInfo, destination);
+            return;
+        }
+
+        File.SetLastWriteTimeUtc(destination, sourceInfo.LastWriteTimeUtc);
+        File.SetLastAccessTimeUtc(destination, sourceInfo.LastAccessTimeUtc);
+    }
+
+    private static void CopyManagedFileMetadata(FileInfo sourceInfo, string destination)
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            File.SetUnixFileMode(destination, File.GetUnixFileMode(sourceInfo.FullName));
+        }
+
         File.SetLastWriteTimeUtc(destination, sourceInfo.LastWriteTimeUtc);
         File.SetLastAccessTimeUtc(destination, sourceInfo.LastAccessTimeUtc);
     }

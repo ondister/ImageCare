@@ -21,6 +21,8 @@ using ImageCare.Core.Services.FolderHistoryService;
 using ImageCare.Core.Services.FolderService;
 using ImageCare.Core.Services.FolderStatisticsService;
 using ImageCare.Core.Services.LogEventService;
+using ImageCare.Core.Services.MediaAnnotationsIndex;
+using ImageCare.Core.Services.MediaAnnotationsService;
 using ImageCare.Core.Services.MediaPreviewOperationsService;
 using ImageCare.Core.Services.MediaPreviewService;
 using ImageCare.Core.Services.NotificationService;
@@ -49,6 +51,7 @@ namespace ImageCare.UI.Avalonia;
 public class App : PrismApplication
 {
     private SplashWindow? _splashWindow;
+    private MediaAnnotationsCoordinator? _mediaAnnotationsCoordinator;
 
     protected override Rules CreateContainerRules()
     {
@@ -86,6 +89,8 @@ public class App : PrismApplication
         LocalizationManager.Instance.SetCulture(configuration.UiCultureName);
 
         var mainWindow = Container.Resolve<MainWindow>();
+        _mediaAnnotationsCoordinator = Container.Resolve<MediaAnnotationsCoordinator>();
+        _mediaAnnotationsCoordinator.Start();
         mainWindow.Opened += OnMainWindowOpened;
         return mainWindow;
     }
@@ -110,6 +115,8 @@ public class App : PrismApplication
     {
         var configurationService = Container.Resolve<IConfigurationService>();
         configurationService.SaveConfiguration();
+        _mediaAnnotationsCoordinator?.Dispose();
+        _mediaAnnotationsCoordinator = null;
     }
 
     protected override void RegisterTypes(IContainerRegistry containerRegistry)
@@ -152,6 +159,10 @@ public class App : PrismApplication
 
         containerRegistry.RegisterSingleton<IConfigurationFileSource, WindowsConfigurationFileSource>();
         containerRegistry.RegisterSingleton<IConfigurationService, JsonConfigurationService>();
+        containerRegistry.RegisterSingleton<IMediaAnnotationsStorageService, XmpMediaAnnotationsStorageService>();
+        containerRegistry.RegisterSingleton<IMediaAnnotationsIndex, SqliteMediaAnnotationsIndex>();
+        containerRegistry.RegisterSingleton<IMediaAnnotationsService, MediaAnnotationsService>();
+        containerRegistry.RegisterSingleton<MediaAnnotationsCoordinator>();
 
         containerRegistry.RegisterSingleton<INotificationService, LocalNotificationService>();
         containerRegistry.RegisterSingleton<IFileAssociationsService, ConfigurationFileAssociationsService>();
@@ -163,6 +174,7 @@ public class App : PrismApplication
         containerRegistry.RegisterSingleton<TrayAnalysisProgressService>();
         containerRegistry.RegisterSingleton<ImageViewerWindowService>();
         containerRegistry.RegisterSingleton<SettingsWindowService>();
+        containerRegistry.RegisterSingleton<MediaSearchWindowService>();
 
         containerRegistry.RegisterSingleton<TypeAdapterConfig>(() =>
         {

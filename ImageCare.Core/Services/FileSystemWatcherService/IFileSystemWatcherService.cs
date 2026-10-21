@@ -1,24 +1,28 @@
-﻿using ImageCare.Core.Domain.Folders;
+using ImageCare.Core.Domain.Folders;
 
 namespace ImageCare.Core.Services.FileSystemWatcherService;
 
 public interface IFileSystemWatcherService
 {
-	public IObservable<FileModel> FileCreated { get; }
+    IObservable<FileModel> FileCreated { get; }
 
-	public IObservable<FileModel> FileDeleted { get; }
+    IObservable<FileModel> FileChanged { get; }
 
-	public IObservable<FileRenamedModel> FileRenamed { get; }
+    IObservable<FileModel> FileDeleted { get; }
 
-	public IObservable<DirectoryModel> DirectoryCreated { get; }
+    IObservable<FileRenamedModel> FileRenamed { get; }
 
-	public IObservable<DirectoryModel> DirectoryDeleted { get; }
+    IObservable<DirectoryModel> DirectoryCreated { get; }
 
-	public IObservable<DirectoryRenamedModel> DirectoryRenamed { get; }
+    IObservable<DirectoryModel> DirectoryDeleted { get; }
 
-	public void StartWatching();
+    IObservable<DirectoryRenamedModel> DirectoryRenamed { get; }
 
-	public void StopWatching();
+    IObservable<string> RescanRequested { get; }
 
-	public void StartWatchingDirectory(string directoryPath);
+    void StartWatching();
+
+    void StopWatching();
+
+    void StartWatchingDirectory(string directoryPath);
 }

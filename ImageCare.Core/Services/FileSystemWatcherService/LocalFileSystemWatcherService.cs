@@ -13,12 +13,14 @@ public sealed class LocalFileSystemWatcherService : IFileSystemWatcherService, I
     private readonly FileSystemWatcher _directoriesWatcher;
 
     private readonly Subject<FileModel> _fileCreatedSubject;
+    private readonly Subject<FileModel> _fileChangedSubject;
     private readonly Subject<FileModel> _fileDeletedSubject;
     private readonly Subject<FileRenamedModel> _fileRenamedSubject;
 
     private readonly Subject<DirectoryModel> _directoryCreatedSubject;
     private readonly Subject<DirectoryModel> _directoryDeletedSubject;
     private readonly Subject<DirectoryRenamedModel> _directoryRenamedSubject;
+    private readonly Subject<string> _rescanRequestedSubject;
 
     private readonly CompositeDisposable _subscriptions = new();
     private readonly object _watcherRestartLock = new();
@@ -39,17 +41,21 @@ public sealed class LocalFileSystemWatcherService : IFileSystemWatcherService, I
         };
 
         _fileCreatedSubject = new Subject<FileModel>();
+        _fileChangedSubject = new Subject<FileModel>();
         _fileDeletedSubject = new Subject<FileModel>();
         _fileRenamedSubject = new Subject<FileRenamedModel>();
 
         _directoryCreatedSubject = new Subject<DirectoryModel>();
         _directoryDeletedSubject = new Subject<DirectoryModel>();
         _directoryRenamedSubject = new Subject<DirectoryRenamedModel>();
+        _rescanRequestedSubject = new Subject<string>();
 
         CreateObservables();
     }
 
     public IObservable<FileModel> FileCreated => _fileCreatedSubject.AsObservable();
+
+    public IObservable<FileModel> FileChanged => _fileChangedSubject.AsObservable();
 
     public IObservable<FileModel> FileDeleted => _fileDeletedSubject.AsObservable();
 
@@ -61,27 +67,30 @@ public sealed class LocalFileSystemWatcherService : IFileSystemWatcherService, I
 
     public IObservable<DirectoryRenamedModel> DirectoryRenamed => _directoryRenamedSubject.AsObservable();
 
+    public IObservable<string> RescanRequested => _rescanRequestedSubject.AsObservable();
+
     public void Dispose()
     {
-        if (_disposed)
+        lock (_watcherRestartLock)
         {
-            return;
+            if (_disposed)
+            {
+                return;
+            }
+
+            _disposed = true;
+            _filesWatcher.Dispose();
+            _directoriesWatcher.Dispose();
+            _subscriptions.Dispose();
+            _fileCreatedSubject.Dispose();
+            _fileChangedSubject.Dispose();
+            _fileDeletedSubject.Dispose();
+            _fileRenamedSubject.Dispose();
+            _directoryCreatedSubject.Dispose();
+            _directoryDeletedSubject.Dispose();
+            _directoryRenamedSubject.Dispose();
+            _rescanRequestedSubject.Dispose();
         }
-
-        _filesWatcher.Dispose();
-        _directoriesWatcher.Dispose();
-
-        _subscriptions.Dispose();
-
-        _fileCreatedSubject.Dispose();
-        _fileDeletedSubject.Dispose();
-        _fileRenamedSubject.Dispose();
-
-        _directoryCreatedSubject.Dispose();
-        _directoryDeletedSubject.Dispose();
-        _directoryRenamedSubject.Dispose();
-
-        _disposed = true;
     }
 
     public void StartWatching()
@@ -169,16 +178,14 @@ public sealed class LocalFileSystemWatcherService : IFileSystemWatcherService, I
                 return;
             }
 
-            if (!string.IsNullOrWhiteSpace(_filesWatcher.Path) && Directory.Exists(_filesWatcher.Path))
+            var watchedPath = _filesWatcher.Path;
+            if (!string.IsNullOrWhiteSpace(watchedPath) && Directory.Exists(watchedPath))
             {
                 _filesWatcher.EnableRaisingEvents = false;
-                _filesWatcher.EnableRaisingEvents = true;
-            }
-
-            if (!string.IsNullOrWhiteSpace(_directoriesWatcher.Path) && Directory.Exists(_directoriesWatcher.Path))
-            {
                 _directoriesWatcher.EnableRaisingEvents = false;
+                _filesWatcher.EnableRaisingEvents = true;
                 _directoriesWatcher.EnableRaisingEvents = true;
+                _rescanRequestedSubject.OnNext(Path.TrimEndingDirectorySeparator(Path.GetFullPath(watchedPath)));
             }
         }
     }
@@ -201,6 +208,20 @@ public sealed class LocalFileSystemWatcherService : IFileSystemWatcherService, I
                                       .Subscribe(_fileCreatedSubject);
 
         _subscriptions.Add(fileCreatedSubscription);
+
+        var fileChangedSubscription = Observable
+                                      .FromEventPattern<FileSystemEventHandler, FileSystemEventArgs>(
+                                          h => _filesWatcher.Changed += h,
+                                          h => _filesWatcher.Changed -= h)
+                                      .Select(e => CreateFileModel(e.EventArgs))
+                                      .Buffer(TimeSpan.FromMilliseconds(200))
+                                      .Where(files => files.Count > 0)
+                                      .SelectMany(files => files
+                                          .GroupBy(file => file.FullName, pathComparer)
+                                          .Select(group => group.Last()))
+                                      .Subscribe(_fileChangedSubject);
+
+        _subscriptions.Add(fileChangedSubscription);
 
         var fileDeletedSubscription = Observable
                                       .FromEventPattern<FileSystemEventHandler, FileSystemEventArgs>(

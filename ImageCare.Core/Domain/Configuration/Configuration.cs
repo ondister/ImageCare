@@ -63,4 +63,10 @@ public sealed class Configuration
 
 
     public List<string> SmartFolderPaths { get; set; } = new();
+
+
+    public List<string> MediaSearchRootPaths { get; set; } = new();
+
+
+    public List<string> PinnedTags { get; set; } = new();
 }

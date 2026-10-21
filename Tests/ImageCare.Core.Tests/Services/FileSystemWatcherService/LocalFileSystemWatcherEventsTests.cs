@@ -33,17 +33,22 @@ public class LocalFileSystemWatcherServiceFileEventsTests
     [Test]
     public void FileCreated_Event_EmittedWhenFileCreated()
     {
-        FileModel receivedModel = null;
+        FileModel? receivedCreatedModel = null;
+        FileModel? receivedChangedModel = null;
         var testFileName = "testfile.txt";
         var testFilePath = Path.Combine(_testDirectory, testFileName);
 
-        using var subscription = _service.FileCreated.Subscribe(model => receivedModel = model);
+        using var createdSubscription = _service.FileCreated.Subscribe(model => receivedCreatedModel = model);
+        using var changedSubscription = _service.FileChanged.Subscribe(model => receivedChangedModel = model);
 
         File.WriteAllText(testFilePath, "test content");
 
-        Assert.That(() => receivedModel, Is.Not.Null.After(2000, 50));
-        Assert.That(receivedModel.Name, Is.EqualTo(testFileName));
-        Assert.That(receivedModel.FullName, Is.EqualTo(testFilePath));
+        Assert.That(() => receivedCreatedModel, Is.Not.Null.After(2000, 50));
+        Assert.That(receivedCreatedModel!.Name, Is.EqualTo(testFileName));
+        Assert.That(receivedCreatedModel.FullName, Is.EqualTo(testFilePath));
+        Assert.That(() => receivedChangedModel, Is.Not.Null.After(2000, 50));
+        Assert.That(receivedChangedModel!.Name, Is.EqualTo(testFileName));
+        Assert.That(receivedChangedModel.FullName, Is.EqualTo(testFilePath));
     }
 
     [Test]

@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.Windows.Input;
 using Avalonia.Media.Imaging;
 
+using ImageCare.Core.Domain.Annotations;
 using ImageCare.Core.Domain.Media.Metadata;
 using ImageCare.Core.Domain.MediaFormats;
 using ImageCare.Core.Domain.Notification;
@@ -41,6 +42,11 @@ internal class MediaPreviewViewModel : ViewModelBase, IComparable<MediaPreviewVi
     private bool _useOpenWith;
     private bool _hasLocation;
     private IMediaMetadata? _metadata;
+    private int _rating;
+    private IReadOnlyList<string> _tags = Array.Empty<string>();
+    private string _annotationState = string.Empty;
+    private bool _isAnnotationsSaving;
+    private MediaAnnotationsSnapshot? _annotationSnapshot;
 
     private DateTime _fileDate;
     private string _frameColorCode = "Transparent";
@@ -174,6 +180,59 @@ internal class MediaPreviewViewModel : ViewModelBase, IComparable<MediaPreviewVi
     }
 
     public bool IsLoaded => PreviewBitmap != null;
+
+    public int Rating
+    {
+        get => _rating;
+        private set
+        {
+            if (SetProperty(ref _rating, Math.Clamp(value, 0, 5)))
+            {
+                RaisePropertyChanged(nameof(RatingStars));
+            }
+        }
+    }
+
+    public string RatingStars => Rating == 0 ? "☆☆☆☆☆" : new string('★', Rating) + new string('☆', 5 - Rating);
+
+    public IReadOnlyList<string> Tags
+    {
+        get => _tags;
+        private set
+        {
+            if (SetProperty(ref _tags, value))
+            {
+                RaisePropertyChanged(nameof(TagSummary));
+                RaisePropertyChanged(nameof(HasTags));
+            }
+        }
+    }
+
+    public bool HasTags => Tags.Count > 0;
+
+    public string TagSummary => string.Join(", ", Tags);
+
+    public string AnnotationState
+    {
+        get => _annotationState;
+        internal set => SetProperty(ref _annotationState, value ?? string.Empty);
+    }
+
+    public bool IsAnnotationsSaving
+    {
+        get => _isAnnotationsSaving;
+        internal set => SetProperty(ref _isAnnotationsSaving, value);
+    }
+
+    internal MediaAnnotationsSnapshot? AnnotationSnapshot => _annotationSnapshot;
+
+    internal void ApplyAnnotations(MediaAnnotations annotations, string state, MediaAnnotationsSnapshot? snapshot = null)
+    {
+        Rating = annotations.Rating;
+        Tags = annotations.Tags;
+        _annotationSnapshot = snapshot;
+        AnnotationState = state;
+    }
 
     public int CompareTo(MediaPreviewViewModel? other)
     {

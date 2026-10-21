@@ -1,10 +1,12 @@
 using System;
+using System.Threading;
 
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 
 using ImageCare.Core.Services.ConfigurationService;
+using ImageCare.Core.Services.MediaAnnotationsService;
 using ImageCare.UI.Avalonia.Localization;
 using ImageCare.UI.Avalonia.ViewModels;
 using ImageCare.UI.Avalonia.Views;
@@ -19,6 +21,8 @@ internal sealed class SettingsWindowService
 {
     private readonly IConfigurationService _configurationService;
     private readonly IFileDialogService _fileDialogService;
+    private readonly IMediaAnnotationsService _annotationsService;
+    private readonly SynchronizationContext _synchronizationContext;
     private readonly IMapper _mapper;
     private readonly ILogger _logger;
     private readonly LocalizationManager _localization;
@@ -26,12 +30,16 @@ internal sealed class SettingsWindowService
 
     public SettingsWindowService(IConfigurationService configurationService,
                                  IFileDialogService fileDialogService,
+                                 IMediaAnnotationsService annotationsService,
+                                 SynchronizationContext synchronizationContext,
                                  IMapper mapper,
                                  ILogger logger,
                                  LocalizationManager localization)
     {
         _configurationService = configurationService;
         _fileDialogService = fileDialogService;
+        _annotationsService = annotationsService;
+        _synchronizationContext = synchronizationContext;
         _mapper = mapper;
         _logger = logger;
         _localization = localization;
@@ -48,6 +56,8 @@ internal sealed class SettingsWindowService
         var viewModel = new SettingsViewModel(
             _configurationService,
             _fileDialogService,
+            _annotationsService,
+            _synchronizationContext,
             _mapper,
             _logger,
             _localization);

@@ -130,4 +130,53 @@
   <data name="Overview_DeletedAt" xml:space="preserve"><value>Удалён</value></data>
   <data name="Preview_HasLocation" xml:space="preserve"><value>Доступны данные геолокации</value></data>
   <data name="Preview_Selected" xml:space="preserve"><value>Выбранное изображение</value></data>
+  <data name="Common_Save" xml:space="preserve"><value>Сохранить</value></data>
+  <data name="Bottom_Search" xml:space="preserve"><value>Поиск</value></data>
+  <data name="Annotations_SettingsTab" xml:space="preserve"><value>Аннотации и поиск</value></data>
+  <data name="Annotations_RootsTitle" xml:space="preserve"><value>Корневые папки индекса</value></data>
+  <data name="Annotations_RootsDescription" xml:space="preserve"><value>Индексируются только поддерживаемые форматы изображений. Сканирование выполняется в фоне.</value></data>
+  <data name="Annotations_AddRoot" xml:space="preserve"><value>Добавить папку</value></data>
+  <data name="Annotations_RemoveRoot" xml:space="preserve"><value>Удалить папку</value></data>
+  <data name="Annotations_Rebuild" xml:space="preserve"><value>Пересканировать</value></data>
+  <data name="Annotations_SelectRoot" xml:space="preserve"><value>Выберите корневую папку поиска изображений</value></data>
+  <data name="Annotations_RootRemoved" xml:space="preserve"><value>Папка удалена из настроенных корней поиска. Метаданные изображений не изменены.</value></data>
+  <data name="Annotations_Rebuilding" xml:space="preserve"><value>Сканирование папок индекса…</value></data>
+  <data name="Annotations_TagsTitle" xml:space="preserve"><value>Доступные теги</value></data>
+  <data name="Annotations_TagsDescription" xml:space="preserve"><value>Список объединяет закреплённые теги и теги из индекса. Удаление закреплённого тега не удаляет его из изображений.</value></data>
+  <data name="Annotations_NewTag" xml:space="preserve"><value>Добавить любой тег</value></data>
+  <data name="Annotations_StatusReady" xml:space="preserve"><value>Индекс изображений готов.</value></data>
+  <data name="Annotations_StatusRunning" xml:space="preserve"><value>Сканирование изображений: обработано {0}.</value></data>
+  <data name="Annotations_StatusCompleted" xml:space="preserve"><value>Сканирование завершено: обработано изображений — {0}.</value></data>
+  <data name="Annotations_StatusCancelled" xml:space="preserve"><value>Сканирование отменено.</value></data>
+  <data name="Annotations_StatusFailed" xml:space="preserve"><value>Ошибка сканирования: {0}</value></data>
+  <data name="Annotations_Rating" xml:space="preserve"><value>Рейтинг</value></data>
+  <data name="Annotations_Unrated" xml:space="preserve"><value>Без рейтинга</value></data>
+  <data name="Annotations_StateCached" xml:space="preserve"><value>Из кеша</value></data>
+  <data name="Annotations_StateCurrent" xml:space="preserve"><value>Обновлено</value></data>
+  <data name="Annotations_StateSaving" xml:space="preserve"><value>Сохранение…</value></data>
+  <data name="Annotations_StateSaved" xml:space="preserve"><value>Сохранено</value></data>
+  <data name="Annotations_StateError" xml:space="preserve"><value>Ошибка сохранения</value></data>
+  <data name="Annotations_SaveFailed" xml:space="preserve"><value>Не удалось сохранить аннотации изображения</value></data>
+  <data name="Search_Title" xml:space="preserve"><value>Поиск изображений</value></data>
+  <data name="Search_Ready" xml:space="preserve"><value>Задайте фильтры и выполните поиск по индексу.</value></data>
+  <data name="Search_NoRoots" xml:space="preserve"><value>Добавьте хотя бы одну корневую папку индекса в настройках.</value></data>
+  <data name="Search_TextPlaceholder" xml:space="preserve"><value>Необязательное имя файла или путь</value></data>
+  <data name="Search_TagsPlaceholder" xml:space="preserve"><value>Теги через запятую</value></data>
+  <data name="Search_Search" xml:space="preserve"><value>Найти</value></data>
+  <data name="Search_MinRating" xml:space="preserve"><value>Мин.</value></data>
+  <data name="Search_MaxRating" xml:space="preserve"><value>Макс.</value></data>
+  <data name="Search_AllTags" xml:space="preserve"><value>Все теги</value></data>
+  <data name="Search_Searching" xml:space="preserve"><value>Поиск в локальном индексе…</value></data>
+  <data name="Search_NoResults" xml:space="preserve"><value>В индексе нет изображений с такими параметрами.</value></data>
+  <data name="Search_ResultCount" xml:space="preserve"><value>Найдено изображений в индексе: {0}.</value></data>
+  <data name="Search_Cancelled" xml:space="preserve"><value>Поиск отменён.</value></data>
+  <data name="Search_Failed" xml:space="preserve"><value>Не удалось выполнить поиск по индексу.</value></data>
+  <data name="Search_InvalidRatingRange" xml:space="preserve"><value>Минимальный рейтинг не может превышать максимальный.</value></data>
+  <data name="Search_File" xml:space="preserve"><value>Файл</value></data>
+  <data name="Search_Rating" xml:space="preserve"><value>Рейтинг</value></data>
+  <data name="Search_Tags" xml:space="preserve"><value>Теги</value></data>
+  <data name="Search_Path" xml:space="preserve"><value>Путь</value></data>
+  <data name="Search_OpenSelected" xml:space="preserve"><value>Открыть выбранное</value></data>
+  <data name="Search_FileMissing" xml:space="preserve"><value>Файл из индекса больше не существует</value></data>
+  <data name="Search_OpenFailed" xml:space="preserve"><value>Не удалось открыть изображение из индекса</value></data>
 </root>
