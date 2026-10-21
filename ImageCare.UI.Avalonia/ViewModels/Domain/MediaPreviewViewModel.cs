@@ -213,6 +213,11 @@ internal class MediaPreviewViewModel : ViewModelBase, IComparable<MediaPreviewVi
 
     public string RatingStars => Rating == 0 ? "☆☆☆☆☆" : new string('★', Rating) + new string('☆', 5 - Rating);
 
+    /// <summary>
+    /// Annotations (rating and tags) are stored for images only, so video cards must not show rating stars.
+    /// </summary>
+    public bool SupportsRating => MediaFormat.SupportsAnnotations;
+
     public IReadOnlyList<string> Tags
     {
         get => _tags;

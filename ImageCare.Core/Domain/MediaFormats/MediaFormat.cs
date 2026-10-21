@@ -53,6 +53,12 @@ public sealed class MediaFormat : IEquatable<MediaFormat>
 
 	public MediaType MediaType { get; }
 
+	/// <summary>
+	/// Annotations (rating and tags) are stored for images only. Video files have no rating support,
+	/// so the UI must not offer or display rating for them.
+	/// </summary>
+	public bool SupportsAnnotations => MediaType == MediaType.Image;
+
 	/// <inheritdoc />
 	public bool Equals(MediaFormat? other)
 	{

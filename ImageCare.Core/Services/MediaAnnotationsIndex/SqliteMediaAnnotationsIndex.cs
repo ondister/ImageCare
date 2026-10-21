@@ -13,7 +13,7 @@ public sealed class SqliteMediaAnnotationsIndex : IMediaAnnotationsIndex
         ? StringComparer.OrdinalIgnoreCase
         : StringComparer.Ordinal;
     private static readonly string[] ImageExtensions = MediaFormat.GetSupportedExtensions()
-        .Where(extension => MediaFormat.GetMediaFormatByExtension(extension)?.MediaType == MediaType.Image)
+        .Where(extension => MediaFormat.GetMediaFormatByExtension(extension)?.SupportsAnnotations == true)
         .Select(extension => extension.ToLowerInvariant())
         .Distinct(StringComparer.OrdinalIgnoreCase)
         .ToArray();

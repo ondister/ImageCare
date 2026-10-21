@@ -201,7 +201,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
                 _selectedPreview.Selected = true;
 
                 _fileOperationsService.SetSelectedPreview(new SelectedMediaPreview(_mapper.Map<MediaPreview>(_selectedPreview), FileManagerPanel));
-                if (_selectedPreview.MediaFormat.MediaType == MediaType.Image)
+                if (_selectedPreview.MediaFormat.SupportsAnnotations)
                 {
                     var cancellation = CancellationTokenSource.CreateLinkedTokenSource(
                         _folderSelectedCancellationTokenSource.Token);
@@ -267,7 +267,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
                                       !_isLoadingSelectedAnnotations &&
                                       SelectedPreview?.AnnotationSnapshot != null;
 
-    public bool HasAnnotatableSelection => SelectedPreview?.MediaFormat.MediaType == MediaType.Image;
+    public bool HasAnnotatableSelection => SelectedPreview?.MediaFormat.SupportsAnnotations == true;
 
     public IReadOnlyList<string> CurrentTags => SelectedPreview?.Tags ?? Array.Empty<string>();
 
@@ -954,7 +954,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
             }
 
             await AddImagePreviewAsync(imagePreview);
-            if (imagePreview.MediaFormat.MediaType == MediaType.Image)
+            if (imagePreview.MediaFormat.SupportsAnnotations)
             {
                 _ = RefreshChangedAnnotationAsync(filePath);
             }
@@ -1427,7 +1427,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
 
     private void ApplyCachedAnnotations(MediaPreviewViewModel preview)
     {
-        if (preview.MediaFormat.MediaType != MediaType.Image)
+        if (!preview.MediaFormat.SupportsAnnotations)
         {
             return;
         }
@@ -1487,7 +1487,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
         }
 
         var owners = ImagePreviews
-            .Where(preview => preview.MediaFormat.MediaType == MediaType.Image)
+            .Where(preview => preview.MediaFormat.SupportsAnnotations)
             .Select(preview => new
             {
                 preview.Url,
@@ -1639,7 +1639,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
     {
         var preview = SelectedPreview;
         if (preview == null ||
-            preview.MediaFormat.MediaType != MediaType.Image ||
+            !preview.MediaFormat.SupportsAnnotations ||
             preview.AnnotationSnapshot == null ||
             IsSavingAnnotations ||
             _isLoadingSelectedAnnotations)

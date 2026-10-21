@@ -196,7 +196,9 @@
                     </Grid>
                     <Grid Grid.Row="2" Margin="0,3,0,0" ColumnDefinitions="Auto,*">
                         <TextBlock Grid.Column="0" Text="{Binding RatingStars}" FontSize="{StaticResource Font.Size.Micro}"
-                                   Foreground="{DynamicResource Brush.Accent}" />
+                                   Foreground="{DynamicResource Brush.Accent}"
+                                   x:CompileBindings="True"
+                                   IsVisible="{Binding SupportsRating}" />
                         <TextBlock Grid.Column="1" Margin="8,0,0,0" Text="{Binding TagSummary}"
                                    FontSize="{StaticResource Font.Size.Micro}" TextTrimming="CharacterEllipsis" />
                     </Grid>
