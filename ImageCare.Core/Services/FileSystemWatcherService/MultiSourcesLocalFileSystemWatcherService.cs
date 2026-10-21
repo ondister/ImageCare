@@ -196,10 +196,7 @@ public sealed class MultiSourcesLocalFileSystemWatcherService : IMultiSourcesFil
 
     private void ThrowIfDisposed()
     {
-        if (_disposed)
-        {
-            throw new ObjectDisposedException(nameof(MultiSourcesLocalFileSystemWatcherService));
-        }
+        ObjectDisposedException.ThrowIf(_disposed, this);
     }
 
     private static string NormalizeExistingDirectoryPath(string directoryPath)

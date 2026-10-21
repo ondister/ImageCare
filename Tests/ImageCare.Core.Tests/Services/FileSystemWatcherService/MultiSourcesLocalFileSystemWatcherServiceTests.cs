@@ -69,7 +69,7 @@ public class MultiSourcesLocalFileSystemWatcherServiceTests
 	[Test]
 	public void StartWatchingDirectory_WithNullPath_ThrowsServiceException()
 	{
-		Assert.Throws<ServiceException>(() => _service.StartWatchingDirectory(null));
+		Assert.Throws<ServiceException>(() => _service.StartWatchingDirectory(null!));
 	}
 
 	[Test]
@@ -114,7 +114,7 @@ public class MultiSourcesLocalFileSystemWatcherServiceTests
 	[Test]
 	public void StopWatchingDirectory_WithNullPath_ThrowsServiceException()
 	{
-		Assert.Throws<ServiceException>(() => _service.StopWatchingDirectory(null));
+		Assert.Throws<ServiceException>(() => _service.StopWatchingDirectory(null!));
 	}
 
 	[Test]

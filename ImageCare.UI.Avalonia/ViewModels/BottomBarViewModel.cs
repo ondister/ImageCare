@@ -331,10 +331,7 @@ internal class BottomBarViewModel : NavigatedViewModelBase
 
     private void ThrowIfDisposed()
     {
-        if (_isDisposed)
-        {
-            throw new ObjectDisposedException(nameof(BottomBarViewModel));
-        }
+        ObjectDisposedException.ThrowIf(_isDisposed, this);
     }
 
     private void SafeDispose<T>(ref T? disposable) where T : IDisposable?

@@ -95,10 +95,7 @@ public sealed class LocalFileSystemWatcherService : IFileSystemWatcherService, I
 
     public void StartWatching()
     {
-        if (_disposed)
-        {
-            throw new ObjectDisposedException(nameof(LocalFileSystemWatcherService));
-        }
+        ObjectDisposedException.ThrowIf(_disposed, this);
 
         _filesWatcher.EnableRaisingEvents = true;
         _directoriesWatcher.EnableRaisingEvents = true;
@@ -117,10 +114,7 @@ public sealed class LocalFileSystemWatcherService : IFileSystemWatcherService, I
 
     public void StartWatchingDirectory(string directoryPath)
     {
-        if (_disposed)
-        {
-            throw new ObjectDisposedException(nameof(LocalFileSystemWatcherService));
-        }
+        ObjectDisposedException.ThrowIf(_disposed, this);
 
         if (string.IsNullOrWhiteSpace(directoryPath))
         {

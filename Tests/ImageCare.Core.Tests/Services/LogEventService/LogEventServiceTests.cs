@@ -25,7 +25,7 @@ public class LogEventServiceTests
     [Test]
     public void Emit_WarningLogEvent_ShouldCreateLogMessageAndNotify()
     {
-        LogMessage receivedMessage = null;
+        LogMessage? receivedMessage = null;
         using var subscription = _service.WarningReceived.Subscribe(msg => receivedMessage = msg);
 
         var timestamp = DateTimeOffset.Now;
@@ -34,7 +34,7 @@ public class LogEventServiceTests
         _service.Emit(logEvent);
 
         Assert.That(receivedMessage, Is.Not.Null);
-        Assert.That(receivedMessage.Message, Is.EqualTo("Test warning"));
+        Assert.That(receivedMessage!.Message, Is.EqualTo("Test warning"));
         Assert.That(receivedMessage.Timestamp, Is.EqualTo(timestamp));
         Assert.That(receivedMessage.ExceptionMessage, Is.Null);
 
@@ -47,7 +47,7 @@ public class LogEventServiceTests
     [Test]
     public void Emit_ErrorLogEvent_ShouldCreateLogMessageWithException()
     {
-        LogMessage receivedMessage = null;
+        LogMessage? receivedMessage = null;
         using var subscription = _service.ErrorReceived.Subscribe(msg => receivedMessage = msg);
 
         var exception = new InvalidOperationException("Test exception");
@@ -56,7 +56,7 @@ public class LogEventServiceTests
         _service.Emit(logEvent);
 
         Assert.That(receivedMessage, Is.Not.Null);
-        Assert.That(receivedMessage.Message, Is.EqualTo("Test error"));
+        Assert.That(receivedMessage!.Message, Is.EqualTo("Test error"));
         Assert.That(receivedMessage.ExceptionMessage, Is.EqualTo("Test exception"));
         Assert.That(_service.GetLastErrors(), Has.Exactly(1).Items);
         Assert.That(_service.GetErrorsCount(), Is.EqualTo(1));
@@ -215,17 +215,17 @@ public class LogEventServiceTests
     public void LogMessage_ShouldContainCorrectTimestampFromLogEvent()
     {
         var expectedTimestamp = new DateTimeOffset(2024, 1, 1, 12, 0, 0, TimeSpan.Zero);
-        LogMessage receivedMessage = null;
+        LogMessage? receivedMessage = null;
         using var subscription = _service.ErrorReceived.Subscribe(msg => receivedMessage = msg);
 
         var logEvent = CreateLogEvent(LogEventLevel.Error, "Test", expectedTimestamp);
 
         _service.Emit(logEvent);
 
-        Assert.That(receivedMessage.Timestamp, Is.EqualTo(expectedTimestamp));
+        Assert.That(receivedMessage!.Timestamp, Is.EqualTo(expectedTimestamp));
     }
 
-    private static LogEvent CreateLogEvent(LogEventLevel level, string message, DateTimeOffset? timestamp = null, Exception exception = null)
+    private static LogEvent CreateLogEvent(LogEventLevel level, string message, DateTimeOffset? timestamp = null, Exception? exception = null)
     {
         return new LogEvent(
             timestamp ?? DateTimeOffset.Now,

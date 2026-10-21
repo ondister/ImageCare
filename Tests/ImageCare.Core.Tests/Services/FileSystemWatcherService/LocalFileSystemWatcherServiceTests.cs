@@ -51,7 +51,7 @@ public class LocalFileSystemWatcherServiceTests
 	[Test]
 	public void StartWatchingDirectory_WithNullPath_ThrowsServiceException()
 	{
-		Assert.Throws<ServiceException>(() => _service.StartWatchingDirectory(null));
+		Assert.Throws<ServiceException>(() => _service.StartWatchingDirectory(null!));
 	}
 
 	[Test]

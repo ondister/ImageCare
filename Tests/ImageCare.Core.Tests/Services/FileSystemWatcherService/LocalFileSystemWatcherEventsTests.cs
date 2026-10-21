@@ -58,13 +58,13 @@ public class LocalFileSystemWatcherServiceFileEventsTests
         var testFilePath = Path.Combine(_testDirectory, testFileName);
         File.WriteAllText(testFilePath, "test content");
 
-        FileModel receivedModel = null;
+        FileModel? receivedModel = null;
         using var subscription = _service.FileDeleted.Subscribe(model => receivedModel = model);
 
         File.Delete(testFilePath);
 
         Assert.That(() => receivedModel, Is.Not.Null.After(500, 50));
-        Assert.That(receivedModel.Name, Is.EqualTo(testFileName));
+        Assert.That(receivedModel!.Name, Is.EqualTo(testFileName));
     }
 }
 
@@ -97,7 +97,7 @@ public class LocalFileSystemWatcherServiceDirectoryEventsTests
     [Test]
     public void DirectoryCreated_Event_EmittedWhenDirectoryCreated()
     {
-        DirectoryModel receivedModel = null;
+        DirectoryModel? receivedModel = null;
         var newDirectoryName = "newsubdir";
         var newDirectoryPath = Path.Combine(_testDirectory, newDirectoryName);
 
@@ -106,7 +106,7 @@ public class LocalFileSystemWatcherServiceDirectoryEventsTests
         Directory.CreateDirectory(newDirectoryPath);
 
         Assert.That(() => receivedModel, Is.Not.Null.After(500, 50));
-        Assert.That(receivedModel.Name, Is.EqualTo(newDirectoryName));
+        Assert.That(receivedModel!.Name, Is.EqualTo(newDirectoryName));
         Assert.That(receivedModel.Path, Is.EqualTo(newDirectoryPath));
     }
 }

@@ -51,7 +51,7 @@ public class Mp4MediaPreviewProviderTests
 		Assert.That(result.Duration, Is.Not.EqualTo(TimeSpan.Zero));
 		Assert.That(result.Duration, Is.GreaterThan(TimeSpan.Zero));
 
-		TestContext.WriteLine($"Video Duration: {result.Duration}");
+		TestContext.Out.WriteLine($"Video Duration: {result.Duration}");
 	}
 
 	[Test]
@@ -72,7 +72,7 @@ public class Mp4MediaPreviewProviderTests
 		Assert.That(result.Width, Is.AnyOf(1920, 1280, 1080, 720, 640, 480));
 		Assert.That(result.Height, Is.AnyOf(1080, 720, 480, 360));
 
-		TestContext.WriteLine($"Video Dimensions: {result.Width}x{result.Height}");
+		TestContext.Out.WriteLine($"Video Dimensions: {result.Width}x{result.Height}");
 	}
 
 	[Test]

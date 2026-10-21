@@ -43,7 +43,7 @@ internal class MainWindowViewModel : ViewModelBase
 	private readonly ILogger _logger;
     private readonly MainImageViewModel _mainImageViewModel;
     private readonly MainVideoViewModel _mainVideoViewModel;
-	private CompositeDisposable _subscriptions;
+	private CompositeDisposable? _subscriptions;
 	private SelectedMediaPreview? _currentSelectedPreview;
     private bool _isImageViewVisible = true;
     private bool _isVideoViewVisible;
@@ -349,14 +349,18 @@ internal class MainWindowViewModel : ViewModelBase
 
 	private void OnNavigationResult(NavigationResult result)
 	{
+		var innerException = result.Exception?.InnerException;
+		if (innerException == null)
+		{
+			return;
+		}
+
 		try
 		{
-			if (result.Exception?.InnerException != null)
-			{
-				_logger.Error(result.Exception?.InnerException, "Navigation failed for region {Region}", result.Context.NavigationService.Region.Name);
+			var regionName = result.Context?.NavigationService?.Region?.Name ?? string.Empty;
+			_logger.Error(innerException, "Navigation failed for region {Region}", regionName);
 
-				throw result.Exception?.InnerException;
-			}
+			throw innerException;
 		}
 		catch (Exception ex)
 		{

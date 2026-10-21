@@ -231,7 +231,13 @@ public sealed class WindowsFileSystemService : IFileSystemService
                 return directoryInfo.Name;
             }
 
-            var newPath = Path.Combine(directoryInfo.Parent.FullName, newName);
+            var parentDirectory = directoryInfo.Parent;
+            if (parentDirectory == null)
+            {
+                return directoryInfo.Name;
+            }
+
+            var newPath = Path.Combine(parentDirectory.FullName, newName);
             if (DirectoryExists(newPath))
             {
                 return directoryInfo.Name;

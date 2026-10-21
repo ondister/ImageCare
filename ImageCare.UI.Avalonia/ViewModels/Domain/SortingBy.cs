@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 
 using DynamicData.Binding;
 
@@ -23,11 +24,11 @@ public static class SortingByExtensions
             case SortingBy.NameAscending:
                 return SortExpressionComparer<MediaPreviewViewModel>.Ascending(p => p.Url);
             case SortingBy.DateTimeDescending:
-                return SortExpressionComparer<MediaPreviewViewModel>.Descending(p => p.Metadata?.CreationDateTime);
+                return SortExpressionComparer<MediaPreviewViewModel>.Descending(p => p.Metadata?.CreationDateTime ?? DateTime.MinValue);
             case SortingBy.DateTimeAscending:
-                return SortExpressionComparer<MediaPreviewViewModel>.Ascending(p => p.Metadata?.CreationDateTime);
+                return SortExpressionComparer<MediaPreviewViewModel>.Ascending(p => p.Metadata?.CreationDateTime ?? DateTime.MinValue);
             default:
-                return SortExpressionComparer<MediaPreviewViewModel>.Ascending(p => p.Metadata?.CreationDateTime);
+                return SortExpressionComparer<MediaPreviewViewModel>.Ascending(p => p.Metadata?.CreationDateTime ?? DateTime.MinValue);
         }
     }
 }

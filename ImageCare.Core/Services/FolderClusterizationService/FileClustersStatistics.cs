@@ -5,7 +5,7 @@ namespace ImageCare.Core.Services.FolderClusterizationService;
 public sealed class FileClustersStatistics
 {
     private readonly Dictionary<string, FilesCluster> _fileToClusterMap;
-    private readonly List<FilesCluster> _clusters;
+    private readonly List<FilesCluster> _clusters = [];
 
     public FileClustersStatistics()
     {

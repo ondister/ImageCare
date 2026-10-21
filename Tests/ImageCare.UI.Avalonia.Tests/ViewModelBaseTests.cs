@@ -172,7 +172,7 @@ public class ViewModelBaseTests
     [Test]
     public void CreateCommand_GenericWithoutCanExecute_ShouldPassParameter()
     {
-        string receivedParameter = null;
+        string? receivedParameter = null;
         var testParameter = "test parameter";
 
         var command = _viewModel.CreateCommand<string>(param => receivedParameter = param);

@@ -25,7 +25,7 @@ public class LocalNotificationServiceTests
 	public void SendNotification_ValidNotification_ShouldEmitToObservable()
 	{
 		var expectedNotification = new SuccessNotification("Test", "Description");
-		Notification actualNotification = null;
+		Notification? actualNotification = null;
 
 		using var subscription = _service.NotificationReceived
 		                                 .Subscribe(notification => actualNotification = notification);
@@ -53,7 +53,7 @@ public class LocalNotificationServiceTests
 	[Test]
 	public void SendNotification_NullNotification_ShouldThrowServiceException()
 	{
-		var exception = Assert.Throws<ServiceException>(() => _service.SendNotification(null));
+		var exception = Assert.Throws<ServiceException>(() => _service.SendNotification(null!));
 		Assert.That(exception.Message, Is.EqualTo("Notification cannot be null"));
 	}
 
@@ -121,7 +121,7 @@ public class LocalNotificationServiceTests
 	{
 		var successNotification = new SuccessNotification("Success", "Operation completed");
 		var errorNotification = new ErrorNotification("Error", "Operation failed");
-		Notification lastReceived = null;
+		Notification? lastReceived = null;
 
 		using var subscription = _service.NotificationReceived
 		                                 .Subscribe(notification => lastReceived = notification);
@@ -137,13 +137,13 @@ public class LocalNotificationServiceTests
 	public void SendNotification_ValidNotificationWithNullDescription_ShouldWorkCorrectly()
 	{
 		var notification = new SuccessNotification("Title", null);
-		Notification receivedNotification = null;
+		Notification? receivedNotification = null;
 
 		using var subscription = _service.NotificationReceived
 		                                 .Subscribe(n => receivedNotification = n);
 
 		Assert.DoesNotThrow(() => _service.SendNotification(notification));
-		Assert.That(receivedNotification.Title, Is.EqualTo("Title"));
+		Assert.That(receivedNotification!.Title, Is.EqualTo("Title"));
 		Assert.That(receivedNotification.Description, Is.Null);
 	}
 }

@@ -55,16 +55,16 @@ internal class GlancePanelViewModel : ViewModelBase, IDialogAware
     private readonly object _imagePathsLock = new();
     private readonly object _loadedPreviewsLock = new();
     private readonly HashSet<MediaPreviewViewModel> _loadedPreviews = [];
-    private SortedObservableCollection<FileModel> _imagePaths;
+    private SortedObservableCollection<FileModel> _imagePaths = new();
 
     private CompositeDisposable? _disposable;
     private readonly LatestOperationCancellation _scrollCancellation = new();
     private CancellationTokenSource _imageLoadCts;
-    private string _title;
+    private string _title = string.Empty;
     private int _imagesPerLine = 3;
 
     private bool _filesLoading;
-    private string _selectedFolderPath;
+    private string _selectedFolderPath = string.Empty;
     private AspectRatioViewModel _selectedAspectRatio;
     private GlanceMediaPreviewViewModel? _selectedPreview;
     private bool _isScrollResetRequested;
@@ -72,7 +72,6 @@ internal class GlancePanelViewModel : ViewModelBase, IDialogAware
     private double _panelRowHeight;
     private bool _hasDeletedFiles;
     private bool _isRestoringAll;
-    private bool _isPreviewAnalysisComplete;
     private bool _isStatisticsAnalysisComplete;
     private MediaSortDirection _sortDirection;
     private IReadOnlyList<IReadOnlyList<GlanceMediaPreviewViewModel>> _previewRows = [];
@@ -133,7 +132,7 @@ internal class GlancePanelViewModel : ViewModelBase, IDialogAware
             new(AspectRatio.Ratio3x2, "3:2"),
             new(AspectRatio.Ratio1x1, "1:1")
         };
-        SelectedAspectRatio = AspectRatioViewModels[0];
+        _selectedAspectRatio = AspectRatioViewModels[0];
     }
 
     public AspectRatioViewModel SelectedAspectRatio
@@ -513,7 +512,6 @@ internal class GlancePanelViewModel : ViewModelBase, IDialogAware
 
     private void ResetAnalysisState()
     {
-        _isPreviewAnalysisComplete = false;
         _isStatisticsAnalysisComplete = false;
         RaisePropertyChanged(nameof(CanChangeSort));
     }
@@ -586,7 +584,6 @@ internal class GlancePanelViewModel : ViewModelBase, IDialogAware
         {
             if (_imagePaths.Count == 0)
             {
-                _isPreviewAnalysisComplete = true;
                 RaisePropertyChanged(nameof(CanChangeSort));
                 return;
             }
@@ -626,10 +623,10 @@ internal class GlancePanelViewModel : ViewModelBase, IDialogAware
 
             if (_imagePaths.Count <= 5_000)
             {
-                _folderClusterizationService.StartAsync(SelectedFolderPath, token);
+                _folderClusterizationService.StartAsync(SelectedFolderPath, token)
+                                       .Forget(_logger, nameof(IFolderClusterizationService.StartAsync));
             }
 
-            _isPreviewAnalysisComplete = true;
             RaisePropertyChanged(nameof(CanChangeSort));
         }
         catch (Exception ex)

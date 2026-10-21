@@ -61,10 +61,7 @@ public sealed class LocalFileSystemFolderService : IFolderService, IDisposable
 
     public async Task<DirectoryModel> GetDirectoryModelAsync(DirectoryModel? directoryModel = null)
     {
-        if (_disposed)
-        {
-            throw new ObjectDisposedException(nameof(LocalFileSystemFolderService));
-        }
+        ObjectDisposedException.ThrowIf(_disposed, this);
 
         return directoryModel == null
                    ? await GetRootDirectoriesLevelAsync()
@@ -73,10 +70,7 @@ public sealed class LocalFileSystemFolderService : IFolderService, IDisposable
 
     public async Task<DirectoryModel> GetDirectoryModelAsync(string directoryPath)
     {
-        if (_disposed)
-        {
-            throw new ObjectDisposedException(nameof(LocalFileSystemFolderService));
-        }
+        ObjectDisposedException.ThrowIf(_disposed, this);
 
         if (string.IsNullOrWhiteSpace(directoryPath))
         {
@@ -99,10 +93,7 @@ public sealed class LocalFileSystemFolderService : IFolderService, IDisposable
 
     public async Task<IEnumerable<FileModel>> GetFileModelAsync(string directoryPath, string searchPattern)
     {
-        if (_disposed)
-        {
-            throw new ObjectDisposedException(nameof(LocalFileSystemFolderService));
-        }
+        ObjectDisposedException.ThrowIf(_disposed, this);
 
         return await Task.Run(() =>
         {
@@ -121,10 +112,7 @@ public sealed class LocalFileSystemFolderService : IFolderService, IDisposable
 
     public void SetSelectedDirectory(SelectedDirectory selectedDirectory)
     {
-        if (_disposed)
-        {
-            throw new ObjectDisposedException(nameof(LocalFileSystemFolderService));
-        }
+        ObjectDisposedException.ThrowIf(_disposed, this);
 
         _folderHistoryService.AddFolderToHistory(selectedDirectory.Path);
 
@@ -137,20 +125,14 @@ public sealed class LocalFileSystemFolderService : IFolderService, IDisposable
 
     public DirectoryModel? GetSelectedDirectory(FileManagerPanel fileManagerPanel)
     {
-        if (_disposed)
-        {
-            throw new ObjectDisposedException(nameof(LocalFileSystemFolderService));
-        }
+        ObjectDisposedException.ThrowIf(_disposed, this);
 
         return _selectedDirectories.GetValueOrDefault(fileManagerPanel);
     }
 
     public void AddVisitingFolder(DirectoryModel directoryModel, FileManagerPanel fileManagerPanel)
     {
-        if (_disposed)
-        {
-            throw new ObjectDisposedException(nameof(LocalFileSystemFolderService));
-        }
+        ObjectDisposedException.ThrowIf(_disposed, this);
 
         if (directoryModel is DeviceModel or SpecialDirectoryModel)
         {
@@ -166,10 +148,7 @@ public sealed class LocalFileSystemFolderService : IFolderService, IDisposable
 
     public void RemoveVisitingFolder(DirectoryModel directoryModel, FileManagerPanel fileManagerPanel)
     {
-        if (_disposed)
-        {
-            throw new ObjectDisposedException(nameof(LocalFileSystemFolderService));
-        }
+        ObjectDisposedException.ThrowIf(_disposed, this);
 
         if (_visitingDirectoryModels.TryRemove((directoryModel.Path, fileManagerPanel), out var removedDirectory))
         {
@@ -179,10 +158,7 @@ public sealed class LocalFileSystemFolderService : IFolderService, IDisposable
 
     public void RemoveFolder(DirectoryModel directoryModel)
     {
-        if (_disposed)
-        {
-            throw new ObjectDisposedException(nameof(LocalFileSystemFolderService));
-        }
+        ObjectDisposedException.ThrowIf(_disposed, this);
 
         if (directoryModel is DriveModel or DeviceModel or SpecialDirectoryModel)
         {
@@ -199,10 +175,7 @@ public sealed class LocalFileSystemFolderService : IFolderService, IDisposable
 
     public DirectoryModel? CreateSubFolder(DirectoryModel directoryModel)
     {
-        if (_disposed)
-        {
-            throw new ObjectDisposedException(nameof(LocalFileSystemFolderService));
-        }
+        ObjectDisposedException.ThrowIf(_disposed, this);
 
         if (directoryModel is DeviceModel or SpecialDirectoryModel)
         {
@@ -217,10 +190,7 @@ public sealed class LocalFileSystemFolderService : IFolderService, IDisposable
 
     public async Task<DirectoryModel> GetCustomDirectoriesLevelAsync(DirectoryModel directoryModel, bool preview = false)
     {
-        if (_disposed)
-        {
-            throw new ObjectDisposedException(nameof(LocalFileSystemFolderService));
-        }
+        ObjectDisposedException.ThrowIf(_disposed, this);
 
         if (directoryModel.DirectoryModels.Any())
         {
@@ -253,7 +223,7 @@ public sealed class LocalFileSystemFolderService : IFolderService, IDisposable
                                           return null;
                                       }
                                   })
-                                  .Where(dir => dir != null)
+                                  .OfType<DirectoryModel>()
                                   .ToList();
 
                 directoryModel.AddDirectories(directories);
@@ -309,7 +279,7 @@ public sealed class LocalFileSystemFolderService : IFolderService, IDisposable
 
             foreach (var file in files)
             {
-                var extension = Path.GetExtension(file.Name);
+                var extension = Path.GetExtension(file.Name) ?? string.Empty;
                 if (supportedExtensionsSet.Contains(extension))
                 {
                     return true;
@@ -318,7 +288,7 @@ public sealed class LocalFileSystemFolderService : IFolderService, IDisposable
 
             return false;
         }
-        catch (Exception _)
+        catch (Exception)
         {
             return false;
         }

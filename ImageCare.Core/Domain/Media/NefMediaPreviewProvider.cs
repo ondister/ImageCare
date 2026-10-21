@@ -158,9 +158,15 @@ internal sealed class NefMediaPreviewProvider : IMediaPreviewProvider
 
     private static void FillMetadata(Directory directory, RawMediaMetadata metadata)
     {
-        foreach (var tag in directory.Tags.Where(t => !string.IsNullOrEmpty(t.Description)))
+        foreach (var tag in directory.Tags)
         {
-            metadata.AddOrUpdateMetadata(tag.Name, tag.Description);
+            var description = tag.Description;
+            if (string.IsNullOrEmpty(description))
+            {
+                continue;
+            }
+
+            metadata.AddOrUpdateMetadata(tag.Name, description);
         }
     }
 

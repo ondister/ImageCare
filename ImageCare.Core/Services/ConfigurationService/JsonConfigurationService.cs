@@ -30,10 +30,7 @@ public sealed class JsonConfigurationService : IConfigurationService, IDisposabl
 
     public void SaveConfiguration()
     {
-        if (_disposed)
-        {
-            throw new ObjectDisposedException(nameof(JsonConfigurationService));
-        }
+        ObjectDisposedException.ThrowIf(_disposed, this);
 
         try
         {
@@ -73,7 +70,7 @@ public sealed class JsonConfigurationService : IConfigurationService, IDisposabl
 
             var filePath = _fileSource.GetConfigurationFilePath();
             using var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-            return (Configuration)JsonSerializer.Deserialize(fileStream, typeof(Configuration), ConfigurationSourceGenerationContext.Default) ?? new Configuration();
+            return JsonSerializer.Deserialize(fileStream, ConfigurationSourceGenerationContext.Default.Configuration) ?? new Configuration();
         }
         catch (Exception exception)
         {

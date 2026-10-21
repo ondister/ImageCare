@@ -1,4 +1,9 @@
 <Project>
+  <PropertyGroup>
+    <!-- Keep the solution warning-free: any compiler or analyzer warning fails the build. -->
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+
   <ItemGroup Condition="('$(RuntimeIdentifier)' == 'win-x64' Or ('$(RuntimeIdentifier)' == '' And $([MSBuild]::IsOSPlatform('Windows')))) And ('$(IsTestProject)' == 'true' Or '$(OutputType)' == 'Exe' Or '$(OutputType)' == 'WinExe')">
     <Content Include="$(MSBuildThisFileDirectory)LibRawDotNet/libraw.dll">
       <Link>libraw.dll</Link>

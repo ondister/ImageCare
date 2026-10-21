@@ -34,7 +34,7 @@ internal class DirectoryViewModel : ViewModelBase, IComparable<DirectoryViewMode
     private bool _isExpanded;
     private bool _isLoaded;
     private string? _name;
-    private string _path;
+    private string _path = string.Empty;
     private bool _hasSupportedMedia;
     private bool _isEditing;
     private string? _editableName;

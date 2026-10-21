@@ -84,7 +84,7 @@ public class WindowsDrivesWatcherServiceTests
 		var driveInfoProviderMock = new Mock<IDriveInfoProvider>();
 		var driveModelsFactoryMock = new Mock<IDriveModelsFactory>();
 
-		driveInfoProviderMock.Setup(x => x.GetDriveByName("X:")).Returns((DriveInfo)null);
+		driveInfoProviderMock.Setup(x => x.GetDriveByName("X:")).Returns((DriveInfo?)null);
 
 		var deviceArrivedSubject = new Subject<string>();
 
@@ -95,7 +95,7 @@ public class WindowsDrivesWatcherServiceTests
 
 		service.StartWatching();
 
-		DriveModel publishedDrive = null;
+		DriveModel? publishedDrive = null;
 		using var subscription = service.DriveMounted.Subscribe(drive => publishedDrive = drive);
 
 		deviceArrivedSubject.OnNext("X:");
@@ -108,7 +108,7 @@ public class WindowsDrivesWatcherServiceTests
 	public void DeviceRemovalObservable_WithRemovedDrive_PublishesUnmountEvent()
 	{
 		var driveInfoProviderMock = new Mock<IDriveInfoProvider>();
-		driveInfoProviderMock.Setup(x => x.GetDriveByName("E:")).Returns((DriveInfo)null);
+		driveInfoProviderMock.Setup(x => x.GetDriveByName("E:")).Returns((DriveInfo?)null);
 
 		var deviceRemovedSubject = new Subject<string>();
 
@@ -118,7 +118,7 @@ public class WindowsDrivesWatcherServiceTests
 
 		service.StartWatching();
 
-		string unmountedDrive = null;
+		string? unmountedDrive = null;
 		using var subscription = service.DriveUnmounted.Subscribe(drive => unmountedDrive = drive);
 
 		deviceRemovedSubject.OnNext("E:");
@@ -141,7 +141,7 @@ public class WindowsDrivesWatcherServiceTests
 
 		service.StartWatching();
 
-		string unmountedDrive = null;
+		string? unmountedDrive = null;
 		using var subscription = service.DriveUnmounted.Subscribe(drive => unmountedDrive = drive);
 
 		deviceRemovedSubject.OnNext("F:");
@@ -174,7 +174,7 @@ public class WindowsDrivesWatcherServiceTests
 
 		service.StartWatching();
 
-		DriveModel publishedDrive = null;
+		DriveModel? publishedDrive = null;
 		using var subscription = service.DriveMounted.Subscribe(drive => publishedDrive = drive);
 
 		Assert.DoesNotThrow(() => deviceArrivedSubject.OnNext("H:"));
@@ -191,7 +191,7 @@ public class WindowsDrivesWatcherServiceTests
 		var folderServiceMock = new Mock<IFolderService>();
 
 		driveInfoProviderMock.Setup(x => x.GetDriveByName("I:")).Returns(driveInfo);
-		driveModelsFactoryMock.Setup(x => x.CreateDriveModel(driveInfo)).Returns((DriveModel)null);
+		driveModelsFactoryMock.Setup(x => x.CreateDriveModel(driveInfo)).Returns((DriveModel?)null);
 
 		var deviceArrivedSubject = new Subject<string>();
 
@@ -203,7 +203,7 @@ public class WindowsDrivesWatcherServiceTests
 
 		service.StartWatching();
 
-		DriveModel publishedDrive = null;
+		DriveModel? publishedDrive = null;
 		using var subscription = service.DriveMounted.Subscribe(drive => publishedDrive = drive);
 
 		deviceArrivedSubject.OnNext("I:");

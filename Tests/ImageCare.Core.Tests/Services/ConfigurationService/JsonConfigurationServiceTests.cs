@@ -60,7 +60,8 @@ public class JsonConfigurationServiceTests
 		var savedContent = File.ReadAllText(testFilePath);
 		var savedConfig = JsonSerializer.Deserialize<Configuration>(savedContent);
 
-		Assert.That(savedConfig.LastSourceDirectoryPath, Is.EqualTo("E:\\NewSource"));
+		Assert.That(savedConfig, Is.Not.Null);
+		Assert.That(savedConfig!.LastSourceDirectoryPath, Is.EqualTo("E:\\NewSource"));
 		Assert.That(savedConfig.ApplicationAssociationPairs, Has.Count.EqualTo(1));
 		fileSource.Verify(x => x.EnsureDirectoryExists(), Times.AtLeast(2));
 	}
@@ -72,7 +73,7 @@ public class JsonConfigurationServiceTests
 		var fileSource = CreateMockFileSource(testFilePath);
 		using var service = new JsonConfigurationService(fileSource.Object);
 
-		Configuration receivedConfig = null;
+		Configuration? receivedConfig = null;
 		using var subscription = service.ConfigurationSaved.Subscribe(config => receivedConfig = config);
 
 		service.SaveConfiguration();
@@ -107,7 +108,7 @@ public class JsonConfigurationServiceTests
 	[Test]
 	public void Constructor_NullFileSource_ThrowsArgumentNullException()
 	{
-		Assert.Throws<ArgumentNullException>(() => new JsonConfigurationService(null));
+		Assert.Throws<ArgumentNullException>(() => new JsonConfigurationService(null!));
 	}
 
 	[Test]
@@ -139,14 +140,15 @@ public class JsonConfigurationServiceTests
 	[Test]
 	public void LoadConfiguration_WithExistingValidFile_ReturnsDeserializedConfiguration()
 	{
-		var testFilePath = Path.Combine(_testBaseDirectory, "test8", "configuration.json");
+		var testDirectoryPath = Path.Combine(_testBaseDirectory, "test8");
+		var testFilePath = Path.Combine(testDirectoryPath, "configuration.json");
 		var expectedConfig = new Configuration
 		{
 			LastSourceDirectoryPath = "C:\\ExistingSource",
 			LastTargetDirectoryPath = "D:\\ExistingTarget"
 		};
 
-		Directory.CreateDirectory(Path.GetDirectoryName(testFilePath));
+		Directory.CreateDirectory(testDirectoryPath);
 		File.WriteAllText(testFilePath, JsonSerializer.Serialize(expectedConfig));
 
 		var fileSource = CreateMockFileSource(testFilePath);

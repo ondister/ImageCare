@@ -53,7 +53,7 @@ internal class FoldersViewModel : NavigatedViewModelBase
     private long _reconciliationVersion;
 
     private DirectoryViewModel? _selectedFileSystemItem;
-    private CompositeDisposable _compositeDisposable;
+    private CompositeDisposable? _compositeDisposable;
     private CancellationTokenSource? _searchCancellationTokenSource;
     private CancellationTokenSource? _mediaNavigationCancellationTokenSource;
 
@@ -383,7 +383,13 @@ internal class FoldersViewModel : NavigatedViewModelBase
 
     private async Task PerformSearchAsync()
     {
-        if (string.IsNullOrWhiteSpace(SearchText) || SelectedFileSystemItem == null)
+        if (string.IsNullOrWhiteSpace(SearchText))
+        {
+            return;
+        }
+
+        var selectedFileSystemItem = SelectedFileSystemItem;
+        if (selectedFileSystemItem == null)
         {
             return;
         }
@@ -404,10 +410,12 @@ internal class FoldersViewModel : NavigatedViewModelBase
                 SearchText,
                 SelectedFileSystemItem?.Name ?? _localization["Folders_AllFolders"]);
 
+            var searchText = SearchText;
+
             await Task.Run(
                 () =>
                 {
-                    var directories = _fileSystemService.EnumerateDirectories(SelectedFileSystemItem.Path, $"*{SearchText}*", SearchOption.AllDirectories)
+                    var directories = _fileSystemService.EnumerateDirectories(selectedFileSystemItem.Path, $"*{searchText}*", SearchOption.AllDirectories)
                                                         .Select(d => new DirectoryModel(Path.GetFileName(d), d));
                     foreach (var directory in directories)
                     {
@@ -488,7 +496,7 @@ internal class FoldersViewModel : NavigatedViewModelBase
                 SaveLastDirectoryPath(value);
 
                 IsSearchEnabled = value is not (SpecialDirectoryViewModel or DriveViewModel or DeviceViewModel);
-                SearchTarget = _localization.Get("Folders_SearchFoldersIn", _selectedFileSystemItem.Name);
+                SearchTarget = _localization.Get("Folders_SearchFoldersIn", value.Name);
             }
             catch (Exception ex)
             {

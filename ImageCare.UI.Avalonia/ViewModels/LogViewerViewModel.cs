@@ -32,7 +32,7 @@ internal sealed class LogViewerViewModel : ViewModelBase, IDialogAware, IDisposa
     private readonly ReadOnlyObservableCollection<LogMessageViewModel> _messageViewModels;
     private readonly SourceList<LogMessageViewModel> _sourceList = new();
     private readonly Subject<string> _filterChanged;
-    private CompositeDisposable _compositeDisposable;
+    private CompositeDisposable? _compositeDisposable = [];
     private bool _isDisposed;
 
     private bool _showWarnings = true;
@@ -126,15 +126,15 @@ internal sealed class LogViewerViewModel : ViewModelBase, IDialogAware, IDisposa
 
         try
         {
-            _compositeDisposable = new CompositeDisposable
-            {
+            _compositeDisposable =
+            [
                 _logEventService.ErrorReceived.Subscribe(OnErrorReceived),
                 _logEventService.WarningReceived.Subscribe(OnWarningReceived),
                 _logEventService.MessagesCleared.Subscribe(OnMessagesCleared),
 
                 _logNotificationService.ErrorsCountUpdated.Subscribe(OnErrorsCountUpdated),
                 _logNotificationService.WarningsCountUpdated.Subscribe(OnWarningsCountUpdated)
-            };
+            ];
 
             LoadExistingMessages();
         }
@@ -160,8 +160,6 @@ internal sealed class LogViewerViewModel : ViewModelBase, IDialogAware, IDisposa
             _isDisposed = true;
         }
     }
-
-    public event Action<IDialogResult>? RequestClose;
 
     private void LoadExistingMessages()
     {
@@ -314,13 +312,10 @@ internal sealed class LogViewerViewModel : ViewModelBase, IDialogAware, IDisposa
 
     private void ThrowIfDisposed()
     {
-        if (_isDisposed)
-        {
-            throw new ObjectDisposedException(nameof(LogViewerViewModel));
-        }
+        ObjectDisposedException.ThrowIf(_isDisposed, this);
     }
 
-    private void SafeDispose<T>(ref T disposable) where T : IDisposable?
+    private void SafeDispose<T>(ref T? disposable) where T : class, IDisposable
     {
         try
         {

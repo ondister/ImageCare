@@ -55,11 +55,11 @@ public class RegisterMapper : IRegister
 
         cfg.NewConfig<MediaPreview, MediaPreviewViewModel>()
            .Include<MediaPreview, GlanceMediaPreviewViewModel>()
-           .Ignore(dst => dst.PreviewBitmap)
+           .Ignore(dst => dst.PreviewBitmap!)
            .Ignore(dst => dst.RemoveImagePreviewCommand)
            .Ignore(dst => dst.Selected)
            .Ignore(dst => dst.IsLoading)
-           .Ignore(dst => dst.Metadata)
+           .Ignore(dst => dst.Metadata!)
            .Ignore(dst => dst.MetadataString)
            .Ignore(dst => dst.DateTimeString)
            .Ignore(dst => dst.RotateAngle)
@@ -82,11 +82,11 @@ public class RegisterMapper : IRegister
                                _serviceLocator.Resolve<LocalizationManager>()));
 
         cfg.NewConfig<MediaPreview, GlanceMediaPreviewViewModel>()
-           .Ignore(dst => dst.PreviewBitmap)
+           .Ignore(dst => dst.PreviewBitmap!)
            .Ignore(dst => dst.RemoveImagePreviewCommand)
            .Ignore(dst => dst.Selected)
            .Ignore(dst => dst.IsLoading)
-           .Ignore(dst => dst.Metadata)
+           .Ignore(dst => dst.Metadata!)
            .Ignore(dst => dst.MetadataString)
            .Ignore(dst => dst.DateTimeString)
            .Ignore(dst => dst.RotateAngle)
@@ -118,7 +118,7 @@ public class RegisterMapper : IRegister
             .Ignore(dest => dest.IsLoaded)
             .Ignore(dest => dest.FileManagerPanel)
             .Ignore(dest => dest.IsEditing)
-            .Ignore(dest => dest.EditableName)
+            .Ignore(dest => dest.EditableName!)
             .Ignore(dest => dest.LoadState)
             .Ignore(dest => dest.IsSelected);
 
@@ -129,7 +129,7 @@ public class RegisterMapper : IRegister
            .Ignore(dest => dest.IsLoaded)
            .Ignore(dest => dest.FileManagerPanel)
            .Ignore(dest => dest.IsEditing)
-           .Ignore(dest => dest.EditableName)
+           .Ignore(dest => dest.EditableName!)
            .Ignore(dest => dest.LoadState)
            .Ignore(dest => dest.IsSelected);
 

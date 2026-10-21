@@ -139,9 +139,6 @@ public sealed class SinkLogEventService : ILogEventSink, ILogEventService, ILogN
 
 	private void ThrowIfDisposed()
 	{
-		if (_isDisposed)
-		{
-			throw new ObjectDisposedException(nameof(SinkLogEventService));
-		}
+		ObjectDisposedException.ThrowIf(_isDisposed, this);
 	}
 }

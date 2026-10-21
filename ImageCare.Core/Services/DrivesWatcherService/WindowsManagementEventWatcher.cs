@@ -45,20 +45,14 @@ public sealed class WindowsManagementEventWatcher : IManagementEventWatcher
 
 	public void Start()
 	{
-		if (_disposed)
-		{
-			throw new ObjectDisposedException(nameof(WindowsManagementEventWatcher));
-		}
+		ObjectDisposedException.ThrowIf(_disposed, this);
 
 		_watcher.Start();
 	}
 
 	public void Stop()
 	{
-		if (_disposed)
-		{
-			throw new ObjectDisposedException(nameof(WindowsManagementEventWatcher));
-		}
+		ObjectDisposedException.ThrowIf(_disposed, this);
 
 		_watcher.Stop();
 	}

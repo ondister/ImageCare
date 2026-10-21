@@ -44,7 +44,7 @@ public class LocalFileSystemFolderServiceTests
     {
         Assert.Throws<ArgumentNullException>(() =>
             new LocalFileSystemFolderService(
-                null,
+                null!,
                 _driveInfoProviderMock.Object,
                 _driveModelsFactoryMock.Object,
                 _folderHistoryServiceMock.Object));
@@ -57,7 +57,7 @@ public class LocalFileSystemFolderServiceTests
             new LocalFileSystemFolderService(
                 _fileSystemServiceMock.Object,
                 _driveInfoProviderMock.Object,
-                null,
+                null!,
                 _folderHistoryServiceMock.Object));
     }
 
@@ -105,20 +105,20 @@ public class LocalFileSystemFolderServiceTests
     public void AddVisitingFolder_EmitsFolderVisitedEvent()
     {
         var directory = new DirectoryModel("test", "test_path");
-        SelectedDirectory capturedEvent = null;
+        SelectedDirectory? capturedEvent = null;
 
         using var subscription = _service.FolderVisited.Subscribe(dir => capturedEvent = dir);
         _service.AddVisitingFolder(directory, FileManagerPanel.Left);
 
         Assert.That(capturedEvent, Is.Not.Null);
-        Assert.That(capturedEvent.FileManagerPanel, Is.EqualTo(FileManagerPanel.Left));
+        Assert.That(capturedEvent!.FileManagerPanel, Is.EqualTo(FileManagerPanel.Left));
     }
 
     [Test]
     public void AddVisitingFolderAsDevice_IgnoreFolderVisitedEvent()
     {
         var directory = new DeviceModel("test", "test_path");
-        SelectedDirectory capturedEvent = null;
+        SelectedDirectory? capturedEvent = null;
 
         using var subscription = _service.FolderVisited.Subscribe(dir => capturedEvent = dir);
         _service.AddVisitingFolder(directory, FileManagerPanel.Left);
@@ -132,7 +132,7 @@ public class LocalFileSystemFolderServiceTests
         var directory = new DirectoryModel("test", "test_path");
         _service.AddVisitingFolder(directory, FileManagerPanel.Left);
 
-        SelectedDirectory capturedEvent = null;
+        SelectedDirectory? capturedEvent = null;
         using var subscription = _service.FolderLeft.Subscribe(dir => capturedEvent = dir);
         _service.RemoveVisitingFolder(directory, FileManagerPanel.Left);
 

@@ -84,9 +84,10 @@ public class MediaPreviewTests
 	public void Equals_WithSameReference_ShouldReturnTrue()
 	{
 		var preview = new MediaPreview("Title", "https://example.com/image.jpg", MediaFormat.MediaFormatJpg, 800);
+		var sameReference = preview;
 
-		Assert.That(preview.Equals(preview), Is.True);
-		Assert.That(preview == preview, Is.True);
+		Assert.That(preview.Equals(sameReference), Is.True);
+		Assert.That(preview == sameReference, Is.True);
 	}
 
 	[Test]

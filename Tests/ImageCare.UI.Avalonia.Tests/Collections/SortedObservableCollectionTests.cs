@@ -62,7 +62,7 @@ public class SortedObservableCollectionTests
 	{
 		var collection = new SortedObservableCollection<int>();
 
-		Assert.Throws<ArgumentNullException>(() => collection.AddRange(null));
+		Assert.Throws<ArgumentNullException>(() => collection.AddRange(null!));
 	}
 
 	[Test]

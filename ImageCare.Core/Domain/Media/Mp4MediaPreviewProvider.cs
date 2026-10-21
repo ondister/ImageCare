@@ -104,9 +104,15 @@ internal sealed class Mp4MediaPreviewProvider : IMediaPreviewProvider
 
 	private static void FillMetadata(Directory directory, AllMetadataWrapper mediaMetadata)
 	{
-		foreach (var tag in directory.Tags.Where(t => !string.IsNullOrEmpty(t.Description)))
+		foreach (var tag in directory.Tags)
 		{
-			mediaMetadata.AddOrUpdateMetadata(tag.Name, tag.Description);
+			var description = tag.Description;
+			if (string.IsNullOrEmpty(description))
+			{
+				continue;
+			}
+
+			mediaMetadata.AddOrUpdateMetadata(tag.Name, description);
 		}
 	}
 

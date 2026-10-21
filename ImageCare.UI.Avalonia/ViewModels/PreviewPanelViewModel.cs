@@ -75,7 +75,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
 
     private CancellationTokenSource _folderSelectedCancellationTokenSource;
     private CancellationTokenSource? _selectedAnnotationCancellation;
-    private SortedObservableCollection<FileModel> _imagePaths;
+    private SortedObservableCollection<FileModel> _imagePaths = new();
     private readonly LatestOperationCancellation _scrollCancellation = new();
 
     private bool _isScrollResetRequested;
@@ -213,7 +213,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
         }
     }
 
-    public string SelectedFolderPath { get; set; }
+    public string SelectedFolderPath { get; set; } = string.Empty;
 
     public TimelineViewModel TimelineVm { get; }
 
@@ -298,7 +298,9 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
     /// <inheritdoc />
     public override void OnNavigatedTo(NavigationContext navigationContext)
     {
-        FileManagerPanel = (FileManagerPanel)navigationContext.Parameters["panel"];
+        FileManagerPanel = navigationContext.Parameters["panel"] is FileManagerPanel panel
+            ? panel
+            : FileManagerPanel.Undefined;
         ApplySortDirection(GetSavedSortDirection(), save: false);
 
         _disposable?.Dispose();
@@ -1130,7 +1132,8 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
 
             if (_imagePaths.Count <= 5_000)
             {
-                _folderClusterizationService.StartAsync(SelectedFolderPath, token);
+                _folderClusterizationService.StartAsync(SelectedFolderPath, token)
+                                       .Forget(_logger, nameof(IFolderClusterizationService.StartAsync));
             }
 
             _isPreviewAnalysisComplete = true;

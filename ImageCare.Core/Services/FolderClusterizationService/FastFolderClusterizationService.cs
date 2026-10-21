@@ -168,9 +168,6 @@ public class FastFolderClusterizationService : IFolderClusterizationService
 
     private void ThrowIfDisposed()
     {
-        if (_isDisposed)
-        {
-            throw new ObjectDisposedException(nameof(FastFolderClusterizationService));
-        }
+        ObjectDisposedException.ThrowIf(_isDisposed, this);
     }
 }

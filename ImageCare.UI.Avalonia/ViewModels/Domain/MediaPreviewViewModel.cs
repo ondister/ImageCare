@@ -40,8 +40,8 @@ internal class MediaPreviewViewModel : ViewModelBase, IComparable<MediaPreviewVi
     private bool _selected;
     private bool _isLoading = true;
     private int _maxImageHeight = 200;
-    private string _metadataString;
-    private string _dateTimeString;
+    private string _metadataString = string.Empty;
+    private string _dateTimeString = string.Empty;
     private double _rotateAngle;
     private bool _useOpenWith;
     private bool _hasLocation;

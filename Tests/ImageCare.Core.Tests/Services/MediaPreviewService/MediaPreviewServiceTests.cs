@@ -23,7 +23,7 @@ public class CommonMediaPreviewServiceTests
     {
         using var service = new CommonMediaPreviewService();
         var imagePath = GetTestImagePath("test.JPG");
-        var mediaPreview = await service.GetMediaPreviewAsync(imagePath);
+        var mediaPreview = await GetPreviewAsync(service, imagePath);
 
         var stream = await service.GetJpegImageStreamAsync(mediaPreview, MediaPreviewSize.Medium);
 
@@ -36,7 +36,7 @@ public class CommonMediaPreviewServiceTests
     {
         using var service = new CommonMediaPreviewService();
         var imagePath = GetTestImagePath("canon_geo.CR3");
-        var mediaPreview = await service.GetMediaPreviewAsync(imagePath);
+        var mediaPreview = await GetPreviewAsync(service, imagePath);
 
         var stream = await service.GetJpegImageStreamAsync(mediaPreview, MediaPreviewSize.Medium);
 
@@ -49,7 +49,7 @@ public class CommonMediaPreviewServiceTests
     {
         using var service = new CommonMediaPreviewService();
         var imagePath = GetTestImagePath("sony.ARW");
-        var mediaPreview = await service.GetMediaPreviewAsync(imagePath);
+        var mediaPreview = await GetPreviewAsync(service, imagePath);
 
         var stream = await service.GetJpegImageStreamAsync(mediaPreview, MediaPreviewSize.Medium);
 
@@ -66,7 +66,7 @@ public class CommonMediaPreviewServiceTests
         var result = await service.GetMediaPreviewAsync(imagePath);
 
         Assert.That(result, Is.Not.Null);
-        Assert.That(result.MediaFormat, Is.EqualTo(MediaFormat.MediaFormatJpg));
+        Assert.That(result!.MediaFormat, Is.EqualTo(MediaFormat.MediaFormatJpg));
         Assert.That(result.Title, Is.EqualTo("test.JPG"));
         Assert.That(result.Url, Is.EqualTo(imagePath));
         Assert.That(result.MaxImageHeight, Is.EqualTo(200));
@@ -81,7 +81,7 @@ public class CommonMediaPreviewServiceTests
         var result = await service.GetMediaPreviewAsync(imagePath);
 
         Assert.That(result, Is.Not.Null);
-        Assert.That(result.MediaFormat, Is.EqualTo(MediaFormat.MediaFormatCr3));
+        Assert.That(result!.MediaFormat, Is.EqualTo(MediaFormat.MediaFormatCr3));
     }
 
     [Test]
@@ -93,7 +93,7 @@ public class CommonMediaPreviewServiceTests
         var result = await service.GetMediaPreviewAsync(imagePath);
 
         Assert.That(result, Is.Not.Null);
-        Assert.That(result.MediaFormat, Is.EqualTo(MediaFormat.MediaFormatArw));
+        Assert.That(result!.MediaFormat, Is.EqualTo(MediaFormat.MediaFormatArw));
     }
 
     [Test]
@@ -105,7 +105,7 @@ public class CommonMediaPreviewServiceTests
         var result = await service.GetMediaPreviewAsync(imagePath);
 
         Assert.That(result, Is.Not.Null);
-        Assert.That(result.MediaFormat, Is.EqualTo(MediaFormat.MediaFormatMp4));
+        Assert.That(result!.MediaFormat, Is.EqualTo(MediaFormat.MediaFormatMp4));
     }
 
     [Test]
@@ -113,7 +113,7 @@ public class CommonMediaPreviewServiceTests
     {
         using var service = new CommonMediaPreviewService();
         var imagePath = GetTestImagePath("test.JPG");
-        var mediaPreview = await service.GetMediaPreviewAsync(imagePath);
+        var mediaPreview = await GetPreviewAsync(service, imagePath);
 
         var metadata = await service.GetMediaMetadataAsync(mediaPreview);
 
@@ -127,7 +127,7 @@ public class CommonMediaPreviewServiceTests
     {
         using var service = new CommonMediaPreviewService();
         var imagePath = GetTestImagePath("canon_geo.CR3");
-        var mediaPreview = await service.GetMediaPreviewAsync(imagePath);
+        var mediaPreview = await GetPreviewAsync(service, imagePath);
 
         var metadata = await service.GetMediaMetadataAsync(mediaPreview);
 
@@ -139,7 +139,7 @@ public class CommonMediaPreviewServiceTests
     {
         using var service = new CommonMediaPreviewService();
         var imagePath = GetTestImagePath("sony.ARW");
-        var mediaPreview = await service.GetMediaPreviewAsync(imagePath);
+        var mediaPreview = await GetPreviewAsync(service, imagePath);
 
         var metadata = await service.GetMediaMetadataAsync(mediaPreview);
 
@@ -151,7 +151,7 @@ public class CommonMediaPreviewServiceTests
     {
         using var service = new CommonMediaPreviewService();
         var imagePath = GetTestImagePath("test.JPG");
-        var mediaPreview = await service.GetMediaPreviewAsync(imagePath);
+        var mediaPreview = await GetPreviewAsync(service, imagePath);
 
         var metadata1 = await service.GetMediaMetadataAsync(mediaPreview);
         var metadata2 = await service.GetMediaMetadataAsync(mediaPreview);
@@ -176,7 +176,7 @@ public class CommonMediaPreviewServiceTests
     {
         using var service = new CommonMediaPreviewService();
         var imagePath = GetTestImagePath("test.JPG");
-        var mediaPreview = await service.GetMediaPreviewAsync(imagePath);
+        var mediaPreview = await GetPreviewAsync(service, imagePath);
 
         var creationDate = await service.GetCreationDateTime(mediaPreview);
 
@@ -189,7 +189,7 @@ public class CommonMediaPreviewServiceTests
     {
         using var service = new CommonMediaPreviewService();
         var imagePath = GetTestImagePath("canon_geo.CR3");
-        var mediaPreview = await service.GetMediaPreviewAsync(imagePath);
+        var mediaPreview = await GetPreviewAsync(service, imagePath);
 
         var creationDate = await service.GetCreationDateTime(mediaPreview);
 
@@ -201,7 +201,7 @@ public class CommonMediaPreviewServiceTests
     {
         using var service = new CommonMediaPreviewService();
         var imagePath = GetTestImagePath("sony.ARW");
-        var mediaPreview = await service.GetMediaPreviewAsync(imagePath);
+        var mediaPreview = await GetPreviewAsync(service, imagePath);
 
         var creationDate = await service.GetCreationDateTime(mediaPreview);
 
@@ -235,7 +235,7 @@ public class CommonMediaPreviewServiceTests
     {
         using var service = new CommonMediaPreviewService();
         var imagePath = GetTestImagePath("test.JPG");
-        var mediaPreview = await service.GetMediaPreviewAsync(imagePath);
+        var mediaPreview = await GetPreviewAsync(service, imagePath);
 
         var smallStream = await service.GetJpegImageStreamAsync(mediaPreview, MediaPreviewSize.Small);
         var mediumStream = await service.GetJpegImageStreamAsync(mediaPreview, MediaPreviewSize.Medium);
@@ -251,13 +251,22 @@ public class CommonMediaPreviewServiceTests
     {
         using var service = new CommonMediaPreviewService();
         var imagePath = GetTestImagePath("test.JPG");
-        var mediaPreview = await service.GetMediaPreviewAsync(imagePath);
+        var mediaPreview = await GetPreviewAsync(service, imagePath);
         var cancellationTokenSource = new CancellationTokenSource();
 
         cancellationTokenSource.Cancel();
 
         Assert.That(async () => await service.GetJpegImageStreamAsync(mediaPreview, MediaPreviewSize.Medium, cancellationTokenSource.Token),
             Throws.TypeOf<OperationCanceledException>());
+    }
+
+    private static async Task<MediaPreview> GetPreviewAsync(CommonMediaPreviewService service, string imagePath)
+    {
+        var mediaPreview = await service.GetMediaPreviewAsync(imagePath);
+
+        Assert.That(mediaPreview, Is.Not.Null);
+
+        return mediaPreview!;
     }
 
     private string GetTestImagesPath()

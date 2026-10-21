@@ -203,6 +203,6 @@ public class Cr3MediaPreviewProviderTests
 		Assert.That(result.Location.Latitude, Is.EqualTo(Math.Round(result.Location.Latitude, 5)));
 		Assert.That(result.Location.Longitude, Is.EqualTo(Math.Round(result.Location.Longitude, 5)));
 
-		TestContext.WriteLine($"GPS Coordinates: Lat={result.Location.Latitude}, Lon={result.Location.Longitude}, Alt={result.Location.Altitude}");
+		TestContext.Out.WriteLine($"GPS Coordinates: Lat={result.Location.Latitude}, Lon={result.Location.Longitude}, Alt={result.Location.Altitude}");
 	}
 }

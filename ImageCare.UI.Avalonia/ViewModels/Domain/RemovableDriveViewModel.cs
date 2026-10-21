@@ -14,7 +14,7 @@ internal sealed class RemovableDriveViewModel : DriveViewModel
 {
     private long _availableFreeSpace;
     private double _spacePercentage;
-    private string _spaceInfo;
+    private string _spaceInfo = string.Empty;
 
     /// <inheritdoc />
     public RemovableDriveViewModel(string? name,

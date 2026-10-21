@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Reactive;
 using System.Reactive.Disposables;
@@ -54,8 +55,8 @@ internal class TimelineViewModel : ViewModelBase, IDisposable
 
         _disposables.Add(
             _dateStatsCache.Connect()
-                           .Sort(new DateStatViewModelDescendingComparer())
-                           .Bind(out var dateStatViewModels)
+                           .SortAndBind(out ReadOnlyObservableCollection<DateStatViewModel> dateStatViewModels,
+                                        new DateStatViewModelDescendingComparer())
                            .Subscribe());
 
         DateStatViewModels = dateStatViewModels;

@@ -40,10 +40,7 @@ public sealed class ConfigurationFileAssociationsService : IFileAssociationsServ
 
 	public IEnumerable<FileApplicationInfo> GetAssociations(MediaFormat mediaFormat)
 	{
-		if (_disposed)
-		{
-			throw new ObjectDisposedException(nameof(ConfigurationFileAssociationsService));
-		}
+		ObjectDisposedException.ThrowIf(_disposed, this);
 
 		return _associations.GetOrAdd(mediaFormat, AddAssociations);
 	}

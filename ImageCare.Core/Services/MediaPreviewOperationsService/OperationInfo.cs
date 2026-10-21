@@ -14,7 +14,7 @@ public sealed class OperationInfo
 
 	public long BytesTransferred { get; set; }
 
-	public string ProcessedFile { get; set; }
+	public string ProcessedFile { get; set; } = string.Empty;
 
 	public double BytesPerSecond { get; }
 
