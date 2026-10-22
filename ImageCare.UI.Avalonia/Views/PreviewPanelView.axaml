@@ -14,10 +14,16 @@
              FontSize="{StaticResource Font.Size.Small}">
 
     <UserControl.Styles>
-        <Style Selector="ComboBox.compactTagCombo /template/ TextBox#PART_EditableTextBox">
-            <Setter Property="MinHeight" Value="0" />
-            <Setter Property="Padding" Value="0" />
-            <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Style Selector="Button.tagRemoveButton">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="2" />
+            <Setter Property="MinWidth" Value="14" />
+            <Setter Property="MinHeight" Value="14" />
+            <Setter Property="Width" Value="14" />
+            <Setter Property="Height" Value="14" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Cursor" Value="Hand" />
         </Style>
     </UserControl.Styles>
 
@@ -63,20 +69,20 @@
             </Button>
         </Grid>
 
-        <Border Grid.Row="1" Margin="2,3" Padding="6,3" CornerRadius="4"
+        <Border Grid.Row="1" Margin="2,3" Padding="8,4" CornerRadius="4"
                 Background="{DynamicResource Brush.PreviewSurface}"
                 IsVisible="{Binding HasAnnotatableSelection}"
                 IsEnabled="{Binding CanEditAnnotations}"
                 ToolTip.Tip="{Binding AnnotationEditorStatus}">
             <ScrollViewer HorizontalScrollBarVisibility="Auto"
                           VerticalScrollBarVisibility="Disabled">
-                <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
                     <ComboBox SelectedIndex="{Binding SelectedRating, Mode=TwoWay}"
-                              Width="120"
-                              Height="16"
-                              MinHeight="16"
-                              Padding="4,0"
-                              FontSize="10">
+                              Width="150"
+                              Height="22"
+                              MinHeight="22"
+                              Padding="6,0"
+                              FontSize="12">
                         <ComboBoxItem Content="{localization:Loc Annotations_Unrated}" />
                         <ComboBoxItem Content="★" />
                         <ComboBoxItem Content="★★" />
@@ -84,52 +90,92 @@
                         <ComboBoxItem Content="★★★★" />
                         <ComboBoxItem Content="★★★★★" />
                     </ComboBox>
+                    <TextBox x:Name="PreviewTagInput"
+                             Width="150"
+                             Height="22"
+                             MinHeight="22"
+                             Padding="6,0"
+                             FontSize="12"
+                             VerticalContentAlignment="Center"
+                             Text="{Binding NewTag, Mode=TwoWay}"
+                             PlaceholderText="{localization:Loc Search_TagsPlaceholder}"
+                             KeyDown="OnPreviewTagInputKeyDown" />
+                    <Popup Name="TagSuggestionsPopup"
+                           PlacementTarget="{Binding #PreviewTagInput}"
+                           Placement="Top"
+                           IsLightDismissEnabled="True"
+                           HorizontalOffset="0"
+                           VerticalOffset="-4">
+                        <Border Background="{DynamicResource Brush.PreviewCard}"
+                                BorderBrush="{DynamicResource Brush.Splitter}"
+                                BorderThickness="1"
+                                CornerRadius="6"
+                                Opacity="1"
+                                Padding="6">
+                            <ScrollViewer MaxHeight="180"
+                                          Width="260"
+                                          VerticalScrollBarVisibility="Auto"
+                                          HorizontalScrollBarVisibility="Disabled">
+                                <ItemsControl ItemsSource="{Binding AvailableAnnotationTags}"
+                                              x:CompileBindings="False">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <WrapPanel Orientation="Horizontal" />
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Button Margin="0,0,4,4"
+                                                    Padding="8,0"
+                                                    FontSize="11"
+                                                    Height="22"
+                                                    MinHeight="22"
+                                                    MinWidth="0"
+                                                    VerticalContentAlignment="Center"
+                                                    Content="{Binding}"
+                                                    Click="OnTagSuggestionClick" />
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+                        </Border>
+                    </Popup>
                     <Button Classes="IconButton"
-                            Width="16"
-                            Height="16"
-                            MinWidth="16"
-                            MinHeight="16"
-                            Padding="2"
-                            Command="{Binding SaveRatingCommand}"
-                            ToolTip.Tip="{localization:Loc Common_Save}">
-                        <iconPacks:PackIconLucide Kind="Save" Width="10" Height="10" />
-                    </Button>
-                    <ComboBox Classes="compactTagCombo"
-                              Width="120"
-                              Height="16"
-                              MinHeight="16"
-                              Padding="4,0"
-                              FontSize="10"
-                              ItemsSource="{Binding AvailableAnnotationTags}"
-                              Text="{Binding NewTag}"
-                              IsEditable="True"
-                              behaviors:ComboBoxSearchBehavior.IsEnabled="True" />
-                    <Button Classes="IconButton"
-                            Width="16"
-                            Height="16"
-                            MinWidth="16"
-                            MinHeight="16"
-                            Padding="2"
+                            Width="22"
+                            Height="22"
+                            MinWidth="22"
+                            MinHeight="22"
+                            Padding="4"
                             Command="{Binding AddTagCommand}"
                             ToolTip.Tip="{localization:Loc Settings_Add}">
-                        <iconPacks:PackIconLucide Kind="Tag" Width="10" Height="10" />
+                        <iconPacks:PackIconLucide Kind="Tag" Width="14" Height="14" />
                     </Button>
                     <ItemsControl ItemsSource="{Binding CurrentTags}" VerticalAlignment="Center">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
-                                <StackPanel Orientation="Horizontal" />
+                                <WrapPanel Orientation="Horizontal" />
                             </ItemsPanelTemplate>
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Button Margin="2,0" Padding="5,1"
-                                        Content="{Binding}"
-                                        Command="{Binding $parent[UserControl].DataContext.RemoveTagCommand}"
-                                        CommandParameter="{Binding}" />
+                                <Border Background="{DynamicResource ThemeBackgroundBrush}"
+                                        CornerRadius="12"
+                                        Padding="8,2"
+                                        Margin="0,1,4,1">
+                                    <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding}" VerticalAlignment="Center" />
+                                        <Button Classes="tagRemoveButton"
+                                                Command="{Binding $parent[UserControl].DataContext.RemoveTagCommand}"
+                                                CommandParameter="{Binding}"
+                                                ToolTip.Tip="{localization:Loc Search_RemoveTag}">
+                                            <iconPacks:PackIconLucide Kind="X" Width="10" Height="10" />
+                                        </Button>
+                                    </StackPanel>
+                                </Border>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
-                    <TextBlock MaxWidth="90"
+                    <TextBlock MaxWidth="160"
                                Text="{Binding AnnotationEditorStatus}"
                                Opacity="0.7"
                                TextTrimming="CharacterEllipsis"

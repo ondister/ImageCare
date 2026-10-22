@@ -195,7 +195,7 @@
                                    VerticalAlignment="Center" />
                     </Grid>
                     <Grid Grid.Row="2" Margin="0,3,0,0" ColumnDefinitions="Auto,*">
-                        <TextBlock Grid.Column="0" Text="{Binding RatingStars}" FontSize="{StaticResource Font.Size.Micro}"
+                        <TextBlock Grid.Column="0" Text="{Binding RatingStars}" FontSize="{StaticResource Font.Size.Small}"
                                    Foreground="{DynamicResource Brush.Accent}"
                                    x:CompileBindings="True"
                                    IsVisible="{Binding SupportsRating}" />

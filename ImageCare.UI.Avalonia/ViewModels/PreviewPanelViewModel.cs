@@ -90,6 +90,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
     private int _selectedRating;
     private string _newTag = string.Empty;
     private string[] _allAvailableAnnotationTags = [];
+    private MediaPreviewViewModel? _annotationPreview;
     private string _annotationEditorStatus = string.Empty;
     private bool _isSavingAnnotations;
     private bool _isLoadingSelectedAnnotations;
@@ -138,7 +139,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
         ToggleSortDirectionCommand = CreateCommand(ToggleSortDirection);
         SaveRatingCommand = CreateAsyncCommand(SaveRatingAsync, () => CanEditAnnotations)
             .ObservesProperty(() => CanEditAnnotations);
-        AddTagCommand = CreateAsyncCommand(AddTagAsync, () => CanEditAnnotations && !string.IsNullOrWhiteSpace(NewTag))
+        AddTagCommand = CreateAsyncCommand(AddTagAsync, () => CanEditAnnotations && !string.IsNullOrWhiteSpace(MediaAnnotations.NormalizeTag(NewTag)))
             .ObservesProperty(() => CanEditAnnotations)
             .ObservesProperty(() => NewTag);
         RemoveTagCommand = CreateAsyncCommand<string>(RemoveTagAsync);
@@ -228,7 +229,25 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
     public int SelectedRating
     {
         get => _selectedRating;
-        set => SetProperty(ref _selectedRating, Math.Clamp(value, 0, 5));
+        set
+        {
+            var clamped = Math.Clamp(value, 0, 5);
+            if (!SetProperty(ref _selectedRating, clamped))
+            {
+                return;
+            }
+
+            var preview = SelectedPreview;
+            if (preview != null &&
+                ReferenceEquals(preview, _annotationPreview) &&
+                preview.MediaFormat.SupportsAnnotations &&
+                preview.AnnotationSnapshot != null &&
+                !IsSavingAnnotations &&
+                !_isLoadingSelectedAnnotations)
+            {
+                _ = SaveSelectedAnnotationsAsync(clamped, CurrentTags, CancellationToken.None);
+            }
+        }
     }
 
     public string NewTag
@@ -238,9 +257,59 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
         {
             if (SetProperty(ref _newTag, value ?? string.Empty))
             {
-                ApplyAvailableAnnotationTagFilter();
+                _synchronizationContext.Post(_ => ApplyAvailableAnnotationTagFilter(), null);
             }
         }
+    }
+
+    public bool HasCurrentTags => CurrentTags.Count > 0;
+
+    /// <summary>
+    /// Adds whatever is typed in the tag field. Used when the user presses Enter or clicks the add button.
+    /// </summary>
+    public void AddTagInput()
+    {
+        var normalized = MediaAnnotations.NormalizeTag(NewTag);
+        if (normalized.Length == 0)
+        {
+            return;
+        }
+
+        _ = AddTagValueAsync(normalized);
+    }
+
+    public void RemoveTag(string tag) => _ = RemoveTagAsync(tag);
+
+    public void AddExistingTag(string? tag)
+    {
+        var normalized = MediaAnnotations.NormalizeTag(tag ?? string.Empty);
+        if (normalized.Length == 0)
+        {
+            return;
+        }
+
+        _ = AddExistingTagCoreAsync(normalized);
+    }
+
+    private async Task AddExistingTagCoreAsync(string normalized)
+    {
+        await AddTagValueAsync(normalized);
+        NewTag = string.Empty;
+    }
+
+    private async Task AddTagValueAsync(string normalized)
+    {
+        var preview = SelectedPreview;
+        if (preview == null ||
+            !ReferenceEquals(preview, _annotationPreview) ||
+            !preview.MediaFormat.SupportsAnnotations ||
+            preview.AnnotationSnapshot == null)
+        {
+            return;
+        }
+
+        await SaveSelectedAnnotationsAsync(SelectedRating, CurrentTags.Append(normalized), CancellationToken.None);
+        NewTag = string.Empty;
     }
 
     public string AnnotationEditorStatus
@@ -272,6 +341,8 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
     public IReadOnlyList<string> CurrentTags => SelectedPreview?.Tags ?? Array.Empty<string>();
 
     public System.Collections.ObjectModel.ObservableCollection<string> AvailableAnnotationTags { get; } = new();
+
+    public bool HasAvailableAnnotationTags => AvailableAnnotationTags.Count > 0;
 
     public ICommand SaveRatingCommand { get; }
 
@@ -1565,9 +1636,16 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
 
     private void UpdateAnnotationEditor()
     {
-        SelectedRating = SelectedPreview?.Rating ?? 0;
+        _annotationPreview = SelectedPreview;
+        var rating = SelectedPreview?.Rating ?? 0;
+        if (_selectedRating != Math.Clamp(rating, 0, 5))
+        {
+            _selectedRating = Math.Clamp(rating, 0, 5);
+            RaisePropertyChanged(nameof(SelectedRating));
+        }
         AnnotationEditorStatus = SelectedPreview?.AnnotationState ?? string.Empty;
         RaisePropertyChanged(nameof(CurrentTags));
+        RaisePropertyChanged(nameof(HasCurrentTags));
         _ = RefreshAvailableAnnotationTagsAsync();
     }
 
@@ -1598,16 +1676,32 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
 
     private void ApplyAvailableAnnotationTagFilter()
     {
-        var prefix = MediaAnnotations.NormalizeTag(NewTag);
-        var filteredTags = prefix.Length == 0
-            ? _allAvailableAnnotationTags
-            : _allAvailableAnnotationTags
-                .Where(tag => tag.StartsWith(prefix, StringComparison.OrdinalIgnoreCase));
-
-        AvailableAnnotationTags.Clear();
-        foreach (var tag in filteredTags)
+        try
         {
-            AvailableAnnotationTags.Add(tag);
+            var query = MediaAnnotations.NormalizeTag(NewTag ?? string.Empty);
+            var source = _allAvailableAnnotationTags ?? Array.Empty<string>();
+            var filteredTags = query.Length == 0
+                ? source
+                : source.Where(tag => MediaAnnotations.MatchesTagQuery(tag, query));
+
+            AvailableAnnotationTags.Clear();
+            foreach (var tag in filteredTags)
+            {
+                AvailableAnnotationTags.Add(tag);
+            }
+
+            RaisePropertyChanged(nameof(HasAvailableAnnotationTags));
+        }
+        catch (Exception exception)
+        {
+            _logger.Error(exception, "Failed to apply annotation tag filter");
+            try
+            {
+                AvailableAnnotationTags.Clear();
+            }
+            catch
+            {
+            }
         }
     }
 
@@ -1622,8 +1716,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
             return;
         }
 
-        await SaveSelectedAnnotationsAsync(SelectedRating, CurrentTags.Append(normalized), token);
-        NewTag = string.Empty;
+        await AddTagValueAsync(normalized);
     }
 
     private Task RemoveTagAsync(string tag) =>

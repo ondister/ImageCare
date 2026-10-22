@@ -50,6 +50,46 @@ public sealed record MediaAnnotations
 
     internal static string GetTagKey(string tag) => NormalizeTag(tag).ToUpperInvariant();
 
+    private static readonly char[] TagTokenSeparators =
+        [' ', '\t', '-', '_', '.', ',', ';', ':', '/', '\\', '(', ')', '[', ']', '"', '\'', '*', '#'];
+
+    /// <summary>
+    /// Matches a tag against typed text ignoring word order and separators, so that
+    /// "щурка" finds "золотистая щурка". Every typed token must appear somewhere in the tag.
+    /// </summary>
+    public static bool MatchesTagQuery(string tag, string query)
+    {
+        ArgumentNullException.ThrowIfNull(tag);
+        ArgumentNullException.ThrowIfNull(query);
+
+        var normalizedTag = NormalizeTag(tag);
+        if (normalizedTag.Length == 0)
+        {
+            return false;
+        }
+
+        var normalizedQuery = NormalizeTag(query);
+        if (normalizedQuery.Length == 0)
+        {
+            return true;
+        }
+
+        if (normalizedTag.Contains(normalizedQuery, StringComparison.CurrentCultureIgnoreCase))
+        {
+            return true;
+        }
+
+        var tokens = normalizedQuery.Split(
+            TagTokenSeparators,
+            StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (tokens.Length == 0)
+        {
+            return false;
+        }
+
+        return tokens.All(token => normalizedTag.Contains(token, StringComparison.CurrentCultureIgnoreCase));
+    }
+
     private static ImmutableArray<string> NormalizeTags(IEnumerable<string>? tags)
     {
         if (tags is null)

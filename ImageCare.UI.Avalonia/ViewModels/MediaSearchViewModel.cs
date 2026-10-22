@@ -350,7 +350,7 @@ public sealed class MediaSearchViewModel : ViewModelBase
     {
         var query = TagSearchText.Trim();
         var matches = _availableTags
-            .Where(tag => query.Length == 0 || tag.Contains(query, StringComparison.CurrentCultureIgnoreCase))
+            .Where(tag => query.Length == 0 || MediaAnnotations.MatchesTagQuery(tag, query))
             .Where(tag => !SelectedTags.Any(selected => selected.Equals(tag, StringComparison.OrdinalIgnoreCase)))
             .ToList();
         if (!TagSuggestions.SequenceEqual(matches, StringComparer.Ordinal))
