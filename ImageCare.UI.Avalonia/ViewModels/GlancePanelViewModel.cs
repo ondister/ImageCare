@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
 
+using ImageCare.Core.Domain.Annotations;
 using ImageCare.Core.Domain.Configuration;
 using ImageCare.Core.Domain.Folders;
 using ImageCare.Core.Domain.Media;
@@ -20,6 +21,7 @@ using ImageCare.Core.Services.FileSystemWatcherService;
 using ImageCare.Core.Services.FolderClusterizationService;
 using ImageCare.Core.Services.FolderService;
 using ImageCare.Core.Services.FolderStatisticsService;
+using ImageCare.Core.Services.MediaAnnotationsService;
 using ImageCare.Core.Services.MediaPreviewOperationsService;
 using ImageCare.Core.Services.MediaPreviewService;
 using ImageCare.Core.Services.NotificationService;
@@ -48,6 +50,7 @@ internal class GlancePanelViewModel : ViewModelBase, IDialogAware
     private readonly IMediaPreviewOperationsService _fileOperationsService;
     private readonly INotificationService _notificationService;
     private readonly IConfigurationService _configurationService;
+    private readonly IMediaAnnotationsService _annotationsService;
     private readonly LocalizationManager _localization;
     private readonly IMapper _mapper;
     private readonly ILogger _logger;
@@ -56,6 +59,8 @@ internal class GlancePanelViewModel : ViewModelBase, IDialogAware
     private readonly object _loadedPreviewsLock = new();
     private readonly HashSet<MediaPreviewViewModel> _loadedPreviews = [];
     private SortedObservableCollection<FileModel> _imagePaths = new();
+    private Dictionary<string, IndexedMediaAnnotations> _annotationsByPath = new(
+        OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
 
     private CompositeDisposable? _disposable;
     private readonly LatestOperationCancellation _scrollCancellation = new();
@@ -83,6 +88,7 @@ internal class GlancePanelViewModel : ViewModelBase, IDialogAware
                                 IFileSystemWatcherService fileSystemWatcherService,
                                 IMediaPreviewOperationsService fileOperationsService,
                                 IConfigurationService configurationService,
+                                IMediaAnnotationsService annotationsService,
                                 TrayAnalysisProgressService trayAnalysisProgressService,
                                 INotificationService notificationService,
                                 LocalizationManager localization,
@@ -99,6 +105,7 @@ internal class GlancePanelViewModel : ViewModelBase, IDialogAware
         _fileOperationsService = fileOperationsService;
         _notificationService = notificationService;
         _configurationService = configurationService;
+        _annotationsService = annotationsService;
         _localization = localization;
         _mapper = mapper;
         _logger = logger;
@@ -301,6 +308,11 @@ internal class GlancePanelViewModel : ViewModelBase, IDialogAware
                                          .Where(files => files.Count > 0)
                                          .ObserveOn(_synchronizationContext)
                                          .Subscribe(OnFilesCreated, onError: OnObservableError),
+                _fileSystemWatcherService.FileChanged
+                                         .Buffer(TimeSpan.FromMilliseconds(150))
+                                         .Where(files => files.Count > 0)
+                                         .ObserveOn(_synchronizationContext)
+                                         .Subscribe(OnFilesChanged, onError: OnObservableError),
                 _fileSystemWatcherService.FileDeleted
                                          .Buffer(TimeSpan.FromMilliseconds(150))
                                          .Where(files => files.Count > 0)
@@ -563,6 +575,7 @@ internal class GlancePanelViewModel : ViewModelBase, IDialogAware
             FilesLoading = false;
             _ = LoadInitialImagesAsync(_imageLoadCts.Token);
             _ = _folderStatisticsService.StartAsync(selectedFileSystemItem.Path, token);
+            _ = RefreshCacheThenReconcileAsync(selectedFileSystemItem.Path, token);
         }
         catch (OperationCanceledException)
         {
@@ -577,6 +590,168 @@ internal class GlancePanelViewModel : ViewModelBase, IDialogAware
             FilesLoading = false;
         }
     }
+
+    private async Task RefreshCacheThenReconcileAsync(string directoryPath, CancellationToken token)
+    {
+        try
+        {
+            await RefreshCachedAnnotationsAsync(directoryPath, token).ConfigureAwait(false);
+            await ReconcileFolderAndRefreshAsync(directoryPath, token).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            // Expected when the overview closes or switches folders.
+        }
+    }
+
+    private async Task RefreshCachedAnnotationsAsync(string directoryPath, CancellationToken token)
+    {
+        if (string.IsNullOrWhiteSpace(directoryPath))
+        {
+            return;
+        }
+
+        try
+        {
+            var cached = await _annotationsService.GetDirectoryAsync(directoryPath, token).ConfigureAwait(false);
+            var cachedByPath = cached.ToDictionary(
+                item => item.MediaPath,
+                OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
+            token.ThrowIfCancellationRequested();
+            ApplyAnnotationsToPreviews(directoryPath, cachedByPath);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            _logger.Error(exception, "Failed to read cached annotations for {Directory}", directoryPath);
+        }
+    }
+
+    private async Task ReconcileFolderAndRefreshAsync(string directoryPath, CancellationToken token)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(directoryPath))
+            {
+                return;
+            }
+
+            await _annotationsService.RefreshDirectoryAsync(directoryPath, token).ConfigureAwait(false);
+            var refreshed = await _annotationsService.GetDirectoryAsync(directoryPath, token).ConfigureAwait(false);
+            var refreshedByPath = refreshed.ToDictionary(
+                item => item.MediaPath,
+                OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
+            ApplyAnnotationsToPreviews(directoryPath, refreshedByPath);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception exception)
+        {
+            _logger.Error(exception, "Failed to reconcile annotations for {Directory}", directoryPath);
+        }
+    }
+
+    private void ApplyAnnotationsToPreviews(
+        string directoryPath,
+        Dictionary<string, IndexedMediaAnnotations> annotationsByPath)
+    {
+        _synchronizationContext.Post(_ =>
+        {
+            if (!PathsEqual(SelectedFolderPath, directoryPath))
+            {
+                return;
+            }
+
+            _annotationsByPath = annotationsByPath;
+            foreach (var preview in ImagePreviews)
+            {
+                ApplyCachedAnnotations(preview);
+            }
+        }, null);
+    }
+
+    private void ApplyCachedAnnotations(MediaPreviewViewModel preview)
+    {
+        if (!preview.MediaFormat.SupportsAnnotations)
+        {
+            return;
+        }
+
+        var annotations = _annotationsByPath.TryGetValue(preview.Url, out var indexed)
+            ? indexed.Annotations
+            : MediaAnnotations.Empty;
+        preview.ApplyAnnotations(annotations, _localization["Annotations_StateCached"]);
+    }
+
+    private async Task RefreshChangedAnnotationAsync(string changedPath)
+    {
+        try
+        {
+            var ownerPath = ResolveAnnotationOwnerPath(changedPath);
+            if (ownerPath == null || !System.IO.File.Exists(ownerPath))
+            {
+                return;
+            }
+
+            var snapshot = await _annotationsService.GetSnapshotAsync(ownerPath).ConfigureAwait(false);
+            _synchronizationContext.Post(_ =>
+            {
+                var preview = ImagePreviews.FirstOrDefault(item => PathsEqual(item.Url, ownerPath));
+                if (preview == null)
+                {
+                    return;
+                }
+
+                preview.ApplyAnnotations(snapshot.Annotations, _localization["Annotations_StateCurrent"], snapshot);
+            }, null);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception exception)
+        {
+            _logger.Error(exception, "Failed to refresh changed annotations for {Path}", changedPath);
+        }
+    }
+
+    private string? ResolveAnnotationOwnerPath(string changedPath)
+    {
+        if (!IsXmpPath(changedPath))
+        {
+            return ImagePreviews
+                .FirstOrDefault(preview => preview.MediaFormat.SupportsAnnotations &&
+                                           PathsEqual(preview.Url, changedPath))
+                ?.Url;
+        }
+
+        var owners = ImagePreviews
+            .Where(preview => preview.MediaFormat.SupportsAnnotations)
+            .Select(preview => new
+            {
+                preview.Url,
+                Sidecar = XmpSidecarPath.GetExternalSidecarPath(preview.Url)
+            })
+            .Where(candidate => PathsEqual(candidate.Sidecar, changedPath))
+            .Select(candidate => candidate.Url)
+            .ToArray();
+        if (owners.Length > 1)
+        {
+            _logger.Warning(
+                "Skipped ambiguous XMP watcher refresh for {Sidecar}; owners: {Owners}",
+                changedPath,
+                string.Join(", ", owners));
+            return null;
+        }
+
+        return owners.FirstOrDefault();
+    }
+
+    private static bool IsXmpPath(string path) =>
+        System.IO.Path.GetExtension(path).Equals(".xmp", StringComparison.OrdinalIgnoreCase);
 
     private async Task LoadInitialImagesAsync(CancellationToken token)
     {
@@ -674,6 +849,11 @@ internal class GlancePanelViewModel : ViewModelBase, IDialogAware
                     var newPreviews = previews
                         .Where(preview => existingPaths.Add(preview.Url))
                         .ToArray();
+                    foreach (var preview in newPreviews)
+                    {
+                        ApplyCachedAnnotations(preview);
+                    }
+
                     ImagePreviews.AddRange(newPreviews);
                 }
                 finally
@@ -828,10 +1008,23 @@ internal class GlancePanelViewModel : ViewModelBase, IDialogAware
         }
     }
 
+    private void OnFilesChanged(IList<FileModel> files)
+    {
+        foreach (var file in files)
+        {
+            _ = RefreshChangedAnnotationAsync(file.FullName);
+        }
+    }
+
     private void OnFilesDeleted(IList<FileModel> files)
     {
         try
         {
+            foreach (var file in files.Where(file => IsXmpPath(file.FullName)))
+            {
+                _ = RefreshChangedAnnotationAsync(file.FullName);
+            }
+
             var pathComparer = OperatingSystem.IsWindows()
                 ? StringComparer.OrdinalIgnoreCase
                 : StringComparer.Ordinal;
@@ -868,6 +1061,11 @@ internal class GlancePanelViewModel : ViewModelBase, IDialogAware
 
     private void OnFilesCreated(IList<FileModel> files)
     {
+        foreach (var file in files.Where(file => IsXmpPath(file.FullName)))
+        {
+            _ = RefreshChangedAnnotationAsync(file.FullName);
+        }
+
         var pathComparer = OperatingSystem.IsWindows()
             ? StringComparer.OrdinalIgnoreCase
             : StringComparer.Ordinal;
@@ -1006,6 +1204,7 @@ internal class GlancePanelViewModel : ViewModelBase, IDialogAware
                 {
                     if (ImagePreviews.All(existing => !PathsEqual(existing.Url, mediaPreviewViewModel.Url)))
                     {
+                        ApplyCachedAnnotations(mediaPreviewViewModel);
                         ImagePreviews.Add(mediaPreviewViewModel);
                         added = true;
                     }
