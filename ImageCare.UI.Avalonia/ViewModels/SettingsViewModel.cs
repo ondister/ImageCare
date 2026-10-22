@@ -719,19 +719,31 @@ public sealed class SettingsViewModel : ViewModelBase
     {
         try
         {
-            var indexed = await _annotationsService.GetAllTagsAsync(cancellationToken);
-            var pinned = _configService.Configuration.Value.PinnedTags ?? [];
-            var tags = pinned.Concat(indexed)
+            var configuration = _configService.Configuration.Value;
+            if (NormalizePinnedTags(configuration))
+            {
+                SaveConfiguration();
+            }
+
+            var pinned = configuration.PinnedTags ?? [];
+            var tags = pinned
                 .Where(tag => !string.IsNullOrWhiteSpace(tag))
                 .Select(MediaAnnotations.NormalizeTag)
+                .Where(tag => !string.IsNullOrWhiteSpace(tag))
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .OrderBy(tag => tag, StringComparer.Create(_localization.Culture, ignoreCase: true))
                 .ThenBy(tag => tag, StringComparer.Ordinal)
                 .ToArray();
+
             AvailableTags.Clear();
             foreach (var tag in tags)
             {
                 AvailableTags.Add(tag);
+            }
+
+            if (SelectedPinnedTag != null && !AvailableTags.Contains(SelectedPinnedTag, StringComparer.OrdinalIgnoreCase))
+            {
+                SelectedPinnedTag = null;
             }
         }
         catch (OperationCanceledException)
