@@ -9,6 +9,7 @@ using Avalonia.Markup.Xaml;
 using Avalonia.Threading;
 using DryIoc;
 using ImageCare.Core.Domain.Configuration;
+using ImageCare.Core.Domain.Annotations;
 using ImageCare.Core.Domain.Folders;
 using ImageCare.Core.Domain.Media;
 using ImageCare.Core.Services.ConfigurationService;
@@ -20,6 +21,7 @@ using ImageCare.Core.Services.FolderClusterizationService;
 using ImageCare.Core.Services.FolderHistoryService;
 using ImageCare.Core.Services.FolderService;
 using ImageCare.Core.Services.FolderStatisticsService;
+using ImageCare.Core.Services.FolderTagService;
 using ImageCare.Core.Services.LogEventService;
 using ImageCare.Core.Services.MediaAnnotationsIndex;
 using ImageCare.Core.Services.MediaAnnotationsService;
@@ -163,6 +165,9 @@ public class App : PrismApplication
         containerRegistry.RegisterSingleton<IMediaAnnotationsIndex, SqliteMediaAnnotationsIndex>();
         containerRegistry.RegisterSingleton<IMediaAnnotationsService, MediaAnnotationsService>();
         containerRegistry.RegisterSingleton<MediaAnnotationsCoordinator>();
+        containerRegistry.RegisterSingleton<IFolderTagsStore, FolderTagsStore>();
+        containerRegistry.RegisterSingleton<FolderTagApplicationLog>(_ => new FolderTagApplicationLog(GetLogDirectory()));
+        containerRegistry.RegisterSingleton<IFolderTagApplicationService, FolderTagApplicationService>();
 
         containerRegistry.RegisterSingleton<INotificationService, LocalNotificationService>();
         containerRegistry.RegisterSingleton<IFileAssociationsService, ConfigurationFileAssociationsService>();
@@ -223,14 +228,17 @@ public class App : PrismApplication
         throw new PlatformNotSupportedException("ImageCare currently supports Windows and macOS only.");
     }
 
+    private static string GetLogDirectory() =>
+        Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "ImageCare",
+            "Logs");
+
     private static Logger CreateLogger(ILogEventSink logEventSink)
     {
         var options = new DestructuringOptionsBuilder()
             .WithDefaultDestructurers();
-        var logDirectory = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "ImageCare",
-            "Logs");
+        var logDirectory = GetLogDirectory();
         Directory.CreateDirectory(logDirectory);
 
         return new LoggerConfiguration()

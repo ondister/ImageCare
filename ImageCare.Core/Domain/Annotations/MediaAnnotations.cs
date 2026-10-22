@@ -90,7 +90,17 @@ public sealed record MediaAnnotations
         return tokens.All(token => normalizedTag.Contains(token, StringComparison.CurrentCultureIgnoreCase));
     }
 
-    private static ImmutableArray<string> NormalizeTags(IEnumerable<string>? tags)
+    private static ImmutableArray<string> NormalizeTags(IEnumerable<string>? tags) =>
+        NormalizeTagsOrdered(tags)
+            .OrderBy(value => value, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(value => value, StringComparer.Ordinal)
+            .ToImmutableArray();
+
+    /// <summary>
+    /// Normalizes and de-duplicates tags (case-insensitive) while preserving input order.
+    /// The first occurrence wins and supplies the canonical casing.
+    /// </summary>
+    internal static IReadOnlyList<string> NormalizeTagsOrdered(IEnumerable<string>? tags)
     {
         if (tags is null)
         {
@@ -112,9 +122,6 @@ public sealed record MediaAnnotations
             }
         }
 
-        return uniqueTags.Values
-            .OrderBy(value => value, StringComparer.OrdinalIgnoreCase)
-            .ThenBy(value => value, StringComparer.Ordinal)
-            .ToImmutableArray();
+        return uniqueTags.Values.ToArray();
     }
 }

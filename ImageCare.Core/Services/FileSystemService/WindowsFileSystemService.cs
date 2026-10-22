@@ -171,6 +171,21 @@ public sealed class WindowsFileSystemService : IFileSystemService
         File.SetAttributes(destination, attributes);
     }
 
+    public void CopyFileTimestampsAndAttributes(string source, string destination)
+    {
+        var sourceInfo = new FileInfo(source);
+        sourceInfo.Refresh();
+        if (!sourceInfo.Exists)
+        {
+            throw new FileNotFoundException("Metadata source file was not found.", source);
+        }
+
+        File.SetCreationTimeUtc(destination, sourceInfo.CreationTimeUtc);
+        File.SetLastWriteTimeUtc(destination, sourceInfo.LastWriteTimeUtc);
+        File.SetLastAccessTimeUtc(destination, sourceInfo.LastAccessTimeUtc);
+        File.SetAttributes(destination, sourceInfo.Attributes);
+    }
+
     public void CopyDirectoryMetadata(string source, string destination)
     {
         var sourceInfo = new DirectoryInfo(source);

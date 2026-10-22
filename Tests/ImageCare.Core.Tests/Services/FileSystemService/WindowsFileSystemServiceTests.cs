@@ -87,6 +87,52 @@ public class WindowsFileSystemServiceTests
     }
 
     [Test]
+    public void CopyFileTimestampsAndAttributes_CopiesAttributesAndTimestamps()
+    {
+        var service = new WindowsFileSystemService();
+        var sourceFile = Path.GetTempFileName();
+        var destFile = Path.GetTempFileName();
+
+        try
+        {
+            var originalAttributes = FileAttributes.Hidden | FileAttributes.Archive;
+            var originalCreationTime = DateTime.Now.AddDays(-1);
+            var originalWriteTime = DateTime.Now.AddHours(-1);
+            var originalAccessTime = DateTime.Now.AddHours(-2);
+
+            File.SetAttributes(sourceFile, originalAttributes);
+            File.SetCreationTime(sourceFile, originalCreationTime);
+            File.SetLastWriteTime(sourceFile, originalWriteTime);
+            File.SetLastAccessTime(sourceFile, originalAccessTime);
+
+            service.CopyFileTimestampsAndAttributes(sourceFile, destFile);
+
+            Assert.That(File.GetAttributes(destFile), Is.EqualTo(originalAttributes));
+            Assert.That(File.GetCreationTime(destFile), Is.EqualTo(originalCreationTime).Within(10).Milliseconds);
+            Assert.That(File.GetLastWriteTime(destFile), Is.EqualTo(originalWriteTime).Within(10).Milliseconds);
+            Assert.That(File.GetLastAccessTime(destFile), Is.EqualTo(originalAccessTime).Within(10).Milliseconds);
+        }
+        finally
+        {
+            File.SetAttributes(sourceFile, FileAttributes.Normal);
+            File.SetAttributes(destFile, FileAttributes.Normal);
+            File.Delete(sourceFile);
+            File.Delete(destFile);
+        }
+    }
+
+    [Test]
+    public void CopyFileTimestampsAndAttributes_ThrowsWhenSourceMissing()
+    {
+        var service = new WindowsFileSystemService();
+        var missing = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "missing.dat");
+
+        Assert.That(
+            () => service.CopyFileTimestampsAndAttributes(missing, Path.GetTempFileName()),
+            Throws.TypeOf<FileNotFoundException>());
+    }
+
+    [Test]
     public void CopyDirectoryMetadata_CopiesAttributesAndTimestamps()
     {
         var service = new WindowsFileSystemService();

@@ -122,6 +122,25 @@ public sealed partial class MacOsFileSystemService : IFileSystemService
         File.SetLastAccessTimeUtc(destination, sourceInfo.LastAccessTimeUtc);
     }
 
+    public void CopyFileTimestampsAndAttributes(string source, string destination)
+    {
+        var sourceInfo = new FileInfo(source);
+        sourceInfo.Refresh();
+        if (!sourceInfo.Exists)
+        {
+            throw new FileNotFoundException("Metadata source file was not found.", source);
+        }
+
+        if (!OperatingSystem.IsWindows())
+        {
+            File.SetUnixFileMode(destination, File.GetUnixFileMode(sourceInfo.FullName));
+        }
+
+        File.SetLastWriteTimeUtc(destination, sourceInfo.LastWriteTimeUtc);
+        File.SetLastAccessTimeUtc(destination, sourceInfo.LastAccessTimeUtc);
+        File.SetAttributes(destination, sourceInfo.Attributes);
+    }
+
     public void CopyDirectoryMetadata(string source, string destination)
     {
         var sourceInfo = new DirectoryInfo(source);

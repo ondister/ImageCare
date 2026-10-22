@@ -11,8 +11,10 @@
 
     <TabControl Margin="{DynamicResource MarginAll.Medium}">
         <TabItem Header="{localization:Loc Settings_General}">
-            <StackPanel Margin="{DynamicResource MarginAll.Medium}"
-                        Spacing="8">
+            <ScrollViewer VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled">
+                <StackPanel Margin="{DynamicResource MarginAll.Medium}"
+                            Spacing="8">
                 <TextBlock Text="{localization:Loc Settings_InterfaceLanguage}"
                            FontWeight="Bold"
                            FontSize="{DynamicResource Font.Size.SectionHeader}" />
@@ -62,6 +64,17 @@
 
                 <Separator Margin="{DynamicResource MarginVertical.Small}" />
 
+                <ToggleSwitch Content="{localization:Loc Settings_FolderTags}"
+                              IsChecked="{Binding FolderTagsEnabled, Mode=TwoWay}" />
+                <TextBlock Text="{localization:Loc Settings_FolderTagsDescription}"
+                           Opacity="0.7"
+                           TextWrapping="Wrap" />
+                <CheckBox Content="{localization:Loc Settings_FolderTagsLog}"
+                          IsChecked="{Binding FolderTagApplicationLogEnabled, Mode=TwoWay}"
+                          IsEnabled="{Binding FolderTagsEnabled}" />
+
+                <Separator Margin="{DynamicResource MarginVertical.Small}" />
+
                 <ToggleSwitch Content="{localization:Loc Settings_SafeDeletion}"
                               IsChecked="{Binding SafeDeletionEnabled, Mode=TwoWay}" />
                 <TextBlock Text="{localization:Loc Settings_SafeDeletionDescription}"
@@ -94,6 +107,7 @@
                                    Width="100" />
                 </StackPanel>
             </StackPanel>
+            </ScrollViewer>
         </TabItem>
 
         <TabItem Header="{localization:Loc Settings_FileAssociations}">

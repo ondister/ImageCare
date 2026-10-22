@@ -53,6 +53,9 @@
   <data name="Settings_DragDropModifier" xml:space="preserve"><value>Key for switching the file operation</value></data>
   <data name="Settings_CopyOnDragDropByDefault" xml:space="preserve"><value>Copy files by default</value></data>
   <data name="Settings_DragDropDescription" xml:space="preserve"><value>Without the key, ImageCare uses the default operation. Hold the selected key to switch temporarily between copying and moving.</value></data>
+  <data name="Settings_FolderTags" xml:space="preserve"><value>Apply folder tags automatically</value></data>
+  <data name="Settings_FolderTagsDescription" xml:space="preserve"><value>When a photo is moved or copied into a folder, ImageCare merges the tags declared in that folder's folder-tags.txt (and the nearest parent folder that has one) into the file's annotations. The preview panel can also apply a folder's tags to every image in it.</value></data>
+  <data name="Settings_FolderTagsLog" xml:space="preserve"><value>Write a debug journal of folder tag applications (kept for 3 days)</value></data>
   <data name="Settings_ModifierControl" xml:space="preserve"><value>Ctrl</value></data>
   <data name="Settings_ModifierAlt" xml:space="preserve"><value>Alt / Option</value></data>
   <data name="Settings_ModifierShift" xml:space="preserve"><value>Shift</value></data>
@@ -119,6 +122,10 @@
   <data name="Tray_AnalyzingFolder" xml:space="preserve"><value>Analyzing folder</value></data>
   <data name="Tray_AnalyzingFolders" xml:space="preserve"><value>Analyzing folders</value></data>
   <data name="Tray_PreparingAnalysis" xml:space="preserve"><value>preparing</value></data>
+  <data name="FolderTags_ProgressTitle" xml:space="preserve"><value>Applying folder tags</value></data>
+  <data name="FolderTags_CompletedTitle" xml:space="preserve"><value>Folder tags applied</value></data>
+  <data name="FolderTags_ProgressDescriptionFormat" xml:space="preserve"><value>{0} / {1}</value></data>
+  <data name="FolderTags_CompletedDescriptionFormat" xml:space="preserve"><value>{0} updated, {1} already tagged, {2} failed</value></data>
   <data name="Overview_Title" xml:space="preserve"><value>Folder overview — {0}</value></data>
   <data name="Overview_Files" xml:space="preserve"><value>Files</value></data>
   <data name="Overview_Deleted" xml:space="preserve"><value>Deleted</value></data>
@@ -191,4 +198,6 @@
   <data name="Search_OpenSelected" xml:space="preserve"><value>Go to</value></data>
   <data name="Search_FileMissing" xml:space="preserve"><value>The indexed file no longer exists</value></data>
   <data name="Search_OpenFailed" xml:space="preserve"><value>Could not open the indexed image</value></data>
+  <data name="FolderTags_ApplyTooltip" xml:space="preserve"><value>Apply this folder's tags to every image in it</value></data>
+  <data name="FolderTags_Failed" xml:space="preserve"><value>Could not apply folder tags.</value></data>
 </root>

@@ -53,6 +53,9 @@
   <data name="Settings_DragDropModifier" xml:space="preserve"><value>Клавиша смены файловой операции</value></data>
   <data name="Settings_CopyOnDragDropByDefault" xml:space="preserve"><value>Копировать файлы по умолчанию</value></data>
   <data name="Settings_DragDropDescription" xml:space="preserve"><value>Без клавиши ImageCare выполняет выбранную по умолчанию операцию. Удерживайте выбранную клавишу, чтобы временно переключаться между копированием и перемещением.</value></data>
+  <data name="Settings_FolderTags" xml:space="preserve"><value>Автоматически применять теги папки</value></data>
+  <data name="Settings_FolderTagsDescription" xml:space="preserve"><value>Когда фото перемещается или копируется в папку, ImageCare добавляет к его аннотациям теги из файла folder-tags.txt этой папки (или ближайшей родительской папки, где такой файл есть). Панель превью также может применить теги папки ко всем изображениям в ней.</value></data>
+  <data name="Settings_FolderTagsLog" xml:space="preserve"><value>Вести отладочный журнал применения тегов папки (хранится 3 дня)</value></data>
   <data name="Settings_ModifierControl" xml:space="preserve"><value>Ctrl</value></data>
   <data name="Settings_ModifierAlt" xml:space="preserve"><value>Alt / Option</value></data>
   <data name="Settings_ModifierShift" xml:space="preserve"><value>Shift</value></data>
@@ -119,6 +122,10 @@
   <data name="Tray_AnalyzingFolder" xml:space="preserve"><value>Анализ папки</value></data>
   <data name="Tray_AnalyzingFolders" xml:space="preserve"><value>Анализ папок</value></data>
   <data name="Tray_PreparingAnalysis" xml:space="preserve"><value>подготовка</value></data>
+  <data name="FolderTags_ProgressTitle" xml:space="preserve"><value>Применение тегов папки</value></data>
+  <data name="FolderTags_CompletedTitle" xml:space="preserve"><value>Теги папки применены</value></data>
+  <data name="FolderTags_ProgressDescriptionFormat" xml:space="preserve"><value>{0} / {1}</value></data>
+  <data name="FolderTags_CompletedDescriptionFormat" xml:space="preserve"><value>обновлено {0}, уже с тегами {1}, ошибок {2}</value></data>
   <data name="Overview_Title" xml:space="preserve"><value>Обзор папки — {0}</value></data>
   <data name="Overview_Files" xml:space="preserve"><value>Файлы</value></data>
   <data name="Overview_Deleted" xml:space="preserve"><value>Удалённые</value></data>
@@ -191,4 +198,6 @@
   <data name="Search_OpenSelected" xml:space="preserve"><value>Перейти</value></data>
   <data name="Search_FileMissing" xml:space="preserve"><value>Файл из индекса больше не существует</value></data>
   <data name="Search_OpenFailed" xml:space="preserve"><value>Не удалось открыть изображение из индекса</value></data>
+  <data name="FolderTags_ApplyTooltip" xml:space="preserve"><value>Применить теги этой папки ко всем изображениям в ней</value></data>
+  <data name="FolderTags_Failed" xml:space="preserve"><value>Не удалось применить теги папки.</value></data>
 </root>

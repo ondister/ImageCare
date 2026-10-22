@@ -157,7 +157,7 @@ public sealed class XmpMediaAnnotationsStorageService : IMediaAnnotationsStorage
             }
 
             EnsureUnchanged(initialState, CaptureState(mediaPath, mediaPath), mediaPath);
-            _fileSystemService.CopyFileMetadata(mediaPath, temporaryPath);
+            _fileSystemService.CopyFileTimestampsAndAttributes(mediaPath, temporaryPath);
             cancellationToken.ThrowIfCancellationRequested();
             File.Move(temporaryPath, mediaPath, true);
         }

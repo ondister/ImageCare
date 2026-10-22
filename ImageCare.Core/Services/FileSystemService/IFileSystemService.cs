@@ -44,6 +44,15 @@ public interface IFileSystemService
 
     void CopyFileMetadata(string source, string destination);
 
+    /// <summary>
+    /// Copies only timestamps and attributes from <paramref name="source"/> to
+    /// <paramref name="destination"/>. Unlike <see cref="CopyFileMetadata"/> this does not
+    /// touch security descriptors or alternate data streams and is safe to use for transient
+    /// files (for example a temporary rewrite target in the same directory) where the
+    /// destination must not inherit a security descriptor it is not allowed to apply.
+    /// </summary>
+    void CopyFileTimestampsAndAttributes(string source, string destination);
+
     void CopyDirectoryMetadata(string source, string destination);
 
     void SafeDelete(string path);

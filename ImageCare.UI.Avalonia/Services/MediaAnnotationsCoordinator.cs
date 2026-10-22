@@ -27,6 +27,7 @@ internal sealed class MediaAnnotationsCoordinator : IDisposable
     private readonly IMediaAnnotationsIndex _index;
     private readonly IConfigurationService _configurationService;
     private readonly IMediaPreviewOperationsService _previewOperations;
+    private readonly IFolderTagApplicationService _folderTagApplicationService;
     private readonly ILogger _logger;
     private readonly CancellationTokenSource _schedulerCancellation = new();
     private readonly CancellationTokenSource _workerCancellation = new();
@@ -49,12 +50,14 @@ internal sealed class MediaAnnotationsCoordinator : IDisposable
         IMediaAnnotationsIndex index,
         IConfigurationService configurationService,
         IMediaPreviewOperationsService previewOperations,
+        IFolderTagApplicationService folderTagApplicationService,
         ILogger logger)
     {
         _annotationsService = annotationsService;
         _index = index;
         _configurationService = configurationService;
         _previewOperations = previewOperations;
+        _folderTagApplicationService = folderTagApplicationService;
         _logger = logger;
     }
 
@@ -179,6 +182,12 @@ internal sealed class MediaAnnotationsCoordinator : IDisposable
                 && IsImagePath(destinationPath)
                 && File.Exists(destinationPath))
             {
+                if (operation.Kind is MediaFileOperationKind.Copy or MediaFileOperationKind.Move)
+                {
+                    await ApplyFolderTagsAsync(operation.Kind, destinationPath, cancellationToken)
+                        .ConfigureAwait(false);
+                }
+
                 var snapshot = await _annotationsService.GetSnapshotAsync(destinationPath, cancellationToken)
                     .ConfigureAwait(false);
                 await _index.UpsertAsync(ToIndexed(snapshot), cancellationToken).ConfigureAwait(false);
@@ -191,6 +200,35 @@ internal sealed class MediaAnnotationsCoordinator : IDisposable
         {
             _logger.Error(exception, "Failed to synchronize annotation index after {Operation} for {Path}",
                 operation.Kind, operation.SourcePath);
+        }
+    }
+
+    private async Task ApplyFolderTagsAsync(
+        MediaFileOperationKind kind,
+        string destinationPath,
+        CancellationToken cancellationToken)
+    {
+        if (!_configurationService.Configuration.Value.FolderTagsEnabled)
+        {
+            return;
+        }
+
+        try
+        {
+            var action = kind == MediaFileOperationKind.Move ? "move" : "copy";
+            await _folderTagApplicationService.ApplyToFileAsync(destinationPath, action, cancellationToken)
+                .ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            // Folder tags are best-effort: a failure must not break the index synchronisation
+            // nor the completed file operation.
+            _logger.Warning(exception, "Failed to apply folder tags after {Operation} for {Path}",
+                kind, destinationPath);
         }
     }
 

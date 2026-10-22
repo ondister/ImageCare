@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
 using System.Reactive;
@@ -61,6 +62,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
     private readonly INotificationService _notificationService;
     private readonly IConfigurationService _configurationService;
     private readonly IMediaAnnotationsService _annotationsService;
+    private readonly IFolderTagApplicationService _folderTagApplicationService;
     private readonly LocalizationManager _localization;
     private readonly IDialogService _dialogService;
     private readonly IMapper _mapper;
@@ -90,6 +92,9 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
     private int _selectedRating;
     private string _newTag = string.Empty;
     private string[] _allAvailableAnnotationTags = [];
+    private string _selectedFolderPath = string.Empty;
+    private bool _isApplyingFolderTags;
+    private CancellationTokenSource? _folderTagCancellation;
     private MediaPreviewViewModel? _annotationPreview;
     private string _annotationEditorStatus = string.Empty;
     private bool _isSavingAnnotations;
@@ -107,6 +112,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
                                  INotificationService notificationService,
                                  IConfigurationService configurationService,
                                  IMediaAnnotationsService annotationsService,
+                                 IFolderTagApplicationService folderTagApplicationService,
                                  LocalizationManager localization,
                                  TrayAnalysisProgressService trayAnalysisProgressService,
                                  IDialogService dialogService,
@@ -126,6 +132,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
         _notificationService = notificationService;
         _configurationService = configurationService;
         _annotationsService = annotationsService;
+        _folderTagApplicationService = folderTagApplicationService;
         _localization = localization;
         _dialogService = dialogService;
         _mapper = mapper;
@@ -143,9 +150,12 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
             .ObservesProperty(() => CanEditAnnotations)
             .ObservesProperty(() => NewTag);
         RemoveTagCommand = CreateAsyncCommand<string>(RemoveTagAsync);
+        ApplyFolderTagsCommand = CreateAsyncCommand(ApplyFolderTagsAsync, () => CanApplyFolderTags)
+            .ObservesProperty(() => CanApplyFolderTags);
 
         ImagePreviews = new SortedObservableCollection<MediaPreviewViewModel>(
             new CreationDateTimeComparer(_sortDirection));
+        ImagePreviews.CollectionChanged += OnImagePreviewsChanged;
 
         _folderSelectedCancellationTokenSource = new CancellationTokenSource();
 
@@ -171,6 +181,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
             if (SetProperty(ref _filesLoading, value))
             {
                 RaisePropertyChanged(nameof(CanChangeSort));
+                RaisePropertyChanged(nameof(CanApplyFolderTags));
             }
         }
     }
@@ -214,7 +225,18 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
         }
     }
 
-    public string SelectedFolderPath { get; set; } = string.Empty;
+    public string SelectedFolderPath
+    {
+        get => _selectedFolderPath;
+        set
+        {
+            if (SetProperty(ref _selectedFolderPath, value ?? string.Empty))
+            {
+                RaisePropertyChanged(nameof(CanChangeSort));
+                RaisePropertyChanged(nameof(CanApplyFolderTags));
+            }
+        }
+    }
 
     public TimelineViewModel TimelineVm { get; }
 
@@ -318,6 +340,30 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
         private set => SetProperty(ref _annotationEditorStatus, value);
     }
 
+    public bool IsApplyingFolderTags
+    {
+        get => _isApplyingFolderTags;
+        private set
+        {
+            if (SetProperty(ref _isApplyingFolderTags, value))
+            {
+                RaisePropertyChanged(nameof(CanApplyFolderTags));
+            }
+        }
+    }
+
+    public bool CanApplyFolderTags => !IsApplyingFolderTags &&
+                                      !FilesLoading &&
+                                      !string.IsNullOrWhiteSpace(SelectedFolderPath) &&
+                                      ImagePreviews.Count > 0;
+
+    private void OnImagePreviewsChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        RaisePropertyChanged(nameof(CanApplyFolderTags));
+    }
+
+    public ICommand ApplyFolderTagsCommand { get; }
+
     public bool IsSavingAnnotations
     {
         get => _isSavingAnnotations;
@@ -406,6 +452,9 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
             _fileOperationsService.FileOperationCompleted
                                   .ObserveOn(_synchronizationContext)
                                   .Subscribe(OnFileOperationCompleted),
+            _folderTagApplicationService.ApplicationStatus
+                                        .ObserveOn(_synchronizationContext)
+                                        .Subscribe(OnFolderTagApplicationStatusChanged),
             _folderService.FileSystemItemSelected.Subscribe(OnFolderSelected),
             _fileOperationsService.MediaPreviewNavigationRequested
                                   .ObserveOn(_synchronizationContext)
@@ -886,6 +935,12 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
             var deletedPaths = files
                 .Select(file => file.FullName)
                 .Where(path => MediaFormat.IsSupportedExtension(System.IO.Path.GetExtension(path)))
+                // A file-system watcher can report a transient Deleted event when a file is
+                // atomically replaced (for example when XMP is embedded into a JPEG by writing
+                // a temporary file and moving it over the original). Only treat the path as
+                // deleted when it is genuinely gone from disk, otherwise the preview would
+                // vanish even though the file still exists.
+                .Where(path => !_fileSystemService.FileExists(path))
                 .ToHashSet(pathComparer);
 
             lock (_imagePathsLock)
@@ -924,7 +979,8 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
                 return;
             }
 
-            if (MediaFormat.IsSupportedExtension(System.IO.Path.GetExtension(oldPath)))
+            if (MediaFormat.IsSupportedExtension(System.IO.Path.GetExtension(oldPath)) &&
+                !_fileSystemService.FileExists(oldPath))
             {
                 RemoveFilePath(oldPath);
                 RemoveImagePreviewByPath(oldPath);
@@ -939,6 +995,93 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
         catch (Exception ex)
         {
             _logger.Error(ex, "Unexpected exception during handling of file renaming: {Path}", model.OldFileModel.FullName);
+        }
+    }
+
+    private async Task ApplyFolderTagsAsync()
+    {
+        var folderPath = SelectedFolderPath;
+        if (string.IsNullOrWhiteSpace(folderPath) || !CanApplyFolderTags)
+        {
+            return;
+        }
+
+        _folderTagCancellation?.Cancel();
+        _folderTagCancellation?.Dispose();
+        var cancellation = CancellationTokenSource.CreateLinkedTokenSource(
+            _folderSelectedCancellationTokenSource.Token);
+        _folderTagCancellation = cancellation;
+
+        IsApplyingFolderTags = true;
+        try
+        {
+            await _folderTagApplicationService.ApplyToDirectoryAsync(folderPath, cancellation.Token);
+            cancellation.Token.ThrowIfCancellationRequested();
+            await ReconcileFolderAndRefreshAsync(folderPath, cancellation.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            // Cancellation is surfaced through the tray tooltip, which clears itself.
+        }
+        catch (Exception exception)
+        {
+            _logger.Error(exception, "Failed to apply folder tags to {Folder}", folderPath);
+            _notificationService.SendNotification(new Notification(
+                _localization["FolderTags_Failed"],
+                exception.Message));
+        }
+        finally
+        {
+            if (ReferenceEquals(_folderTagCancellation, cancellation))
+            {
+                _folderTagCancellation = null;
+            }
+
+            cancellation.Dispose();
+            IsApplyingFolderTags = false;
+        }
+    }
+
+    private void OnFolderTagApplicationStatusChanged(FolderTagApplicationStatus status)
+    {
+        // Folder-tag progress and the completion summary are surfaced in the bottom information
+        // bar (the same place copy/move/delete notifications appear), so the user always sees
+        // the outcome without hovering anything.
+        switch (status.State)
+        {
+            case FolderTagApplicationState.Running:
+                IsApplyingFolderTags = true;
+                _notificationService.SendNotification(new Notification(
+                    _localization["FolderTags_ProgressTitle"],
+                    string.Format(
+                        _localization["FolderTags_ProgressDescriptionFormat"],
+                        status.ProcessedFiles,
+                        status.TotalFiles)));
+                break;
+            case FolderTagApplicationState.Completed:
+                IsApplyingFolderTags = false;
+                if (status.ProcessedFiles > 0)
+                {
+                    var description = string.Format(
+                        _localization["FolderTags_CompletedDescriptionFormat"],
+                        status.UpdatedFiles,
+                        status.SkippedFiles,
+                        status.FailedFiles);
+                    _notificationService.SendNotification(status.FailedFiles > 0
+                        ? new ErrorNotification(_localization["FolderTags_CompletedTitle"], description)
+                        : new SuccessNotification(_localization["FolderTags_CompletedTitle"], description));
+                }
+
+                break;
+            case FolderTagApplicationState.Cancelled:
+                IsApplyingFolderTags = false;
+                break;
+            case FolderTagApplicationState.Failed:
+                IsApplyingFolderTags = false;
+                _notificationService.SendNotification(new ErrorNotification(
+                    _localization["FolderTags_Failed"],
+                    status.Error ?? SelectedFolderPath));
+                break;
         }
     }
 
@@ -1040,6 +1183,15 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
     {
         try
         {
+            // Guard against spurious watcher events: an atomic replace (temporary file moved
+            // over the original, as happens when XMP is embedded into a JPEG) can surface as a
+            // Deleted notification even though the media file still exists. Removing the
+            // preview in that case would make the image vanish from the panel.
+            if (_fileSystemService.FileExists(filePath))
+            {
+                return;
+            }
+
             var imagePreviewViewModel = ImagePreviews.FirstOrDefault(vm => PathsEqual(vm.Url, filePath));
             if (imagePreviewViewModel == null)
             {

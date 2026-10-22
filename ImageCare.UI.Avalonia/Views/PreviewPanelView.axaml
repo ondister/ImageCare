@@ -35,10 +35,22 @@
 
     <Grid RowDefinitions="Auto,Auto,*"
           Margin="{StaticResource MarginAll.Small}">
-        <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
-            <views:TimelineView Grid.Column="0"
-                                DataContext="{Binding TimelineVm}" />
+        <Grid Grid.Row="0" ColumnDefinitions="*,Auto,Auto">
+            <StackPanel Grid.Column="0" Spacing="2">
+                <views:TimelineView DataContext="{Binding TimelineVm}" />
+            </StackPanel>
             <Button Grid.Column="1"
+                    Width="32"
+                    Height="32"
+                    Padding="4"
+                    Margin="2,0,0,0"
+                    VerticalAlignment="Center"
+                    Command="{Binding ApplyFolderTagsCommand}"
+                    IsEnabled="{Binding CanApplyFolderTags}"
+                    ToolTip.Tip="{localization:Loc FolderTags_ApplyTooltip}">
+                <iconPacks:PackIconLucide Kind="Tags" Width="16" Height="16" />
+            </Button>
+            <Button Grid.Column="2"
                     Width="32"
                     Height="32"
                     Padding="4"

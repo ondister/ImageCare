@@ -42,6 +42,8 @@ public sealed class SettingsViewModel : ViewModelBase
     private LanguageOption? _selectedLanguage;
     private DragDropModifierOption? _selectedDragDropModifier;
     private bool _copyOnDragDropByDefault;
+    private bool _folderTagsEnabled;
+    private bool _folderTagApplicationLogEnabled;
     private bool _restoreLastFoldersOnStartup;
     private bool _safeDeletionEnabled;
     private string _safeDeletionDirectoryPath = string.Empty;
@@ -179,6 +181,36 @@ public sealed class SettingsViewModel : ViewModelBase
             }
 
             _configService.Configuration.Value.SafeDeletionEnabled = value;
+            SaveConfiguration();
+        }
+    }
+
+    public bool FolderTagsEnabled
+    {
+        get => _folderTagsEnabled;
+        set
+        {
+            if (!SetProperty(ref _folderTagsEnabled, value))
+            {
+                return;
+            }
+
+            _configService.Configuration.Value.FolderTagsEnabled = value;
+            SaveConfiguration();
+        }
+    }
+
+    public bool FolderTagApplicationLogEnabled
+    {
+        get => _folderTagApplicationLogEnabled;
+        set
+        {
+            if (!SetProperty(ref _folderTagApplicationLogEnabled, value))
+            {
+                return;
+            }
+
+            _configService.Configuration.Value.FolderTagApplicationLogEnabled = value;
             SaveConfiguration();
         }
     }
@@ -384,6 +416,12 @@ public sealed class SettingsViewModel : ViewModelBase
 
             _safeDeletionEnabled = configuration.SafeDeletionEnabled;
             RaisePropertyChanged(nameof(SafeDeletionEnabled));
+
+            _folderTagsEnabled = configuration.FolderTagsEnabled;
+            RaisePropertyChanged(nameof(FolderTagsEnabled));
+
+            _folderTagApplicationLogEnabled = configuration.FolderTagApplicationLogEnabled;
+            RaisePropertyChanged(nameof(FolderTagApplicationLogEnabled));
 
             _safeDeletionDirectoryPath = configuration.SafeDeletionDirectoryPath;
             RaisePropertyChanged(nameof(SafeDeletionDirectoryPath));

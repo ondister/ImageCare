@@ -69,4 +69,18 @@ public sealed class Configuration
 
 
     public List<string> PinnedTags { get; set; } = new();
+
+
+    /// <summary>
+    /// When enabled, media moved into or copied into a folder automatically inherits the
+    /// tags declared by that folder's <c>folder-tags.txt</c> descriptor.
+    /// </summary>
+    public bool FolderTagsEnabled { get; set; } = true;
+
+
+    /// <summary>
+    /// When enabled, successful folder-tag applications are recorded to a daily debug
+    /// journal under the application log directory.
+    /// </summary>
+    public bool FolderTagApplicationLogEnabled { get; set; }
 }
