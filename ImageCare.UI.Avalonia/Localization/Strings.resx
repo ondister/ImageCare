@@ -166,11 +166,17 @@
   <data name="Search_Ready" xml:space="preserve"><value>Set filters and search the media index.</value></data>
   <data name="Search_NoRoots" xml:space="preserve"><value>Add at least one indexed root folder in Settings.</value></data>
   <data name="Search_TextPlaceholder" xml:space="preserve"><value>Optional file name or path</value></data>
-  <data name="Search_TagsPlaceholder" xml:space="preserve"><value>Tags separated by commas</value></data>
+  <data name="Search_TagsPlaceholder" xml:space="preserve"><value>Start typing a tag…</value></data>
+  <data name="Search_RemoveTag" xml:space="preserve"><value>Remove tag</value></data>
+  <data name="Search_AvailableTags" xml:space="preserve"><value>Available tags</value></data>
+  <data name="Search_NoMatchingTags" xml:space="preserve"><value>No matching tags</value></data>
   <data name="Search_Search" xml:space="preserve"><value>Search</value></data>
-  <data name="Search_MinRating" xml:space="preserve"><value>Min</value></data>
-  <data name="Search_MaxRating" xml:space="preserve"><value>Max</value></data>
   <data name="Search_AllTags" xml:space="preserve"><value>Match all tags</value></data>
+  <data name="Search_AnyTag" xml:space="preserve"><value>Any of the tags</value></data>
+  <data name="Search_AnyRating" xml:space="preserve"><value>Any</value></data>
+  <data name="Search_RatingFrom" xml:space="preserve"><value>from</value></data>
+  <data name="Search_RatingTo" xml:space="preserve"><value>to</value></data>
+  <data name="Search_Preview" xml:space="preserve"><value>Preview</value></data>
   <data name="Search_Searching" xml:space="preserve"><value>Searching the local index…</value></data>
   <data name="Search_NoResults" xml:space="preserve"><value>No indexed images match these filters.</value></data>
   <data name="Search_ResultCount" xml:space="preserve"><value>Found {0} indexed images.</value></data>

@@ -54,7 +54,6 @@ internal sealed class MediaSearchWindowService
             return;
         }
 
-        Window window = null!;
         var viewModel = new MediaSearchViewModel(
             _annotationsService,
             _configurationService,
@@ -62,14 +61,13 @@ internal sealed class MediaSearchWindowService
             _previewOperations,
             _notificationService,
             _localization,
-            _logger,
-            () => window.Close());
-        window = new Window
+            _logger);
+        var window = new Window
         {
             Title = viewModel.Title,
-            Width = 980,
+            Width = 1040,
             Height = 620,
-            MinWidth = 720,
+            MinWidth = 820,
             MinHeight = 420,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
             Content = new MediaSearchView { DataContext = viewModel }

@@ -6,6 +6,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
 
+using Avalonia.Media.Imaging;
+using Avalonia.Threading;
+
 using ImageCare.Core.Domain.Annotations;
 using ImageCare.Core.Domain.Folders;
 using ImageCare.Core.Domain.MediaFormats;
@@ -25,6 +28,10 @@ namespace ImageCare.UI.Avalonia.ViewModels;
 
 public sealed class MediaSearchViewModel : ViewModelBase
 {
+    // Matches the widest allowed preview column so widened thumbnails stay sharp.
+    private const int ThumbnailDecodeWidth = 260;
+    private static readonly SemaphoreSlim ThumbnailDecodeGate = new(3, 3);
+
     private readonly IMediaAnnotationsService _annotationsService;
     private readonly IConfigurationService _configurationService;
     private readonly IMediaPreviewService _previewService;
@@ -32,17 +39,16 @@ public sealed class MediaSearchViewModel : ViewModelBase
     private readonly INotificationService _notificationService;
     private readonly LocalizationManager _localization;
     private readonly ILogger _logger;
-    private readonly Action? _navigationRequested;
     private string _text = string.Empty;
-    private string _tagsText = string.Empty;
-    private bool _useMinimumRating;
-    private bool _useMaximumRating;
-    private int _minimumRating;
-    private int _maximumRating = 5;
+    private string _tagSearchText = string.Empty;
+    private string[] _availableTags = [];
+    private int _minimumRatingIndex;
+    private int _maximumRatingIndex;
     private bool _matchAllTags = true;
     private bool _isSearching;
     private string _statusText;
     private MediaSearchResultViewModel? _selectedResult;
+    private CancellationTokenSource _thumbnailCancellation = new();
 
     public MediaSearchViewModel(
         IMediaAnnotationsService annotationsService,
@@ -51,8 +57,7 @@ public sealed class MediaSearchViewModel : ViewModelBase
         IMediaPreviewOperationsService previewOperations,
         INotificationService notificationService,
         LocalizationManager localization,
-        ILogger logger,
-        Action? navigationRequested = null)
+        ILogger logger)
     {
         _annotationsService = annotationsService;
         _configurationService = configurationService;
@@ -61,13 +66,15 @@ public sealed class MediaSearchViewModel : ViewModelBase
         _notificationService = notificationService;
         _localization = localization;
         _logger = logger;
-        _navigationRequested = navigationRequested;
         _statusText = localization["Search_Ready"];
         SearchCommand = CreateAsyncCommand(SearchAsync);
         ShowSelectedCommand = CreateAsyncCommand(ShowSelectedAsync, () => SelectedResult != null)
             .ObservesProperty(() => SelectedResult);
         OpenSelectedCommand = CreateAsyncCommand(OpenSelectedAsync, () => SelectedResult != null)
             .ObservesProperty(() => SelectedResult);
+        RemoveTagCommand = CreateCommand<string>(RemoveSelectedTag);
+        AddTagCommand = CreateCommand<string>(AddSelectedTag);
+        _ = LoadAvailableTagsAsync();
     }
 
     public string Title => _localization["Search_Title"];
@@ -80,40 +87,76 @@ public sealed class MediaSearchViewModel : ViewModelBase
         set => SetProperty(ref _text, value ?? string.Empty);
     }
 
-    public string TagsText
+    /// <summary>
+    /// Text typed into the tag field. It only filters <see cref="TagSuggestions" />; the actual
+    /// filter uses <see cref="SelectedTags" />, which is filled by picking a suggestion or pressing Enter.
+    /// </summary>
+    public string TagSearchText
     {
-        get => _tagsText;
-        set => SetProperty(ref _tagsText, value ?? string.Empty);
+        get => _tagSearchText;
+        set
+        {
+            if (SetProperty(ref _tagSearchText, value ?? string.Empty))
+            {
+                RefreshTagSuggestions();
+            }
+        }
     }
 
-    public bool UseMinimumRating
+    /// <summary>
+    /// Tags that can be picked right now: every known tag matching the typed text that is not
+    /// selected yet. Showing them keeps the user from typing tags blind.
+    /// </summary>
+    public ObservableCollection<string> TagSuggestions { get; } = new();
+
+    public ObservableCollection<string> SelectedTags { get; } = new();
+
+    public bool HasSelectedTags => SelectedTags.Count > 0;
+
+    public bool HasAvailableTags => _availableTags.Length > 0;
+
+    public bool HasTagSuggestions => TagSuggestions.Count > 0;
+
+    public bool NoMatchingTags => HasAvailableTags && !HasTagSuggestions;
+
+    /// <summary>
+    /// Minimum rating filter: 0 means "any rating", 1..5 means "rating is at least N".
+    /// </summary>
+    public int MinimumRatingIndex
     {
-        get => _useMinimumRating;
-        set => SetProperty(ref _useMinimumRating, value);
+        get => _minimumRatingIndex;
+        set => SetProperty(ref _minimumRatingIndex, Math.Clamp(value, 0, 5));
     }
 
-    public bool UseMaximumRating
+    /// <summary>
+    /// Maximum rating filter: 0 means "any rating", 1..5 means "rating is at most N".
+    /// </summary>
+    public int MaximumRatingIndex
     {
-        get => _useMaximumRating;
-        set => SetProperty(ref _useMaximumRating, value);
+        get => _maximumRatingIndex;
+        set => SetProperty(ref _maximumRatingIndex, Math.Clamp(value, 0, 5));
     }
 
-    public int MinimumRating
-    {
-        get => _minimumRating;
-        set => SetProperty(ref _minimumRating, Math.Clamp(value, 0, 5));
-    }
+    public bool MatchAllTags => _matchAllTags;
 
-    public int MaximumRating
+    /// <summary>
+    /// Tag matching mode: 0 matches every tag, 1 matches at least one tag.
+    /// </summary>
+    public int TagMatchModeIndex
     {
-        get => _maximumRating;
-        set => SetProperty(ref _maximumRating, Math.Clamp(value, 0, 5));
-    }
+        get => _matchAllTags ? 0 : 1;
+        set
+        {
+            var matchAllTags = value <= 0;
+            if (_matchAllTags == matchAllTags)
+            {
+                return;
+            }
 
-    public bool MatchAllTags
-    {
-        get => _matchAllTags;
-        set => SetProperty(ref _matchAllTags, value);
+            _matchAllTags = matchAllTags;
+            RaisePropertyChanged();
+            RaisePropertyChanged(nameof(MatchAllTags));
+        }
     }
 
     public bool IsSearching
@@ -140,11 +183,17 @@ public sealed class MediaSearchViewModel : ViewModelBase
 
     public ICommand OpenSelectedCommand { get; }
 
+    public ICommand RemoveTagCommand { get; }
+
+    public ICommand AddTagCommand { get; }
+
     private async Task SearchAsync(IProgress<int> progress, CancellationToken cancellationToken)
     {
         try
         {
-            if (UseMinimumRating && UseMaximumRating && MinimumRating > MaximumRating)
+            var minimumRating = MinimumRatingIndex > 0 ? MinimumRatingIndex : (int?)null;
+            var maximumRating = MaximumRatingIndex > 0 ? MaximumRatingIndex : (int?)null;
+            if (minimumRating is { } minimum && maximumRating is { } maximum && minimum > maximum)
             {
                 StatusText = _localization["Search_InvalidRatingRange"];
                 return;
@@ -154,6 +203,7 @@ public sealed class MediaSearchViewModel : ViewModelBase
             StatusText = _localization["Search_Searching"];
             Results.Clear();
             SelectedResult = null;
+            var thumbnailToken = ResetThumbnailLoading();
             var roots = (_configurationService.Configuration.Value.MediaSearchRootPaths ?? [])
                 .Where(root => !string.IsNullOrWhiteSpace(root))
                 .Distinct(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal)
@@ -164,7 +214,7 @@ public sealed class MediaSearchViewModel : ViewModelBase
                 return;
             }
 
-            var tags = TagsText.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            var tags = SelectedTags.ToArray();
             var found = new System.Collections.Generic.Dictionary<string, IndexedMediaAnnotations>(
                 OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
             foreach (var root in roots)
@@ -172,10 +222,10 @@ public sealed class MediaSearchViewModel : ViewModelBase
                 var query = new MediaAnnotationsSearchQuery(
                     string.IsNullOrWhiteSpace(Text) ? null : Text.Trim(),
                     RootPath: root,
-                    MinimumRating: UseMinimumRating ? MinimumRating : null,
-                    MaximumRating: UseMaximumRating ? MaximumRating : null,
+                    MinimumRating: minimumRating,
+                    MaximumRating: maximumRating,
                     Tags: tags,
-                    MatchAllTags: MatchAllTags,
+                    MatchAllTags: _matchAllTags,
                     Limit: 500);
                 foreach (var result in await _annotationsService.SearchAsync(query, cancellationToken))
                 {
@@ -187,12 +237,15 @@ public sealed class MediaSearchViewModel : ViewModelBase
                          .OrderByDescending(item => item.Annotations.Rating)
                          .ThenBy(item => item.MediaPath, StringComparer.OrdinalIgnoreCase))
             {
-                Results.Add(new MediaSearchResultViewModel(result));
+                Results.Add(new MediaSearchResultViewModel(
+                    result,
+                    path => LoadThumbnailAsync(path, thumbnailToken)));
             }
 
             StatusText = Results.Count == 0
                 ? _localization["Search_NoResults"]
                 : _localization.Get("Search_ResultCount", Results.Count);
+            _ = LoadAvailableTagsAsync();
         }
         catch (OperationCanceledException)
         {
@@ -246,7 +299,6 @@ public sealed class MediaSearchViewModel : ViewModelBase
             if (navigateToFile)
             {
                 _previewOperations.RequestMediaPreviewNavigation(selectedPreview);
-                _navigationRequested?.Invoke();
             }
             else
             {
@@ -261,6 +313,137 @@ public sealed class MediaSearchViewModel : ViewModelBase
             _logger.Error(exception, "Failed to open media search result {Path}", selected.Path);
             _notificationService.SendNotification(
                 new ErrorNotification(_localization["Search_OpenFailed"], selected.Path));
+        }
+    }
+
+    /// <summary>
+    /// Moves whatever is currently typed into the tag chips. Invoked when Enter is pressed in the tag field.
+    /// </summary>
+    public void AddTagInput() => AddSelectedTag(TagSearchText);
+
+    private void AddSelectedTag(string? tag)
+    {
+        var normalized = MediaAnnotations.NormalizeTag(tag ?? string.Empty);
+        if (normalized.Length > 0 &&
+            !SelectedTags.Any(selected => selected.Equals(normalized, StringComparison.OrdinalIgnoreCase)))
+        {
+            SelectedTags.Add(normalized);
+            RaisePropertyChanged(nameof(HasSelectedTags));
+        }
+
+        TagSearchText = string.Empty;
+        RefreshTagSuggestions();
+    }
+
+    private void RemoveSelectedTag(string? tag)
+    {
+        if (tag == null || !SelectedTags.Remove(tag))
+        {
+            return;
+        }
+
+        RaisePropertyChanged(nameof(HasSelectedTags));
+        RefreshTagSuggestions();
+    }
+
+    private void RefreshTagSuggestions()
+    {
+        var query = TagSearchText.Trim();
+        var matches = _availableTags
+            .Where(tag => query.Length == 0 || tag.Contains(query, StringComparison.CurrentCultureIgnoreCase))
+            .Where(tag => !SelectedTags.Any(selected => selected.Equals(tag, StringComparison.OrdinalIgnoreCase)))
+            .ToList();
+        if (!TagSuggestions.SequenceEqual(matches, StringComparer.Ordinal))
+        {
+            TagSuggestions.Clear();
+            foreach (var tag in matches)
+            {
+                TagSuggestions.Add(tag);
+            }
+        }
+
+        RaisePropertyChanged(nameof(HasTagSuggestions));
+        RaisePropertyChanged(nameof(NoMatchingTags));
+    }
+
+    private async Task LoadAvailableTagsAsync()
+    {
+        try
+        {
+            var indexedTags = await _annotationsService.GetAllTagsAsync();
+            var pinnedTags = _configurationService.Configuration.Value.PinnedTags ?? [];
+            var tags = pinnedTags.Concat(indexedTags)
+                .Select(MediaAnnotations.NormalizeTag)
+                .Where(tag => tag.Length > 0)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(tag => tag, StringComparer.Create(_localization.Culture, ignoreCase: true))
+                .ThenBy(tag => tag, StringComparer.Ordinal)
+                .ToArray();
+            Dispatcher.UIThread.Post(() =>
+            {
+                _availableTags = tags;
+                RaisePropertyChanged(nameof(HasAvailableTags));
+                RefreshTagSuggestions();
+            });
+        }
+        catch (Exception exception)
+        {
+            _logger.Error(exception, "Failed to load available search tags");
+        }
+    }
+
+    private CancellationToken ResetThumbnailLoading()
+    {
+        var previous = _thumbnailCancellation;
+        _thumbnailCancellation = new CancellationTokenSource();
+        // The previous source is cancelled but not disposed: pending thumbnail loads may still read
+        // its token and would otherwise observe ObjectDisposedException.
+        previous.Cancel();
+        return _thumbnailCancellation.Token;
+    }
+
+    private async Task<Bitmap?> LoadThumbnailAsync(string path, CancellationToken token)
+    {
+        try
+        {
+            if (!File.Exists(path))
+            {
+                return null;
+            }
+
+            var preview = await _previewService.GetMediaPreviewAsync(path, token).ConfigureAwait(false);
+            if (preview == null)
+            {
+                return null;
+            }
+
+            await ThumbnailDecodeGate.WaitAsync(token).ConfigureAwait(false);
+            try
+            {
+                await using var stream = await _previewService
+                                                .GetJpegImageStreamAsync(preview, MediaPreviewSize.Small, token)
+                                                .ConfigureAwait(false);
+                return await Task.Run(
+                                 () => Bitmap.DecodeToWidth(
+                                     stream,
+                                     ThumbnailDecodeWidth,
+                                     BitmapInterpolationMode.MediumQuality),
+                                 token)
+                             .ConfigureAwait(false);
+            }
+            finally
+            {
+                ThumbnailDecodeGate.Release();
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            return null;
+        }
+        catch (Exception exception)
+        {
+            _logger.Error(exception, "Failed to load search result thumbnail for {Path}", path);
+            return null;
         }
     }
 }
