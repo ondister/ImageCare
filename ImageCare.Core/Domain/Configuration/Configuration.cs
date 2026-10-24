@@ -83,4 +83,20 @@ public sealed class Configuration
     /// journal under the application log directory.
     /// </summary>
     public bool FolderTagApplicationLogEnabled { get; set; }
+
+    /// <summary>
+    /// Enables the built-in MCP server (Streamable HTTP) on the local machine. The server only
+    /// listens on the loopback interface and exposes ImageCare's live folders, batches and
+    /// annotations to MCP-compatible agents.
+    /// </summary>
+    public bool McpServerEnabled { get; set; }
+
+    /// <summary>Loopback port used by the embedded MCP server.</summary>
+    public int McpServerPort { get; set; } = 5277;
+
+    /// <summary>
+    /// Optional bearer token required by the MCP server when set. Leave empty to allow local
+    /// access without a token.
+    /// </summary>
+    public string McpServerAccessToken { get; set; } = string.Empty;
 }

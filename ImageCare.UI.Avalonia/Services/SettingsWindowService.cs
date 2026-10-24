@@ -22,6 +22,7 @@ internal sealed class SettingsWindowService
     private readonly IConfigurationService _configurationService;
     private readonly IFileDialogService _fileDialogService;
     private readonly IMediaAnnotationsService _annotationsService;
+    private readonly ImageCareMcpServerController _mcpServerController;
     private readonly SynchronizationContext _synchronizationContext;
     private readonly IMapper _mapper;
     private readonly ILogger _logger;
@@ -31,6 +32,7 @@ internal sealed class SettingsWindowService
     public SettingsWindowService(IConfigurationService configurationService,
                                  IFileDialogService fileDialogService,
                                  IMediaAnnotationsService annotationsService,
+                                 ImageCareMcpServerController mcpServerController,
                                  SynchronizationContext synchronizationContext,
                                  IMapper mapper,
                                  ILogger logger,
@@ -39,6 +41,7 @@ internal sealed class SettingsWindowService
         _configurationService = configurationService;
         _fileDialogService = fileDialogService;
         _annotationsService = annotationsService;
+        _mcpServerController = mcpServerController;
         _synchronizationContext = synchronizationContext;
         _mapper = mapper;
         _logger = logger;
@@ -57,6 +60,7 @@ internal sealed class SettingsWindowService
             _configurationService,
             _fileDialogService,
             _annotationsService,
+            _mcpServerController,
             _synchronizationContext,
             _mapper,
             _logger,

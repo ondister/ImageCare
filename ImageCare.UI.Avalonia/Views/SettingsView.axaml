@@ -106,6 +106,28 @@
                                    Increment="1"
                                    Width="100" />
                 </StackPanel>
+
+                <Separator Margin="{DynamicResource MarginVertical.Small}" />
+
+                <ToggleSwitch Content="{localization:Loc Settings_McpServer}"
+                              IsChecked="{Binding McpServerEnabled, Mode=TwoWay}" />
+                <TextBlock Text="{localization:Loc Settings_McpServerDescription}"
+                           Opacity="0.7"
+                           TextWrapping="Wrap" />
+                <StackPanel Orientation="Horizontal"
+                            Spacing="8"
+                            IsEnabled="{Binding McpServerEnabled}">
+                    <TextBlock Text="{localization:Loc Settings_McpServerPort}"
+                               VerticalAlignment="Center" />
+                    <NumericUpDown Value="{Binding McpServerPort, Mode=TwoWay}"
+                                   Minimum="1024"
+                                   Maximum="65535"
+                                   Increment="1"
+                                   Width="120" />
+                </StackPanel>
+                <TextBlock Text="{Binding McpServerStatus}"
+                           Opacity="0.7"
+                           TextWrapping="Wrap" />
             </StackPanel>
             </ScrollViewer>
         </TabItem>

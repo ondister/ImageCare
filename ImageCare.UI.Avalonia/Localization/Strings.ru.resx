@@ -99,6 +99,13 @@
   <data name="Settings_SafeDeletionFolder" xml:space="preserve"><value>Папка буфера</value></data>
   <data name="Settings_SafeDeletionMaxFiles" xml:space="preserve"><value>Максимум файлов в буфере</value></data>
   <data name="Settings_SelectSafeDeletionFolder" xml:space="preserve"><value>Выберите папку буфера безопасного удаления</value></data>
+  <data name="Settings_McpServer" xml:space="preserve"><value>MCP-сервер</value></data>
+  <data name="Settings_McpServerDescription" xml:space="preserve"><value>Открывает ImageCare для MCP-совместимых агентов (Claude Desktop, Cursor, VS Code, Copilot) по Streamable HTTP на loopback-интерфейсе. Агент может читать пакеты, превью, рейтинги и теги, предлагать теги и — только по явной команде — удалять файлы, которые пользователь не оставил.</value></data>
+  <data name="Settings_McpServerPort" xml:space="preserve"><value>Порт</value></data>
+  <data name="Settings_McpServerStatusStopped" xml:space="preserve"><value>Остановлен</value></data>
+  <data name="Settings_McpServerStatusStarting" xml:space="preserve"><value>Запуск…</value></data>
+  <data name="Settings_McpServerStatusRunning" xml:space="preserve"><value>Работает: {0}</value></data>
+  <data name="Settings_McpServerStatusFailed" xml:space="preserve"><value>Не удалось запустить: {0}</value></data>
   <data name="Delete_Removing" xml:space="preserve"><value>Удаление файла «{0}»…</value></data>
   <data name="Delete_Removed" xml:space="preserve"><value>Файл «{0}» удалён</value></data>
   <data name="Delete_UndoHint" xml:space="preserve"><value>Последний удалённый файл можно восстановить.</value></data>

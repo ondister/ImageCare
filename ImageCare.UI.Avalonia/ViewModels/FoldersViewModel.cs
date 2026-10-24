@@ -1087,6 +1087,68 @@ internal class FoldersViewModel : NavigatedViewModelBase
         return currentFolder;
     }
 
+    /// <summary>
+    /// Selects a folder in the tree as if the user had clicked it, loading the missing levels first.
+    /// Returns <see langword="false"/> when the folder is outside the loaded drive tree so the
+    /// caller can fall back to switching the preview panel only.
+    /// </summary>
+    internal async Task<bool> SelectFolderInTreeAsync(
+        string folderPath,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(folderPath);
+
+        try
+        {
+            var root = await WaitForFolderTreeAsync(cancellationToken);
+            if (root == null)
+            {
+                return false;
+            }
+
+            var targetPath = NormalizePath(folderPath);
+            var drive = root.ChildFileSystemItems
+                            .OfType<DriveViewModel>()
+                            .Where(item => item is not SpecialDirectoryViewModel)
+                            .Where(item => IsSamePathOrDescendant(item.Path, targetPath))
+                            .OrderByDescending(item => NormalizePath(item.Path).Length)
+                            .FirstOrDefault();
+            if (drive == null)
+            {
+                return false;
+            }
+
+            var targetDirectory = await GoToFolderFromSelectedAsync(drive, targetPath, cancellationToken);
+            SelectedFileSystemItem = targetDirectory;
+            RevealSelectedFolderRequested?.Invoke(targetDirectory);
+            return true;
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.Warning(ex, "Failed to select folder in the tree: {Path}", folderPath);
+            return false;
+        }
+    }
+
+    private async Task<DeviceViewModel?> WaitForFolderTreeAsync(CancellationToken cancellationToken)
+    {
+        var deadline = DateTime.UtcNow.AddSeconds(3);
+        while (true)
+        {
+            var root = FileSystemItemViewModels.OfType<DeviceViewModel>().FirstOrDefault();
+            if (root != null || DateTime.UtcNow >= deadline)
+            {
+                return root;
+            }
+
+            await Task.Delay(50, cancellationToken);
+        }
+    }
+
     private async Task RestoreLastFolderAsync(DirectoryViewModel rootViewModel)
     {
         var configuration = _configurationService.Configuration.Value;

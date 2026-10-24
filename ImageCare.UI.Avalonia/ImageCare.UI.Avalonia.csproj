@@ -55,7 +55,9 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ImageCare.Core\ImageCare.Core.csproj" />
+    <ProjectReference Include="..\ImageCare.Mcp\ImageCare.Mcp.csproj" />
   </ItemGroup>
+
 
   <PropertyGroup>
     <NativePlayerRuntimeIdentifier Condition="'$(RuntimeIdentifier)' == 'win-x64' Or '$(RuntimeIdentifier)' == 'win-x86'">$(RuntimeIdentifier)</NativePlayerRuntimeIdentifier>

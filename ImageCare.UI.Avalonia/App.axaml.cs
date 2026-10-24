@@ -54,6 +54,7 @@ public class App : PrismApplication
 {
     private SplashWindow? _splashWindow;
     private MediaAnnotationsCoordinator? _mediaAnnotationsCoordinator;
+    private ImageCareMcpServerController? _mcpServerController;
 
     protected override Rules CreateContainerRules()
     {
@@ -93,8 +94,27 @@ public class App : PrismApplication
         var mainWindow = Container.Resolve<MainWindow>();
         _mediaAnnotationsCoordinator = Container.Resolve<MediaAnnotationsCoordinator>();
         _mediaAnnotationsCoordinator.Start();
+
+        _mcpServerController = Container.Resolve<ImageCareMcpServerController>();
+        _ = System.Threading.Tasks.Task.Run(() => SafeStartMcpAsync());
+
         mainWindow.Opened += OnMainWindowOpened;
         return mainWindow;
+    }
+
+    private async System.Threading.Tasks.Task SafeStartMcpAsync()
+    {
+        try
+        {
+            if (_mcpServerController is not null)
+            {
+                await _mcpServerController.StartIfEnabledAsync().ConfigureAwait(false);
+            }
+        }
+        catch (Exception exception)
+        {
+            Log.Logger.Warning(exception, "ImageCare MCP server failed to start");
+        }
     }
 
     private void OnMainWindowOpened(object? sender, EventArgs e)
@@ -119,6 +139,16 @@ public class App : PrismApplication
         configurationService.SaveConfiguration();
         _mediaAnnotationsCoordinator?.Dispose();
         _mediaAnnotationsCoordinator = null;
+        try
+        {
+            _mcpServerController?.DisposeAsync().AsTask().GetAwaiter().GetResult();
+        }
+        catch (Exception)
+        {
+            // Best-effort shutdown of the local MCP server.
+        }
+
+        _mcpServerController = null;
     }
 
     protected override void RegisterTypes(IContainerRegistry containerRegistry)
@@ -196,6 +226,8 @@ public class App : PrismApplication
         containerRegistry.Register<IFolderStatisticsService, FileWatcherFolderStatisticsService>();
         containerRegistry.Register<IFolderClusterizationService, FastFolderClusterizationService>();
         containerRegistry.Register<ImagePreviewDropHandler, ImagePreviewDropHandler>();
+
+        containerRegistry.RegisterSingleton<ImageCareMcpServerController>();
 
         containerRegistry.RegisterDialogWindow<ChildWindow>("childWindow");
         containerRegistry.RegisterDialog<GlancePanelView, GlancePanelViewModel>("glanceViewer");

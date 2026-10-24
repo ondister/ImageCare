@@ -32,6 +32,7 @@ public sealed class SettingsViewModel : ViewModelBase
     private readonly ILogger _logger;
     private readonly LocalizationManager _localization;
     private readonly IMediaAnnotationsService _annotationsService;
+    private readonly ImageCareMcpServerController _mcpServerController;
     private readonly SynchronizationContext _synchronizationContext;
     private IDisposable? _annotationsStatusSubscription;
 
@@ -46,6 +47,9 @@ public sealed class SettingsViewModel : ViewModelBase
     private bool _folderTagApplicationLogEnabled;
     private bool _restoreLastFoldersOnStartup;
     private bool _safeDeletionEnabled;
+    private bool _mcpServerEnabled;
+    private int _mcpServerPort = 5277;
+    private string _mcpServerStatus = string.Empty;
     private string _safeDeletionDirectoryPath = string.Empty;
     private int _safeDeletionMaxFileCount = 100;
     private string? _selectedMediaSearchRoot;
@@ -59,6 +63,7 @@ public sealed class SettingsViewModel : ViewModelBase
         IConfigurationService configurationService,
         IFileDialogService fileDialogService,
         IMediaAnnotationsService annotationsService,
+        ImageCareMcpServerController mcpServerController,
         SynchronizationContext synchronizationContext,
         IMapper mapper,
         ILogger logger,
@@ -67,6 +72,7 @@ public sealed class SettingsViewModel : ViewModelBase
         _configService = configurationService;
         _fileDialogService = fileDialogService;
         _annotationsService = annotationsService;
+        _mcpServerController = mcpServerController;
         _synchronizationContext = synchronizationContext;
         _mapper = mapper;
         _logger = logger;
@@ -213,6 +219,48 @@ public sealed class SettingsViewModel : ViewModelBase
             _configService.Configuration.Value.FolderTagApplicationLogEnabled = value;
             SaveConfiguration();
         }
+    }
+
+    public bool McpServerEnabled
+    {
+        get => _mcpServerEnabled;
+        set
+        {
+            if (!SetProperty(ref _mcpServerEnabled, value))
+            {
+                return;
+            }
+
+            _configService.Configuration.Value.McpServerEnabled = value;
+            SaveConfiguration();
+            _ = ApplyMcpServerStateAsync();
+        }
+    }
+
+    public int McpServerPort
+    {
+        get => _mcpServerPort;
+        set
+        {
+            var normalized = Math.Clamp(value, 1024, 65535);
+            if (!SetProperty(ref _mcpServerPort, normalized))
+            {
+                return;
+            }
+
+            _configService.Configuration.Value.McpServerPort = normalized;
+            SaveConfiguration();
+            if (_mcpServerEnabled)
+            {
+                _ = ApplyMcpServerStateAsync();
+            }
+        }
+    }
+
+    public string McpServerStatus
+    {
+        get => _mcpServerStatus;
+        private set => SetProperty(ref _mcpServerStatus, value);
     }
 
     public string SafeDeletionDirectoryPath
@@ -422,6 +470,13 @@ public sealed class SettingsViewModel : ViewModelBase
 
             _folderTagApplicationLogEnabled = configuration.FolderTagApplicationLogEnabled;
             RaisePropertyChanged(nameof(FolderTagApplicationLogEnabled));
+
+            _mcpServerEnabled = configuration.McpServerEnabled;
+            RaisePropertyChanged(nameof(McpServerEnabled));
+
+            _mcpServerPort = Math.Clamp(configuration.McpServerPort, 1024, 65535);
+            RaisePropertyChanged(nameof(McpServerPort));
+            RefreshMcpServerStatus();
 
             _safeDeletionDirectoryPath = configuration.SafeDeletionDirectoryPath;
             RaisePropertyChanged(nameof(SafeDeletionDirectoryPath));
@@ -924,6 +979,55 @@ public sealed class SettingsViewModel : ViewModelBase
         {
             _logger.Error(ex, "Failed to save configuration");
         }
+    }
+
+    private async Task ApplyMcpServerStateAsync()
+    {
+        try
+        {
+            if (_mcpServerEnabled)
+            {
+                if (_mcpServerController.IsRunning)
+                {
+                    await _mcpServerController.StopAsync().ConfigureAwait(false);
+                }
+
+                await _mcpServerController
+                    .StartAsync(_mcpServerPort)
+                    .ConfigureAwait(false);
+            }
+            else
+            {
+                await _mcpServerController.StopAsync().ConfigureAwait(false);
+            }
+        }
+        catch (Exception exception)
+        {
+            _logger.Error(exception, "Failed to apply MCP server settings");
+        }
+        finally
+        {
+            _synchronizationContext.Post(_ => RefreshMcpServerStatus(), null);
+        }
+    }
+
+    private void RefreshMcpServerStatus()
+    {
+        if (!_mcpServerEnabled)
+        {
+            McpServerStatus = _localization["Settings_McpServerStatusStopped"];
+            return;
+        }
+
+        if (_mcpServerController.IsRunning && !string.IsNullOrWhiteSpace(_mcpServerController.EndpointUrl))
+        {
+            McpServerStatus = _localization.Get("Settings_McpServerStatusRunning", _mcpServerController.EndpointUrl);
+            return;
+        }
+
+        McpServerStatus = string.IsNullOrWhiteSpace(_mcpServerController.LastError)
+            ? _localization["Settings_McpServerStatusStarting"]
+            : _localization.Get("Settings_McpServerStatusFailed", _mcpServerController.LastError);
     }
 
     private void OnCommandException(Exception exception)

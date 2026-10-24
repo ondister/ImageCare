@@ -99,6 +99,13 @@
   <data name="Settings_SafeDeletionFolder" xml:space="preserve"><value>Buffer folder</value></data>
   <data name="Settings_SafeDeletionMaxFiles" xml:space="preserve"><value>Maximum files in buffer</value></data>
   <data name="Settings_SelectSafeDeletionFolder" xml:space="preserve"><value>Select the safe deletion buffer folder</value></data>
+  <data name="Settings_McpServer" xml:space="preserve"><value>MCP server</value></data>
+  <data name="Settings_McpServerDescription" xml:space="preserve"><value>Exposes ImageCare to MCP-compatible agents (Claude Desktop, Cursor, VS Code, Copilot) over Streamable HTTP on the loopback interface. Agents can read batches, previews, ratings and tags, suggest tags, and — only after an explicit request — delete the files the user did not keep.</value></data>
+  <data name="Settings_McpServerPort" xml:space="preserve"><value>Port</value></data>
+  <data name="Settings_McpServerStatusStopped" xml:space="preserve"><value>Stopped</value></data>
+  <data name="Settings_McpServerStatusStarting" xml:space="preserve"><value>Starting…</value></data>
+  <data name="Settings_McpServerStatusRunning" xml:space="preserve"><value>Running: {0}</value></data>
+  <data name="Settings_McpServerStatusFailed" xml:space="preserve"><value>Failed to start: {0}</value></data>
   <data name="Delete_Removing" xml:space="preserve"><value>Removing {0}…</value></data>
   <data name="Delete_Removed" xml:space="preserve"><value>Removed {0}</value></data>
   <data name="Delete_UndoHint" xml:space="preserve"><value>You can restore the most recently removed file.</value></data>
