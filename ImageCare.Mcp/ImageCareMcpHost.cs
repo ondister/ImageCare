@@ -425,8 +425,20 @@ public sealed class ImageCareMcpHost : IAsyncDisposable
         {
             _logger.Warning(exception, "MCP server shutdown did not complete cleanly");
         }
+        catch (Exception exception)
+        {
+            _logger.Error(exception, "MCP server shutdown failed");
+        }
 
-        await _app.DisposeAsync().ConfigureAwait(false);
+        try
+        {
+            await _app.DisposeAsync().ConfigureAwait(false);
+        }
+        catch (Exception exception) when (exception is ObjectDisposedException or InvalidOperationException)
+        {
+            // The host can already be disposed while a stop attempt timed out; nothing to clean up.
+        }
+
         _app = null;
         _logger.Information("ImageCare MCP server stopped");
     }

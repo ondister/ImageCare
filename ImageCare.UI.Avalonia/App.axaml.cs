@@ -133,7 +133,7 @@ public class App : PrismApplication
             DispatcherPriority.Background);
     }
 
-    protected virtual void OnShutdownRequested(object? sender, ShutdownRequestedEventArgs e)
+    protected virtual async void OnShutdownRequested(object? sender, ShutdownRequestedEventArgs e)
     {
         var configurationService = Container.Resolve<IConfigurationService>();
         configurationService.SaveConfiguration();
@@ -141,7 +141,10 @@ public class App : PrismApplication
         _mediaAnnotationsCoordinator = null;
         try
         {
-            _mcpServerController?.DisposeAsync().AsTask().GetAwaiter().GetResult();
+            if (_mcpServerController is not null)
+            {
+                await _mcpServerController.DisposeAsync().ConfigureAwait(false);
+            }
         }
         catch (Exception)
         {
