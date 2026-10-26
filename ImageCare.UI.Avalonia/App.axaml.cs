@@ -158,6 +158,7 @@ public class App : PrismApplication
     protected override void RegisterTypes(IContainerRegistry containerRegistry)
     {
         containerRegistry.RegisterInstance(LocalizationManager.Instance);
+        containerRegistry.RegisterInstance(TimeProvider.System);
 
         var logService = new SinkLogEventService();
         containerRegistry.RegisterInstance<ILogEventService>(logService);
@@ -205,6 +206,7 @@ public class App : PrismApplication
         containerRegistry.RegisterSingleton<IFolderTagApplicationService, FolderTagApplicationService>();
 
         containerRegistry.RegisterSingleton<INotificationService, LocalNotificationService>();
+        containerRegistry.RegisterSingleton<AdaptiveHelpPolicy>();
         containerRegistry.RegisterSingleton<AdaptiveHelpService>();
         containerRegistry.RegisterSingleton<IFileAssociationsService, ConfigurationFileAssociationsService>();
         containerRegistry.RegisterSingleton<IClipboardService, ClipboardService>();
@@ -218,6 +220,7 @@ public class App : PrismApplication
         containerRegistry.RegisterSingleton<ImageViewerWindowService>();
         containerRegistry.RegisterSingleton<SettingsWindowService>();
         containerRegistry.RegisterSingleton<MediaSearchWindowService>();
+        containerRegistry.RegisterSingleton<ShellUiActionService>();
         containerRegistry.RegisterSingleton<FolderTagsEditorWindowService>();
 
         containerRegistry.RegisterSingleton<TypeAdapterConfig>(() =>

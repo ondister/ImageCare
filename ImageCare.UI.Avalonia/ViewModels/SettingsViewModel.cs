@@ -47,6 +47,10 @@ public sealed class SettingsViewModel : ViewModelBase
     private bool _folderTagApplicationLogEnabled;
     private bool _restoreLastFoldersOnStartup;
     private bool _adaptiveHelpEnabled;
+    private bool _adaptiveHelpReturningUserEnabled;
+    private bool _adaptiveHelpDifficultyAssistanceEnabled;
+    private bool _adaptiveHelpNewFeaturesEnabled;
+    private AdaptiveHelpDetailLevelOption? _selectedAdaptiveHelpDetailLevel;
     private bool _safeDeletionEnabled;
     private bool _mcpServerEnabled;
     private int _mcpServerPort = 5277;
@@ -111,12 +115,15 @@ public sealed class SettingsViewModel : ViewModelBase
         RemovePinnedTagCommand = CreateCommand(RemovePinnedTag, () => SelectedPinnedTag != null)
             .ObservesProperty(() => SelectedPinnedTag);
         ImportPinnedTagsCommand = CreateAsyncCommand(ImportPinnedTagsAsync, OnCommandException);
+        ResetAdaptiveHelpProgressCommand = CreateCommand(ResetAdaptiveHelpProgress);
+        ClearAdaptiveHelpHistoryCommand = CreateCommand(ClearAdaptiveHelpHistory);
 
         _newExtension = SupportedExtensions.FirstOrDefault(extension =>
             extension.Equals(".jpg", StringComparison.OrdinalIgnoreCase))
             ?? SupportedExtensions.FirstOrDefault()
             ?? string.Empty;
         RebuildDragDropModifierOptions(DragDropModifierKey.Control);
+        RebuildAdaptiveHelpDetailLevelOptions(AdaptiveHelpDetailLevel.Standard);
         RebuildApplicationChoices();
     }
 
@@ -127,6 +134,8 @@ public sealed class SettingsViewModel : ViewModelBase
     public IReadOnlyList<string> SupportedExtensions { get; }
 
     public ObservableCollection<DragDropModifierOption> DragDropModifierOptions { get; } = new();
+
+    public ObservableCollection<AdaptiveHelpDetailLevelOption> AdaptiveHelpDetailLevelOptions { get; } = new();
 
     public ObservableCollection<ApplicationChoiceViewModel> ApplicationChoices { get; } = new();
 
@@ -158,6 +167,60 @@ public sealed class SettingsViewModel : ViewModelBase
             }
 
             _configService.Configuration.Value.AdaptiveHelpEnabled = value;
+            SaveConfiguration();
+        }
+    }
+
+    public bool AdaptiveHelpReturningUserEnabled
+    {
+        get => _adaptiveHelpReturningUserEnabled;
+        set
+        {
+            if (SetProperty(ref _adaptiveHelpReturningUserEnabled, value))
+            {
+                _configService.Configuration.Value.AdaptiveHelpReturningUserEnabled = value;
+                SaveConfiguration();
+            }
+        }
+    }
+
+    public bool AdaptiveHelpDifficultyAssistanceEnabled
+    {
+        get => _adaptiveHelpDifficultyAssistanceEnabled;
+        set
+        {
+            if (SetProperty(ref _adaptiveHelpDifficultyAssistanceEnabled, value))
+            {
+                _configService.Configuration.Value.AdaptiveHelpDifficultyAssistanceEnabled = value;
+                SaveConfiguration();
+            }
+        }
+    }
+
+    public bool AdaptiveHelpNewFeaturesEnabled
+    {
+        get => _adaptiveHelpNewFeaturesEnabled;
+        set
+        {
+            if (SetProperty(ref _adaptiveHelpNewFeaturesEnabled, value))
+            {
+                _configService.Configuration.Value.AdaptiveHelpNewFeaturesEnabled = value;
+                SaveConfiguration();
+            }
+        }
+    }
+
+    public AdaptiveHelpDetailLevelOption? SelectedAdaptiveHelpDetailLevel
+    {
+        get => _selectedAdaptiveHelpDetailLevel;
+        set
+        {
+            if (!SetProperty(ref _selectedAdaptiveHelpDetailLevel, value) || value == null)
+            {
+                return;
+            }
+
+            _configService.Configuration.Value.AdaptiveHelpDetailLevel = value.Level;
             SaveConfiguration();
         }
     }
@@ -325,6 +388,7 @@ public sealed class SettingsViewModel : ViewModelBase
             _configService.Configuration.Value.UiCultureName = value.Name;
             SaveConfiguration();
             RebuildDragDropModifierOptions(_configService.Configuration.Value.DragDropModifier);
+            RebuildAdaptiveHelpDetailLevelOptions(_configService.Configuration.Value.AdaptiveHelpDetailLevel);
             RebuildApplicationChoices();
             RaisePropertyChanged(nameof(Title));
         }
@@ -439,6 +503,10 @@ public sealed class SettingsViewModel : ViewModelBase
 
     public ICommand ImportPinnedTagsCommand { get; }
 
+    public ICommand ResetAdaptiveHelpProgressCommand { get; }
+
+    public ICommand ClearAdaptiveHelpHistoryCommand { get; }
+
     public void Close()
     {
         try
@@ -475,6 +543,17 @@ public sealed class SettingsViewModel : ViewModelBase
 
             _adaptiveHelpEnabled = configuration.AdaptiveHelpEnabled;
             RaisePropertyChanged(nameof(AdaptiveHelpEnabled));
+
+            _adaptiveHelpReturningUserEnabled = configuration.AdaptiveHelpReturningUserEnabled;
+            RaisePropertyChanged(nameof(AdaptiveHelpReturningUserEnabled));
+
+            _adaptiveHelpDifficultyAssistanceEnabled = configuration.AdaptiveHelpDifficultyAssistanceEnabled;
+            RaisePropertyChanged(nameof(AdaptiveHelpDifficultyAssistanceEnabled));
+
+            _adaptiveHelpNewFeaturesEnabled = configuration.AdaptiveHelpNewFeaturesEnabled;
+            RaisePropertyChanged(nameof(AdaptiveHelpNewFeaturesEnabled));
+
+            RebuildAdaptiveHelpDetailLevelOptions(configuration.AdaptiveHelpDetailLevel);
 
             RebuildDragDropModifierOptions(configuration.DragDropModifier);
 
@@ -892,6 +971,50 @@ public sealed class SettingsViewModel : ViewModelBase
 
         SaveConfiguration();
         LoadAssociations();
+    }
+
+    private void ResetAdaptiveHelpProgress()
+    {
+        var configuration = _configService.Configuration.Value;
+        configuration.AdaptiveHelpCompletedHintIds ??= new List<string>();
+        configuration.AdaptiveHelpCompletedHintIds.Clear();
+        configuration.AdaptiveHelpDismissedHintIds ??= new List<string>();
+        configuration.AdaptiveHelpDismissedHintIds.Clear();
+        configuration.AdaptiveHelpProgress ??= new List<AdaptiveHelpProgressEntry>();
+        configuration.AdaptiveHelpProgress.Clear();
+        configuration.AdaptiveHelpUserGoal = AdaptiveHelpUserGoal.Unknown;
+        SaveConfiguration();
+    }
+
+    private void ClearAdaptiveHelpHistory()
+    {
+        var configuration = _configService.Configuration.Value;
+        configuration.AdaptiveHelpSessionHistoryUtc ??= new List<DateTimeOffset>();
+        configuration.AdaptiveHelpSessionHistoryUtc.Clear();
+        configuration.AdaptiveHelpLastSessionUtc = null;
+        configuration.AdaptiveHelpLastShownUtc = null;
+        SaveConfiguration();
+    }
+
+    private void RebuildAdaptiveHelpDetailLevelOptions(AdaptiveHelpDetailLevel selectedLevel)
+    {
+        AdaptiveHelpDetailLevelOptions.Clear();
+        AdaptiveHelpDetailLevelOptions.Add(
+            new AdaptiveHelpDetailLevelOption(
+                _localization["Settings_HelpLevelMinimal"],
+                AdaptiveHelpDetailLevel.Minimal));
+        AdaptiveHelpDetailLevelOptions.Add(
+            new AdaptiveHelpDetailLevelOption(
+                _localization["Settings_HelpLevelStandard"],
+                AdaptiveHelpDetailLevel.Standard));
+        AdaptiveHelpDetailLevelOptions.Add(
+            new AdaptiveHelpDetailLevelOption(
+                _localization["Settings_HelpLevelDetailed"],
+                AdaptiveHelpDetailLevel.Detailed));
+
+        _selectedAdaptiveHelpDetailLevel = AdaptiveHelpDetailLevelOptions.First(option =>
+            option.Level == selectedLevel);
+        RaisePropertyChanged(nameof(SelectedAdaptiveHelpDetailLevel));
     }
 
     private void RebuildDragDropModifierOptions(DragDropModifierKey selectedModifier)

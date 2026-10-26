@@ -26,6 +26,20 @@ public partial class FoldersView : UserControl
         AttachViewModel(DataContext as FoldersViewModel);
     }
 
+    internal bool FocusPanel()
+    {
+        if (_viewModel?.SelectedFileSystemItem is { } selectedItem)
+        {
+            FolderTree.ScrollIntoView(selectedItem);
+            if (FolderTree.TreeContainerFromItem(selectedItem) is TreeViewItem container)
+            {
+                return container.Focus();
+            }
+        }
+
+        return FolderTree.Focus();
+    }
+
     private void OnDataContextChanged(object? sender, EventArgs e)
     {
         AttachViewModel(DataContext as FoldersViewModel);

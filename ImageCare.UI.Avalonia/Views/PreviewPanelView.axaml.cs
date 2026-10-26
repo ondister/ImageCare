@@ -21,6 +21,20 @@ public partial class PreviewPanelView : UserControl
 		InitializeComponent();
 	}
 
+    internal bool FocusPanel()
+    {
+        if (PreviewsList.SelectedItem is { } selected)
+        {
+            PreviewsList.ScrollIntoView(selected);
+            if (PreviewsList.ContainerFromItem(selected) is Control container)
+            {
+                return container.Focus();
+            }
+        }
+
+        return PreviewsList.Focus();
+    }
+
 	protected override void OnDataContextChanged(EventArgs e)
 	{
 		base.OnDataContextChanged(e);

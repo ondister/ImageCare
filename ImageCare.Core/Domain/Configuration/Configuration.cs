@@ -117,4 +117,23 @@ public sealed class Configuration
 
     /// <summary>UTC time when an automatic help suggestion was last displayed.</summary>
     public DateTimeOffset? AdaptiveHelpLastShownUtc { get; set; }
+
+    /// <summary>Controls reminders after an unusually long interval between sessions.</summary>
+    public bool AdaptiveHelpReturningUserEnabled { get; set; } = true;
+
+    /// <summary>Controls assistance after repeated user-visible errors.</summary>
+    public bool AdaptiveHelpDifficultyAssistanceEnabled { get; set; } = true;
+
+    /// <summary>Controls recommendations about relevant features after an update.</summary>
+    public bool AdaptiveHelpNewFeaturesEnabled { get; set; } = true;
+
+    public AdaptiveHelpDetailLevel AdaptiveHelpDetailLevel { get; set; } = AdaptiveHelpDetailLevel.Standard;
+
+    public AdaptiveHelpUserGoal AdaptiveHelpUserGoal { get; set; }
+
+    public List<DateTimeOffset> AdaptiveHelpSessionHistoryUtc { get; set; } = new();
+
+    public List<AdaptiveHelpProgressEntry> AdaptiveHelpProgress { get; set; } = new();
+
+    public string AdaptiveHelpLastSeenVersion { get; set; } = string.Empty;
 }

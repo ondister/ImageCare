@@ -118,6 +118,10 @@ internal class MainWindowViewModel : ViewModelBase
 
     public AdaptiveHelpService AdaptiveHelp => _adaptiveHelpService;
 
+    public bool IsMacOs => OperatingSystem.IsMacOS();
+
+    public bool IsNotMacOs => !IsMacOs;
+
     public bool IsImageViewVisible
     {
         get => _isImageViewVisible;

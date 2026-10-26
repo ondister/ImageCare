@@ -50,6 +50,31 @@
                 <TextBlock Text="{localization:Loc Settings_AdaptiveHelpDescription}"
                            Opacity="0.7"
                            TextWrapping="Wrap" />
+                <StackPanel Spacing="6" IsEnabled="{Binding AdaptiveHelpEnabled}">
+                    <ToggleSwitch Content="{localization:Loc Settings_HelpReturningUsers}"
+                                  IsChecked="{Binding AdaptiveHelpReturningUserEnabled, Mode=TwoWay}" />
+                    <ToggleSwitch Content="{localization:Loc Settings_HelpDifficulties}"
+                                  IsChecked="{Binding AdaptiveHelpDifficultyAssistanceEnabled, Mode=TwoWay}" />
+                    <ToggleSwitch Content="{localization:Loc Settings_HelpNewFeatures}"
+                                  IsChecked="{Binding AdaptiveHelpNewFeaturesEnabled, Mode=TwoWay}" />
+                    <TextBlock Text="{localization:Loc Settings_HelpDetailLevel}" />
+                    <ComboBox ItemsSource="{Binding AdaptiveHelpDetailLevelOptions}"
+                              SelectedItem="{Binding SelectedAdaptiveHelpDetailLevel, Mode=TwoWay}"
+                              MinWidth="240"
+                              HorizontalAlignment="Left">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="domain:AdaptiveHelpDetailLevelOption">
+                                <TextBlock Text="{Binding DisplayName}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Button Content="{localization:Loc Settings_HelpResetProgress}"
+                                Command="{Binding ResetAdaptiveHelpProgressCommand}" />
+                        <Button Content="{localization:Loc Settings_HelpClearHistory}"
+                                Command="{Binding ClearAdaptiveHelpHistoryCommand}" />
+                    </StackPanel>
+                </StackPanel>
 
                 <Separator Margin="{DynamicResource MarginVertical.Small}" />
 

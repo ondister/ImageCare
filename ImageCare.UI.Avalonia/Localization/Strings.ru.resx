@@ -265,22 +265,73 @@
   <data name="Help_GotIt" xml:space="preserve"><value>Понятно</value></data>
   <data name="Help_DontShowAgain" xml:space="preserve"><value>Больше не показывать эту подсказку</value></data>
   <data name="Help_WelcomeTitle" xml:space="preserve"><value>Начните с двух папок</value></data>
-  <data name="Help_WelcomeMessage" xml:space="preserve"><value>Выберите исходную папку слева и целевую справа. ImageCare покажет их медиафайлы рядом.</value></data>
+  <data name="Help_WelcomeMessage" xml:space="preserve"><value>Выберите исходную папку слева и целевую справа. Затем перетаскивайте медиафайлы между нижними панелями превью, чтобы копировать или перемещать их.</value></data>
   <data name="Help_ReturningTitle" xml:space="preserve"><value>Продолжите с места остановки</value></data>
   <data name="Help_ReturningMessage" xml:space="preserve"><value>Последнее рабочее пространство — «{0}». Восстановите или выберите папки, чтобы продолжить. Кнопка «?» в любой момент предложит следующий шаг.</value></data>
   <data name="Help_LastWorkspaceUnknown" xml:space="preserve"><value>предыдущие папки</value></data>
   <data name="Help_SelectSourceTitle" xml:space="preserve"><value>Выберите исходную папку</value></data>
   <data name="Help_SelectSourceMessage" xml:space="preserve"><value>В левой панели выберите папку с изображениями, которые хотите просмотреть.</value></data>
   <data name="Help_SelectTargetTitle" xml:space="preserve"><value>Выберите целевую папку</value></data>
-  <data name="Help_SelectTargetMessage" xml:space="preserve"><value>Выберите папку в правой панели. В неё будут копироваться или перемещаться файлы из левой панели.</value></data>
-  <data name="Help_SelectMediaTitle" xml:space="preserve"><value>Выберите медиафайлы</value></data>
-  <data name="Help_SelectMediaMessage" xml:space="preserve"><value>Выберите одно или несколько превью. Центральные кнопки станут доступны, когда в обеих панелях выбраны папки.</value></data>
-  <data name="Help_TransferTitle" xml:space="preserve"><value>Скопируйте или переместите выбранное</value></data>
-  <data name="Help_TransferMessage" xml:space="preserve"><value>Используйте центральную кнопку копирования или перемещения. Удерживайте настроенную клавишу-модификатор, чтобы временно сменить операцию перетаскивания.</value></data>
+  <data name="Help_SelectTargetMessage" xml:space="preserve"><value>Выберите папку в правой панели. После этого файлы можно перетаскивать между нижними панелями превью.</value></data>
+  <data name="Help_SelectMediaTitle" xml:space="preserve"><value>Выберите файлы для перетаскивания</value></data>
+  <data name="Help_SelectMediaMessage" xml:space="preserve"><value>Выберите одно или несколько превью в нижней панели, затем перетащите их в другую панель.</value></data>
+  <data name="Help_TransferTitle" xml:space="preserve"><value>Перетащите выбранные файлы в другую панель</value></data>
+  <data name="Help_TransferMessage" xml:space="preserve"><value>Перетащите выбранные файлы между нижними панелями превью. По умолчанию выполняется операция «{0}». Удерживайте {1} при перетаскивании, чтобы временно сменить операцию. Центральные кнопки остаются альтернативой.</value></data>
   <data name="Help_ReadyTitle" xml:space="preserve"><value>Помощь учитывает текущую задачу</value></data>
   <data name="Help_ReadyMessage" xml:space="preserve"><value>Выберите папки или медиафайлы и снова откройте эту панель, чтобы получить уместный следующий шаг. Автоматическая рекомендация появляется не чаще одного раза за сеанс.</value></data>
   <data name="Help_ReasonFirstRun" xml:space="preserve"><value>Предложено, потому что это первый сеанс.</value></data>
-  <data name="Help_ReasonReturning" xml:space="preserve"><value>Предложено после длительного перерыва в работе с ImageCare.</value></data>
+  <data name="Help_ReasonReturning" xml:space="preserve"><value>Предложено, потому что перерыв достиг адаптивного порога — {0} дн.</value></data>
   <data name="Help_ReasonContext" xml:space="preserve"><value>Предложено с учётом выбранных папок и файлов.</value></data>
   <data name="Help_ReasonManual" xml:space="preserve"><value>Эту помощь можно открыть кнопкой «?» в любое время.</value></data>
+  <data name="Settings_HelpReturningUsers" xml:space="preserve"><value>Подсказки после длительного перерыва</value></data>
+  <data name="Settings_HelpDifficulties" xml:space="preserve"><value>Помощь после повторяющихся ошибок</value></data>
+  <data name="Settings_HelpNewFeatures" xml:space="preserve"><value>Полезные функции после обновлений</value></data>
+  <data name="Settings_HelpDetailLevel" xml:space="preserve"><value>Количество помощи</value></data>
+  <data name="Settings_HelpLevelMinimal" xml:space="preserve"><value>Минимальное — до 3 рекомендаций</value></data>
+  <data name="Settings_HelpLevelStandard" xml:space="preserve"><value>Стандартное — до 4 рекомендаций</value></data>
+  <data name="Settings_HelpLevelDetailed" xml:space="preserve"><value>Подробное — до 5 рекомендаций</value></data>
+  <data name="Settings_HelpResetProgress" xml:space="preserve"><value>Сбросить освоенные операции</value></data>
+  <data name="Settings_HelpClearHistory" xml:space="preserve"><value>Очистить историю рекомендаций</value></data>
+  <data name="Help_SuggestionTitle" xml:space="preserve"><value>Рекомендуемый следующий шаг</value></data>
+  <data name="Help_SuggestionSubtitle" xml:space="preserve"><value>Одна своевременная подсказка. После закрытия она не появится снова в этом сеансе.</value></data>
+  <data name="Help_CenterTitle" xml:space="preserve"><value>Центр помощи</value></data>
+  <data name="Help_CenterSubtitle" xml:space="preserve"><value>Рекомендации учитывают выбранные папки, файлы и вашу основную задачу.</value></data>
+  <data name="Help_SettingsButton" xml:space="preserve"><value>Настройки помощи</value></data>
+  <data name="Help_GoalTitle" xml:space="preserve"><value>Что вы хотите сделать?</value></data>
+  <data name="Help_GoalMessage" xml:space="preserve"><value>Выбор изменит порядок рекомендаций, но не запустит операцию.</value></data>
+  <data name="Help_GoalOrganize" xml:space="preserve"><value>Разобрать медиафайлы</value></data>
+  <data name="Help_GoalCopy" xml:space="preserve"><value>Скопировать файлы</value></data>
+  <data name="Help_GoalSearch" xml:space="preserve"><value>Найти изображения</value></data>
+  <data name="Help_GoalCleanUp" xml:space="preserve"><value>Удалить ненужные файлы</value></data>
+  <data name="Help_GoalExplore" xml:space="preserve"><value>Изучить ImageCare</value></data>
+  <data name="Help_RestoreFoldersTitle" xml:space="preserve"><value>Восстановите рабочее пространство</value></data>
+  <data name="Help_RestoreFoldersMessage" xml:space="preserve"><value>Откройте сохранённые исходную и целевую папки, включая «{0}», и продолжите с места остановки.</value></data>
+  <data name="Help_DifficultyTitle" xml:space="preserve"><value>Помочь разобраться с операцией?</value></data>
+  <data name="Help_DifficultyMessage" xml:space="preserve"><value>Недавно несколько операций завершились ошибкой. Перед повтором проверьте целевую папку, права доступа и настройки операции.</value></data>
+  <data name="Help_SearchTitle" xml:space="preserve"><value>Ищите по пути, тегам и рейтингу</value></data>
+  <data name="Help_SearchMessage" xml:space="preserve"><value>Поиск по медиаиндексу находит изображения без последовательного просмотра всех папок.</value></data>
+  <data name="Help_SafeDeletionTitle" xml:space="preserve"><value>Удаляйте файлы безопасно</value></data>
+  <data name="Help_SafeDeletionMessage" xml:space="preserve"><value>Безопасное удаление сохраняет удалённые медиафайлы в буфере ImageCare, откуда их можно восстановить.</value></data>
+  <data name="Help_NewFeaturesTitle" xml:space="preserve"><value>Возможности для вашего сценария</value></data>
+  <data name="Help_NewFeaturesMessage" xml:space="preserve"><value>В этой версии улучшены поиск по индексу, теги и пакетные операции с медиафайлами.</value></data>
+  <data name="Help_SettingsTitle" xml:space="preserve"><value>Настройте ImageCare под свою работу</value></data>
+  <data name="Help_SettingsMessage" xml:space="preserve"><value>Настройте перетаскивание, безопасное удаление, язык и количество адаптивной помощи.</value></data>
+  <data name="Help_ActionChooseSource" xml:space="preserve"><value>К исходной папке</value></data>
+  <data name="Help_ActionChooseTarget" xml:space="preserve"><value>К целевой папке</value></data>
+  <data name="Help_ActionGoToMedia" xml:space="preserve"><value>К медиафайлам</value></data>
+  <data name="Help_ActionGoToSelection" xml:space="preserve"><value>К перетаскиванию</value></data>
+  <data name="Help_ActionContinue" xml:space="preserve"><value>Продолжить</value></data>
+  <data name="Help_ActionRestoreFolders" xml:space="preserve"><value>Восстановить папки</value></data>
+  <data name="Help_ActionOpenSearch" xml:space="preserve"><value>Открыть поиск</value></data>
+  <data name="Help_ActionTrySearch" xml:space="preserve"><value>Попробовать поиск</value></data>
+  <data name="Help_ActionOpenSettings" xml:space="preserve"><value>Открыть настройки</value></data>
+  <data name="Help_ActionReviewSettings" xml:space="preserve"><value>Проверить настройки</value></data>
+  <data name="Help_ReasonNoSource" xml:space="preserve"><value>Исходная папка не выбрана.</value></data>
+  <data name="Help_ReasonNoTarget" xml:space="preserve"><value>Целевая папка не выбрана.</value></data>
+  <data name="Help_ReasonNoSelection" xml:space="preserve"><value>Исходная папка готова, но медиафайлы ещё не выбраны.</value></data>
+  <data name="Help_ReasonSelectionReady" xml:space="preserve"><value>Выбранные объекты ({0}) можно перетащить в другую панель превью.</value></data>
+  <data name="Help_ReasonRepeatedErrors" xml:space="preserve"><value>За последние пять минут показано ошибок: {0}.</value></data>
+  <data name="Help_ReasonSelectedGoal" xml:space="preserve"><value>Приоритет повышен, потому что рекомендация соответствует выбранной цели.</value></data>
+  <data name="Help_ReasonOptional" xml:space="preserve"><value>Дополнительная операция, которая может пригодиться в текущем сценарии.</value></data>
+  <data name="Help_ReasonNewVersion" xml:space="preserve"><value>Предложено после обновления ImageCare с прошлого запуска.</value></data>
 </root>

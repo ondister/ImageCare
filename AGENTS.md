@@ -66,6 +66,21 @@ dotnet publish ImageCare.UI.Avalonia/ImageCare.UI.Avalonia.csproj --configuratio
 - New UI strings go in both `ImageCare.UI.Avalonia/Localization/Strings.resx` and `Strings.ru.resx`; XAML uses `{loc:Loc Key}` via `LocExtension`.
 - `ImageCare.UI.Avalonia/tags-example.txt` is the user-facing tag dictionary and is copied to output. There is no root `tags-example.txt`.
 
+## Adaptive help center
+
+- Keep help centralized. `ImageCare.UI.Avalonia/Services/AdaptiveHelpService.cs` owns event subscriptions, persisted progress, localization, and presentation state. Feature views publish their normal domain events and must not decide when hints appear.
+- `AdaptiveHelpPolicy.cs` contains deterministic eligibility, ranking, cooldown, return-threshold, fatigue, and mastery rules. Keep it free of Avalonia, Prism, Rx, and localization so policy tests remain fast.
+- `ShellUiActionService.cs` is the only bridge from recommendations to the shell. Help actions may focus folder/preview panels, restore saved folder selections, or open search/settings. They must never copy, move, or delete files without a separate explicit user action.
+- Drag-and-drop between the lower preview panels is the primary transfer workflow. Keep `transfer-media` above optional recommendations when both folders and a media selection are ready. Show the configured default operation and modifier key in its text.
+- Automatic help shows one recommendation per session, observes a 24-hour cooldown, and stops repeating a topic after two closes. Repeated-error help requires two user-visible errors within five minutes. Manual help can still be opened from the title-bar icon.
+- The return threshold is three times the median interval in the last ten sessions, clamped to 14–60 days, with a 30-day fallback. A basic workflow hint is mastered after three successful real actions and then leaves normal ranking.
+- Persistent models are in `ImageCare.Core/Domain/Configuration/AdaptiveHelpConfiguration.cs` and properties on `Configuration`. Normalize collection properties after deserializing old or hand-edited JSON.
+- The single panel host and the platform-aligned title-bar icon live in `Views/MainWindow.axaml`. Keep both macOS and Windows placement branches when changing the icon.
+- Add every help string to both resource files. When adding a hint, update the catalog in `AdaptiveHelpService`, its candidate rule in `AdaptiveHelpPolicy`, and `AdaptiveHelpPolicyTests`.
+- Targeted checks:
+  - `dotnet test Tests/ImageCare.UI.Avalonia.Tests/ImageCare.UI.Avalonia.Tests.csproj --filter "FullyQualifiedName~AdaptiveHelpPolicyTests"`
+  - `dotnet test Tests/ImageCare.Core.Tests/ImageCare.Core.Tests.csproj --filter "FullyQualifiedName~JsonConfigurationServiceTests"`
+
 ## MCP server
 
 - `ImageCareMcpHost` uses `WithToolsFromAssembly`. After adding or renaming a tool, update `Tests/ImageCare.Mcp.Tests/McpHostSmokeTests.ExpectedTools` and `docs/mcp-server.ru.md`.
@@ -82,7 +97,7 @@ dotnet publish ImageCare.UI.Avalonia/ImageCare.UI.Avalonia.csproj --configuratio
 
 - `ImageCare.Core.Tests` reads fixtures from `TestImages/` under `TestContext.CurrentContext.TestDirectory`. Preview tests call `Assert.Ignore` when fixtures are missing, so absent files silently reduce coverage.
 - `ImageCare.Mcp.Tests` starts a real Kestrel host on ephemeral ports with temp directories and inert service mocks; no external services are required.
-- `ImageCare.UI.Avalonia.Tests` is small (collections/`ViewModelBase`). `LibRawDotNet.Tests` needs the native libraw library in its output; failures there usually mean missing native assets.
+- `ImageCare.UI.Avalonia.Tests` covers view-model helpers and deterministic adaptive-help policy rules. `LibRawDotNet.Tests` needs the native libraw library in its output; failures there usually mean missing native assets.
 - There are no manual codegen steps or database migrations. The SQLite index is created at runtime.
 
 ## Existing docs

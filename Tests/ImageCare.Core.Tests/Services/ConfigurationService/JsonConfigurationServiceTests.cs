@@ -160,6 +160,49 @@ public class JsonConfigurationServiceTests
 		Assert.That(result.LastTargetDirectoryPath, Is.EqualTo("D:\\ExistingTarget"));
 	}
 
+	[Test]
+	public void SaveConfiguration_RoundTripsAdaptiveHelpState()
+	{
+		var testFilePath = Path.Combine(_testBaseDirectory, "adaptive-help", "configuration.json");
+		var fileSource = CreateMockFileSource(testFilePath);
+		var completedAt = new DateTimeOffset(2026, 10, 26, 12, 0, 0, TimeSpan.Zero);
+
+		using (var service = new JsonConfigurationService(fileSource.Object))
+		{
+			var configuration = service.Configuration.Value;
+			configuration.AdaptiveHelpUserGoal = AdaptiveHelpUserGoal.SearchMedia;
+			configuration.AdaptiveHelpDetailLevel = AdaptiveHelpDetailLevel.Detailed;
+			configuration.AdaptiveHelpReturningUserEnabled = false;
+			configuration.AdaptiveHelpSessionHistoryUtc = [completedAt.AddDays(-5), completedAt];
+			configuration.AdaptiveHelpProgress =
+			[
+				new AdaptiveHelpProgressEntry
+				{
+					HintId = "search-media",
+					ExposureCount = 2,
+					SuccessfulActionCount = 3,
+					MasteryLevel = AdaptiveHelpMasteryLevel.Mastered,
+					LastCompletedUtc = completedAt
+				}
+			];
+			service.SaveConfiguration();
+		}
+
+		using var reloadedService = new JsonConfigurationService(fileSource.Object);
+		var reloaded = reloadedService.Configuration.Value;
+
+		Assert.Multiple(() =>
+		{
+			Assert.That(reloaded.AdaptiveHelpUserGoal, Is.EqualTo(AdaptiveHelpUserGoal.SearchMedia));
+			Assert.That(reloaded.AdaptiveHelpDetailLevel, Is.EqualTo(AdaptiveHelpDetailLevel.Detailed));
+			Assert.That(reloaded.AdaptiveHelpReturningUserEnabled, Is.False);
+			Assert.That(reloaded.AdaptiveHelpSessionHistoryUtc, Has.Count.EqualTo(2));
+			Assert.That(reloaded.AdaptiveHelpProgress, Has.Count.EqualTo(1));
+			Assert.That(reloaded.AdaptiveHelpProgress[0].MasteryLevel, Is.EqualTo(AdaptiveHelpMasteryLevel.Mastered));
+			Assert.That(reloaded.AdaptiveHelpProgress[0].LastCompletedUtc, Is.EqualTo(completedAt));
+		});
+	}
+
 	private static Mock<IConfigurationFileSource> CreateMockFileSource(string filePath)
 	{
 		var mock = new Mock<IConfigurationFileSource>();
