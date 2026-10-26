@@ -1,8 +1,10 @@
 using System;
 
+using ImageCare.Core.Domain.MediaFormats;
 using ImageCare.Core.Services.FileSystemService;
 
 using ImageCare.Mcp.Media;
+using ImageCare.Mcp.Sessions;
 
 using Moq;
 
@@ -104,6 +106,7 @@ public sealed class MediaLibraryBatchTests
     {
         TestSupport.CreateMediaFile(_directory, "keep.jpg", BaseTime);
         TestSupport.CreateMediaFile(_directory, "keep.cr3", BaseTime);
+        TestSupport.CreateMediaFile(_directory, "keep.dng", BaseTime);
         File.WriteAllText(Path.Combine(_directory, "notes.txt"), "not media");
         File.WriteAllText(Path.Combine(_directory, "folder-tags.txt"), "wildlife");
 
@@ -111,6 +114,23 @@ public sealed class MediaLibraryBatchTests
 
         Assert.That(
             files.Select(Path.GetFileName),
-            Is.EquivalentTo(new[] { "keep.cr3", "keep.jpg" }));
+            Is.EquivalentTo(new[] { "keep.cr3", "keep.dng", "keep.jpg" }));
+    }
+
+    [TestCase("photo.dng")]
+    [TestCase("photo.DNG")]
+    public void ResolveFormat_WithDngFile_ReturnsDngFormat(string fileName)
+    {
+        var result = ReviewSessionService.ResolveFormat(fileName);
+
+        Assert.That(result, Is.EqualTo(MediaFormat.MediaFormatDng));
+    }
+
+    [Test]
+    public void ResolveFormat_WithUnsupportedFile_ReturnsUnknownFormat()
+    {
+        var result = ReviewSessionService.ResolveFormat("photo.tiff");
+
+        Assert.That(result, Is.EqualTo(MediaFormat.MediaFormatUnknown));
     }
 }

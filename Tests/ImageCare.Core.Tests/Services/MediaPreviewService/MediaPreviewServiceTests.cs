@@ -58,6 +58,19 @@ public class CommonMediaPreviewServiceTests
     }
 
     [Test]
+    public async Task GetJpegImageStreamAsync_WithDngFile_ReturnsStream()
+    {
+        using var service = new CommonMediaPreviewService();
+        var imagePath = GetTestImagePath("dng_test.dng");
+        var mediaPreview = await GetPreviewAsync(service, imagePath);
+
+        var stream = await service.GetJpegImageStreamAsync(mediaPreview, MediaPreviewSize.Medium);
+
+        Assert.That(stream, Is.Not.Null);
+        Assert.That(stream.Length, Is.GreaterThan(0));
+    }
+
+    [Test]
     public async Task GetMediaPreviewAsync_WithJpgFile_ReturnsCorrectMediaPreview()
     {
         using var service = new CommonMediaPreviewService();
@@ -94,6 +107,18 @@ public class CommonMediaPreviewServiceTests
 
         Assert.That(result, Is.Not.Null);
         Assert.That(result!.MediaFormat, Is.EqualTo(MediaFormat.MediaFormatArw));
+    }
+
+    [Test]
+    public async Task GetMediaPreviewAsync_WithDngFile_ReturnsDngFormat()
+    {
+        using var service = new CommonMediaPreviewService();
+        var imagePath = GetTestImagePath("dng_test.dng");
+
+        var result = await service.GetMediaPreviewAsync(imagePath);
+
+        Assert.That(result, Is.Not.Null);
+        Assert.That(result!.MediaFormat, Is.EqualTo(MediaFormat.MediaFormatDng));
     }
 
     [Test]
@@ -144,6 +169,21 @@ public class CommonMediaPreviewServiceTests
         var metadata = await service.GetMediaMetadataAsync(mediaPreview);
 
         Assert.That(metadata, Is.Not.Null);
+    }
+
+    [Test]
+    public async Task GetMediaMetadataAsync_WithDngFile_ReturnsMetadata()
+    {
+        using var service = new CommonMediaPreviewService();
+        var imagePath = GetTestImagePath("dng_test.dng");
+        var mediaPreview = await GetPreviewAsync(service, imagePath);
+
+        var metadata = await service.GetMediaMetadataAsync(mediaPreview);
+
+        Assert.That(metadata, Is.Not.Null);
+        Assert.That(metadata.Width, Is.EqualTo(6000));
+        Assert.That(metadata.Height, Is.EqualTo(4000));
+        Assert.That(metadata.Location, Is.Not.EqualTo(ImageCare.Core.Domain.Media.Metadata.Location.Empty));
     }
 
     [Test]
@@ -206,6 +246,18 @@ public class CommonMediaPreviewServiceTests
         var creationDate = await service.GetCreationDateTime(mediaPreview);
 
         Assert.That(creationDate, Is.GreaterThan(DateTime.MinValue));
+    }
+
+    [Test]
+    public async Task GetCreationDateTime_WithDngFile_ReturnsValidDateTime()
+    {
+        using var service = new CommonMediaPreviewService();
+        var imagePath = GetTestImagePath("dng_test.dng");
+        var mediaPreview = await GetPreviewAsync(service, imagePath);
+
+        var creationDate = await service.GetCreationDateTime(mediaPreview);
+
+        Assert.That(creationDate, Is.EqualTo(new DateTime(2025, 2, 27, 17, 3, 15)));
     }
 
     [Test]

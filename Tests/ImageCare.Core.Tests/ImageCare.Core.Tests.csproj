@@ -48,6 +48,10 @@
     <None Update="TestImages\sony.ARW">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="TestImages\ dng_test.dng">
+      <Link>TestImages\dng_test.dng</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>

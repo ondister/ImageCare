@@ -4,7 +4,7 @@ namespace ImageCare.Core.Domain.Configuration;
 
 public static class DefaultFileApplicationAssociations
 {
-    public const int CurrentVersion = 1;
+    public const int CurrentVersion = 2;
 
     public static bool EnsureInitialized(Configuration configuration)
     {

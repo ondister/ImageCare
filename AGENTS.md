@@ -53,9 +53,9 @@ dotnet publish ImageCare.UI.Avalonia/ImageCare.UI.Avalonia.csproj --configuratio
 - `MediaAnnotationsCoordinator` is started/stopped by `App.axaml.cs` and coordinates XMP storage with the SQLite annotation index. XMP files live next to media files and are deliberately excluded from media lists.
 - Safe deletion is implemented in `WindowsMediaPreviewOperationsService` using `deletion-manifest.json` and `ImageCare_Deleted_` temporary files. Preserve that flow when touching file operations.
 - `WindowsMediaPreviewOperationsService` and `WindowsConfigurationFileSource` are cross-platform despite their names: they delegate through injected `IFileSystemService`/`IProcessService` or `Environment.SpecialFolder.LocalApplicationData`.
-- Media previews dispatch through `MediaPreviewProvidersFactory` to per-format `IMediaPreviewProvider`s (`Jpeg`, `Cr3`, `Arw`, `Nef`, `Mp4`, unsupported fallback). Add a provider and metadata type rather than branching on extensions in UI code.
+- Media previews dispatch through `MediaPreviewProvidersFactory` to per-format `IMediaPreviewProvider`s (`Jpeg`, `Cr3`, `Arw`, `Nef`, `Dng`, `Mp4`, unsupported fallback). Add a provider and metadata type rather than branching on extensions in UI code.
 - macOS video uses AVPlayer via `Platforms/macOS/MacVideoPlayerView`, not libmpv. Windows uses libmpv from `ImageCare.UI.Avalonia/player-native/win-x64/libmpv-2.dll`; only the Windows DLL is copied by the UI project.
-- The location map renders only the currently selected Canon CR3 image (GPS is not parsed for other formats) and needs internet for OpenStreetMap tiles.
+- The location map renders only the currently selected Canon CR3 or DNG image (GPS is not parsed for other formats) and needs internet for OpenStreetMap tiles.
 - Native RAW assets: `Directory.Build.targets` copies `LibRawDotNet/libraw.dll` into Windows exe/test outputs; macOS dylibs flow transitively from `LibRawDotNet/runtimes/osx-arm64/native`. If RAW previews fail, check native assets before managed code.
 - Time-based clustering is skipped when a folder panel exceeds 5,000 files (`GlancePanelViewModel` / `PreviewPanelViewModel`).
 - Prism dialogs use `RegisterDialog`/`RegisterDialogWindow`; the shared dialog host is registered as `childWindow`.

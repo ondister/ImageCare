@@ -43,6 +43,8 @@ public sealed class MediaFormat : IEquatable<MediaFormat>
 
 	public static MediaFormat MediaFormatCr3 { get; } = new([".CR3"], MediaType.Image);
 
+	public static MediaFormat MediaFormatDng { get; } = new([".DNG"], MediaType.Image);
+
 	public static MediaFormat MediaFormatJpg { get; } = new([".jpg", ".jpeg"], MediaType.Image);
 
 	public static MediaFormat MediaFormatMp4 { get; } = new([".mp4"], MediaType.Video);
@@ -108,9 +110,9 @@ public sealed class MediaFormat : IEquatable<MediaFormat>
 		return !Equals(left, right);
 	}
 
-	internal static MediaFormat? GetMediaFormatByExtension(string extension)
+	public static MediaFormat? GetMediaFormatByExtension(string extension)
 	{
-		return _supportedMediaFormats.Values.FirstOrDefault(f => f.FileExtensions.Contains(extension));
+		return _supportedMediaFormats.GetValueOrDefault(extension);
 	}
 
 	internal static MediaFormat Create(FileModel fileModel)

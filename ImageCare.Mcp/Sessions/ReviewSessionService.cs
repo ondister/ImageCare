@@ -515,15 +515,8 @@ public sealed class ReviewSessionService
 
     public static MediaFormat ResolveFormat(string path)
     {
-        return Path.GetExtension(path).ToLowerInvariant() switch
-        {
-            ".jpg" or ".jpeg" => MediaFormat.MediaFormatJpg,
-            ".cr3" => MediaFormat.MediaFormatCr3,
-            ".arw" => MediaFormat.MediaFormatArw,
-            ".nef" => MediaFormat.MediaFormatNef,
-            ".mp4" => MediaFormat.MediaFormatMp4,
-            _ => MediaFormat.MediaFormatUnknown
-        };
+        return MediaFormat.GetMediaFormatByExtension(Path.GetExtension(path))
+               ?? MediaFormat.MediaFormatUnknown;
     }
 
     private static string BuildSessionId(string sourcePath)

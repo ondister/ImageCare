@@ -20,6 +20,7 @@ internal sealed class MediaPreviewProvidersFactory
             _mediaProviders.Add(MediaFormat.MediaFormatCr3, new Cr3MediaPreviewProvider());
             _mediaProviders.Add(MediaFormat.MediaFormatArw, new ArwMediaPreviewProvider());
             _mediaProviders.Add(MediaFormat.MediaFormatNef, new NefMediaPreviewProvider());
+            _mediaProviders.Add(MediaFormat.MediaFormatDng, new DngMediaPreviewProvider());
         }
 
         if (Capabilities.Video)

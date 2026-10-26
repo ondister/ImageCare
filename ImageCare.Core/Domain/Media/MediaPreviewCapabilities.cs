@@ -25,7 +25,8 @@ public sealed record MediaPreviewCapabilities(bool Raw, bool Video)
         if (Raw && mediaFormat is not null &&
             (mediaFormat == MediaFormat.MediaFormatCr3
              || mediaFormat == MediaFormat.MediaFormatArw
-             || mediaFormat == MediaFormat.MediaFormatNef))
+             || mediaFormat == MediaFormat.MediaFormatNef
+             || mediaFormat == MediaFormat.MediaFormatDng))
         {
             return true;
         }

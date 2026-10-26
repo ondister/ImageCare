@@ -5,7 +5,7 @@ namespace ImageCare.Core.Services.MediaAnnotationsService;
 /// </summary>
 public static class XmpSidecarPath
 {
-    private static readonly string[] ProprietaryRawExtensions = [".nef", ".arw", ".cr3"];
+    private static readonly string[] ProprietaryRawExtensions = [".nef", ".arw", ".cr3", ".dng"];
     private static readonly StringComparer PathComparer = OperatingSystem.IsWindows()
         ? StringComparer.OrdinalIgnoreCase
         : StringComparer.Ordinal;

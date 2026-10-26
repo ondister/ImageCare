@@ -306,10 +306,7 @@ internal sealed class MediaAnnotationsCoordinator : IDisposable
 
     private static bool IsImagePath(string path)
     {
-        var extension = Path.GetExtension(path);
-        return MediaFormat.GetSupportedExtensions().Any(candidate =>
-                   candidate.Equals(extension, StringComparison.OrdinalIgnoreCase))
-               && !extension.Equals(".mp4", StringComparison.OrdinalIgnoreCase);
+        return MediaFormat.GetMediaFormatByExtension(Path.GetExtension(path))?.SupportsAnnotations == true;
     }
 
     private static IndexedMediaAnnotations ToIndexed(MediaAnnotationsSnapshot snapshot) =>

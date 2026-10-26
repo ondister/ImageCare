@@ -13,8 +13,8 @@ For example, a birdwatcher returns from the field with a memory card containing 
 - Two folder panels and a shared preview strip for sorting files between directories.
 - Folder overview with a timeline, adjustable grid, sorting, and restored-file list.
 - Time-based image clustering marks related shooting sessions with colored frames in folders containing up to 5,000 media files.
-- Preview extraction and metadata reading for JPEG, RAW images, and MP4 video.
-- Shooting-location map for a selected geotagged Canon CR3 image, with a marker and coordinate copying.
+- Preview extraction and metadata reading for JPEG, RAW images (including DNG), and MP4 video.
+- Shooting-location map for a selected geotagged Canon CR3 or DNG image, with a marker and coordinate copying.
 - Ratings and tags stored in XMP sidecar files.
 - Tag dictionaries can be imported from UTF-8 text files; `tags-example.txt` contains an alphabetical list of 325 bird species recorded in Belarus.
 - Indexed search by file properties, rating, and tags.
@@ -23,13 +23,13 @@ For example, a birdwatcher returns from the field with a memory card containing 
 - English and Russian interface.
 
 ## Photo location map
-The map shows only the currently selected image, not every image in the folder. ImageCare currently reads GPS coordinates from Canon CR3 files only. Loading the OpenStreetMap background requires an internet connection.
+The map shows only the currently selected image, not every image in the folder. ImageCare currently reads GPS coordinates from Canon CR3 and DNG files. Loading the OpenStreetMap background requires an internet connection.
 
 ## Supported formats
 
 | Type | Formats |
 |---|---|
-| Images | JPEG/JPG, Canon CR3, Sony ARW, Nikon NEF |
+| Images | JPEG/JPG, Canon CR3, Sony ARW, Nikon NEF, Adobe DNG |
 | Video | MP4 |
 | Metadata sidecars | XMP |
 
