@@ -229,4 +229,32 @@
   <data name="FolderTags_Editor_CommentTag" xml:space="preserve"><value>Tags cannot start with '#'.</value></data>
   <data name="FolderTags_Editor_EmptyTag" xml:space="preserve"><value>Enter a tag.</value></data>
   <data name="FolderTags_Editor_Unavailable" xml:space="preserve"><value>The folder is no longer available.</value></data>
+  <data name="Batch_SelectionCount" xml:space="preserve"><value>{0} selected</value></data>
+  <data name="Batch_ExportJpeg" xml:space="preserve"><value>Export JPEG</value></data>
+  <data name="Batch_ExportJpegShort" xml:space="preserve"><value>JPEG</value></data>
+  <data name="Batch_ExportJpegTooltip" xml:space="preserve"><value>Export the largest preview as JPEG</value></data>
+  <data name="Batch_ExportFolderTitle" xml:space="preserve"><value>Select a folder for exported JPEG files</value></data>
+  <data name="Batch_CopySelection" xml:space="preserve"><value>Copy selected files</value></data>
+  <data name="Batch_MoveSelection" xml:space="preserve"><value>Move selected files</value></data>
+  <data name="Batch_DeleteSelection" xml:space="preserve"><value>Delete selected files</value></data>
+  <data name="Batch_ClearSelection" xml:space="preserve"><value>Clear selection</value></data>
+  <data name="Batch_CancelOperation" xml:space="preserve"><value>Cancel operation</value></data>
+  <data name="Batch_Progress" xml:space="preserve"><value>{0} / {1}</value></data>
+  <data name="Batch_Start_Copy" xml:space="preserve"><value>Copying {0} files to {1}…</value></data>
+  <data name="Batch_Start_Move" xml:space="preserve"><value>Moving {0} files to {1}…</value></data>
+  <data name="Batch_Start_Delete" xml:space="preserve"><value>Deleting {0} files…</value></data>
+  <data name="Batch_Start_Export" xml:space="preserve"><value>Exporting {0} images to {1}…</value></data>
+  <data name="Batch_Completed_Copy" xml:space="preserve"><value>Copied {0} of {1} files</value></data>
+  <data name="Batch_Completed_Move" xml:space="preserve"><value>Moved {0} of {1} files</value></data>
+  <data name="Batch_Completed_Delete" xml:space="preserve"><value>Deleted {0} of {1} files</value></data>
+  <data name="Batch_Completed_Export" xml:space="preserve"><value>Exported {0} of {1} images</value></data>
+  <data name="Batch_CancelledTitle" xml:space="preserve"><value>Operation cancelled</value></data>
+  <data name="Batch_FailedTitle" xml:space="preserve"><value>File operation failed</value></data>
+  <data name="Batch_FailedDetail" xml:space="preserve"><value>{0} file(s) failed. First error: {1}</value></data>
+  <data name="Batch_NoTargetFolder" xml:space="preserve"><value>Select a folder in the other panel first.</value></data>
+  <data name="Batch_NoExportableImages" xml:space="preserve"><value>Select at least one image to export.</value></data>
+  <data name="Batch_DeleteConfirmTitle" xml:space="preserve"><value>Delete selected files?</value></data>
+  <data name="Batch_DeleteConfirmMessage" xml:space="preserve"><value>Delete {0} selected file(s)? This cannot be undone from the app.</value></data>
+  <data name="Batch_DeleteConfirmSafeDetail" xml:space="preserve"><value>Safe deletion is enabled, so the files can be restored from the buffer if needed.</value></data>
+  <data name="Batch_DeleteConfirmUnsafeDetail" xml:space="preserve"><value>Safe deletion is disabled. The files will be permanently deleted.</value></data>
 </root>

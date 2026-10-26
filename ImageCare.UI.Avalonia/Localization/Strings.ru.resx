@@ -229,4 +229,32 @@
   <data name="FolderTags_Editor_CommentTag" xml:space="preserve"><value>Тег не может начинаться с символа «#».</value></data>
   <data name="FolderTags_Editor_EmptyTag" xml:space="preserve"><value>Введите тег.</value></data>
   <data name="FolderTags_Editor_Unavailable" xml:space="preserve"><value>Папка больше недоступна.</value></data>
+  <data name="Batch_SelectionCount" xml:space="preserve"><value>Выбрано: {0}</value></data>
+  <data name="Batch_ExportJpeg" xml:space="preserve"><value>Экспорт JPEG</value></data>
+  <data name="Batch_ExportJpegShort" xml:space="preserve"><value>JPEG</value></data>
+  <data name="Batch_ExportJpegTooltip" xml:space="preserve"><value>Экспортировать самый большой предпросмотр в JPEG</value></data>
+  <data name="Batch_ExportFolderTitle" xml:space="preserve"><value>Выберите папку для экспорта JPEG</value></data>
+  <data name="Batch_CopySelection" xml:space="preserve"><value>Копировать выбранные файлы</value></data>
+  <data name="Batch_MoveSelection" xml:space="preserve"><value>Переместить выбранные файлы</value></data>
+  <data name="Batch_DeleteSelection" xml:space="preserve"><value>Удалить выбранные файлы</value></data>
+  <data name="Batch_ClearSelection" xml:space="preserve"><value>Снять выделение</value></data>
+  <data name="Batch_CancelOperation" xml:space="preserve"><value>Отменить операцию</value></data>
+  <data name="Batch_Progress" xml:space="preserve"><value>{0} / {1}</value></data>
+  <data name="Batch_Start_Copy" xml:space="preserve"><value>Копирование файлов ({0}) в {1}…</value></data>
+  <data name="Batch_Start_Move" xml:space="preserve"><value>Перемещение файлов ({0}) в {1}…</value></data>
+  <data name="Batch_Start_Delete" xml:space="preserve"><value>Удаление файлов ({0})…</value></data>
+  <data name="Batch_Start_Export" xml:space="preserve"><value>Экспорт изображений ({0}) в {1}…</value></data>
+  <data name="Batch_Completed_Copy" xml:space="preserve"><value>Скопировано {0} из {1} файлов</value></data>
+  <data name="Batch_Completed_Move" xml:space="preserve"><value>Перемещено {0} из {1} файлов</value></data>
+  <data name="Batch_Completed_Delete" xml:space="preserve"><value>Удалено {0} из {1} файлов</value></data>
+  <data name="Batch_Completed_Export" xml:space="preserve"><value>Экспортировано {0} из {1} изображений</value></data>
+  <data name="Batch_CancelledTitle" xml:space="preserve"><value>Операция отменена</value></data>
+  <data name="Batch_FailedTitle" xml:space="preserve"><value>Не удалось выполнить операцию</value></data>
+  <data name="Batch_FailedDetail" xml:space="preserve"><value>Не удалось обработать файлов: {0}. Первая ошибка: {1}</value></data>
+  <data name="Batch_NoTargetFolder" xml:space="preserve"><value>Сначала выберите папку в другой панели.</value></data>
+  <data name="Batch_NoExportableImages" xml:space="preserve"><value>Выберите хотя бы одно изображение для экспорта.</value></data>
+  <data name="Batch_DeleteConfirmTitle" xml:space="preserve"><value>Удалить выбранные файлы?</value></data>
+  <data name="Batch_DeleteConfirmMessage" xml:space="preserve"><value>Удалить выбранные файлы ({0})? Это действие нельзя отменить в приложении.</value></data>
+  <data name="Batch_DeleteConfirmSafeDetail" xml:space="preserve"><value>Безопасное удаление включено: при необходимости файлы можно восстановить из буфера.</value></data>
+  <data name="Batch_DeleteConfirmUnsafeDetail" xml:space="preserve"><value>Безопасное удаление отключено. Файлы будут удалены безвозвратно.</value></data>
 </root>

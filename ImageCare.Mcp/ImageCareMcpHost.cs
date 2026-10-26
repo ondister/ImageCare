@@ -96,6 +96,8 @@ public sealed class ImageCareMcpHost : IAsyncDisposable
         - Always dry-run destructive tools first and report counts.
         - Tag suggestions are evidence-based: explain which kept photo or folder-tags.txt entry the
           suggestion comes from, and ask before applying.
+        - Use imagecare_rating_set to change a star rating (0 clears it) only when the user explicitly
+          asks; dryRun defaults to true.
         - Paths always come from the user or from tool output; do not guess them.
         """;
 

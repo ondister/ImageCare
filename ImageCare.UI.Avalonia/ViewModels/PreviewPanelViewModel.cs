@@ -25,6 +25,7 @@ using ImageCare.Core.Services.FolderClusterizationService;
 using ImageCare.Core.Services.FolderService;
 using ImageCare.Core.Services.FolderStatisticsService;
 using ImageCare.Core.Services.MediaAnnotationsService;
+using ImageCare.Core.Services.MediaBatchOperationsService;
 using ImageCare.Core.Services.MediaPreviewOperationsService;
 using ImageCare.Core.Services.MediaPreviewService;
 using ImageCare.Core.Services.NotificationService;
@@ -56,6 +57,10 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
     private readonly IFileSystemService _fileSystemService;
     private readonly IFileSystemWatcherService _fileSystemWatcherService;
     private readonly IMediaPreviewOperationsService _fileOperationsService;
+    private readonly IMediaBatchOperationsService _batchOperationsService;
+    private readonly IFileDialogService _fileDialogService;
+    private readonly IConfirmationDialogService _confirmationDialogService;
+    private readonly MediaSelectionCoordinator _selectionCoordinator;
     private readonly FileTransferCoordinator _fileTransferCoordinator;
     private readonly IFolderStatisticsService _folderStatisticsService;
     private readonly IFolderClusterizationService _folderClusterizationService;
@@ -72,8 +77,13 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
     private readonly object _imagePathsLock = new();
     private readonly object _loadedPreviewsLock = new();
     private readonly HashSet<MediaPreviewViewModel> _loadedPreviews = [];
+    private readonly List<MediaPreviewViewModel> _selectedPreviews = [];
     private MediaPreviewViewModel? _selectedPreview;
     private CompositeDisposable? _disposable;
+    private CancellationTokenSource? _batchOperationCancellation;
+    private bool _isBatchOperationRunning;
+    private int _batchProcessed;
+    private int _batchTotal;
 
     private CancellationTokenSource _folderSelectedCancellationTokenSource;
     private CancellationTokenSource? _selectedAnnotationCancellation;
@@ -106,6 +116,10 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
                                  IFileSystemService fileSystemService,
                                  IFileSystemWatcherService fileSystemWatcherService,
                                  IMediaPreviewOperationsService fileOperationsService,
+                                 IMediaBatchOperationsService batchOperationsService,
+                                 IFileDialogService fileDialogService,
+                                 IConfirmationDialogService confirmationDialogService,
+                                 MediaSelectionCoordinator selectionCoordinator,
                                  FileTransferCoordinator fileTransferCoordinator,
                                  IFolderStatisticsService folderStatisticsService,
                                  IFolderClusterizationService folderClusterizationService,
@@ -126,6 +140,10 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
         _fileSystemService = fileSystemService;
         _fileSystemWatcherService = fileSystemWatcherService;
         _fileOperationsService = fileOperationsService;
+        _batchOperationsService = batchOperationsService;
+        _fileDialogService = fileDialogService;
+        _confirmationDialogService = confirmationDialogService;
+        _selectionCoordinator = selectionCoordinator;
         _fileTransferCoordinator = fileTransferCoordinator;
         _folderStatisticsService = folderStatisticsService;
         _folderClusterizationService = folderClusterizationService;
@@ -140,9 +158,13 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
         _synchronizationContext = synchronizationContext;
 
         ImagePreviewDropHandler = imagePreviewDropHandler;
-        CopyImagePreviewCommand = CreateAsyncCommand(CopyImagePreviewAsync);
-        MoveImagePreviewCommand = CreateAsyncCommand(MoveImagePreviewAsync);
-        DeleteImagePreviewCommand = CreateAsyncCommand(DeleteImagePreview);
+        CopyImagePreviewCommand = CreateAsyncCommand(CopySelectionAsync);
+        MoveImagePreviewCommand = CreateAsyncCommand(MoveSelectionAsync);
+        DeleteImagePreviewCommand = CreateAsyncCommand(DeleteSelectionAsync);
+        ExportSelectionCommand = CreateAsyncCommand(ExportSelectionAsync);
+        ClearSelectionCommand = CreateCommand(ClearSelection);
+        CancelBatchOperationCommand = CreateCommand(CancelBatchOperation, () => IsBatchOperationRunning)
+            .ObservesProperty(() => IsBatchOperationRunning);
         ToggleSortDirectionCommand = CreateCommand(ToggleSortDirection);
         SaveRatingCommand = CreateAsyncCommand(SaveRatingAsync, () => CanEditAnnotations)
             .ObservesProperty(() => CanEditAnnotations);
@@ -197,12 +219,11 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
         get => _selectedPreview;
         set
         {
-            if (_selectedPreview != null)
+            if (!SetProperty(ref _selectedPreview, value))
             {
-                _selectedPreview.Selected = false;
+                return;
             }
 
-            SetProperty(ref _selectedPreview, value);
             _selectedAnnotationCancellation?.Cancel();
             SetSelectedAnnotationLoading(false);
             UpdateAnnotationEditor();
@@ -210,8 +231,6 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
             RaisePropertyChanged(nameof(HasAnnotatableSelection));
             if (_selectedPreview != null)
             {
-                _selectedPreview.Selected = true;
-
                 _fileOperationsService.SetSelectedPreview(new SelectedMediaPreview(_mapper.Map<MediaPreview>(_selectedPreview), FileManagerPanel));
                 if (_selectedPreview.MediaFormat.SupportsAnnotations)
                 {
@@ -246,7 +265,77 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
 
     public ICommand DeleteImagePreviewCommand { get; }
 
+    public ICommand ExportSelectionCommand { get; }
+
+    public ICommand ClearSelectionCommand { get; }
+
+    public ICommand CancelBatchOperationCommand { get; }
+
     public ICommand ToggleSortDirectionCommand { get; }
+
+    public IReadOnlyList<MediaPreviewViewModel> SelectedPreviews => _selectedPreviews;
+
+    public int SelectionCount => _selectedPreviews.Count;
+
+    public bool HasSelection => SelectionCount > 0;
+
+    public bool HasMultipleSelection => SelectionCount > 1;
+
+    public string SelectionSummary => _localization.Get("Batch_SelectionCount", SelectionCount);
+
+    public bool IsBatchOperationRunning
+    {
+        get => _isBatchOperationRunning;
+        private set
+        {
+            if (!SetProperty(ref _isBatchOperationRunning, value))
+            {
+                return;
+            }
+
+            RaisePropertyChanged(nameof(CanRunBatchOperation));
+            RaisePropertyChanged(nameof(CanExportSelection));
+        }
+    }
+
+    public bool CanRunBatchOperation => HasSelection && !IsBatchOperationRunning;
+
+    public bool CanExportSelection => HasSelection &&
+                                      !IsBatchOperationRunning &&
+                                      !IsSavingAnnotations &&
+                                      _selectedPreviews.Any(preview => preview.MediaFormat.SupportsAnnotations);
+
+    public int BatchProcessed
+    {
+        get => _batchProcessed;
+        private set
+        {
+            if (SetProperty(ref _batchProcessed, value))
+            {
+                RaisePropertyChanged(nameof(BatchProgressPercent));
+                RaisePropertyChanged(nameof(BatchProgressText));
+            }
+        }
+    }
+
+    public int BatchTotal
+    {
+        get => _batchTotal;
+        private set
+        {
+            if (SetProperty(ref _batchTotal, value))
+            {
+                RaisePropertyChanged(nameof(BatchProgressPercent));
+                RaisePropertyChanged(nameof(BatchProgressText));
+            }
+        }
+    }
+
+    public double BatchProgressPercent => BatchTotal == 0
+        ? 0
+        : 100.0 * BatchProcessed / BatchTotal;
+
+    public string BatchProgressText => _localization.Get("Batch_Progress", BatchProcessed, BatchTotal);
 
     public int SelectedRating
     {
@@ -360,6 +449,22 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
     private void OnImagePreviewsChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
         RaisePropertyChanged(nameof(CanApplyFolderTags));
+
+        if (_selectedPreviews.Count == 0)
+        {
+            return;
+        }
+
+        var remaining = _selectedPreviews.Where(ImagePreviews.Contains).ToArray();
+        if (remaining.Length == _selectedPreviews.Count)
+        {
+            return;
+        }
+
+        var primary = SelectedPreview is { } selected && remaining.Contains(selected)
+            ? selected
+            : remaining.LastOrDefault();
+        UpdateSelection(remaining, primary);
     }
 
     public ICommand ApplyFolderTagsCommand { get; }
@@ -373,6 +478,7 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
             {
                 RaisePropertyChanged(nameof(CanEditAnnotations));
                 RaisePropertyChanged(nameof(HasAnnotatableSelection));
+                RaisePropertyChanged(nameof(CanExportSelection));
             }
         }
     }
@@ -382,7 +488,8 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
                                       !_isLoadingSelectedAnnotations &&
                                       SelectedPreview?.AnnotationSnapshot != null;
 
-    public bool HasAnnotatableSelection => SelectedPreview?.MediaFormat.SupportsAnnotations == true;
+    public bool HasAnnotatableSelection => SelectionCount == 1 &&
+                                           SelectedPreview?.MediaFormat.SupportsAnnotations == true;
 
     public IReadOnlyList<string> CurrentTags => SelectedPreview?.Tags ?? Array.Empty<string>();
 
@@ -556,107 +663,420 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
         }
     }
 
-    private async Task CopyImagePreviewAsync()
+    public void UpdateSelection(
+        IReadOnlyList<MediaPreviewViewModel> selectedPreviews,
+        MediaPreviewViewModel? primary = null)
+    {
+        ArgumentNullException.ThrowIfNull(selectedPreviews);
+
+        var valid = selectedPreviews
+            .Where(preview => preview is not null && ImagePreviews.Contains(preview))
+            .Distinct()
+            .ToArray();
+
+        foreach (var preview in _selectedPreviews)
+        {
+            preview.Selected = false;
+        }
+
+        _selectedPreviews.Clear();
+        _selectedPreviews.AddRange(valid);
+        foreach (var preview in valid)
+        {
+            preview.Selected = true;
+        }
+
+        var nextPrimary = primary is not null && valid.Contains(primary)
+            ? primary
+            : valid.LastOrDefault();
+        if (!ReferenceEquals(SelectedPreview, nextPrimary))
+        {
+            SelectedPreview = nextPrimary;
+        }
+
+        if (valid.Length == 0)
+        {
+            _selectionCoordinator.Clear(FileManagerPanel);
+        }
+        else
+        {
+            _selectionCoordinator.Update(
+                FileManagerPanel,
+                valid.Select(_mapper.Map<MediaPreview>),
+                CopySelectionAsync,
+                MoveSelectionAsync);
+        }
+
+        RaiseSelectionProperties();
+    }
+
+    private void RaiseSelectionProperties()
+    {
+        RaisePropertyChanged(nameof(SelectedPreviews));
+        RaisePropertyChanged(nameof(SelectionCount));
+        RaisePropertyChanged(nameof(HasSelection));
+        RaisePropertyChanged(nameof(HasMultipleSelection));
+        RaisePropertyChanged(nameof(SelectionSummary));
+        RaisePropertyChanged(nameof(CanRunBatchOperation));
+        RaisePropertyChanged(nameof(CanExportSelection));
+        RaisePropertyChanged(nameof(CanEditAnnotations));
+        RaisePropertyChanged(nameof(HasAnnotatableSelection));
+    }
+
+    private void ClearSelection()
+    {
+        if (IsBatchOperationRunning)
+        {
+            return;
+        }
+
+        UpdateSelection(Array.Empty<MediaPreviewViewModel>(), primary: null);
+    }
+
+    private async Task CopySelectionAsync()
+    {
+        if (!HasSelection || IsBatchOperationRunning)
+        {
+            return;
+        }
+
+        if (SelectionCount == 1)
+        {
+            await CopySinglePreviewAsync(_selectedPreviews[0]);
+            return;
+        }
+
+        var targetDirectory = GetOppositeSelectedDirectory();
+        if (targetDirectory == null)
+        {
+            NotifyBatchProblem("Batch_NoTargetFolder");
+            return;
+        }
+
+        var items = GetSelectedMediaPreviews();
+        await RunBatchAsync(
+            MediaBatchOperationKind.Copy,
+            items,
+            _localization.Get("Batch_Start_Copy", items.Count, targetDirectory.Path),
+            (progress, token) => _batchOperationsService.CopyAsync(
+                items,
+                targetDirectory.Path,
+                progress,
+                token));
+    }
+
+    private async Task CopySinglePreviewAsync(MediaPreviewViewModel preview)
     {
         try
         {
-            if (SelectedPreview == null)
-            {
-                return;
-            }
-
-            var targetDirectory = _folderService.GetSelectedDirectory(FileManagerPanel == FileManagerPanel.Left ? FileManagerPanel.Right : FileManagerPanel.Left);
-
+            var targetDirectory = GetOppositeSelectedDirectory();
             if (targetDirectory == null)
             {
+                NotifyBatchProblem("Batch_NoTargetFolder");
                 return;
             }
 
-            var notificationTitle = $"{SelectedPreview.Url} => {targetDirectory.Path}";
+            var notificationTitle = $"{preview.Url} => {targetDirectory.Path}";
             _notificationService.SendNotification(new Notification(notificationTitle, string.Empty));
             var progress = new Progress<OperationInfo>();
-
-            progress.ProgressChanged += (o, info) => { _notificationService.SendNotification(new Notification(notificationTitle, info.Percentage.ToString("F1"))); };
+            progress.ProgressChanged += (_, info) =>
+                _notificationService.SendNotification(
+                    new Notification(notificationTitle, info.Percentage.ToString("F1")));
 
             var result = await _fileTransferCoordinator.CopyAsync(
-                             _mapper.Map<MediaPreview>(SelectedPreview),
-                             targetDirectory.Path,
-                             progress);
+                _mapper.Map<MediaPreview>(preview),
+                targetDirectory.Path,
+                progress);
 
             switch (result)
             {
                 case OperationResult.Success:
-                    _notificationService.SendNotification(new SuccessNotification(notificationTitle, ""));
+                    _notificationService.SendNotification(new SuccessNotification(notificationTitle, string.Empty));
                     break;
                 case OperationResult.Failed:
-                    _notificationService.SendNotification(new ErrorNotification(notificationTitle, ""));
+                    _notificationService.SendNotification(new ErrorNotification(notificationTitle, string.Empty));
+                    _logger.Error(
+                        "Failed to copy image preview from {Source} to {Target}",
+                        preview.Url,
+                        targetDirectory.Path);
                     break;
             }
         }
         catch (Exception ex)
         {
-            _logger.Error(ex, $"Error of image copying:{SelectedPreview}");
+            _logger.Error(ex, "Error copying image preview from {Source}", preview.Url);
+            _notificationService.SendNotification(
+                new ErrorNotification(_localization["Batch_FailedTitle"], ex.Message));
         }
     }
 
-    private async Task MoveImagePreviewAsync()
+    private async Task MoveSelectionAsync()
+    {
+        if (!HasSelection || IsBatchOperationRunning)
+        {
+            return;
+        }
+
+        if (SelectionCount == 1)
+        {
+            await MoveSinglePreviewAsync(_selectedPreviews[0]);
+            return;
+        }
+
+        var targetDirectory = GetOppositeSelectedDirectory();
+        if (targetDirectory == null)
+        {
+            NotifyBatchProblem("Batch_NoTargetFolder");
+            return;
+        }
+
+        var items = GetSelectedMediaPreviews();
+        await RunBatchAsync(
+            MediaBatchOperationKind.Move,
+            items,
+            _localization.Get("Batch_Start_Move", items.Count, targetDirectory.Path),
+            (progress, token) => _batchOperationsService.MoveAsync(
+                items,
+                targetDirectory.Path,
+                progress,
+                token));
+    }
+
+    private async Task MoveSinglePreviewAsync(MediaPreviewViewModel preview)
     {
         try
         {
-            if (SelectedPreview == null)
-            {
-                return;
-            }
-
-            var targetDirectory = _folderService.GetSelectedDirectory(FileManagerPanel == FileManagerPanel.Left ? FileManagerPanel.Right : FileManagerPanel.Left);
-
+            var targetDirectory = GetOppositeSelectedDirectory();
             if (targetDirectory == null)
             {
+                NotifyBatchProblem("Batch_NoTargetFolder");
                 return;
             }
 
-            var notificationTitle = $"{SelectedPreview.Url} => {targetDirectory.Path}";
+            var notificationTitle = $"{preview.Url} => {targetDirectory.Path}";
             _notificationService.SendNotification(new Notification(notificationTitle, string.Empty));
             var progress = new Progress<OperationInfo>();
-
-            progress.ProgressChanged += (o, info) => { _notificationService.SendNotification(new Notification(notificationTitle, info.Percentage.ToString("F1"))); };
+            progress.ProgressChanged += (_, info) =>
+                _notificationService.SendNotification(
+                    new Notification(notificationTitle, info.Percentage.ToString("F1")));
 
             var result = await _fileTransferCoordinator.MoveAsync(
-                             _mapper.Map<MediaPreview>(SelectedPreview),
-                             targetDirectory.Path,
-                             progress);
+                _mapper.Map<MediaPreview>(preview),
+                targetDirectory.Path,
+                progress);
 
             switch (result)
             {
                 case OperationResult.Success:
-                    _notificationService.SendNotification(new SuccessNotification(notificationTitle, ""));
+                    _notificationService.SendNotification(new SuccessNotification(notificationTitle, string.Empty));
                     break;
                 case OperationResult.Failed:
-                    _notificationService.SendNotification(new ErrorNotification(notificationTitle, ""));
+                    _notificationService.SendNotification(new ErrorNotification(notificationTitle, string.Empty));
+                    _logger.Error(
+                        "Failed to move image preview from {Source} to {Target}",
+                        preview.Url,
+                        targetDirectory.Path);
                     break;
             }
         }
         catch (Exception ex)
         {
-            _logger.Error(ex, $"Error of image moving:{SelectedPreview}");
+            _logger.Error(ex, "Error moving image preview from {Source}", preview.Url);
+            _notificationService.SendNotification(
+                new ErrorNotification(_localization["Batch_FailedTitle"], ex.Message));
         }
     }
 
-    private async Task DeleteImagePreview()
+    private async Task DeleteSelectionAsync()
     {
+        if (!HasSelection || IsBatchOperationRunning)
+        {
+            return;
+        }
+
+        var items = GetSelectedMediaPreviews();
+        var safeDeletionEnabled = _configurationService.Configuration.Value.SafeDeletionEnabled;
+        var message = _localization.Get("Batch_DeleteConfirmMessage", items.Count) +
+                      Environment.NewLine +
+                      Environment.NewLine +
+                      _localization[safeDeletionEnabled
+                          ? "Batch_DeleteConfirmSafeDetail"
+                          : "Batch_DeleteConfirmUnsafeDetail"];
+
+        var confirmed = await _confirmationDialogService.ConfirmAsync(
+            _localization["Batch_DeleteConfirmTitle"],
+            message,
+            _localization["Common_Delete"],
+            isDestructive: true);
+        if (!confirmed)
+        {
+            return;
+        }
+
+        await RunBatchAsync(
+            MediaBatchOperationKind.Delete,
+            items,
+            _localization.Get("Batch_Start_Delete", items.Count),
+            (progress, token) => _batchOperationsService.DeleteAsync(items, progress, token));
+    }
+
+    private async Task ExportSelectionAsync()
+    {
+        if (!CanExportSelection)
+        {
+            return;
+        }
+
+        var items = GetSelectedMediaPreviews()
+            .Where(preview => preview.MediaFormat.SupportsAnnotations)
+            .ToArray();
+        if (items.Length == 0)
+        {
+            NotifyBatchProblem("Batch_NoExportableImages");
+            return;
+        }
+
+        var destinationDirectory = await _fileDialogService.ShowOpenFolderDialogAsync(
+            _localization["Batch_ExportFolderTitle"]);
+        if (string.IsNullOrWhiteSpace(destinationDirectory))
+        {
+            return;
+        }
+
+        await RunBatchAsync(
+            MediaBatchOperationKind.ExportJpeg,
+            items,
+            _localization.Get("Batch_Start_Export", items.Length, destinationDirectory),
+            (progress, token) => _batchOperationsService.ExportJpegAsync(
+                items,
+                destinationDirectory,
+                progress,
+                token));
+    }
+
+    private async Task RunBatchAsync(
+        MediaBatchOperationKind kind,
+        IReadOnlyList<MediaPreview> items,
+        string startTitle,
+        Func<IProgress<MediaBatchOperationProgress>, CancellationToken, Task<MediaBatchOperationSummary>> operation)
+    {
+        if (items.Count == 0 || IsBatchOperationRunning)
+        {
+            return;
+        }
+
+        var cancellation = new CancellationTokenSource();
+        _batchOperationCancellation = cancellation;
+        BatchProcessed = 0;
+        BatchTotal = items.Count;
+        IsBatchOperationRunning = true;
+        _notificationService.SendNotification(new Notification(startTitle, string.Empty));
+
         try
         {
-            if (SelectedPreview == null)
-            {
-                return;
-            }
-
-            await SelectedPreview.RemoveImagePreviewAsync();
+            var progress = new Progress<MediaBatchOperationProgress>(OnBatchProgress);
+            var summary = await operation(progress, cancellation.Token);
+            ReportBatchSummary(kind, summary);
+        }
+        catch (OperationCanceledException)
+        {
+            _notificationService.SendNotification(
+                new Notification(_localization["Batch_CancelledTitle"], string.Empty));
         }
         catch (Exception ex)
         {
-            _logger.Error(ex, $"Error of image removing:{SelectedPreview}");
+            _logger.Error(ex, "Batch {Operation} failed", kind);
+            _notificationService.SendNotification(
+                new ErrorNotification(_localization["Batch_FailedTitle"], ex.Message));
         }
+        finally
+        {
+            IsBatchOperationRunning = false;
+            if (ReferenceEquals(_batchOperationCancellation, cancellation))
+            {
+                _batchOperationCancellation = null;
+            }
+
+            cancellation.Dispose();
+        }
+    }
+
+    private void OnBatchProgress(MediaBatchOperationProgress progress)
+    {
+        if (SynchronizationContext.Current == _synchronizationContext)
+        {
+            ApplyBatchProgress(progress);
+            return;
+        }
+
+        _synchronizationContext.Post(_ => ApplyBatchProgress(progress), null);
+    }
+
+    private void ApplyBatchProgress(MediaBatchOperationProgress progress)
+    {
+        BatchProcessed = progress.Processed;
+        BatchTotal = progress.Total;
+    }
+
+    private void CancelBatchOperation() => _batchOperationCancellation?.Cancel();
+
+    private void ReportBatchSummary(
+        MediaBatchOperationKind kind,
+        MediaBatchOperationSummary summary)
+    {
+        var completedTitle = _localization.Get(
+            kind switch
+            {
+                MediaBatchOperationKind.Copy => "Batch_Completed_Copy",
+                MediaBatchOperationKind.Move => "Batch_Completed_Move",
+                MediaBatchOperationKind.Delete => "Batch_Completed_Delete",
+                MediaBatchOperationKind.ExportJpeg => "Batch_Completed_Export",
+                _ => "Batch_FailedTitle"
+            },
+            summary.Succeeded,
+            summary.Total);
+
+        if (summary.Cancelled)
+        {
+            _notificationService.SendNotification(
+                new Notification(_localization["Batch_CancelledTitle"], completedTitle));
+            return;
+        }
+
+        if (summary.Failed > 0)
+        {
+            var detail = summary.Failures.Count == 0
+                ? _localization["Batch_FailedTitle"]
+                : _localization.Get(
+                    "Batch_FailedDetail",
+                    summary.Failed,
+                    summary.Failures[0].Error);
+            _notificationService.SendNotification(new ErrorNotification(completedTitle, detail));
+            return;
+        }
+
+        _notificationService.SendNotification(new SuccessNotification(completedTitle, string.Empty));
+    }
+
+    private void NotifyBatchProblem(string messageKey)
+    {
+        _notificationService.SendNotification(
+            new ErrorNotification(_localization["Batch_FailedTitle"], _localization[messageKey]));
+    }
+
+    private IReadOnlyList<MediaPreview> GetSelectedMediaPreviews()
+    {
+        return _selectedPreviews
+            .Select(_mapper.Map<MediaPreview>)
+            .ToArray();
+    }
+
+    private DirectoryModel? GetOppositeSelectedDirectory()
+    {
+        return _folderService.GetSelectedDirectory(
+            FileManagerPanel == FileManagerPanel.Left
+                ? FileManagerPanel.Right
+                : FileManagerPanel.Left);
     }
 
     private async Task AddImagePreviewAsync(MediaPreview previewImage)
@@ -1757,6 +2177,10 @@ internal class PreviewPanelViewModel : NavigatedViewModelBase
         }
         catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
         {
+        }
+        catch (Exception) when (!_fileSystemService.FileExists(preview.Url))
+        {
+            // The file was moved or deleted while its annotations were loading.
         }
         catch (Exception exception)
         {

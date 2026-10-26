@@ -25,6 +25,7 @@ using ImageCare.Core.Services.FolderTagService;
 using ImageCare.Core.Services.LogEventService;
 using ImageCare.Core.Services.MediaAnnotationsIndex;
 using ImageCare.Core.Services.MediaAnnotationsService;
+using ImageCare.Core.Services.MediaBatchOperationsService;
 using ImageCare.Core.Services.MediaPreviewOperationsService;
 using ImageCare.Core.Services.MediaPreviewService;
 using ImageCare.Core.Services.NotificationService;
@@ -191,6 +192,7 @@ public class App : PrismApplication
         containerRegistry.RegisterSingleton<IFolderService, LocalFileSystemFolderService>();
         containerRegistry.RegisterSingleton<IFolderHistoryService, LocalFolderHistoryService>();
         containerRegistry.RegisterSingleton<IMediaPreviewOperationsService, WindowsMediaPreviewOperationsService>();
+        containerRegistry.RegisterSingleton<IMediaBatchOperationsService, MediaBatchOperationsService>();
 
         containerRegistry.RegisterSingleton<IConfigurationFileSource, WindowsConfigurationFileSource>();
         containerRegistry.RegisterSingleton<IConfigurationService, JsonConfigurationService>();
@@ -206,6 +208,8 @@ public class App : PrismApplication
         containerRegistry.RegisterSingleton<IFileAssociationsService, ConfigurationFileAssociationsService>();
         containerRegistry.RegisterSingleton<IClipboardService, ClipboardService>();
         containerRegistry.RegisterSingleton<IFileDialogService, AvaloniaFileDialogService>();
+        containerRegistry.RegisterSingleton<IConfirmationDialogService, AvaloniaConfirmationDialogService>();
+        containerRegistry.RegisterSingleton<MediaSelectionCoordinator>();
         containerRegistry.RegisterSingleton<RenameFileWindowService>();
         containerRegistry.RegisterSingleton<FileTransferCoordinator>();
         containerRegistry.RegisterSingleton<FileTransferOperationState>();

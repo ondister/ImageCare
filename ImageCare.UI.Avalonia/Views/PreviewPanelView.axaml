@@ -84,9 +84,11 @@
         <Border Grid.Row="1" Margin="2,3" Padding="8,4" CornerRadius="4"
                 Background="{DynamicResource Brush.PreviewSurface}"
                 IsVisible="{Binding HasAnnotatableSelection}"
-                IsEnabled="{Binding CanEditAnnotations}"
                 ToolTip.Tip="{Binding AnnotationEditorStatus}">
-            <ScrollViewer HorizontalScrollBarVisibility="Auto"
+            <Grid ColumnDefinitions="*,Auto">
+            <ScrollViewer Grid.Column="0"
+                          IsEnabled="{Binding CanEditAnnotations}"
+                          HorizontalScrollBarVisibility="Auto"
                           VerticalScrollBarVisibility="Disabled">
                 <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
                     <ComboBox SelectedIndex="{Binding SelectedRating, Mode=TwoWay}"
@@ -194,6 +196,127 @@
                                VerticalAlignment="Center" />
                 </StackPanel>
             </ScrollViewer>
+            <Button Grid.Column="1"
+                    Height="26"
+                    MinHeight="26"
+                    Padding="8,0"
+                    Margin="6,0,0,0"
+                    VerticalAlignment="Center"
+                    Command="{Binding ExportSelectionCommand}"
+                    IsEnabled="{Binding CanExportSelection}"
+                    ToolTip.Tip="{localization:Loc Batch_ExportJpegTooltip}">
+                <StackPanel Orientation="Horizontal" Spacing="5">
+                    <iconPacks:PackIconLucide Kind="Download" Width="14" Height="14" />
+                    <TextBlock Text="{localization:Loc Batch_ExportJpegShort}"
+                               FontSize="11"
+                               VerticalAlignment="Center" />
+                </StackPanel>
+            </Button>
+            </Grid>
+        </Border>
+
+        <Border Grid.Row="1" Margin="2,3" Padding="8,4" CornerRadius="4"
+                Background="{DynamicResource Brush.PreviewSurface}"
+                IsVisible="{Binding HasMultipleSelection}">
+            <Grid ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Center">
+                <TextBlock Grid.Column="0"
+                           Text="{Binding SelectionSummary}"
+                           FontWeight="SemiBold"
+                           VerticalAlignment="Center"
+                           Margin="0,0,8,0" />
+                <StackPanel Grid.Column="1"
+                            Orientation="Horizontal"
+                            Spacing="2"
+                            VerticalAlignment="Center"
+                            IsVisible="{Binding !IsBatchOperationRunning}">
+                    <Button Classes="IconButton"
+                            Width="26"
+                            Height="26"
+                            MinWidth="26"
+                            MinHeight="26"
+                            Padding="4"
+                            Command="{Binding ExportSelectionCommand}"
+                            IsEnabled="{Binding CanExportSelection}"
+                            ToolTip.Tip="{localization:Loc Batch_ExportJpegTooltip}">
+                        <iconPacks:PackIconLucide Kind="Download" Width="14" Height="14" />
+                    </Button>
+                    <Button Classes="IconButton"
+                            Width="26"
+                            Height="26"
+                            MinWidth="26"
+                            MinHeight="26"
+                            Padding="4"
+                            Command="{Binding CopyImagePreviewCommand}"
+                            ToolTip.Tip="{localization:Loc Batch_CopySelection}">
+                        <iconPacks:PackIconLucide Kind="Copy" Width="14" Height="14" />
+                    </Button>
+                    <Button Classes="IconButton"
+                            Width="26"
+                            Height="26"
+                            MinWidth="26"
+                            MinHeight="26"
+                            Padding="4"
+                            Command="{Binding MoveImagePreviewCommand}"
+                            ToolTip.Tip="{localization:Loc Batch_MoveSelection}">
+                        <iconPacks:PackIconLucide Kind="FolderInput" Width="14" Height="14" />
+                    </Button>
+                    <Button Classes="IconButton"
+                            Width="26"
+                            Height="26"
+                            MinWidth="26"
+                            MinHeight="26"
+                            Padding="4"
+                            Command="{Binding DeleteImagePreviewCommand}"
+                            Foreground="{DynamicResource Brush.Danger}"
+                            ToolTip.Tip="{localization:Loc Batch_DeleteSelection}">
+                        <iconPacks:PackIconLucide Kind="Trash2" Width="14" Height="14" />
+                    </Button>
+                </StackPanel>
+                <Grid Grid.Column="1"
+                      ColumnDefinitions="*,Auto"
+                      VerticalAlignment="Center"
+                      IsVisible="{Binding IsBatchOperationRunning}">
+                    <ProgressBar Grid.Column="0"
+                                 Height="6"
+                                 Minimum="0"
+                                 Maximum="100"
+                                 Value="{Binding BatchProgressPercent}"
+                                 VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="1"
+                               Text="{Binding BatchProgressText}"
+                               Margin="8,0,0,0"
+                               FontSize="11"
+                               Opacity="0.8"
+                               VerticalAlignment="Center" />
+                </Grid>
+                <StackPanel Grid.Column="2"
+                            Orientation="Horizontal"
+                            Spacing="2"
+                            VerticalAlignment="Center">
+                    <Button Classes="IconButton"
+                            Width="26"
+                            Height="26"
+                            MinWidth="26"
+                            MinHeight="26"
+                            Padding="4"
+                            Command="{Binding CancelBatchOperationCommand}"
+                            IsVisible="{Binding IsBatchOperationRunning}"
+                            ToolTip.Tip="{localization:Loc Batch_CancelOperation}">
+                        <iconPacks:PackIconLucide Kind="Square" Width="14" Height="14" />
+                    </Button>
+                    <Button Classes="IconButton"
+                            Width="26"
+                            Height="26"
+                            MinWidth="26"
+                            MinHeight="26"
+                            Padding="4"
+                            Command="{Binding ClearSelectionCommand}"
+                            IsVisible="{Binding !IsBatchOperationRunning}"
+                            ToolTip.Tip="{localization:Loc Batch_ClearSelection}">
+                        <iconPacks:PackIconLucide Kind="X" Width="14" Height="14" />
+                    </Button>
+                </StackPanel>
+            </Grid>
         </Border>
 
         <TextBlock Grid.Row="2"
@@ -204,10 +327,12 @@
                    Foreground="{DynamicResource Brush.TextPrimary}"
                    IsVisible="{Binding FilesLoading}" />
 
-        <controls:PreviewsListBox Grid.Row="2"
+        <controls:PreviewsListBox x:Name="PreviewsList"
+                                  Grid.Row="2"
                                   ItemsSource="{Binding ImagePreviews}"
-                                  SelectedItem="{Binding SelectedPreview, Mode=TwoWay}"
-                                  SelectionMode="Single"
+                                  SelectionMode="Multiple"
+                                  SelectionChanged="OnPreviewsSelectionChanged"
+                                  IsEnabled="{Binding !IsBatchOperationRunning}"
                                   ItemContainerTheme="{StaticResource PreviewListBoxItem}"
                                   Padding="0"
                                   BorderThickness="0"

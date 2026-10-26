@@ -30,6 +30,7 @@ public sealed class McpHostSmokeTests
         "imagecare_media_metadata",
         "imagecare_media_previews",
         "imagecare_open_folder",
+        "imagecare_rating_set",
         "imagecare_search",
         "imagecare_server_info",
         "imagecare_session_create",

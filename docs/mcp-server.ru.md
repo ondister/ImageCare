@@ -65,6 +65,7 @@ HTTP-серверов (Claude Desktop, Claude Code, Cursor, JetBrains, SDK-кл�
 | `imagecare_list_folders` | Подпапки и количество медиафайлов в них. |
 | `imagecare_media_metadata` | Размер, время съёмки, рейтинг, теги, EXIF. |
 | `imagecare_media_previews` | Уменьшенные JPEG-превью как MCP image-блоки (для мультимодальных моделей). |
+| `imagecare_rating_set` | Изменить рейтинг (0–5 звёзд) у файлов, сохраняя теги; по умолчанию `dryRun=true`. |
 | `imagecare_session_create` | Начать/продолжить сессию отбора; файлы сортируются по времени съёмки и группируются в серии кадров. |
 | `imagecare_session_get` | Текущая партия, при `includePreviews=true` — с картинками. |
 | `imagecare_session_sync` | Прочитать решения пользователя: кто оставлен, кто не определён, кто уже удалён. |
@@ -81,8 +82,9 @@ HTTP-серверов (Claude Desktop, Claude Code, Cursor, JetBrains, SDK-кл�
 | `imagecare_ui_state` | Что сейчас открыто: панели и папки, выбранный файл (`focusedFilePath`) и видимые карточки ленты (`visibleFiles` с рейтингом и тегами). |
 | `imagecare_open_folder` | Открыть папку в левой или правой панели: папка выделяется в дереве, раскрываются предки, лента прокручивается к ней. |
 
-Все разрушающие операции (`imagecare_session_delete_remaining`, `imagecare_tags_apply`,
-`imagecare_folder_tags_set`) поддерживают `dryRun` и по умолчанию сначала показывают план. Удаление
+Все изменяющие операции (`imagecare_session_delete_remaining`, `imagecare_tags_apply`,
+`imagecare_rating_set`, `imagecare_folder_tags_set`) поддерживают `dryRun` и по умолчанию сначала
+показывают план. Удаление
 ограничено `MaxFilesPerDelete` (200 файлов за вызов), обойти лимит можно только явным
 `allowBulk=true`.
 
@@ -105,7 +107,8 @@ HTTP-серверов (Claude Desktop, Claude Code, Cursor, JetBrains, SDK-кл�
    (кластеризация по времени съёмки).
 3. `imagecare_session_get(includePreviews=true)` — агент показывает/обсуждает кадры и предлагает теги
    (`imagecare_tags_suggest`), но **не решает за пользователя**.
-4. Пользователь сам ставит рейтинг, теги и переносит кадры в библиотеку.
+4. Пользователь сам ставит рейтинг, теги и переносит кадры в библиотеку. Если пользователь прямо
+   просит, агент может изменить рейтинг через `imagecare_rating_set` (сначала `dryRun`).
 5. `imagecare_session_sync` — агент читает решения. «Оставлен» = файл на месте и есть рейтинг
    `>= KeepRating` (по умолчанию 1) или хотя бы один тег.
 6. По явной команде «удаляй остальное» — `imagecare_session_delete_remaining` сначала `dryRun`,
