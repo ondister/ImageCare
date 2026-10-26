@@ -55,8 +55,145 @@
 
         <TabControl Grid.Row="1">
             <TabItem Header="{localization:Loc Overview_Files}">
-                <Grid RowDefinitions="*,Auto">
-                    <ListBox Grid.Row="0"
+                <Grid RowDefinitions="Auto,*,Auto">
+                    <Border Grid.Row="0"
+                            IsVisible="{Binding HasSelection}"
+                            Margin="2,2,2,6"
+                            Padding="10"
+                            CornerRadius="{DynamicResource BorderRadius.Medium}"
+                            Background="{DynamicResource Brush.AccentSubtle}">
+                        <StackPanel Spacing="8">
+                            <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="6">
+                                <TextBlock Grid.Column="0"
+                                           Text="{Binding SelectionSummary}"
+                                           FontWeight="Bold"
+                                           VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="1"
+                                           Text="{Binding AnnotatableSelectionSummary}"
+                                           Opacity="0.7"
+                                           VerticalAlignment="Center" />
+                                <Button Grid.Column="2"
+                                        Content="{localization:Loc Action_Copy}"
+                                        Command="{Binding CopySelectionCommand}"
+                                        IsEnabled="{Binding CanTransferSelection}"
+                                        ToolTip.Tip="{Binding CopySelectionToolTip}" />
+                                <Button Grid.Column="3"
+                                        Content="{localization:Loc Action_Move}"
+                                        Command="{Binding MoveSelectionCommand}"
+                                        IsEnabled="{Binding CanTransferSelection}"
+                                        ToolTip.Tip="{Binding MoveSelectionToolTip}" />
+                                <Button Grid.Column="4"
+                                        Content="{localization:Loc Batch_ExportJpegShort}"
+                                        Command="{Binding ExportSelectionCommand}"
+                                        IsEnabled="{Binding CanExportSelection}"
+                                        ToolTip.Tip="{localization:Loc Batch_ExportJpegTooltip}" />
+                                <Button Grid.Column="5"
+                                        Content="{localization:Loc Common_Delete}"
+                                        Command="{Binding DeleteSelectionCommand}"
+                                        IsEnabled="{Binding CanRunOverviewOperation}"
+                                        Foreground="{DynamicResource Brush.Danger}"
+                                        ToolTip.Tip="{localization:Loc Batch_DeleteSelection}" />
+                                <Button Grid.Column="6"
+                                        Content="{localization:Loc Batch_ClearSelection}"
+                                        Command="{Binding ClearSelectionCommand}"
+                                        IsEnabled="{Binding !IsOverviewOperationRunning}"
+                                        ToolTip.Tip="{localization:Loc Batch_ClearSelection}" />
+                            </Grid>
+
+                            <StackPanel Orientation="Horizontal"
+                                        Spacing="6"
+                                        ToolTip.Tip="{Binding TransferDestinationText}">
+                                <iconPacks:PackIconLucide Kind="FolderInput"
+                                                         Width="14"
+                                                         Height="14"
+                                                         VerticalAlignment="Center" />
+                                <TextBlock Text="{Binding TransferDestinationText}"
+                                           FontSize="11"
+                                           Opacity="0.75"
+                                           TextTrimming="CharacterEllipsis"
+                                           VerticalAlignment="Center" />
+                            </StackPanel>
+
+                            <Grid ColumnDefinitions="Auto,150,Auto,220,Auto" ColumnSpacing="6"
+                                  IsEnabled="{Binding CanEditSelectionAnnotations}">
+                                <TextBlock Grid.Column="0"
+                                           Text="{localization:Loc Annotations_Rating}"
+                                           VerticalAlignment="Center" />
+                                <Grid Grid.Column="1">
+                                    <ComboBox SelectedIndex="{Binding SelectedRating, Mode=TwoWay}"
+                                              Width="150"
+                                              Height="22"
+                                              MinHeight="22"
+                                              Padding="6,0"
+                                              FontSize="12">
+                                        <ComboBoxItem Content="{localization:Loc Annotations_Unrated}" />
+                                        <ComboBoxItem Content="★" />
+                                        <ComboBoxItem Content="★★" />
+                                        <ComboBoxItem Content="★★★" />
+                                        <ComboBoxItem Content="★★★★" />
+                                        <ComboBoxItem Content="★★★★★" />
+                                    </ComboBox>
+                                    <TextBlock Text="{localization:Loc Overview_MixedRating}"
+                                               IsVisible="{Binding HasMixedRating}"
+                                               Margin="10,0"
+                                               VerticalAlignment="Center"
+                                               IsHitTestVisible="False"
+                                               Background="{DynamicResource Brush.PreviewCard}" />
+                                </Grid>
+                                <TextBlock Grid.Column="2"
+                                           Text="{localization:Loc Search_Tags}"
+                                           VerticalAlignment="Center" />
+                                <TextBox Grid.Column="3"
+                                         Text="{Binding NewTag, Mode=TwoWay}"
+                                         PlaceholderText="{localization:Loc Overview_AddTagToSelection}" />
+                                <Button Grid.Column="4"
+                                        Content="{localization:Loc Settings_Add}"
+                                        Command="{Binding AddTagCommand}"
+                                        ToolTip.Tip="{localization:Loc Overview_AddTagToSelection}" />
+                            </Grid>
+
+                            <ItemsControl ItemsSource="{Binding SelectionTags}"
+                                          IsVisible="{Binding HasSelectionTags}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel Orientation="Horizontal" />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Button Margin="0,0,5,4"
+                                                Padding="7,3"
+                                                Content="{Binding}"
+                                                Command="{Binding $parent[UserControl].DataContext.RemoveTagCommand}"
+                                                CommandParameter="{Binding}"
+                                                ToolTip.Tip="{localization:Loc Overview_RemoveTagFromSelection}" />
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <Grid ColumnDefinitions="*,Auto,Auto"
+                                  IsVisible="{Binding IsOverviewOperationRunning}"
+                                  ColumnSpacing="8">
+                                <ProgressBar Grid.Column="0"
+                                             Minimum="0"
+                                             Maximum="{Binding BatchTotal}"
+                                             Value="{Binding BatchProcessed}"
+                                             VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="1"
+                                           Text="{Binding BatchProgressText}"
+                                           VerticalAlignment="Center" />
+                                <Button Grid.Column="2"
+                                        Content="{localization:Loc Batch_CancelOperation}"
+                                        Command="{Binding CancelOverviewOperationCommand}"
+                                        ToolTip.Tip="{localization:Loc Batch_CancelOperation}" />
+                            </Grid>
+                            <TextBlock Text="{Binding OverviewOperationStatus}"
+                                       Opacity="0.7"
+                                       TextWrapping="Wrap" />
+                        </StackPanel>
+                    </Border>
+
+                    <ListBox Grid.Row="1"
                              ItemsSource="{Binding PreviewRows}"
                              Padding="0"
                              BorderThickness="0"
@@ -102,8 +239,8 @@
                         </ListBox.ItemTemplate>
                     </ListBox>
 
-                    <Grid Grid.Row="1"
-                          ColumnDefinitions="Auto,Auto"
+                    <Grid Grid.Row="2"
+                          ColumnDefinitions="Auto,Auto,*,Auto"
                           Margin="{StaticResource MarginAll.Small}">
                         <Grid Grid.Column="0"
                               ColumnDefinitions="Auto,Auto,Auto"
@@ -135,6 +272,18 @@
                                   Margin="{StaticResource MarginAll.Medium}"
                                   ItemsSource="{Binding AspectRatioViewModels}"
                                   SelectedItem="{Binding SelectedAspectRatio}" />
+                        <Button Grid.Column="3"
+                                Classes="Small"
+                                Width="26"
+                                Height="26"
+                                Padding="5"
+                                Margin="{StaticResource MarginAll.Small}"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Center"
+                                Command="{Binding AdaptiveHelp.ShowHelpCommand}"
+                                ToolTip.Tip="{localization:Loc Help_Open}">
+                            <iconPacks:PackIconMaterial Kind="HelpCircleOutline" Width="13" Height="13" />
+                        </Button>
                     </Grid>
                 </Grid>
             </TabItem>
@@ -145,7 +294,8 @@
                             HorizontalAlignment="Left"
                             Margin="{StaticResource MarginAll.Small}"
                             Command="{Binding RestoreAllCommand}"
-                            IsVisible="{Binding HasDeletedFiles}">
+                            IsVisible="{Binding HasDeletedFiles}"
+                            ToolTip.Tip="{localization:Loc Overview_RestoreAll}">
                         <StackPanel Orientation="Horizontal" Spacing="6">
                             <iconPacks:PackIconLucide Kind="Undo2" />
                             <TextBlock Text="{localization:Loc Overview_RestoreAll}" />
@@ -200,7 +350,8 @@
                                         <Button Grid.Column="2"
                                                 Margin="8,0,0,0"
                                                 VerticalAlignment="Center"
-                                                Command="{Binding RestoreCommand}">
+                                                Command="{Binding RestoreCommand}"
+                                                ToolTip.Tip="{localization:Loc Overview_Restore}">
                                             <StackPanel Orientation="Horizontal" Spacing="6">
                                                 <iconPacks:PackIconLucide Kind="Undo2" />
                                                 <TextBlock Text="{localization:Loc Overview_Restore}" />
@@ -214,5 +365,12 @@
                 </Grid>
             </TabItem>
         </TabControl>
+
+        <views:AdaptiveHelpPanel Grid.RowSpan="2"
+                                 HorizontalAlignment="Right"
+                                 VerticalAlignment="Stretch"
+                                 Margin="8"
+                                 Width="460"
+                                 DataContext="{Binding AdaptiveHelp}" />
     </Grid>
 </UserControl>

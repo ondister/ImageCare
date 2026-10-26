@@ -334,4 +334,25 @@
   <data name="Help_ReasonSelectedGoal" xml:space="preserve"><value>Приоритет повышен, потому что рекомендация соответствует выбранной цели.</value></data>
   <data name="Help_ReasonOptional" xml:space="preserve"><value>Дополнительная операция, которая может пригодиться в текущем сценарии.</value></data>
   <data name="Help_ReasonNewVersion" xml:space="preserve"><value>Предложено после обновления ImageCare с прошлого запуска.</value></data>
+  <data name="Overview_AnnotatableSelection" xml:space="preserve"><value>Можно изменить изображений: {0}</value></data>
+  <data name="Overview_MixedRating" xml:space="preserve"><value>Разный рейтинг</value></data>
+  <data name="Overview_TransferDestination" xml:space="preserve"><value>Папка назначения: {0}</value></data>
+  <data name="Overview_CopyTo" xml:space="preserve"><value>Копировать выбранные файлы в {0}</value></data>
+  <data name="Overview_MoveTo" xml:space="preserve"><value>Переместить выбранные файлы в {0}</value></data>
+  <data name="Overview_AddTagToSelection" xml:space="preserve"><value>Добавить тег выбранным изображениям</value></data>
+  <data name="Overview_RemoveTagFromSelection" xml:space="preserve"><value>Убрать этот тег у выбранных изображений</value></data>
+  <data name="Overview_AnnotationsCompleted" xml:space="preserve"><value>Обновлено изображений: {0} из {1}</value></data>
+  <data name="Overview_AnnotationsFailed" xml:space="preserve"><value>Не удалось обновить изображений: {0}. Первая ошибка: {1}</value></data>
+  <data name="Help_OverviewSelectTitle" xml:space="preserve"><value>Выберите файлы в обзоре папки</value></data>
+  <data name="Help_OverviewSelectMessage" xml:space="preserve"><value>Щёлкните для выбора одного файла, используйте Ctrl/Command для переключения файлов или Shift для выбора диапазона.</value></data>
+  <data name="Help_OverviewAnnotationsTitle" xml:space="preserve"><value>Измените рейтинг и теги</value></data>
+  <data name="Help_OverviewAnnotationsMessage" xml:space="preserve"><value>Панель выбора применяет рейтинг и добавляет или удаляет теги, сохраняя остальные теги каждого изображения.</value></data>
+  <data name="Help_OverviewBatchTitle" xml:space="preserve"><value>Выполните групповую операцию</value></data>
+  <data name="Help_OverviewBatchMessage" xml:space="preserve"><value>Копируйте, перемещайте, удаляйте или экспортируйте выбранные файлы. Ход операции и отмена доступны в обзоре.</value></data>
+  <data name="Help_OverviewBatchActiveTitle" xml:space="preserve"><value>Выполняется групповая операция</value></data>
+  <data name="Help_OverviewBatchActiveMessage" xml:space="preserve"><value>Следите за ходом операции на панели выбора или отмените её до начала обработки следующего файла.</value></data>
+  <data name="Help_ReasonOverviewOpen" xml:space="preserve"><value>Открыт обзор папки, но файлы ещё не выбраны.</value></data>
+  <data name="Help_ReasonOverviewSelection" xml:space="preserve"><value>Выбрано объектов: {0}; аннотации изображений доступны на панели.</value></data>
+  <data name="Help_ReasonOverviewMultipleSelection" xml:space="preserve"><value>Выбранные объекты ({0}) готовы к групповой операции.</value></data>
+  <data name="Help_ReasonOverviewBatchActive" xml:space="preserve"><value>В обзоре папки сейчас выполняется групповая операция.</value></data>
 </root>

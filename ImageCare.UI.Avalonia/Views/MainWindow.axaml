@@ -29,36 +29,7 @@
         </Grid.RowDefinitions>
 
         <Grid Grid.Row="0"
-              WindowDecorationProperties.ElementRole="TitleBar">
-            <Button IsVisible="{Binding IsMacOs}"
-                    WindowDecorationProperties.ElementRole="User"
-                    HorizontalAlignment="Left"
-                    VerticalAlignment="Center"
-                    Margin="74,0,0,0"
-                    Width="26"
-                    Height="24"
-                    MinWidth="0"
-                    MinHeight="0"
-                    Padding="4"
-                    Command="{Binding AdaptiveHelp.ShowHelpCommand}"
-                    ToolTip.Tip="{localization:Loc Help_Open}">
-                <iconPacks:PackIconMaterial Kind="HelpCircleOutline" Width="13" Height="13" />
-            </Button>
-            <Button IsVisible="{Binding IsNotMacOs}"
-                    WindowDecorationProperties.ElementRole="User"
-                    HorizontalAlignment="Right"
-                    VerticalAlignment="Center"
-                    Margin="0,0,142,0"
-                    Width="26"
-                    Height="24"
-                    MinWidth="0"
-                    MinHeight="0"
-                    Padding="4"
-                    Command="{Binding AdaptiveHelp.ShowHelpCommand}"
-                    ToolTip.Tip="{localization:Loc Help_Open}">
-                <iconPacks:PackIconMaterial Kind="HelpCircleOutline" Width="13" Height="13" />
-            </Button>
-        </Grid>
+              WindowDecorationProperties.ElementRole="TitleBar" />
 
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
@@ -140,125 +111,13 @@
         <ContentControl Grid.Row="4"
                         prism:RegionManager.RegionName="{x:Static ui:RegionNames.BottomBarRegion}" />
 
-        <!-- One centralized help center overlays the shell without blocking the title bar. -->
-        <Border Grid.Row="1"
-                Grid.RowSpan="4"
-                IsVisible="{Binding AdaptiveHelp.IsVisible}"
-                HorizontalAlignment="Right"
-                VerticalAlignment="Stretch"
-                Margin="8"
-                Width="460"
-                Padding="16"
-                CornerRadius="{DynamicResource BorderRadius.Medium}"
-                Background="{DynamicResource Brush.PreviewCard}"
-                BorderBrush="{DynamicResource Brush.Accent}"
-                BorderThickness="1">
-            <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="10">
-                <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
-                    <StackPanel Grid.Column="0" Spacing="3">
-                        <TextBlock Text="{Binding AdaptiveHelp.PanelTitle}"
-                                   FontSize="18"
-                                   FontWeight="Bold"
-                                   TextWrapping="Wrap" />
-                        <TextBlock Text="{Binding AdaptiveHelp.PanelSubtitle}"
-                                   FontSize="{DynamicResource Font.Size.Small}"
-                                   Opacity="0.7"
-                                   TextWrapping="Wrap" />
-                    </StackPanel>
-                    <Button Grid.Column="1"
-                            Content="×"
-                            FontSize="18"
-                            Width="32"
-                            Height="32"
-                            Command="{Binding AdaptiveHelp.HideCommand}"
-                            ToolTip.Tip="{localization:Loc Help_Close}" />
-                </Grid>
-
-                <Border Grid.Row="1"
-                        IsVisible="{Binding AdaptiveHelp.IsGoalSelectionVisible}"
-                        Padding="12"
-                        CornerRadius="{DynamicResource BorderRadius.Small}"
-                        Background="{DynamicResource Brush.AccentSubtle}">
-                    <StackPanel Spacing="8">
-                        <TextBlock Text="{localization:Loc Help_GoalTitle}"
-                                   FontWeight="Bold"
-                                   TextWrapping="Wrap" />
-                        <TextBlock Text="{localization:Loc Help_GoalMessage}"
-                                   TextWrapping="Wrap" />
-                        <WrapPanel Orientation="Horizontal">
-                            <Button Margin="0,0,6,6"
-                                    Content="{localization:Loc Help_GoalOrganize}"
-                                    Command="{Binding AdaptiveHelp.SelectGoalCommand}"
-                                    CommandParameter="OrganizeMedia" />
-                            <Button Margin="0,0,6,6"
-                                    Content="{localization:Loc Help_GoalCopy}"
-                                    Command="{Binding AdaptiveHelp.SelectGoalCommand}"
-                                    CommandParameter="CopyMedia" />
-                            <Button Margin="0,0,6,6"
-                                    Content="{localization:Loc Help_GoalSearch}"
-                                    Command="{Binding AdaptiveHelp.SelectGoalCommand}"
-                                    CommandParameter="SearchMedia" />
-                            <Button Margin="0,0,6,6"
-                                    Content="{localization:Loc Help_GoalCleanUp}"
-                                    Command="{Binding AdaptiveHelp.SelectGoalCommand}"
-                                    CommandParameter="CleanUpMedia" />
-                            <Button Margin="0,0,6,6"
-                                    Content="{localization:Loc Help_GoalExplore}"
-                                    Command="{Binding AdaptiveHelp.SelectGoalCommand}"
-                                    CommandParameter="Explore" />
-                        </WrapPanel>
-                    </StackPanel>
-                </Border>
-
-                <ScrollViewer Grid.Row="2"
-                              VerticalScrollBarVisibility="Auto"
-                              HorizontalScrollBarVisibility="Disabled">
-                    <ItemsControl ItemsSource="{Binding AdaptiveHelp.Recommendations}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate x:DataType="domain:AdaptiveHelpRecommendationViewModel">
-                                <Border Margin="0,0,0,8"
-                                        Padding="12"
-                                        CornerRadius="{DynamicResource BorderRadius.Small}"
-                                        BorderBrush="{DynamicResource Brush.Splitter}"
-                                        BorderThickness="1">
-                                    <StackPanel Spacing="6">
-                                        <TextBlock Text="{Binding Title}"
-                                                   FontWeight="Bold"
-                                                   FontSize="{DynamicResource Font.Size.SectionHeader}"
-                                                   TextWrapping="Wrap" />
-                                        <TextBlock Text="{Binding Message}"
-                                                   TextWrapping="Wrap" />
-                                        <TextBlock Text="{Binding Reason}"
-                                                   FontSize="{DynamicResource Font.Size.Small}"
-                                                   Opacity="0.65"
-                                                   TextWrapping="Wrap" />
-                                        <StackPanel Orientation="Horizontal"
-                                                    HorizontalAlignment="Right"
-                                                    Spacing="6">
-                                            <Button Content="{Binding DismissText}"
-                                                    Command="{Binding DismissCommand}" />
-                                            <Button Content="{Binding ActionText}"
-                                                    Command="{Binding ActionCommand}"
-                                                    IsVisible="{Binding HasAction}"
-                                                    Background="{DynamicResource Brush.Accent}" />
-                                        </StackPanel>
-                                    </StackPanel>
-                                </Border>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </ScrollViewer>
-
-                <StackPanel Grid.Row="3"
-                            Orientation="Horizontal"
-                            HorizontalAlignment="Right"
-                            Spacing="8">
-                    <Button Content="{localization:Loc Help_SettingsButton}"
-                            Command="{Binding AdaptiveHelp.OpenHelpSettingsCommand}" />
-                    <Button Content="{localization:Loc Help_Close}"
-                            Command="{Binding AdaptiveHelp.HideCommand}" />
-                </StackPanel>
-            </Grid>
-        </Border>
+        <!-- One reusable help host is shared by the shell and folder overview. -->
+        <views:AdaptiveHelpPanel Grid.Row="1"
+                                 Grid.RowSpan="4"
+                                 HorizontalAlignment="Right"
+                                 VerticalAlignment="Stretch"
+                                 Margin="8"
+                                 Width="460"
+                                 DataContext="{Binding AdaptiveHelp}" />
     </Grid>
 </Window>

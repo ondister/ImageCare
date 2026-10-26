@@ -334,4 +334,25 @@
   <data name="Help_ReasonSelectedGoal" xml:space="preserve"><value>Prioritized because it matches your selected goal.</value></data>
   <data name="Help_ReasonOptional" xml:space="preserve"><value>An optional operation that may be useful in the current workflow.</value></data>
   <data name="Help_ReasonNewVersion" xml:space="preserve"><value>Suggested because ImageCare was updated since your previous session.</value></data>
+  <data name="Overview_AnnotatableSelection" xml:space="preserve"><value>{0} image(s) can be annotated</value></data>
+  <data name="Overview_MixedRating" xml:space="preserve"><value>Mixed rating</value></data>
+  <data name="Overview_TransferDestination" xml:space="preserve"><value>Destination folder: {0}</value></data>
+  <data name="Overview_CopyTo" xml:space="preserve"><value>Copy selected files to {0}</value></data>
+  <data name="Overview_MoveTo" xml:space="preserve"><value>Move selected files to {0}</value></data>
+  <data name="Overview_AddTagToSelection" xml:space="preserve"><value>Add a tag to selected images</value></data>
+  <data name="Overview_RemoveTagFromSelection" xml:space="preserve"><value>Remove this tag from selected images</value></data>
+  <data name="Overview_AnnotationsCompleted" xml:space="preserve"><value>Updated {0} of {1} images</value></data>
+  <data name="Overview_AnnotationsFailed" xml:space="preserve"><value>{0} image(s) could not be updated. First error: {1}</value></data>
+  <data name="Help_OverviewSelectTitle" xml:space="preserve"><value>Select files in the folder overview</value></data>
+  <data name="Help_OverviewSelectMessage" xml:space="preserve"><value>Click to select one file, Ctrl/Command-click to toggle files, or Shift-click to select a range.</value></data>
+  <data name="Help_OverviewAnnotationsTitle" xml:space="preserve"><value>Edit rating and tags</value></data>
+  <data name="Help_OverviewAnnotationsMessage" xml:space="preserve"><value>Use the selection toolbar to apply a rating or add and remove tags without losing each image's other tags.</value></data>
+  <data name="Help_OverviewBatchTitle" xml:space="preserve"><value>Run a group operation</value></data>
+  <data name="Help_OverviewBatchMessage" xml:space="preserve"><value>Copy, move, delete, or export the selected files. Progress and cancellation are shown in the overview.</value></data>
+  <data name="Help_OverviewBatchActiveTitle" xml:space="preserve"><value>Group operation in progress</value></data>
+  <data name="Help_OverviewBatchActiveMessage" xml:space="preserve"><value>Follow progress in the selection toolbar or cancel before the next file starts.</value></data>
+  <data name="Help_ReasonOverviewOpen" xml:space="preserve"><value>The folder overview is open and no files are selected.</value></data>
+  <data name="Help_ReasonOverviewSelection" xml:space="preserve"><value>{0} selected item(s); image annotations are available in the toolbar.</value></data>
+  <data name="Help_ReasonOverviewMultipleSelection" xml:space="preserve"><value>{0} selected items are ready for a group operation.</value></data>
+  <data name="Help_ReasonOverviewBatchActive" xml:space="preserve"><value>A group operation is currently running in the folder overview.</value></data>
 </root>

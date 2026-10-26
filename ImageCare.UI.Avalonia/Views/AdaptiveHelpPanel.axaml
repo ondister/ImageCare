@@ -1,0 +1,97 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:domain="clr-namespace:ImageCare.UI.Avalonia.ViewModels.Domain"
+             xmlns:localization="clr-namespace:ImageCare.UI.Avalonia.Localization"
+             x:Class="ImageCare.UI.Avalonia.Views.AdaptiveHelpPanel"
+             IsVisible="{Binding IsVisible}">
+    <Border Padding="16"
+            CornerRadius="{DynamicResource BorderRadius.Medium}"
+            Background="{DynamicResource Brush.PreviewCard}"
+            BorderBrush="{DynamicResource Brush.Accent}"
+            BorderThickness="1">
+        <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="10">
+            <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
+                <StackPanel Grid.Column="0" Spacing="3">
+                    <TextBlock Text="{Binding PanelTitle}"
+                               FontSize="18"
+                               FontWeight="Bold"
+                               TextWrapping="Wrap" />
+                    <TextBlock Text="{Binding PanelSubtitle}"
+                               FontSize="{DynamicResource Font.Size.Small}"
+                               Opacity="0.7"
+                               TextWrapping="Wrap" />
+                </StackPanel>
+                <Button Grid.Column="1"
+                        Content="×"
+                        FontSize="18"
+                        Width="32"
+                        Height="32"
+                        Command="{Binding HideCommand}"
+                        ToolTip.Tip="{localization:Loc Help_Close}" />
+            </Grid>
+
+            <Border Grid.Row="1"
+                    IsVisible="{Binding IsGoalSelectionVisible}"
+                    Padding="12"
+                    CornerRadius="{DynamicResource BorderRadius.Small}"
+                    Background="{DynamicResource Brush.AccentSubtle}">
+                <StackPanel Spacing="8">
+                    <TextBlock Text="{localization:Loc Help_GoalTitle}"
+                               FontWeight="Bold"
+                               TextWrapping="Wrap" />
+                    <TextBlock Text="{localization:Loc Help_GoalMessage}"
+                               TextWrapping="Wrap" />
+                    <WrapPanel Orientation="Horizontal">
+                        <Button Margin="0,0,6,6" Content="{localization:Loc Help_GoalOrganize}"
+                                Command="{Binding SelectGoalCommand}" CommandParameter="OrganizeMedia" />
+                        <Button Margin="0,0,6,6" Content="{localization:Loc Help_GoalCopy}"
+                                Command="{Binding SelectGoalCommand}" CommandParameter="CopyMedia" />
+                        <Button Margin="0,0,6,6" Content="{localization:Loc Help_GoalSearch}"
+                                Command="{Binding SelectGoalCommand}" CommandParameter="SearchMedia" />
+                        <Button Margin="0,0,6,6" Content="{localization:Loc Help_GoalCleanUp}"
+                                Command="{Binding SelectGoalCommand}" CommandParameter="CleanUpMedia" />
+                        <Button Margin="0,0,6,6" Content="{localization:Loc Help_GoalExplore}"
+                                Command="{Binding SelectGoalCommand}" CommandParameter="Explore" />
+                    </WrapPanel>
+                </StackPanel>
+            </Border>
+
+            <ScrollViewer Grid.Row="2"
+                          VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled">
+                <ItemsControl ItemsSource="{Binding Recommendations}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="domain:AdaptiveHelpRecommendationViewModel">
+                            <Border Margin="0,0,0,8"
+                                    Padding="12"
+                                    CornerRadius="{DynamicResource BorderRadius.Small}"
+                                    BorderBrush="{DynamicResource Brush.Splitter}"
+                                    BorderThickness="1">
+                                <StackPanel Spacing="6">
+                                    <TextBlock Text="{Binding Title}" FontWeight="Bold"
+                                               FontSize="{DynamicResource Font.Size.SectionHeader}"
+                                               TextWrapping="Wrap" />
+                                    <TextBlock Text="{Binding Message}" TextWrapping="Wrap" />
+                                    <TextBlock Text="{Binding Reason}"
+                                               FontSize="{DynamicResource Font.Size.Small}"
+                                               Opacity="0.65" TextWrapping="Wrap" />
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="6">
+                                        <Button Content="{Binding DismissText}" Command="{Binding DismissCommand}" />
+                                        <Button Content="{Binding ActionText}" Command="{Binding ActionCommand}"
+                                                IsVisible="{Binding HasAction}"
+                                                Background="{DynamicResource Brush.Accent}" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+
+            <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+                <Button Content="{localization:Loc Help_SettingsButton}" Command="{Binding OpenHelpSettingsCommand}" />
+                <Button Content="{localization:Loc Help_Close}" Command="{Binding HideCommand}" />
+            </StackPanel>
+        </Grid>
+    </Border>
+</UserControl>

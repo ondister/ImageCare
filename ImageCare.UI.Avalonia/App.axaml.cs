@@ -207,6 +207,7 @@ public class App : PrismApplication
 
         containerRegistry.RegisterSingleton<INotificationService, LocalNotificationService>();
         containerRegistry.RegisterSingleton<AdaptiveHelpPolicy>();
+        containerRegistry.RegisterSingleton<AdaptiveHelpContextService>();
         containerRegistry.RegisterSingleton<AdaptiveHelpService>();
         containerRegistry.RegisterSingleton<IFileAssociationsService, ConfigurationFileAssociationsService>();
         containerRegistry.RegisterSingleton<IClipboardService, ClipboardService>();

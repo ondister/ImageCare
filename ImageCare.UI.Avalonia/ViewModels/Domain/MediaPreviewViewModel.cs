@@ -25,7 +25,7 @@ namespace ImageCare.UI.Avalonia.ViewModels.Domain;
 
 internal class MediaPreviewViewModel : ViewModelBase, IComparable<MediaPreviewViewModel>
 {
-    private const int PreviewDecodeWidth = 512;
+    private const int DefaultPreviewDecodeWidth = 512;
     private static readonly SemaphoreSlim PreviewDecodeGate = new(4, 4);
 
     private readonly SemaphoreSlim _previewLoadGate = new(1, 1);
@@ -37,6 +37,7 @@ internal class MediaPreviewViewModel : ViewModelBase, IComparable<MediaPreviewVi
     private readonly ILogger _logger;
     private readonly LocalizationManager _localization;
     private Bitmap? _previewBitmap;
+    private int _loadedPreviewWidth;
     private bool _selected;
     private bool _isLoading = true;
     private int _maxImageHeight = 200;
@@ -139,7 +140,13 @@ internal class MediaPreviewViewModel : ViewModelBase, IComparable<MediaPreviewVi
         }
     }
 
-    public void UnloadPreview() => PreviewBitmap = null;
+    public int LoadedPreviewWidth => _loadedPreviewWidth;
+
+    public void UnloadPreview()
+    {
+        PreviewBitmap = null;
+        _loadedPreviewWidth = 0;
+    }
 
     public int MaxImageHeight
     {
@@ -267,13 +274,20 @@ internal class MediaPreviewViewModel : ViewModelBase, IComparable<MediaPreviewVi
         return string.CompareOrdinal(Url, other.Url);
     }
 
-    public async Task LoadPreviewAsync(CancellationToken token)
+    public Task LoadPreviewAsync(CancellationToken token) =>
+        LoadPreviewAsync(DefaultPreviewDecodeWidth, MediaPreviewSize.Medium, token);
+
+    public async Task LoadPreviewAsync(
+        int requestedDecodeWidth,
+        MediaPreviewSize previewSize,
+        CancellationToken token)
     {
+        var decodeWidth = Math.Clamp(requestedDecodeWidth, 256, 2_048);
         await _previewLoadGate.WaitAsync(token);
         Bitmap? decodedBitmap = null;
         try
         {
-            if (PreviewBitmap != null)
+            if (PreviewBitmap != null && _loadedPreviewWidth >= decodeWidth)
             {
                 return;
             }
@@ -284,13 +298,14 @@ internal class MediaPreviewViewModel : ViewModelBase, IComparable<MediaPreviewVi
             {
                 await using var imageStream = await _imageService.GetJpegImageStreamAsync(
                     _mapper.Map<MediaPreview>(this),
-                    MediaPreviewSize.Medium,
+                    previewSize,
                     token);
                 decodedBitmap = await Task.Run(
-                    () => Bitmap.DecodeToWidth(imageStream, PreviewDecodeWidth, BitmapInterpolationMode.MediumQuality),
+                    () => Bitmap.DecodeToWidth(imageStream, decodeWidth, BitmapInterpolationMode.HighQuality),
                     token);
                 token.ThrowIfCancellationRequested();
                 PreviewBitmap = decodedBitmap;
+                _loadedPreviewWidth = decodeWidth;
                 decodedBitmap = null;
             }
             finally

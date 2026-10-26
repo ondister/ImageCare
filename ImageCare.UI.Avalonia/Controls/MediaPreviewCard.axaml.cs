@@ -6,6 +6,8 @@ using Avalonia.Input;
 
 namespace ImageCare.UI.Avalonia.Controls;
 
+internal sealed record MediaPreviewSelectionRequest(object? Item, KeyModifiers Modifiers);
+
 public partial class MediaPreviewCard : UserControl
 {
     public static readonly StyledProperty<ICommand?> SelectCommandProperty =
@@ -34,12 +36,13 @@ public partial class MediaPreviewCard : UserControl
 
     private void OnPointerPressed(object? sender, PointerPressedEventArgs args)
     {
+        var request = new MediaPreviewSelectionRequest(SelectCommandParameter, args.KeyModifiers);
         if (!args.GetCurrentPoint(this).Properties.IsLeftButtonPressed ||
-            SelectCommand?.CanExecute(SelectCommandParameter) != true)
+            SelectCommand?.CanExecute(request) != true)
         {
             return;
         }
 
-        SelectCommand.Execute(SelectCommandParameter);
+        SelectCommand.Execute(request);
     }
 }

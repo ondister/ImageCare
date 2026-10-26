@@ -110,6 +110,30 @@ internal sealed class AdaptiveHelpService : BindableBase, IDisposable
                 "Help_SettingsMessage",
                 HelpActionKind.OpenSettings,
                 "Help_ActionOpenSettings"),
+            [AdaptiveHelpPolicy.OverviewSelectHintId] = new(
+                AdaptiveHelpPolicy.OverviewSelectHintId,
+                "Help_OverviewSelectTitle",
+                "Help_OverviewSelectMessage",
+                HelpActionKind.None,
+                string.Empty),
+            [AdaptiveHelpPolicy.OverviewAnnotationsHintId] = new(
+                AdaptiveHelpPolicy.OverviewAnnotationsHintId,
+                "Help_OverviewAnnotationsTitle",
+                "Help_OverviewAnnotationsMessage",
+                HelpActionKind.None,
+                string.Empty),
+            [AdaptiveHelpPolicy.OverviewBatchHintId] = new(
+                AdaptiveHelpPolicy.OverviewBatchHintId,
+                "Help_OverviewBatchTitle",
+                "Help_OverviewBatchMessage",
+                HelpActionKind.None,
+                string.Empty),
+            [AdaptiveHelpPolicy.OverviewBatchActiveHintId] = new(
+                AdaptiveHelpPolicy.OverviewBatchActiveHintId,
+                "Help_OverviewBatchActiveTitle",
+                "Help_OverviewBatchActiveMessage",
+                HelpActionKind.None,
+                string.Empty),
             [AdaptiveHelpPolicy.ReadyHintId] = new(
                 AdaptiveHelpPolicy.ReadyHintId,
                 "Help_ReadyTitle",
@@ -123,6 +147,7 @@ internal sealed class AdaptiveHelpService : BindableBase, IDisposable
     private readonly IMediaPreviewOperationsService _fileOperationsService;
     private readonly INotificationService _notificationService;
     private readonly MediaSelectionCoordinator _selectionCoordinator;
+    private readonly AdaptiveHelpContextService _helpContext;
     private readonly ShellUiActionService _shellActions;
     private readonly AdaptiveHelpPolicy _policy;
     private readonly LocalizationManager _localization;
@@ -144,6 +169,7 @@ internal sealed class AdaptiveHelpService : BindableBase, IDisposable
         IMediaPreviewOperationsService fileOperationsService,
         INotificationService notificationService,
         MediaSelectionCoordinator selectionCoordinator,
+        AdaptiveHelpContextService helpContext,
         ShellUiActionService shellActions,
         AdaptiveHelpPolicy policy,
         LocalizationManager localization,
@@ -156,6 +182,7 @@ internal sealed class AdaptiveHelpService : BindableBase, IDisposable
         _fileOperationsService = fileOperationsService;
         _notificationService = notificationService;
         _selectionCoordinator = selectionCoordinator;
+        _helpContext = helpContext;
         _shellActions = shellActions;
         _policy = policy;
         _localization = localization;
@@ -231,10 +258,12 @@ internal sealed class AdaptiveHelpService : BindableBase, IDisposable
             }
 
             _selectionCoordinator.SelectionChanged += OnSelectionChanged;
+            _helpContext.Changed += OnHelpContextChanged;
             _localization.CultureChanged += OnCultureChanged;
             _subscriptions = new CompositeDisposable
             {
                 Disposable.Create(() => _selectionCoordinator.SelectionChanged -= OnSelectionChanged),
+                Disposable.Create(() => _helpContext.Changed -= OnHelpContextChanged),
                 Disposable.Create(() => _localization.CultureChanged -= OnCultureChanged),
                 _folderService.FileSystemItemSelected
                     .ObserveOn(_synchronizationContext)
@@ -382,6 +411,11 @@ internal sealed class AdaptiveHelpService : BindableBase, IDisposable
         RefreshVisibleRecommendations();
     }
 
+    private void OnHelpContextChanged(object? sender, EventArgs args)
+    {
+        RefreshVisibleRecommendations();
+    }
+
     private void OnFileOperationCompleted(MediaFileOperationCompleted operation)
     {
         switch (operation.Kind)
@@ -410,6 +444,7 @@ internal sealed class AdaptiveHelpService : BindableBase, IDisposable
             || !configuration.AdaptiveHelpDifficultyAssistanceEnabled
             || _automaticShownThisSession
             || IsVisible
+            || _helpContext.IsBatchOperationRunning
             || !_policy.CanShowAutomatically(configuration, now))
         {
             RefreshVisibleRecommendations();
@@ -458,7 +493,10 @@ internal sealed class AdaptiveHelpService : BindableBase, IDisposable
             _recentErrors.Count,
             HasRestorableFolders(configuration),
             _hasNewFeatures,
-            _isReturningSession);
+            _isReturningSession,
+            _helpContext.IsFolderOverviewOpen,
+            _helpContext.FolderOverviewSelectionCount,
+            _helpContext.IsBatchOperationRunning);
         var decisions = _policy.Rank(context, configuration, automatic);
 
         Recommendations.Clear();
@@ -590,6 +628,8 @@ internal sealed class AdaptiveHelpService : BindableBase, IDisposable
                     _configurationService.Configuration.Value.AdaptiveHelpSessionHistoryUtc).TotalDays)),
             "Help_ReasonRepeatedErrors" => _localization.Get(decision.ReasonKey, context.RecentErrorCount),
             "Help_ReasonSelectionReady" => _localization.Get(decision.ReasonKey, context.SelectedMediaCount),
+            "Help_ReasonOverviewSelection" => _localization.Get(decision.ReasonKey, context.FolderOverviewSelectionCount),
+            "Help_ReasonOverviewMultipleSelection" => _localization.Get(decision.ReasonKey, context.FolderOverviewSelectionCount),
             _ => _localization[decision.ReasonKey]
         };
     }

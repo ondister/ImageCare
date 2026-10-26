@@ -37,7 +37,7 @@
             BorderBrush="{DynamicResource Brush.Splitter}"
             BorderThickness="0,1,0,0"
             Background="{DynamicResource ThemeBackgroundBrush}">
-        <Grid Height="23" ColumnDefinitions="Auto,Auto,*,Auto,Auto,Auto">
+        <Grid Height="23" ColumnDefinitions="Auto,Auto,*,Auto,Auto,Auto,Auto">
             <Border Grid.Column="0"
                     Height="22"
                     Padding="6,0"
@@ -177,6 +177,18 @@
                     </Border>
                     <TextBlock Classes="StatusText" Text="{localization:Loc Bottom_MessagesList}" />
                 </StackPanel>
+            </Button>
+
+            <Button Grid.Column="6"
+                    Classes="StatusBarButton"
+                    Width="26"
+                    MinWidth="26"
+                    Padding="4,0"
+                    Command="{Binding $parent[Window].DataContext.AdaptiveHelp.ShowHelpCommand}"
+                    ToolTip.Tip="{localization:Loc Help_Open}">
+                <iconPacks:PackIconMaterial Kind="HelpCircleOutline"
+                                            Width="13"
+                                            Height="13" />
             </Button>
         </Grid>
     </Border>

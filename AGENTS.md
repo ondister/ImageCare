@@ -75,11 +75,21 @@ dotnet publish ImageCare.UI.Avalonia/ImageCare.UI.Avalonia.csproj --configuratio
 - Automatic help shows one recommendation per session, observes a 24-hour cooldown, and stops repeating a topic after two closes. Repeated-error help requires two user-visible errors within five minutes. Manual help can still be opened from the title-bar icon.
 - The return threshold is three times the median interval in the last ten sessions, clamped to 14–60 days, with a 30-day fallback. A basic workflow hint is mastered after three successful real actions and then leaves normal ranking.
 - Persistent models are in `ImageCare.Core/Domain/Configuration/AdaptiveHelpConfiguration.cs` and properties on `Configuration`. Normalize collection properties after deserializing old or hand-edited JSON.
-- The single panel host and the platform-aligned title-bar icon live in `Views/MainWindow.axaml`. Keep both macOS and Windows placement branches when changing the icon.
+- `AdaptiveHelpContextService.cs` carries transient surface state, including folder-overview selection and batch activity. Views may update this context but must not rank or localize hints.
+- `Views/AdaptiveHelpPanel.axaml` is the reusable panel host shared by `MainWindow` and `GlancePanelView`; the platform-aligned title-bar icon remains in `MainWindow.axaml`. Keep both macOS and Windows placement branches when changing the icon.
 - Add every help string to both resource files. When adding a hint, update the catalog in `AdaptiveHelpService`, its candidate rule in `AdaptiveHelpPolicy`, and `AdaptiveHelpPolicyTests`.
 - Targeted checks:
   - `dotnet test Tests/ImageCare.UI.Avalonia.Tests/ImageCare.UI.Avalonia.Tests.csproj --filter "FullyQualifiedName~AdaptiveHelpPolicyTests"`
   - `dotnet test Tests/ImageCare.Core.Tests/ImageCare.Core.Tests.csproj --filter "FullyQualifiedName~JsonConfigurationServiceTests"`
+
+## Folder overview
+
+- `GlancePanelViewModel` is split across `GlancePanelViewModel.cs` and `GlancePanelViewModel.Enhancements.cs`. Keep loading, watcher, timeline, and viewport code in the original file; keep selection, annotation editing, group operations, and quality buckets in the enhancement partial.
+- The overview preserves row virtualization through `PreviewRows`, `VirtualizingStackPanel`, and `FixedWrapPanel`. Collection changes are coalesced by `SchedulePreviewRowsRebuild`; do not rebuild rows for selection-only changes.
+- Preview quality is adaptive: 512, 768, 1024, or 1536 pixels according to `ImagesPerLine`. Upgrade only visible/retained previews and preserve the global four-decode gate and viewport unloading.
+- Selection semantics are desktop-standard: click replaces, Ctrl/Command toggles, Shift selects a range. Keep selection by view-model identity and remove missing items after watcher or file-operation updates.
+- Rating and tag edits operate on every selected annotatable image through `IMediaAnnotationsService`; read a fresh snapshot before each write, preserve unrelated tags/rating, continue after per-file failures, and expose cancellation/progress.
+- Copy, move, delete, and JPEG export reuse `IMediaBatchOperationsService`. Do not duplicate low-level file operations or bypass safe-delete confirmation. The opposite main-window folder is the copy/move destination.
 
 ## MCP server
 

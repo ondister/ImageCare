@@ -14,7 +14,10 @@ public sealed record AdaptiveHelpContext(
     int RecentErrorCount,
     bool HasRestorableFolders,
     bool HasNewFeatures,
-    bool IsReturningUser);
+    bool IsReturningUser,
+    bool IsFolderOverviewOpen = false,
+    int FolderOverviewSelectionCount = 0,
+    bool IsBatchOperationRunning = false);
 
 public sealed record AdaptiveHelpDecision(string HintId, int Score, string ReasonKey);
 
@@ -32,6 +35,10 @@ public sealed class AdaptiveHelpPolicy
     public const string SafeDeletionHintId = "safe-deletion";
     public const string NewFeaturesHintId = "new-features";
     public const string SettingsHintId = "help-settings";
+    public const string OverviewSelectHintId = "overview-select";
+    public const string OverviewAnnotationsHintId = "overview-annotations";
+    public const string OverviewBatchHintId = "overview-batch";
+    public const string OverviewBatchActiveHintId = "overview-batch-active";
     public const string ReadyHintId = "ready";
 
     public static readonly TimeSpan AutomaticCooldown = TimeSpan.FromDays(1);
@@ -129,6 +136,26 @@ public sealed class AdaptiveHelpPolicy
         if (context.HasNewFeatures && configuration.AdaptiveHelpNewFeaturesEnabled)
         {
             Add(candidates, NewFeaturesHintId, 950, "Help_ReasonNewVersion", configuration);
+        }
+
+        if (context.IsFolderOverviewOpen)
+        {
+            if (context.IsBatchOperationRunning)
+            {
+                Add(candidates, OverviewBatchActiveHintId, 1250, "Help_ReasonOverviewBatchActive", configuration);
+            }
+            else if (context.FolderOverviewSelectionCount == 0)
+            {
+                Add(candidates, OverviewSelectHintId, 1200, "Help_ReasonOverviewOpen", configuration);
+            }
+            else
+            {
+                Add(candidates, OverviewAnnotationsHintId, 1150, "Help_ReasonOverviewSelection", configuration);
+                if (context.FolderOverviewSelectionCount > 1)
+                {
+                    Add(candidates, OverviewBatchHintId, 1175, "Help_ReasonOverviewMultipleSelection", configuration);
+                }
+            }
         }
 
         if (!context.HasSourceFolder)
