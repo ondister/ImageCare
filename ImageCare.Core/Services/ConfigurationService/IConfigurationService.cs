@@ -8,5 +8,10 @@ public interface IConfigurationService
 
 	Lazy<Configuration> Configuration { get; }
 
+    /// <summary>
+    /// Gets whether the configuration file was absent when the service started.
+    /// </summary>
+    bool IsFirstRun => false;
+
 	void SaveConfiguration();
 }

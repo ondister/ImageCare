@@ -99,4 +99,22 @@ public sealed class Configuration
     /// access without a token.
     /// </summary>
     public string McpServerAccessToken { get; set; } = string.Empty;
+
+    /// <summary>Enables automatic, contextual help suggestions.</summary>
+    public bool AdaptiveHelpEnabled { get; set; } = true;
+
+    /// <summary>Version of the help experience last initialized for this profile.</summary>
+    public int AdaptiveHelpExperienceVersion { get; set; }
+
+    /// <summary>Hints completed explicitly or through the corresponding real action.</summary>
+    public List<string> AdaptiveHelpCompletedHintIds { get; set; } = new();
+
+    /// <summary>Hints the user asked not to see again.</summary>
+    public List<string> AdaptiveHelpDismissedHintIds { get; set; } = new();
+
+    /// <summary>UTC time when the previous application session started.</summary>
+    public DateTimeOffset? AdaptiveHelpLastSessionUtc { get; set; }
+
+    /// <summary>UTC time when an automatic help suggestion was last displayed.</summary>
+    public DateTimeOffset? AdaptiveHelpLastShownUtc { get; set; }
 }

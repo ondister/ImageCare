@@ -46,6 +46,7 @@ public sealed class SettingsViewModel : ViewModelBase
     private bool _folderTagsEnabled;
     private bool _folderTagApplicationLogEnabled;
     private bool _restoreLastFoldersOnStartup;
+    private bool _adaptiveHelpEnabled;
     private bool _safeDeletionEnabled;
     private bool _mcpServerEnabled;
     private int _mcpServerPort = 5277;
@@ -142,6 +143,21 @@ public sealed class SettingsViewModel : ViewModelBase
             }
 
             _configService.Configuration.Value.RestoreLastFoldersOnStartup = value;
+            SaveConfiguration();
+        }
+    }
+
+    public bool AdaptiveHelpEnabled
+    {
+        get => _adaptiveHelpEnabled;
+        set
+        {
+            if (!SetProperty(ref _adaptiveHelpEnabled, value))
+            {
+                return;
+            }
+
+            _configService.Configuration.Value.AdaptiveHelpEnabled = value;
             SaveConfiguration();
         }
     }
@@ -456,6 +472,9 @@ public sealed class SettingsViewModel : ViewModelBase
 
             _restoreLastFoldersOnStartup = configuration.RestoreLastFoldersOnStartup;
             RaisePropertyChanged(nameof(RestoreLastFoldersOnStartup));
+
+            _adaptiveHelpEnabled = configuration.AdaptiveHelpEnabled;
+            RaisePropertyChanged(nameof(AdaptiveHelpEnabled));
 
             RebuildDragDropModifierOptions(configuration.DragDropModifier);
 

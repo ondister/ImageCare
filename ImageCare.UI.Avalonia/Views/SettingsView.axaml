@@ -42,6 +42,17 @@
 
                 <Separator Margin="{DynamicResource MarginVertical.Small}" />
 
+                <TextBlock Text="{localization:Loc Settings_HelpTitle}"
+                           FontWeight="Bold"
+                           FontSize="{DynamicResource Font.Size.SectionHeader}" />
+                <ToggleSwitch Content="{localization:Loc Settings_AdaptiveHelp}"
+                              IsChecked="{Binding AdaptiveHelpEnabled, Mode=TwoWay}" />
+                <TextBlock Text="{localization:Loc Settings_AdaptiveHelpDescription}"
+                           Opacity="0.7"
+                           TextWrapping="Wrap" />
+
+                <Separator Margin="{DynamicResource MarginVertical.Small}" />
+
                 <TextBlock Text="{localization:Loc Settings_DragDropBehavior}"
                            FontWeight="Bold"
                            FontSize="{DynamicResource Font.Size.SectionHeader}" />

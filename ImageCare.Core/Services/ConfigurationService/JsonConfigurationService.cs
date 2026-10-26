@@ -18,6 +18,7 @@ public sealed class JsonConfigurationService : IConfigurationService, IDisposabl
     public JsonConfigurationService(IConfigurationFileSource fileSource)
     {
         _fileSource = fileSource ?? throw new ArgumentNullException(nameof(fileSource));
+        IsFirstRun = !_fileSource.ConfigurationFileExists();
         _configurationSavedSubject = new Subject<Configuration>();
         Configuration = new Lazy<Configuration>(LoadConfiguration);
 
@@ -27,6 +28,8 @@ public sealed class JsonConfigurationService : IConfigurationService, IDisposabl
     public IObservable<Configuration> ConfigurationSaved => _configurationSavedSubject.AsObservable();
 
     public Lazy<Configuration> Configuration { get; }
+
+    public bool IsFirstRun { get; }
 
     public void SaveConfiguration()
     {

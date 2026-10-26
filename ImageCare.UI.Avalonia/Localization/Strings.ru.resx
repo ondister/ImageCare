@@ -257,4 +257,30 @@
   <data name="Batch_DeleteConfirmMessage" xml:space="preserve"><value>Удалить выбранные файлы ({0})? Это действие нельзя отменить в приложении.</value></data>
   <data name="Batch_DeleteConfirmSafeDetail" xml:space="preserve"><value>Безопасное удаление включено: при необходимости файлы можно восстановить из буфера.</value></data>
   <data name="Batch_DeleteConfirmUnsafeDetail" xml:space="preserve"><value>Безопасное удаление отключено. Файлы будут удалены безвозвратно.</value></data>
+  <data name="Settings_HelpTitle" xml:space="preserve"><value>Помощь и рекомендации</value></data>
+  <data name="Settings_AdaptiveHelp" xml:space="preserve"><value>Показывать адаптивные рекомендации</value></data>
+  <data name="Settings_AdaptiveHelpDescription" xml:space="preserve"><value>ImageCare предлагает один уместный следующий шаг после запуска или долгого перерыва. Рекомендации реагируют на действия, хранятся локально и не блокируют интерфейс. Ручная помощь остаётся доступна по кнопке «?».</value></data>
+  <data name="Help_Open" xml:space="preserve"><value>Открыть помощь</value></data>
+  <data name="Help_Close" xml:space="preserve"><value>Закрыть</value></data>
+  <data name="Help_GotIt" xml:space="preserve"><value>Понятно</value></data>
+  <data name="Help_DontShowAgain" xml:space="preserve"><value>Больше не показывать эту подсказку</value></data>
+  <data name="Help_WelcomeTitle" xml:space="preserve"><value>Начните с двух папок</value></data>
+  <data name="Help_WelcomeMessage" xml:space="preserve"><value>Выберите исходную папку слева и целевую справа. ImageCare покажет их медиафайлы рядом.</value></data>
+  <data name="Help_ReturningTitle" xml:space="preserve"><value>Продолжите с места остановки</value></data>
+  <data name="Help_ReturningMessage" xml:space="preserve"><value>Последнее рабочее пространство — «{0}». Восстановите или выберите папки, чтобы продолжить. Кнопка «?» в любой момент предложит следующий шаг.</value></data>
+  <data name="Help_LastWorkspaceUnknown" xml:space="preserve"><value>предыдущие папки</value></data>
+  <data name="Help_SelectSourceTitle" xml:space="preserve"><value>Выберите исходную папку</value></data>
+  <data name="Help_SelectSourceMessage" xml:space="preserve"><value>В левой панели выберите папку с изображениями, которые хотите просмотреть.</value></data>
+  <data name="Help_SelectTargetTitle" xml:space="preserve"><value>Выберите целевую папку</value></data>
+  <data name="Help_SelectTargetMessage" xml:space="preserve"><value>Выберите папку в правой панели. В неё будут копироваться или перемещаться файлы из левой панели.</value></data>
+  <data name="Help_SelectMediaTitle" xml:space="preserve"><value>Выберите медиафайлы</value></data>
+  <data name="Help_SelectMediaMessage" xml:space="preserve"><value>Выберите одно или несколько превью. Центральные кнопки станут доступны, когда в обеих панелях выбраны папки.</value></data>
+  <data name="Help_TransferTitle" xml:space="preserve"><value>Скопируйте или переместите выбранное</value></data>
+  <data name="Help_TransferMessage" xml:space="preserve"><value>Используйте центральную кнопку копирования или перемещения. Удерживайте настроенную клавишу-модификатор, чтобы временно сменить операцию перетаскивания.</value></data>
+  <data name="Help_ReadyTitle" xml:space="preserve"><value>Помощь учитывает текущую задачу</value></data>
+  <data name="Help_ReadyMessage" xml:space="preserve"><value>Выберите папки или медиафайлы и снова откройте эту панель, чтобы получить уместный следующий шаг. Автоматическая рекомендация появляется не чаще одного раза за сеанс.</value></data>
+  <data name="Help_ReasonFirstRun" xml:space="preserve"><value>Предложено, потому что это первый сеанс.</value></data>
+  <data name="Help_ReasonReturning" xml:space="preserve"><value>Предложено после длительного перерыва в работе с ImageCare.</value></data>
+  <data name="Help_ReasonContext" xml:space="preserve"><value>Предложено с учётом выбранных папок и файлов.</value></data>
+  <data name="Help_ReasonManual" xml:space="preserve"><value>Эту помощь можно открыть кнопкой «?» в любое время.</value></data>
 </root>

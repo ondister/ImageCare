@@ -257,4 +257,30 @@
   <data name="Batch_DeleteConfirmMessage" xml:space="preserve"><value>Delete {0} selected file(s)? This cannot be undone from the app.</value></data>
   <data name="Batch_DeleteConfirmSafeDetail" xml:space="preserve"><value>Safe deletion is enabled, so the files can be restored from the buffer if needed.</value></data>
   <data name="Batch_DeleteConfirmUnsafeDetail" xml:space="preserve"><value>Safe deletion is disabled. The files will be permanently deleted.</value></data>
+  <data name="Settings_HelpTitle" xml:space="preserve"><value>Help and recommendations</value></data>
+  <data name="Settings_AdaptiveHelp" xml:space="preserve"><value>Show adaptive recommendations</value></data>
+  <data name="Settings_AdaptiveHelpDescription" xml:space="preserve"><value>ImageCare suggests one relevant next step after startup or a long absence. Recommendations react to your actions, stay local, and never block the interface. Manual help remains available from the ? button.</value></data>
+  <data name="Help_Open" xml:space="preserve"><value>Open help</value></data>
+  <data name="Help_Close" xml:space="preserve"><value>Close</value></data>
+  <data name="Help_GotIt" xml:space="preserve"><value>Got it</value></data>
+  <data name="Help_DontShowAgain" xml:space="preserve"><value>Do not show this tip again</value></data>
+  <data name="Help_WelcomeTitle" xml:space="preserve"><value>Start with two folders</value></data>
+  <data name="Help_WelcomeMessage" xml:space="preserve"><value>Select a source folder on the left and a destination folder on the right. ImageCare will show their media side by side.</value></data>
+  <data name="Help_ReturningTitle" xml:space="preserve"><value>Continue where you left off</value></data>
+  <data name="Help_ReturningMessage" xml:space="preserve"><value>Your last workspace was “{0}”. Restore or select folders to continue, or use the ? button whenever you need a suggested next step.</value></data>
+  <data name="Help_LastWorkspaceUnknown" xml:space="preserve"><value>your previous folders</value></data>
+  <data name="Help_SelectSourceTitle" xml:space="preserve"><value>Select a source folder</value></data>
+  <data name="Help_SelectSourceMessage" xml:space="preserve"><value>Choose the folder whose images you want to review in the left panel.</value></data>
+  <data name="Help_SelectTargetTitle" xml:space="preserve"><value>Select a destination folder</value></data>
+  <data name="Help_SelectTargetMessage" xml:space="preserve"><value>Choose a folder in the right panel. It will become the destination for copy and move operations from the left.</value></data>
+  <data name="Help_SelectMediaTitle" xml:space="preserve"><value>Select media to work with</value></data>
+  <data name="Help_SelectMediaMessage" xml:space="preserve"><value>Select one or more previews. The center buttons will become available when both panels have folders.</value></data>
+  <data name="Help_TransferTitle" xml:space="preserve"><value>Copy or move the selection</value></data>
+  <data name="Help_TransferMessage" xml:space="preserve"><value>Use the center Copy or Move button. Hold your configured modifier key to temporarily switch the drag-and-drop operation.</value></data>
+  <data name="Help_ReadyTitle" xml:space="preserve"><value>Help follows your current task</value></data>
+  <data name="Help_ReadyMessage" xml:space="preserve"><value>Select folders or media and open this panel again for the most relevant next step. Automatic recommendations appear at most once per session.</value></data>
+  <data name="Help_ReasonFirstRun" xml:space="preserve"><value>Suggested because this is your first session.</value></data>
+  <data name="Help_ReasonReturning" xml:space="preserve"><value>Suggested because ImageCare has not been opened for a while.</value></data>
+  <data name="Help_ReasonContext" xml:space="preserve"><value>Suggested from the current folders and selection.</value></data>
+  <data name="Help_ReasonManual" xml:space="preserve"><value>Open this help at any time from the ? button.</value></data>
 </root>

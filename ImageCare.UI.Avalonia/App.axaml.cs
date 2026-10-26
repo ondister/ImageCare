@@ -205,6 +205,7 @@ public class App : PrismApplication
         containerRegistry.RegisterSingleton<IFolderTagApplicationService, FolderTagApplicationService>();
 
         containerRegistry.RegisterSingleton<INotificationService, LocalNotificationService>();
+        containerRegistry.RegisterSingleton<AdaptiveHelpService>();
         containerRegistry.RegisterSingleton<IFileAssociationsService, ConfigurationFileAssociationsService>();
         containerRegistry.RegisterSingleton<IClipboardService, ClipboardService>();
         containerRegistry.RegisterSingleton<IFileDialogService, AvaloniaFileDialogService>();

@@ -38,6 +38,7 @@ internal class MainWindowViewModel : ViewModelBase
 	private readonly ILogger _logger;
     private readonly MainImageViewModel _mainImageViewModel;
     private readonly MainVideoViewModel _mainVideoViewModel;
+    private readonly AdaptiveHelpService _adaptiveHelpService;
 	private CompositeDisposable? _subscriptions;
     private bool _isImageViewVisible = true;
     private bool _isVideoViewVisible;
@@ -52,6 +53,7 @@ internal class MainWindowViewModel : ViewModelBase
                                MediaSelectionCoordinator selectionCoordinator,
                                MainImageViewModel mainImageViewModel,
                                MainVideoViewModel mainVideoViewModel,
+                               AdaptiveHelpService adaptiveHelpService,
 							   SynchronizationContext synchronizationContext,
 							   ILogger logger)
 	{
@@ -64,6 +66,7 @@ internal class MainWindowViewModel : ViewModelBase
         _selectionCoordinator = selectionCoordinator;
         _mainImageViewModel = mainImageViewModel;
         _mainVideoViewModel = mainVideoViewModel;
+        _adaptiveHelpService = adaptiveHelpService;
 		_synchronizationContext = synchronizationContext;
 		_logger = logger;
 
@@ -112,6 +115,8 @@ internal class MainWindowViewModel : ViewModelBase
     public MainImageViewModel MainImageViewModel => _mainImageViewModel;
 
     public MainVideoViewModel MainVideoViewModel => _mainVideoViewModel;
+
+    public AdaptiveHelpService AdaptiveHelp => _adaptiveHelpService;
 
     public bool IsImageViewVisible
     {
@@ -270,6 +275,8 @@ internal class MainWindowViewModel : ViewModelBase
 							  .ObserveOn(_synchronizationContext)
 							  .Subscribe(OnFolderSelected, OnObservableError)
 			};
+
+            _adaptiveHelpService.Start();
 		}
 		catch (Exception ex)
 		{
@@ -283,6 +290,7 @@ internal class MainWindowViewModel : ViewModelBase
 		try
 		{
             _folderHistoryService.SaveHistory();
+            _adaptiveHelpService.Stop();
 			_subscriptions?.Dispose();
 		}
 		catch (Exception ex)
