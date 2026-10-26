@@ -144,6 +144,35 @@ public partial class FoldersView : UserControl
         }
     }
 
+    private void OnEditFolderTagsClick(object? sender, RoutedEventArgs e)
+    {
+        var menuItem = sender as MenuItem;
+        var directory = menuItem?.Tag as DirectoryViewModel
+                        ?? menuItem?.DataContext as DirectoryViewModel;
+        if (directory != null && _viewModel?.EditFolderTagsCommand.CanExecute(directory) == true)
+        {
+            _viewModel.EditFolderTagsCommand.Execute(directory);
+        }
+    }
+
+    private void OnOpenFolderMenuClick(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Control control)
+        {
+            return;
+        }
+
+        var folderRow = control.FindAncestorOfType<Border>();
+        if (folderRow?.ContextMenu is not { } contextMenu)
+        {
+            return;
+        }
+
+        contextMenu.PlacementTarget = control;
+        contextMenu.Placement = PlacementMode.Bottom;
+        contextMenu.Open(folderRow);
+    }
+
     private static void OnNameTextBoxLostFocus(object? sender, RoutedEventArgs e)
     {
         if (sender is TextBox { DataContext: DirectoryViewModel viewModel } &&

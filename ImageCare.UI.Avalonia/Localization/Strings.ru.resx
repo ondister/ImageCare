@@ -207,4 +207,26 @@
   <data name="Search_OpenFailed" xml:space="preserve"><value>Не удалось открыть изображение из индекса</value></data>
   <data name="FolderTags_ApplyTooltip" xml:space="preserve"><value>Применить теги этой папки ко всем изображениям в ней</value></data>
   <data name="FolderTags_Failed" xml:space="preserve"><value>Не удалось применить теги папки.</value></data>
+  <data name="Folders_EditFolderTags" xml:space="preserve"><value>Теги папки…</value></data>
+  <data name="Folders_FolderMenu" xml:space="preserve"><value>Меню папки</value></data>
+  <data name="FolderTags_Editor_Title" xml:space="preserve"><value>Теги папки: {0}</value></data>
+  <data name="FolderTags_Editor_Description" xml:space="preserve"><value>Эти теги автоматически добавляются к фотографиям, скопированным или перемещённым в эту папку. Теги родительских папок наследуются.</value></data>
+  <data name="FolderTags_Editor_Descriptor" xml:space="preserve"><value>Файл:</value></data>
+  <data name="FolderTags_Editor_OwnTags" xml:space="preserve"><value>Теги этой папки</value></data>
+  <data name="FolderTags_Editor_NewTagPlaceholder" xml:space="preserve"><value>Введите тег</value></data>
+  <data name="FolderTags_Editor_Add" xml:space="preserve"><value>Добавить</value></data>
+  <data name="FolderTags_Editor_RemoveTag" xml:space="preserve"><value>Удалить тег</value></data>
+  <data name="FolderTags_Editor_NoOwnTags" xml:space="preserve"><value>Тегов пока нет. Добавьте тег, чтобы создать файл описания.</value></data>
+  <data name="FolderTags_Editor_InheritedTags" xml:space="preserve"><value>Унаследовано от родительских папок</value></data>
+  <data name="FolderTags_Editor_InheritedHint" xml:space="preserve"><value>Применяются автоматически; изменяйте их в родительской папке.</value></data>
+  <data name="FolderTags_Editor_NoInheritedTags" xml:space="preserve"><value>В родительских папках теги не заданы.</value></data>
+  <data name="FolderTags_Editor_Unsaved" xml:space="preserve"><value>Есть несохранённые изменения.</value></data>
+  <data name="FolderTags_Editor_Saved" xml:space="preserve"><value>Теги папки сохранены.</value></data>
+  <data name="FolderTags_Editor_SaveFailed" xml:space="preserve"><value>Не удалось сохранить теги папки: {0}</value></data>
+  <data name="FolderTags_Editor_LoadFailed" xml:space="preserve"><value>Не удалось загрузить теги папки: {0}</value></data>
+  <data name="FolderTags_Editor_TagExists" xml:space="preserve"><value>Этот тег уже есть в списке.</value></data>
+  <data name="FolderTags_Editor_TagInherited" xml:space="preserve"><value>Этот тег уже унаследован от родительской папки.</value></data>
+  <data name="FolderTags_Editor_CommentTag" xml:space="preserve"><value>Тег не может начинаться с символа «#».</value></data>
+  <data name="FolderTags_Editor_EmptyTag" xml:space="preserve"><value>Введите тег.</value></data>
+  <data name="FolderTags_Editor_Unavailable" xml:space="preserve"><value>Папка больше недоступна.</value></data>
 </root>

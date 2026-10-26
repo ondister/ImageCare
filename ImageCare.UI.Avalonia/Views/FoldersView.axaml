@@ -18,6 +18,7 @@
                   ItemsSource="{Binding FileSystemItemViewModels}"
                   SelectedItem="{Binding SelectedFileSystemItem, Mode=TwoWay}"
                   SelectionMode="Single"
+                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                   IsVisible="{Binding !IsInSearchSession}">
             <TreeView.Styles>
                 <Style Selector="TreeViewItem" x:DataType="domain:DirectoryViewModel">
@@ -157,9 +158,32 @@
                     <Border Classes="FolderRow"
                             Classes.Selected="{Binding IsSelected}"
                             MinHeight="26"
+                            Padding="0,0,16,0"
                             Background="Transparent"
                             CornerRadius="5">
-                        <Grid MinHeight="26" ColumnDefinitions="24,*,Auto" VerticalAlignment="Center">
+                        <Border.ContextMenu>
+                            <ContextMenu>
+                                <MenuItem Header="{localization:Loc Folders_AddRecent}"
+                                          Tag="{Binding}"
+                                          Click="OnAddFolderToRecentClick"
+                                          IsVisible="{Binding !IsRecentEntry}" />
+                                <Separator IsVisible="{Binding !IsRecentEntry}" />
+                                <MenuItem Header="{localization:Loc Folders_EditFolderTags}"
+                                          Tag="{Binding}"
+                                          Click="OnEditFolderTagsClick" />
+                                <Separator IsVisible="{Binding !IsRecentEntry}" />
+                                <MenuItem Header="{localization:Loc Common_Create}"
+                                          Command="{Binding CreateFolderCommand}"
+                                          IsVisible="{Binding !IsRecentEntry}" />
+                                <MenuItem Header="{localization:Loc Common_Rename}"
+                                          Command="{Binding StartRenameFolderCommand}"
+                                          IsVisible="{Binding !IsRecentEntry}" />
+                                <MenuItem Header="{localization:Loc Common_Delete}"
+                                          Command="{Binding DeleteFolderCommand}"
+                                          IsVisible="{Binding !IsRecentEntry}" />
+                            </ContextMenu>
+                        </Border.ContextMenu>
+                        <Grid MinHeight="26" ColumnDefinitions="24,*,Auto,Auto" VerticalAlignment="Center">
                         <Grid Grid.Column="0" Width="20" Height="20">
                             <iconPacks:PackIconMaterial Kind="FolderOutline"
                                                         Width="18"
@@ -201,26 +225,7 @@
                                     <StackPanel Spacing="0">
                                         <TextBlock Text="{Binding Name}"
                                                    VerticalAlignment="Center"
-                                                   TextTrimming="CharacterEllipsis">
-                                            <TextBlock.ContextMenu>
-                                                <ContextMenu>
-                                                    <MenuItem Header="{localization:Loc Folders_AddRecent}"
-                                                              Tag="{Binding}"
-                                                              Click="OnAddFolderToRecentClick"
-                                                              IsVisible="{Binding !IsRecentEntry}" />
-                                                    <Separator IsVisible="{Binding !IsRecentEntry}" />
-                                                    <MenuItem Header="{localization:Loc Common_Create}"
-                                                              Command="{Binding CreateFolderCommand}"
-                                                              IsVisible="{Binding !IsRecentEntry}" />
-                                                    <MenuItem Header="{localization:Loc Common_Rename}"
-                                                              Command="{Binding StartRenameFolderCommand}"
-                                                              IsVisible="{Binding !IsRecentEntry}" />
-                                                    <MenuItem Header="{localization:Loc Common_Delete}"
-                                                              Command="{Binding DeleteFolderCommand}"
-                                                              IsVisible="{Binding !IsRecentEntry}" />
-                                                </ContextMenu>
-                                            </TextBlock.ContextMenu>
-                                        </TextBlock>
+                                                   TextTrimming="CharacterEllipsis" />
                                         <TextBlock Text="{Binding Path}"
                                                    FontSize="{StaticResource Font.Size.Micro}"
                                                    Opacity="0.65"
@@ -244,6 +249,15 @@
                         </ContentPresenter>
 
                         <Button Grid.Column="2"
+                                Classes="TreeAction"
+                                Margin="2,0,0,0"
+                                Click="OnOpenFolderMenuClick"
+                                ToolTip.Tip="{localization:Loc Folders_FolderMenu}">
+                            <iconPacks:PackIconMaterial Kind="DotsHorizontal"
+                                                        Width="15"
+                                                        Height="15" />
+                        </Button>
+                        <Button Grid.Column="3"
                                 Classes="TreeAction"
                                 Margin="2,0"
                                 IsVisible="{Binding IsPinnedPopular}"

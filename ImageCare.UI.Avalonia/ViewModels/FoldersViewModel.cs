@@ -41,6 +41,7 @@ internal class FoldersViewModel : NavigatedViewModelBase
     private readonly IFolderHistoryService _folderHistoryService;
     private readonly IFileDialogService _fileDialogService;
     private readonly IFileSystemService _fileSystemService;
+    private readonly FolderTagsEditorWindowService _folderTagsEditorWindowService;
     private readonly IConfigurationService _configurationService;
     private readonly IMultiSourcesFileSystemWatcherService _multiSourcesFileSystemWatcherService;
     private readonly IDrivesWatcherService _drivesWatcherService;
@@ -70,6 +71,7 @@ internal class FoldersViewModel : NavigatedViewModelBase
                             IFolderHistoryService folderHistoryService,
                             IFileDialogService fileDialogService,
                             IFileSystemService fileSystemService,
+                            FolderTagsEditorWindowService folderTagsEditorWindowService,
                             IConfigurationService configurationService,
                             IMultiSourcesFileSystemWatcherService multiSourcesFileSystemWatcherService,
                             IDrivesWatcherService drivesWatcherService,
@@ -83,6 +85,7 @@ internal class FoldersViewModel : NavigatedViewModelBase
         _folderHistoryService = folderHistoryService ?? throw new ArgumentNullException(nameof(folderHistoryService));
         _fileDialogService = fileDialogService ?? throw new ArgumentNullException(nameof(fileDialogService));
         _fileSystemService = fileSystemService ?? throw new ArgumentNullException(nameof(fileSystemService));
+        _folderTagsEditorWindowService = folderTagsEditorWindowService ?? throw new ArgumentNullException(nameof(folderTagsEditorWindowService));
         _configurationService = configurationService ?? throw new ArgumentNullException(nameof(configurationService));
         _multiSourcesFileSystemWatcherService = multiSourcesFileSystemWatcherService ?? throw new ArgumentNullException(nameof(multiSourcesFileSystemWatcherService));
         _drivesWatcherService = drivesWatcherService ?? throw new ArgumentNullException(nameof(drivesWatcherService));
@@ -104,6 +107,7 @@ internal class FoldersViewModel : NavigatedViewModelBase
         AddRecentFolderCommand = CreateAsyncCommand(AddRecentFolderAsync);
         AddFolderToRecentCommand = CreateCommand<DirectoryViewModel>(AddFolderToRecent);
         RemoveRecentFolderCommand = CreateCommand<DirectoryViewModel>(RemoveRecentFolder);
+        EditFolderTagsCommand = CreateCommand<DirectoryViewModel>(EditFolderTags);
 
         FileSystemItemViewModels = new Collections.SortedObservableCollection<DirectoryViewModel>();
         SearchResults = new ObservableCollection<DirectoryViewModel>();
@@ -126,6 +130,8 @@ internal class FoldersViewModel : NavigatedViewModelBase
     public ICommand AddFolderToRecentCommand { get; }
 
     public ICommand RemoveRecentFolderCommand { get; }
+
+    public ICommand EditFolderTagsCommand { get; }
 
     public event Action<DirectoryViewModel>? RevealSelectedFolderRequested;
 
@@ -565,6 +571,16 @@ internal class FoldersViewModel : NavigatedViewModelBase
         {
             _logger.Error(ex, "Failed to remove a folder from Recent: {Path}", directory.Path);
         }
+    }
+
+    private void EditFolderTags(DirectoryViewModel directory)
+    {
+        if (directory == null || string.IsNullOrWhiteSpace(directory.Path))
+        {
+            return;
+        }
+
+        _folderTagsEditorWindowService.Show(directory.Path);
     }
 
     private void OnFolderHistoryChanged(object? sender, EventArgs e)

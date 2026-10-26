@@ -1,3 +1,5 @@
+using System.Collections.Concurrent;
+
 using ImageCare.Core.Domain.Annotations;
 using ImageCare.Core.Domain.Configuration;
 using ImageCare.Core.Services.ConfigurationService;
@@ -181,19 +183,25 @@ public class FolderTagApplicationServiceTests
 
     private sealed class InMemoryAnnotationsService : IMediaAnnotationsService
     {
-        private readonly Dictionary<string, MediaAnnotations> _annotations =
+        private readonly ConcurrentDictionary<string, MediaAnnotations> _annotations =
             new(StringComparer.OrdinalIgnoreCase);
+        private int _writeCount;
 
-        public int WriteCount { get; private set; }
+        public int WriteCount => Volatile.Read(ref _writeCount);
 
         public IObservable<AnnotationsReconciliationStatus> ReconciliationStatus =>
             System.Reactive.Linq.Observable.Return(AnnotationsReconciliationStatus.Idle);
 
         public bool Contains(string path) => _annotations.ContainsKey(Path.GetFullPath(path));
 
-        public MediaAnnotationsSnapshot Snapshot(string path) =>
-            new(Path.GetFullPath(path), _annotations.GetValueOrDefault(Path.GetFullPath(path), MediaAnnotations.Empty),
+        public MediaAnnotationsSnapshot Snapshot(string path)
+        {
+            var fullPath = Path.GetFullPath(path);
+            return new MediaAnnotationsSnapshot(
+                fullPath,
+                _annotations.GetValueOrDefault(fullPath, MediaAnnotations.Empty),
                 new AnnotationFileState(path, false, 0, DateTime.MinValue, 0, DateTime.MinValue));
+        }
 
         public Task InitializeAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
 
@@ -211,7 +219,7 @@ public class FolderTagApplicationServiceTests
             AnnotationFileState? expectedState = null,
             CancellationToken cancellationToken = default)
         {
-            WriteCount++;
+            Interlocked.Increment(ref _writeCount);
             _annotations[Path.GetFullPath(mediaPath)] = annotations;
             return Task.FromResult(Snapshot(mediaPath));
         }

@@ -213,6 +213,7 @@ public class App : PrismApplication
         containerRegistry.RegisterSingleton<ImageViewerWindowService>();
         containerRegistry.RegisterSingleton<SettingsWindowService>();
         containerRegistry.RegisterSingleton<MediaSearchWindowService>();
+        containerRegistry.RegisterSingleton<FolderTagsEditorWindowService>();
 
         containerRegistry.RegisterSingleton<TypeAdapterConfig>(() =>
         {

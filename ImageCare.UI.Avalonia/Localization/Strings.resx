@@ -207,4 +207,26 @@
   <data name="Search_OpenFailed" xml:space="preserve"><value>Could not open the indexed image</value></data>
   <data name="FolderTags_ApplyTooltip" xml:space="preserve"><value>Apply this folder's tags to every image in it</value></data>
   <data name="FolderTags_Failed" xml:space="preserve"><value>Could not apply folder tags.</value></data>
+  <data name="Folders_EditFolderTags" xml:space="preserve"><value>Folder tags…</value></data>
+  <data name="Folders_FolderMenu" xml:space="preserve"><value>Folder menu</value></data>
+  <data name="FolderTags_Editor_Title" xml:space="preserve"><value>Folder tags: {0}</value></data>
+  <data name="FolderTags_Editor_Description" xml:space="preserve"><value>These tags are added automatically to photos copied or moved into this folder. Tags from parent folders are inherited.</value></data>
+  <data name="FolderTags_Editor_Descriptor" xml:space="preserve"><value>Descriptor:</value></data>
+  <data name="FolderTags_Editor_OwnTags" xml:space="preserve"><value>Tags for this folder</value></data>
+  <data name="FolderTags_Editor_NewTagPlaceholder" xml:space="preserve"><value>Enter a tag</value></data>
+  <data name="FolderTags_Editor_Add" xml:space="preserve"><value>Add</value></data>
+  <data name="FolderTags_Editor_RemoveTag" xml:space="preserve"><value>Remove tag</value></data>
+  <data name="FolderTags_Editor_NoOwnTags" xml:space="preserve"><value>No tags yet. Add a tag to create the descriptor file.</value></data>
+  <data name="FolderTags_Editor_InheritedTags" xml:space="preserve"><value>Inherited from parent folders</value></data>
+  <data name="FolderTags_Editor_InheritedHint" xml:space="preserve"><value>Applied automatically; edit them in the parent folder.</value></data>
+  <data name="FolderTags_Editor_NoInheritedTags" xml:space="preserve"><value>Parent folders do not define any tags.</value></data>
+  <data name="FolderTags_Editor_Unsaved" xml:space="preserve"><value>Unsaved changes.</value></data>
+  <data name="FolderTags_Editor_Saved" xml:space="preserve"><value>Folder tags saved.</value></data>
+  <data name="FolderTags_Editor_SaveFailed" xml:space="preserve"><value>Could not save folder tags: {0}</value></data>
+  <data name="FolderTags_Editor_LoadFailed" xml:space="preserve"><value>Could not load folder tags: {0}</value></data>
+  <data name="FolderTags_Editor_TagExists" xml:space="preserve"><value>This tag is already in the list.</value></data>
+  <data name="FolderTags_Editor_TagInherited" xml:space="preserve"><value>This tag is already inherited from a parent folder.</value></data>
+  <data name="FolderTags_Editor_CommentTag" xml:space="preserve"><value>Tags cannot start with '#'.</value></data>
+  <data name="FolderTags_Editor_EmptyTag" xml:space="preserve"><value>Enter a tag.</value></data>
+  <data name="FolderTags_Editor_Unavailable" xml:space="preserve"><value>The folder is no longer available.</value></data>
 </root>
