@@ -1,0 +1,72 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:iconPacks="https://github.com/MahApps/IconPacks.Avalonia"
+             x:Class="ImageCare.UI.Avalonia.Controls.RatingControl"
+             Height="22"
+             MinHeight="22"
+             HorizontalContentAlignment="Stretch"
+             VerticalContentAlignment="Stretch">
+    <UserControl.Styles>
+        <Style Selector="Button.starButton">
+            <Setter Property="MinWidth" Value="0" />
+            <Setter Property="MinHeight" Value="0" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius" Value="2" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+        <Style Selector="Button.starButton:pointerover">
+            <Setter Property="Background" Value="{DynamicResource Brush.AccentSubtle}" />
+        </Style>
+        <Style Selector="Button.starButton iconPacks|PackIconMaterial.outlineStar">
+            <Setter Property="Foreground" Value="{DynamicResource Brush.TextPrimary}" />
+            <Setter Property="Opacity" Value="0.55" />
+        </Style>
+        <Style Selector="Button.starButton iconPacks|PackIconMaterial.filledStar">
+            <Setter Property="Foreground" Value="{DynamicResource Brush.Accent}" />
+            <Setter Property="Opacity" Value="0" />
+        </Style>
+        <Style Selector="Button.starButton.filled iconPacks|PackIconMaterial.outlineStar">
+            <Setter Property="Opacity" Value="0" />
+        </Style>
+        <Style Selector="Button.starButton.filled iconPacks|PackIconMaterial.filledStar">
+            <Setter Property="Opacity" Value="1" />
+        </Style>
+    </UserControl.Styles>
+
+    <Grid ColumnDefinitions="*,*,*,*,*">
+        <Button x:Name="Star1Button" Grid.Column="0" Classes="starButton" Tag="1" Click="OnStarClick">
+            <Grid Width="16" Height="16">
+                <iconPacks:PackIconMaterial Classes="outlineStar" Kind="StarOutline" Width="16" Height="16" />
+                <iconPacks:PackIconMaterial Classes="filledStar" Kind="Star" Width="16" Height="16" />
+            </Grid>
+        </Button>
+        <Button x:Name="Star2Button" Grid.Column="1" Classes="starButton" Tag="2" Click="OnStarClick">
+            <Grid Width="16" Height="16">
+                <iconPacks:PackIconMaterial Classes="outlineStar" Kind="StarOutline" Width="16" Height="16" />
+                <iconPacks:PackIconMaterial Classes="filledStar" Kind="Star" Width="16" Height="16" />
+            </Grid>
+        </Button>
+        <Button x:Name="Star3Button" Grid.Column="2" Classes="starButton" Tag="3" Click="OnStarClick">
+            <Grid Width="16" Height="16">
+                <iconPacks:PackIconMaterial Classes="outlineStar" Kind="StarOutline" Width="16" Height="16" />
+                <iconPacks:PackIconMaterial Classes="filledStar" Kind="Star" Width="16" Height="16" />
+            </Grid>
+        </Button>
+        <Button x:Name="Star4Button" Grid.Column="3" Classes="starButton" Tag="4" Click="OnStarClick">
+            <Grid Width="16" Height="16">
+                <iconPacks:PackIconMaterial Classes="outlineStar" Kind="StarOutline" Width="16" Height="16" />
+                <iconPacks:PackIconMaterial Classes="filledStar" Kind="Star" Width="16" Height="16" />
+            </Grid>
+        </Button>
+        <Button x:Name="Star5Button" Grid.Column="4" Classes="starButton" Tag="5" Click="OnStarClick">
+            <Grid Width="16" Height="16">
+                <iconPacks:PackIconMaterial Classes="outlineStar" Kind="StarOutline" Width="16" Height="16" />
+                <iconPacks:PackIconMaterial Classes="filledStar" Kind="Star" Width="16" Height="16" />
+            </Grid>
+        </Button>
+    </Grid>
+</UserControl>

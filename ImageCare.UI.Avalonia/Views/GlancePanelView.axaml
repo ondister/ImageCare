@@ -120,19 +120,11 @@
                                            Text="{localization:Loc Annotations_Rating}"
                                            VerticalAlignment="Center" />
                                 <Grid Grid.Column="1">
-                                    <ComboBox SelectedIndex="{Binding SelectedRating, Mode=TwoWay}"
-                                              Width="150"
-                                              Height="22"
-                                              MinHeight="22"
-                                              Padding="6,0"
-                                              FontSize="12">
-                                        <ComboBoxItem Content="{localization:Loc Annotations_Unrated}" />
-                                        <ComboBoxItem Content="★" />
-                                        <ComboBoxItem Content="★★" />
-                                        <ComboBoxItem Content="★★★" />
-                                        <ComboBoxItem Content="★★★★" />
-                                        <ComboBoxItem Content="★★★★★" />
-                                    </ComboBox>
+                                    <controls:RatingControl Rating="{Binding SelectedRating, Mode=TwoWay}"
+                                                            Width="150"
+                                                            Height="22"
+                                                            MinHeight="22"
+                                                            VerticalAlignment="Center" />
                                     <TextBlock Text="{localization:Loc Overview_MixedRating}"
                                                IsVisible="{Binding HasMixedRating}"
                                                Margin="10,0"

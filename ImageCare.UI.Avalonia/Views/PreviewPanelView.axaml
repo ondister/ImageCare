@@ -91,19 +91,11 @@
                           HorizontalScrollBarVisibility="Auto"
                           VerticalScrollBarVisibility="Disabled">
                 <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                    <ComboBox SelectedIndex="{Binding SelectedRating, Mode=TwoWay}"
-                              Width="150"
-                              Height="22"
-                              MinHeight="22"
-                              Padding="6,0"
-                              FontSize="12">
-                        <ComboBoxItem Content="{localization:Loc Annotations_Unrated}" />
-                        <ComboBoxItem Content="★" />
-                        <ComboBoxItem Content="★★" />
-                        <ComboBoxItem Content="★★★" />
-                        <ComboBoxItem Content="★★★★" />
-                        <ComboBoxItem Content="★★★★★" />
-                    </ComboBox>
+                    <controls:RatingControl Rating="{Binding SelectedRating, Mode=TwoWay}"
+                                            Width="150"
+                                            Height="22"
+                                            MinHeight="22"
+                                            VerticalAlignment="Center" />
                     <TextBox x:Name="PreviewTagInput"
                              Width="150"
                              Height="22"
