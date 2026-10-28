@@ -1,3 +1,5 @@
+using ImageCare.Core.Domain.Media.Metadata;
+using ImageCare.Core.Domain.MediaFormats;
 using ImageCare.Core.Domain.Preview;
 using ImageCare.Core.Exceptions;
 using ImageCare.Core.Services.FileSystemService;
@@ -190,6 +192,9 @@ public sealed class MediaBatchOperationsService(
             destinationDirectoryPath,
             reservedNames);
         var annotations = await annotationsService.GetAsync(preview.Url, cancellationToken).ConfigureAwait(false);
+        var metadata = preview.MediaFormat == MediaFormat.MediaFormatJpg
+            ? null
+            : await mediaPreviewService.GetMediaMetadataAsync(preview, cancellationToken).ConfigureAwait(false);
 
         try
         {
@@ -201,6 +206,12 @@ public sealed class MediaBatchOperationsService(
             await using (var destination = fileSystemService.Create(destinationPath))
             {
                 await source.CopyToAsync(destination, cancellationToken).ConfigureAwait(false);
+            }
+
+            if (metadata is not null)
+            {
+                await JpegExifMetadataWriter.WriteAsync(destinationPath, metadata, cancellationToken)
+                    .ConfigureAwait(false);
             }
 
             if (annotations.Rating > 0 || annotations.Tags.Length > 0)

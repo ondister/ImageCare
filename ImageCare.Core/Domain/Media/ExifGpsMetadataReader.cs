@@ -9,7 +9,7 @@ namespace ImageCare.Core.Domain.Media;
 
 internal static class ExifGpsMetadataReader
 {
-    public static void Apply(IReadOnlyList<Directory> directories, RawMediaMetadata metadata)
+    public static void Apply(IReadOnlyList<Directory> directories, ImageMediaMetadata metadata)
     {
         var gpsDirectory = directories.OfType<GpsDirectory>().FirstOrDefault();
         if (gpsDirectory == null)

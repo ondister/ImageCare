@@ -16,12 +16,12 @@ internal sealed class JpegMediaPreviewProvider : IMediaPreviewProvider
 	{
 		try
 		{
-			var readers = new IJpegSegmentMetadataReader[] { new ExifReader() };
+			var readers = new IJpegSegmentMetadataReader[] { new ExifReader(), new JpegReader() };
 			var directories = JpegMetadataReader.ReadMetadata(url, readers);
 
 			var exifDirectory = FindExifSubIfdDirectory(directories);
 
-			if (exifDirectory != null && TryExtractBasicMetadata(exifDirectory, out var dateTime, out var width, out var height))
+			if (exifDirectory != null && TryExtractBasicMetadata(exifDirectory, directories, out var dateTime, out var width, out var height))
 			{
 				return CreateJpegMediaMetadata(exifDirectory, directories, dateTime, width, height);
 			}
@@ -62,15 +62,29 @@ internal sealed class JpegMediaPreviewProvider : IMediaPreviewProvider
 			d.Name.Equals("Exif SubIFD", StringComparison.OrdinalIgnoreCase));
 	}
 
-	private static bool TryExtractBasicMetadata(Directory directory, out DateTime dateTime, out int width, out int height)
+	private static bool TryExtractBasicMetadata(
+		Directory directory,
+		IReadOnlyList<Directory> allDirectories,
+		out DateTime dateTime,
+		out int width,
+		out int height)
 	{
-		dateTime = DateTime.MinValue;
-		width = 0;
-		height = 0;
+		var hasDateTime = directory.TryGetDateTime(ExifDirectoryBase.TagDateTimeOriginal, out dateTime);
+		var hasWidth = directory.TryGetInt32(ExifDirectoryBase.TagExifImageWidth, out width);
+		var hasHeight = directory.TryGetInt32(ExifDirectoryBase.TagExifImageHeight, out height);
 
-		return directory.TryGetDateTime(ExifDirectoryBase.TagDateTimeOriginal, out dateTime) &&
-			   directory.TryGetInt32(ExifDirectoryBase.TagExifImageWidth, out width) &&
-			   directory.TryGetInt32(ExifDirectoryBase.TagExifImageHeight, out height);
+		var jpegDirectory = allDirectories.OfType<JpegDirectory>().FirstOrDefault();
+		if (!hasWidth && jpegDirectory != null)
+		{
+			hasWidth = jpegDirectory.TryGetInt32(JpegDirectory.TagImageWidth, out width);
+		}
+
+		if (!hasHeight && jpegDirectory != null)
+		{
+			hasHeight = jpegDirectory.TryGetInt32(JpegDirectory.TagImageHeight, out height);
+		}
+
+		return hasDateTime && hasWidth && hasHeight && width > 0 && height > 0;
 	}
 
 	private static JpegMediaMetadata CreateJpegMediaMetadata(Directory exifDirectory, IReadOnlyList<Directory> allDirectories, DateTime dateTime, int width, int height)
@@ -80,6 +94,7 @@ internal sealed class JpegMediaPreviewProvider : IMediaPreviewProvider
 		FillExifParameters(exifDirectory, metadata);
 		FillMetadata(exifDirectory, metadata);
 		FillOrientationFromIfd0(allDirectories, metadata);
+		ExifGpsMetadataReader.Apply(allDirectories, metadata);
 
 		return metadata;
 	}

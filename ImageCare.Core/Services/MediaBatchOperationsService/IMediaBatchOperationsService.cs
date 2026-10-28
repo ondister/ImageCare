@@ -26,7 +26,9 @@ public interface IMediaBatchOperationsService
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Writes the largest available JPEG preview for each image, carrying over rating and tags.
+    /// Writes the largest available JPEG preview for each image. RAW exports receive common EXIF
+    /// fields (capture time, orientation, exposure, ISO, aperture, and GPS); rating and tags are
+    /// embedded as XMP. Existing JPEG files retain their original metadata.
     /// </summary>
     Task<MediaBatchOperationSummary> ExportJpegAsync(
         IReadOnlyList<MediaPreview> mediaPreviews,
