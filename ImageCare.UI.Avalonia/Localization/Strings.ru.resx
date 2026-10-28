@@ -36,6 +36,7 @@
   <data name="Preview_LoadingFolder" xml:space="preserve"><value>Загрузка содержимого папки. Подождите...</value></data>
   <data name="Metadata_Title" xml:space="preserve"><value>Название</value></data>
   <data name="Metadata_Description" xml:space="preserve"><value>Описание</value></data>
+  <data name="Metadata_SearchPlaceholder" xml:space="preserve"><value>Поиск по названиям и значениям</value></data>
   <data name="Logs_Type" xml:space="preserve"><value>Тип</value></data>
   <data name="Logs_Timestamp" xml:space="preserve"><value>Время</value></data>
   <data name="Logs_Message" xml:space="preserve"><value>Сообщение</value></data>

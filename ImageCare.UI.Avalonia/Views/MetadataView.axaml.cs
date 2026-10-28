@@ -24,6 +24,12 @@ public partial class MetadataView : UserControl
         TryInitializeViewModel();
     }
 
+    private void OnViewUnloaded(object? sender, RoutedEventArgs e)
+    {
+        _isLoaded = false;
+        _initializedViewModel = null;
+    }
+
     private void OnDataContextChanged(object? sender, EventArgs e)
     {
         TryInitializeViewModel();

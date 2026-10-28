@@ -5,67 +5,103 @@
              xmlns:mvvm="http://prismlibrary.com/"
              xmlns:domain="clr-namespace:ImageCare.UI.Avalonia.ViewModels.Domain"
              xmlns:viewModels="clr-namespace:ImageCare.UI.Avalonia.ViewModels"
+             xmlns:iconPacks="https://github.com/MahApps/IconPacks.Avalonia"
              xmlns:localization="clr-namespace:ImageCare.UI.Avalonia.Localization"
              mc:Ignorable="d"
              mvvm:ViewModelLocator.AutoWireViewModel="True"
              x:Class="ImageCare.UI.Avalonia.Views.MetadataView"
              x:DataType="viewModels:MetadataViewModel"
-             Loaded="OnViewLoaded">
+             Loaded="OnViewLoaded"
+             Unloaded="OnViewUnloaded">
 
-    <ListBox ItemsSource="{Binding MetadataList}"
-             Grid.IsSharedSizeScope="True">
-        <ListBox.Styles>
-            <Style Selector="ListBoxItem">
-                <Setter Property="Padding" Value="0" />
-            </Style>
-        </ListBox.Styles>
-        <ListBox.Template>
-            <ControlTemplate>
+    <Grid RowDefinitions="Auto,*"
+          MinWidth="460"
+          MaxHeight="500"
+          Grid.IsSharedSizeScope="True">
+        <Border Grid.Row="0"
+                Height="32"
+                Margin="0,0,0,6"
+                Background="{DynamicResource ThemeControlMidBrush}"
+                CornerRadius="6">
+            <Grid Height="30" ColumnDefinitions="*,Auto">
+                <TextBox Grid.Column="0"
+                         Height="30"
+                         MinHeight="0"
+                         Padding="8,0"
+                         Background="Transparent"
+                         BorderThickness="0"
+                         VerticalContentAlignment="Center"
+                         PlaceholderText="{localization:Loc Metadata_SearchPlaceholder}"
+                         Text="{Binding SearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                <Button Grid.Column="1"
+                        Width="28"
+                        Height="28"
+                        MinWidth="0"
+                        MinHeight="0"
+                        Margin="2"
+                        Padding="6"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        Command="{Binding ClearSearchCommand}"
+                        ToolTip.Tip="{localization:Loc Action_ClearSearch}"
+                        IsVisible="{Binding HasSearchText}">
+                    <iconPacks:PackIconMaterial Kind="Close" Width="16" Height="16" />
+                </Button>
+            </Grid>
+        </Border>
 
-                <Grid RowDefinitions="Auto,*">
-                    <Grid Grid.Row="0">
+        <ListBox Grid.Row="1"
+                 ItemsSource="{Binding MetadataList}">
+            <ListBox.Styles>
+                <Style Selector="ListBoxItem">
+                    <Setter Property="Padding" Value="0" />
+                </Style>
+            </ListBox.Styles>
+            <ListBox.Template>
+                <ControlTemplate>
+                    <Grid RowDefinitions="Auto,*">
+                        <Grid Grid.Row="0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition SharedSizeGroup="title" />
+                                <ColumnDefinition SharedSizeGroup="description" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0"
+                                       Text="{localization:Loc Metadata_Title}" />
+                            <TextBlock Grid.Column="1"
+                                       Text="{localization:Loc Metadata_Description}" />
+                        </Grid>
+
+                        <ScrollViewer Grid.Row="1">
+                            <ItemsPresenter />
+                        </ScrollViewer>
+                    </Grid>
+                </ControlTemplate>
+            </ListBox.Template>
+
+            <ListBox.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <VirtualizingStackPanel />
+                </ItemsPanelTemplate>
+            </ListBox.ItemsPanel>
+
+            <ListBox.DataTemplates>
+                <DataTemplate DataType="domain:TagDescriptionViewModel">
+                    <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition SharedSizeGroup="title" />
                             <ColumnDefinition SharedSizeGroup="description" />
+                            <ColumnDefinition />
                         </Grid.ColumnDefinitions>
+
                         <TextBlock Grid.Column="0"
-                                   Text="{localization:Loc Metadata_Title}" />
+                                   Text="{Binding Title}" />
                         <TextBlock Grid.Column="1"
-                                   Text="{localization:Loc Metadata_Description}" />
-
+                                   MaxWidth="400"
+                                   Text="{Binding Description}"
+                                   TextWrapping="Wrap" />
                     </Grid>
-
-                    <ScrollViewer Grid.Row="1">
-                        <ItemsPresenter />
-                    </ScrollViewer>
-
-                </Grid>
-
-            </ControlTemplate>
-        </ListBox.Template>
-
-        <ListBox.ItemsPanel>
-            <ItemsPanelTemplate>
-                <VirtualizingStackPanel />
-            </ItemsPanelTemplate>
-        </ListBox.ItemsPanel>
-
-        <ListBox.DataTemplates>
-            <DataTemplate DataType="domain:TagDescriptionViewModel">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition SharedSizeGroup="title" />
-                        <ColumnDefinition SharedSizeGroup="description" />
-                        <ColumnDefinition />
-                    </Grid.ColumnDefinitions>
-
-                    <TextBlock Grid.Column="0"
-                               Text="{Binding Title}" />
-                    <TextBlock Grid.Column="1"
-                               MaxWidth="400" Text="{Binding Description}" TextWrapping="Wrap" />
-                </Grid>
-            </DataTemplate>
-        </ListBox.DataTemplates>
-    </ListBox>
-
+                </DataTemplate>
+            </ListBox.DataTemplates>
+        </ListBox>
+    </Grid>
 </UserControl>

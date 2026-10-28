@@ -107,6 +107,7 @@ internal sealed class NefMediaPreviewProvider : IMediaPreviewProvider
 
         FillExifParameters(allDirectories, metadata);
         FillOrientationFromIfd0(allDirectories, metadata);
+        ExifGpsMetadataReader.Apply(allDirectories, metadata);
 
         return metadata;
     }

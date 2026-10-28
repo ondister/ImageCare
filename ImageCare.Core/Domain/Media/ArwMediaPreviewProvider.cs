@@ -88,6 +88,7 @@ internal sealed class ArwMediaPreviewProvider : IMediaPreviewProvider
 		FillExifParameters(mainDirectory, metadata);
 		FillMetadata(mainDirectory, metadata);
 		FillOrientationFromIfd0(allDirectories, metadata);
+		ExifGpsMetadataReader.Apply(allDirectories, metadata);
 
 		return metadata;
 	}
