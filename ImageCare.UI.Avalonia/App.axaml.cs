@@ -33,6 +33,8 @@ using ImageCare.Core.Services.ProcessService;
 using ImageCare.UI.Avalonia.Behaviors;
 using ImageCare.UI.Avalonia.Localization;
 using ImageCare.UI.Avalonia.Mapping;
+using ImageCare.UI.Avalonia.Platforms.MacOS;
+using ImageCare.UI.Avalonia.Platforms.Windows;
 using ImageCare.UI.Avalonia.Services;
 using ImageCare.UI.Avalonia.ViewModels;
 using ImageCare.UI.Avalonia.Views;
@@ -255,7 +257,11 @@ public class App : PrismApplication
             containerRegistry.RegisterSingleton<IManagementEventWatcher, WindowsManagementEventWatcher>();
             containerRegistry.RegisterSingleton<IDriveInfoProvider, SystemDriveInfoProvider>();
             containerRegistry.RegisterSingleton<IDrivesWatcherService, WindowsDrivesWatcherService>();
-            containerRegistry.RegisterSingleton<IMediaPreviewService, CommonMediaPreviewService>();
+            containerRegistry.RegisterSingleton<IVideoFrameExtractor, WindowsVideoFrameExtractor>();
+            containerRegistry.RegisterSingleton<IMediaPreviewService>(provider =>
+                new CommonMediaPreviewService(
+                    MediaPreviewCapabilities.Full,
+                    provider.Resolve<IVideoFrameExtractor>()));
             return;
         }
 
@@ -265,8 +271,11 @@ public class App : PrismApplication
             containerRegistry.RegisterSingleton<IProcessService, SystemProcessService>();
             containerRegistry.RegisterSingleton<IDriveInfoProvider, MacOsDriveInfoProvider>();
             containerRegistry.RegisterSingleton<IDrivesWatcherService, StaticDrivesWatcherService>();
-            containerRegistry.RegisterSingleton<IMediaPreviewService>(
-                _ => new CommonMediaPreviewService(MediaPreviewCapabilities.Full));
+            containerRegistry.RegisterSingleton<IVideoFrameExtractor, MacOsVideoFrameExtractor>();
+            containerRegistry.RegisterSingleton<IMediaPreviewService>(provider =>
+                new CommonMediaPreviewService(
+                    MediaPreviewCapabilities.Full,
+                    provider.Resolve<IVideoFrameExtractor>()));
             return;
         }
 

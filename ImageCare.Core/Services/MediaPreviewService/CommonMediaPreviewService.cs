@@ -22,9 +22,11 @@ public sealed class CommonMediaPreviewService : IMediaPreviewService, IDisposabl
     private readonly ConcurrentDictionary<string, IMediaMetadata> _cachedMetadata;
     private readonly CancellationTokenSource _disposalTokenSource = new();
 
-    public CommonMediaPreviewService(MediaPreviewCapabilities? capabilities = null)
+    public CommonMediaPreviewService(
+        MediaPreviewCapabilities? capabilities = null,
+        IVideoFrameExtractor? videoFrameExtractor = null)
     {
-        _previewProvidersFactory = new MediaPreviewProvidersFactory(capabilities);
+        _previewProvidersFactory = new MediaPreviewProvidersFactory(capabilities, videoFrameExtractor);
         _cachedMetadata = new ConcurrentDictionary<string, IMediaMetadata>();
 
         _fileOperationsRetryPolicy = Policy

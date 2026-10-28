@@ -7,7 +7,9 @@ internal sealed class MediaPreviewProvidersFactory
     private readonly IMediaPreviewProvider _unsupportedMediaPreviewProvider = new UnsupportedMediaPreviewProvider();
     private readonly Dictionary<MediaFormat, IMediaPreviewProvider> _mediaProviders;
 
-    public MediaPreviewProvidersFactory(MediaPreviewCapabilities? capabilities = null)
+    public MediaPreviewProvidersFactory(
+        MediaPreviewCapabilities? capabilities = null,
+        IVideoFrameExtractor? videoFrameExtractor = null)
     {
         Capabilities = capabilities ?? MediaPreviewCapabilities.Full;
         _mediaProviders = new Dictionary<MediaFormat, IMediaPreviewProvider>
@@ -25,7 +27,9 @@ internal sealed class MediaPreviewProvidersFactory
 
         if (Capabilities.Video)
         {
-            _mediaProviders.Add(MediaFormat.MediaFormatMp4, new Mp4MediaPreviewProvider());
+            _mediaProviders.Add(
+                MediaFormat.MediaFormatMp4,
+                new Mp4MediaPreviewProvider(videoFrameExtractor));
         }
     }
 

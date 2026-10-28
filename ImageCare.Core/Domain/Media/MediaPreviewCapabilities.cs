@@ -9,9 +9,8 @@ public sealed record MediaPreviewCapabilities(bool Raw, bool Video)
     public static MediaPreviewCapabilities JpegOnly { get; } = new(Raw: false, Video: false);
 
     /// <summary>
-    ///     RAW photo formats are supported, but video is not. Used on platforms where the native
-    ///     RAW decoder (LibRaw) is available but the video backend (MPV) has not been ported yet,
-    ///     such as macOS.
+    ///     RAW photo formats are supported, but video is not. Use this profile only when no native
+    ///     video backend is available.
     /// </summary>
     public static MediaPreviewCapabilities RawAndJpeg { get; } = new(Raw: true, Video: false);
 

@@ -13,7 +13,7 @@ For example, a birdwatcher returns from the field with a memory card containing 
 - Two folder panels and a shared preview strip for sorting files between directories.
 - Folder overview with a timeline, adjustable grid, sorting, and restored-file list.
 - Time-based image clustering marks related shooting sessions with colored frames in folders containing up to 5,000 media files.
-- Preview extraction and searchable metadata for JPEG, RAW images (including DNG), and MP4 video.
+- Native video-frame thumbnails and searchable metadata for MP4 video; preview extraction and searchable metadata for JPEG and RAW images (including DNG).
 - Shooting-location map for a selected geotagged Canon CR3, Sony ARW, Nikon NEF, or DNG image, with a marker and coordinate copying.
 - Ratings and tags stored in XMP sidecar files.
 - Tag dictionaries can be imported from UTF-8 text files; `tags-example.txt` contains an alphabetical list of 325 bird species recorded in Belarus.
