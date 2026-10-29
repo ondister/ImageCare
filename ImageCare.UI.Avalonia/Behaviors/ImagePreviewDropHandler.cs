@@ -10,8 +10,8 @@ using ImageCare.Core.Domain.Preview;
 using ImageCare.Core.Services.MediaPreviewOperationsService;
 using ImageCare.Core.Services.NotificationService;
 using ImageCare.UI.Avalonia.Services;
-using ImageCare.UI.Avalonia.ViewModels;
 using ImageCare.UI.Avalonia.ViewModels.Domain;
+using ImageCare.UI.Avalonia.ViewModels.Preview;
 
 using MapsterMapper;
 
@@ -66,7 +66,7 @@ public class ImagePreviewDropHandler
     {
         if (!Validate(sender, sourceContext, targetContext) ||
             sourceContext is not MediaPreviewViewModel sourceImagePreview ||
-            targetContext is not PreviewPanelViewModel targetPanel)
+            targetContext is not PreviewImageStripViewModel targetPanel)
         {
             return false;
         }
@@ -126,7 +126,7 @@ public class ImagePreviewDropHandler
     {
         if (sender is not ListBox ||
             sourceContext is not MediaPreviewViewModel sourceImagePreview ||
-            targetContext is not PreviewPanelViewModel targetPanel ||
+            targetContext is not PreviewImageStripViewModel targetPanel ||
             string.IsNullOrWhiteSpace(targetPanel.SelectedFolderPath))
         {
             return false;

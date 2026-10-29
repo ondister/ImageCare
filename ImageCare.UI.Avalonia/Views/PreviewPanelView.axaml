@@ -2,9 +2,6 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:prism="http://prismlibrary.com/"
              xmlns:viewModels="clr-namespace:ImageCare.UI.Avalonia.ViewModels"
-             xmlns:domain="clr-namespace:ImageCare.UI.Avalonia.ViewModels.Domain"
-             xmlns:controls="clr-namespace:ImageCare.UI.Avalonia.Controls"
-             xmlns:behaviors="clr-namespace:ImageCare.UI.Avalonia.Behaviors"
              xmlns:views="clr-namespace:ImageCare.UI.Avalonia.Views"
              xmlns:iconPacks="https://github.com/MahApps/IconPacks.Avalonia"
              xmlns:localization="clr-namespace:ImageCare.UI.Avalonia.Localization"
@@ -13,24 +10,10 @@
              x:DataType="viewModels:PreviewPanelViewModel"
              FontSize="{StaticResource Font.Size.Small}">
 
-    <UserControl.Styles>
-        <Style Selector="Button.tagRemoveButton">
-            <Setter Property="Background" Value="Transparent" />
-            <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="Padding" Value="2" />
-            <Setter Property="MinWidth" Value="14" />
-            <Setter Property="MinHeight" Value="14" />
-            <Setter Property="Width" Value="14" />
-            <Setter Property="Height" Value="14" />
-            <Setter Property="VerticalAlignment" Value="Center" />
-            <Setter Property="Cursor" Value="Hand" />
-        </Style>
-    </UserControl.Styles>
-
     <UserControl.KeyBindings>
-        <KeyBinding Command="{Binding CopyImagePreviewCommand}" Gesture="F5" />
-        <KeyBinding Command="{Binding MoveImagePreviewCommand}" Gesture="F6" />
-        <KeyBinding Command="{Binding DeleteImagePreviewCommand}" Gesture="Delete" />
+        <KeyBinding Command="{Binding Batch.CopyImagePreviewCommand}" Gesture="F5" />
+        <KeyBinding Command="{Binding Batch.MoveImagePreviewCommand}" Gesture="F6" />
+        <KeyBinding Command="{Binding Batch.DeleteImagePreviewCommand}" Gesture="Delete" />
     </UserControl.KeyBindings>
 
     <Grid RowDefinitions="Auto,Auto,*"
@@ -45,8 +28,8 @@
                     Padding="4"
                     Margin="2,0,0,0"
                     VerticalAlignment="Center"
-                    Command="{Binding ApplyFolderTagsCommand}"
-                    IsEnabled="{Binding CanApplyFolderTags}"
+                    Command="{Binding FolderTags.ApplyFolderTagsCommand}"
+                    IsEnabled="{Binding FolderTags.CanApplyFolderTags}"
                     ToolTip.Tip="{localization:Loc FolderTags_ApplyTooltip}">
                 <iconPacks:PackIconLucide Kind="Tags" Width="16" Height="16" />
             </Button>
@@ -56,310 +39,48 @@
                     Padding="4"
                     Margin="2,0,0,0"
                     VerticalAlignment="Center"
-                    Command="{Binding ToggleSortDirectionCommand}"
-                    IsEnabled="{Binding CanChangeSort}">
+                    Command="{Binding MediaStrip.ToggleSortDirectionCommand}"
+                    IsEnabled="{Binding MediaStrip.CanChangeSort}">
                 <Grid>
                     <TextBlock Text="↓"
                                FontSize="18"
                                HorizontalAlignment="Center"
                                VerticalAlignment="Center"
-                               IsVisible="{Binding !IsSortAscending}" />
+                               IsVisible="{Binding !MediaStrip.IsSortAscending}" />
                     <TextBlock Text="↑"
                                FontSize="18"
                                HorizontalAlignment="Center"
                                VerticalAlignment="Center"
-                               IsVisible="{Binding IsSortAscending}" />
+                               IsVisible="{Binding MediaStrip.IsSortAscending}" />
                 </Grid>
                 <ToolTip.Tip>
                     <Grid>
                         <TextBlock Text="{localization:Loc Sort_NewestFirst}"
-                                   IsVisible="{Binding !IsSortAscending}" />
+                                   IsVisible="{Binding !MediaStrip.IsSortAscending}" />
                         <TextBlock Text="{localization:Loc Sort_OldestFirst}"
-                                   IsVisible="{Binding IsSortAscending}" />
+                                   IsVisible="{Binding MediaStrip.IsSortAscending}" />
                     </Grid>
                 </ToolTip.Tip>
             </Button>
         </Grid>
 
-        <Border Grid.Row="1" Margin="2,3" Padding="8,4" CornerRadius="4"
-                Background="{DynamicResource Brush.PreviewSurface}"
-                IsVisible="{Binding HasAnnotatableSelection}"
-                ToolTip.Tip="{Binding AnnotationEditorStatus}">
-            <Grid ColumnDefinitions="*,Auto">
-            <ScrollViewer Grid.Column="0"
-                          IsEnabled="{Binding CanEditAnnotations}"
-                          HorizontalScrollBarVisibility="Auto"
-                          VerticalScrollBarVisibility="Disabled">
-                <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                    <controls:RatingControl Rating="{Binding SelectedRating, Mode=TwoWay}"
-                                            Width="150"
-                                            Height="22"
-                                            MinHeight="22"
-                                            VerticalAlignment="Center" />
-                    <TextBox x:Name="PreviewTagInput"
-                             Width="150"
-                             Height="22"
-                             MinHeight="22"
-                             Padding="6,0"
-                             FontSize="12"
-                             VerticalContentAlignment="Center"
-                             Text="{Binding NewTag, Mode=TwoWay}"
-                             PlaceholderText="{localization:Loc Search_TagsPlaceholder}"
-                             KeyDown="OnPreviewTagInputKeyDown" />
-                    <Popup Name="TagSuggestionsPopup"
-                           PlacementTarget="{Binding #PreviewTagInput}"
-                           Placement="Top"
-                           IsLightDismissEnabled="True"
-                           HorizontalOffset="0"
-                           VerticalOffset="-4">
-                        <Border Background="{DynamicResource Brush.PreviewCard}"
-                                BorderBrush="{DynamicResource Brush.Splitter}"
-                                BorderThickness="1"
-                                CornerRadius="6"
-                                Opacity="1"
-                                Padding="6">
-                            <ScrollViewer MaxHeight="180"
-                                          Width="260"
-                                          VerticalScrollBarVisibility="Auto"
-                                          HorizontalScrollBarVisibility="Disabled">
-                                <ItemsControl ItemsSource="{Binding AvailableAnnotationTags}"
-                                              x:CompileBindings="False">
-                                    <ItemsControl.ItemsPanel>
-                                        <ItemsPanelTemplate>
-                                            <WrapPanel Orientation="Horizontal" />
-                                        </ItemsPanelTemplate>
-                                    </ItemsControl.ItemsPanel>
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <Button Margin="0,0,4,4"
-                                                    Padding="8,0"
-                                                    FontSize="11"
-                                                    Height="22"
-                                                    MinHeight="22"
-                                                    MinWidth="0"
-                                                    VerticalContentAlignment="Center"
-                                                    Content="{Binding}"
-                                                    Click="OnTagSuggestionClick" />
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                            </ScrollViewer>
-                        </Border>
-                    </Popup>
-                    <Button Classes="IconButton"
-                            Width="22"
-                            Height="22"
-                            MinWidth="22"
-                            MinHeight="22"
-                            Padding="4"
-                            Command="{Binding AddTagCommand}"
-                            ToolTip.Tip="{localization:Loc Settings_Add}">
-                        <iconPacks:PackIconLucide Kind="Tag" Width="14" Height="14" />
-                    </Button>
-                    <ItemsControl ItemsSource="{Binding CurrentTags}" VerticalAlignment="Center">
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <WrapPanel Orientation="Horizontal" />
-                            </ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Border Background="{DynamicResource ThemeBackgroundBrush}"
-                                        CornerRadius="12"
-                                        Padding="8,2"
-                                        Margin="0,1,4,1">
-                                    <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
-                                        <TextBlock Text="{Binding}" VerticalAlignment="Center" />
-                                        <Button Classes="tagRemoveButton"
-                                                Command="{Binding $parent[UserControl].DataContext.RemoveTagCommand}"
-                                                CommandParameter="{Binding}"
-                                                ToolTip.Tip="{localization:Loc Search_RemoveTag}">
-                                            <iconPacks:PackIconLucide Kind="X" Width="10" Height="10" />
-                                        </Button>
-                                    </StackPanel>
-                                </Border>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                    <TextBlock MaxWidth="160"
-                               Text="{Binding AnnotationEditorStatus}"
-                               Opacity="0.7"
-                               TextTrimming="CharacterEllipsis"
-                               VerticalAlignment="Center" />
-                </StackPanel>
-            </ScrollViewer>
-            <Button Grid.Column="1"
-                    Height="26"
-                    MinHeight="26"
-                    Padding="8,0"
-                    Margin="6,0,0,0"
-                    VerticalAlignment="Center"
-                    Command="{Binding ExportSelectionCommand}"
-                    IsEnabled="{Binding CanExportSelection}"
-                    ToolTip.Tip="{localization:Loc Batch_ExportJpegTooltip}">
-                <StackPanel Orientation="Horizontal" Spacing="5">
-                    <iconPacks:PackIconLucide Kind="Download" Width="14" Height="14" />
-                    <TextBlock Text="{localization:Loc Batch_ExportJpegShort}"
-                               FontSize="11"
-                               VerticalAlignment="Center" />
-                </StackPanel>
-            </Button>
-            </Grid>
-        </Border>
+        <views:PreviewAnnotationEditorView Grid.Row="1"
+                                           DataContext="{Binding Annotations}" />
 
-        <Border Grid.Row="1" Margin="2,3" Padding="8,4" CornerRadius="4"
-                Background="{DynamicResource Brush.PreviewSurface}"
-                IsVisible="{Binding HasMultipleSelection}">
-            <Grid ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Center">
-                <TextBlock Grid.Column="0"
-                           Text="{Binding SelectionSummary}"
-                           FontWeight="SemiBold"
-                           VerticalAlignment="Center"
-                           Margin="0,0,8,0" />
-                <StackPanel Grid.Column="1"
-                            Orientation="Horizontal"
-                            Spacing="2"
-                            VerticalAlignment="Center"
-                            IsVisible="{Binding !IsBatchOperationRunning}">
-                    <Button Classes="IconButton"
-                            Width="26"
-                            Height="26"
-                            MinWidth="26"
-                            MinHeight="26"
-                            Padding="4"
-                            Command="{Binding ExportSelectionCommand}"
-                            IsEnabled="{Binding CanExportSelection}"
-                            ToolTip.Tip="{localization:Loc Batch_ExportJpegTooltip}">
-                        <iconPacks:PackIconLucide Kind="Download" Width="14" Height="14" />
-                    </Button>
-                    <Button Classes="IconButton"
-                            Width="26"
-                            Height="26"
-                            MinWidth="26"
-                            MinHeight="26"
-                            Padding="4"
-                            Command="{Binding CopyImagePreviewCommand}"
-                            ToolTip.Tip="{localization:Loc Batch_CopySelection}">
-                        <iconPacks:PackIconLucide Kind="Copy" Width="14" Height="14" />
-                    </Button>
-                    <Button Classes="IconButton"
-                            Width="26"
-                            Height="26"
-                            MinWidth="26"
-                            MinHeight="26"
-                            Padding="4"
-                            Command="{Binding MoveImagePreviewCommand}"
-                            ToolTip.Tip="{localization:Loc Batch_MoveSelection}">
-                        <iconPacks:PackIconLucide Kind="FolderInput" Width="14" Height="14" />
-                    </Button>
-                    <Button Classes="IconButton"
-                            Width="26"
-                            Height="26"
-                            MinWidth="26"
-                            MinHeight="26"
-                            Padding="4"
-                            Command="{Binding DeleteImagePreviewCommand}"
-                            Foreground="{DynamicResource Brush.Danger}"
-                            ToolTip.Tip="{localization:Loc Batch_DeleteSelection}">
-                        <iconPacks:PackIconLucide Kind="Trash2" Width="14" Height="14" />
-                    </Button>
-                </StackPanel>
-                <Grid Grid.Column="1"
-                      ColumnDefinitions="*,Auto"
-                      VerticalAlignment="Center"
-                      IsVisible="{Binding IsBatchOperationRunning}">
-                    <ProgressBar Grid.Column="0"
-                                 Height="6"
-                                 Minimum="0"
-                                 Maximum="100"
-                                 Value="{Binding BatchProgressPercent}"
-                                 VerticalAlignment="Center" />
-                    <TextBlock Grid.Column="1"
-                               Text="{Binding BatchProgressText}"
-                               Margin="8,0,0,0"
-                               FontSize="11"
-                               Opacity="0.8"
-                               VerticalAlignment="Center" />
-                </Grid>
-                <StackPanel Grid.Column="2"
-                            Orientation="Horizontal"
-                            Spacing="2"
-                            VerticalAlignment="Center">
-                    <Button Classes="IconButton"
-                            Width="26"
-                            Height="26"
-                            MinWidth="26"
-                            MinHeight="26"
-                            Padding="4"
-                            Command="{Binding CancelBatchOperationCommand}"
-                            IsVisible="{Binding IsBatchOperationRunning}"
-                            ToolTip.Tip="{localization:Loc Batch_CancelOperation}">
-                        <iconPacks:PackIconLucide Kind="Square" Width="14" Height="14" />
-                    </Button>
-                    <Button Classes="IconButton"
-                            Width="26"
-                            Height="26"
-                            MinWidth="26"
-                            MinHeight="26"
-                            Padding="4"
-                            Command="{Binding ClearSelectionCommand}"
-                            IsVisible="{Binding !IsBatchOperationRunning}"
-                            ToolTip.Tip="{localization:Loc Batch_ClearSelection}">
-                        <iconPacks:PackIconLucide Kind="X" Width="14" Height="14" />
-                    </Button>
-                </StackPanel>
-            </Grid>
-        </Border>
+        <views:PreviewSelectionBarView Grid.Row="1"
+                                       DataContext="{Binding Batch}" />
 
-        <TextBlock Grid.Row="2"
-                   Text="{localization:Loc Preview_LoadingFolder}"
-                   HorizontalAlignment="Center"
-                   VerticalAlignment="Center"
-                   FontSize="{StaticResource Font.Size.SectionHeader}"
-                   Foreground="{DynamicResource Brush.TextPrimary}"
-                   IsVisible="{Binding FilesLoading}" />
+        <Grid Grid.Row="2"
+              IsEnabled="{Binding !Batch.IsBatchOperationRunning}">
+            <TextBlock Text="{localization:Loc Preview_LoadingFolder}"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center"
+                       FontSize="{StaticResource Font.Size.SectionHeader}"
+                       Foreground="{DynamicResource Brush.TextPrimary}"
+                       IsVisible="{Binding MediaStrip.FilesLoading}" />
 
-        <controls:PreviewsListBox x:Name="PreviewsList"
-                                  Grid.Row="2"
-                                  ItemsSource="{Binding ImagePreviews}"
-                                  SelectionMode="Multiple"
-                                  SelectionChanged="OnPreviewsSelectionChanged"
-                                  IsEnabled="{Binding !IsBatchOperationRunning}"
-                                  ItemContainerTheme="{StaticResource PreviewListBoxItem}"
-                                  Padding="0"
-                                  BorderThickness="0"
-                                  Theme="{StaticResource PreviewsListBox}"
-                                  ScrollViewer.HorizontalScrollBarVisibility="Auto"
-                                  ScrollViewer.VerticalScrollBarVisibility="Disabled"
-                                  behaviors:HorizontalScrollBehavior.IsEnabled="True"
-                                  behaviors:HorizontalScrollBehavior.IsScrollResetRequested="{Binding IsScrollResetRequested, Mode=TwoWay}"
-                                  behaviors:PreviewDragDropBehavior.DropHandler="{Binding ImagePreviewDropHandler}"
-                                  behaviors:ScrollToIndexBehavior.TargetIndex="{Binding IndexInView, Mode=TwoWay}">
-                <controls:PreviewsListBox.ItemsPanel>
-                    <ItemsPanelTemplate>
-                        <VirtualizingStackPanel Orientation="Horizontal" CacheLength="0.5" />
-                    </ItemsPanelTemplate>
-                </controls:PreviewsListBox.ItemsPanel>
-
-                <controls:PreviewsListBox.Styles>
-                    <Style Selector="ListBoxItem">
-                        <Setter Property="Margin" Value="{StaticResource MarginHorizontal.Small}" />
-                        <Setter Property="Padding" Value="0" />
-                        <Setter Property="VerticalAlignment" Value="Stretch" />
-                        <Setter Property="VerticalContentAlignment" Value="Stretch" />
-                        <Setter Property="Background" Value="Transparent" />
-                    </Style>
-                    <Style Selector="ListBoxItem:selected">
-                        <Setter Property="Background" Value="Transparent" />
-                    </Style>
-                </controls:PreviewsListBox.Styles>
-
-                <controls:PreviewsListBox.ItemTemplate>
-                    <DataTemplate DataType="domain:MediaPreviewViewModel">
-                        <controls:MediaPreviewCard Width="270"
-                                                   VerticalAlignment="Stretch" />
-                    </DataTemplate>
-                </controls:PreviewsListBox.ItemTemplate>
-        </controls:PreviewsListBox>
+            <views:PreviewStripView x:Name="PreviewStrip"
+                                    DataContext="{Binding MediaStrip}" />
+        </Grid>
     </Grid>
 </UserControl>

@@ -6,7 +6,7 @@ using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.VisualTree;
 
-using ImageCare.UI.Avalonia.ViewModels;
+using ImageCare.UI.Avalonia.ViewModels.Preview;
 
 namespace ImageCare.UI.Avalonia.Behaviors;
 
@@ -124,7 +124,7 @@ public sealed class HorizontalScrollBehavior
         private async void OnScrollChanged(object? sender, ScrollChangedEventArgs args)
         {
             if (_scrollViewer == null ||
-                _owner.DataContext is not PreviewPanelViewModel viewModel ||
+                _owner.DataContext is not PreviewImageStripViewModel viewModel ||
                 viewModel.ImagePreviews.Count == 0)
             {
                 return;

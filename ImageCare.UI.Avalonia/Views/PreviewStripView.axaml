@@ -1,0 +1,50 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:domain="clr-namespace:ImageCare.UI.Avalonia.ViewModels.Domain"
+             xmlns:controls="clr-namespace:ImageCare.UI.Avalonia.Controls"
+             xmlns:behaviors="clr-namespace:ImageCare.UI.Avalonia.Behaviors"
+             xmlns:preview="clr-namespace:ImageCare.UI.Avalonia.ViewModels.Preview"
+             x:Class="ImageCare.UI.Avalonia.Views.PreviewStripView"
+             x:DataType="preview:PreviewImageStripViewModel">
+
+    <controls:PreviewsListBox x:Name="PreviewsList"
+                              ItemsSource="{Binding ImagePreviews}"
+                              SelectionMode="Multiple"
+                              SelectionChanged="OnPreviewsSelectionChanged"
+                              ItemContainerTheme="{StaticResource PreviewListBoxItem}"
+                              Padding="0"
+                              BorderThickness="0"
+                              Theme="{StaticResource PreviewsListBox}"
+                              ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                              ScrollViewer.VerticalScrollBarVisibility="Disabled"
+                              behaviors:HorizontalScrollBehavior.IsEnabled="True"
+                              behaviors:HorizontalScrollBehavior.IsScrollResetRequested="{Binding IsScrollResetRequested, Mode=TwoWay}"
+                              behaviors:PreviewDragDropBehavior.DropHandler="{Binding ImagePreviewDropHandler}"
+                              behaviors:ScrollToIndexBehavior.TargetIndex="{Binding IndexInView, Mode=TwoWay}">
+        <controls:PreviewsListBox.ItemsPanel>
+            <ItemsPanelTemplate>
+                <VirtualizingStackPanel Orientation="Horizontal" CacheLength="0.5" />
+            </ItemsPanelTemplate>
+        </controls:PreviewsListBox.ItemsPanel>
+
+        <controls:PreviewsListBox.Styles>
+            <Style Selector="ListBoxItem">
+                <Setter Property="Margin" Value="{StaticResource MarginHorizontal.Small}" />
+                <Setter Property="Padding" Value="0" />
+                <Setter Property="VerticalAlignment" Value="Stretch" />
+                <Setter Property="VerticalContentAlignment" Value="Stretch" />
+                <Setter Property="Background" Value="Transparent" />
+            </Style>
+            <Style Selector="ListBoxItem:selected">
+                <Setter Property="Background" Value="Transparent" />
+            </Style>
+        </controls:PreviewsListBox.Styles>
+
+        <controls:PreviewsListBox.ItemTemplate>
+            <DataTemplate DataType="domain:MediaPreviewViewModel">
+                <controls:MediaPreviewCard Width="270"
+                                           VerticalAlignment="Stretch" />
+            </DataTemplate>
+        </controls:PreviewsListBox.ItemTemplate>
+    </controls:PreviewsListBox>
+</UserControl>

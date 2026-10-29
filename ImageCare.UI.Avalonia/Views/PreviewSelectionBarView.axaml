@@ -1,0 +1,113 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:preview="clr-namespace:ImageCare.UI.Avalonia.ViewModels.Preview"
+             xmlns:iconPacks="https://github.com/MahApps/IconPacks.Avalonia"
+             xmlns:localization="clr-namespace:ImageCare.UI.Avalonia.Localization"
+             x:Class="ImageCare.UI.Avalonia.Views.PreviewSelectionBarView"
+             x:DataType="preview:PreviewBatchOperationsViewModel"
+             FontSize="{StaticResource Font.Size.Small}">
+
+    <Border Margin="2,3" Padding="8,4" CornerRadius="4"
+            Background="{DynamicResource Brush.PreviewSurface}"
+            IsVisible="{Binding Selection.HasMultipleSelection}">
+        <Grid ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Center">
+            <TextBlock Grid.Column="0"
+                       Text="{Binding Selection.SelectionSummary}"
+                       FontWeight="SemiBold"
+                       VerticalAlignment="Center"
+                       Margin="0,0,8,0" />
+            <StackPanel Grid.Column="1"
+                        Orientation="Horizontal"
+                        Spacing="2"
+                        VerticalAlignment="Center"
+                        IsVisible="{Binding !IsBatchOperationRunning}">
+                <Button Classes="IconButton"
+                        Width="26"
+                        Height="26"
+                        MinWidth="26"
+                        MinHeight="26"
+                        Padding="4"
+                        Command="{Binding ExportSelectionCommand}"
+                        IsEnabled="{Binding CanExportSelection}"
+                        ToolTip.Tip="{localization:Loc Batch_ExportJpegTooltip}">
+                    <iconPacks:PackIconLucide Kind="Download" Width="14" Height="14" />
+                </Button>
+                <Button Classes="IconButton"
+                        Width="26"
+                        Height="26"
+                        MinWidth="26"
+                        MinHeight="26"
+                        Padding="4"
+                        Command="{Binding CopyImagePreviewCommand}"
+                        ToolTip.Tip="{localization:Loc Batch_CopySelection}">
+                    <iconPacks:PackIconLucide Kind="Copy" Width="14" Height="14" />
+                </Button>
+                <Button Classes="IconButton"
+                        Width="26"
+                        Height="26"
+                        MinWidth="26"
+                        MinHeight="26"
+                        Padding="4"
+                        Command="{Binding MoveImagePreviewCommand}"
+                        ToolTip.Tip="{localization:Loc Batch_MoveSelection}">
+                    <iconPacks:PackIconLucide Kind="FolderInput" Width="14" Height="14" />
+                </Button>
+                <Button Classes="IconButton"
+                        Width="26"
+                        Height="26"
+                        MinWidth="26"
+                        MinHeight="26"
+                        Padding="4"
+                        Command="{Binding DeleteImagePreviewCommand}"
+                        Foreground="{DynamicResource Brush.Danger}"
+                        ToolTip.Tip="{localization:Loc Batch_DeleteSelection}">
+                    <iconPacks:PackIconLucide Kind="Trash2" Width="14" Height="14" />
+                </Button>
+            </StackPanel>
+            <Grid Grid.Column="1"
+                  ColumnDefinitions="*,Auto"
+                  VerticalAlignment="Center"
+                  IsVisible="{Binding IsBatchOperationRunning}">
+                <ProgressBar Grid.Column="0"
+                             Height="6"
+                             Minimum="0"
+                             Maximum="100"
+                             Value="{Binding BatchProgressPercent}"
+                             VerticalAlignment="Center" />
+                <TextBlock Grid.Column="1"
+                           Text="{Binding BatchProgressText}"
+                           Margin="8,0,0,0"
+                           FontSize="11"
+                           Opacity="0.8"
+                           VerticalAlignment="Center" />
+            </Grid>
+            <StackPanel Grid.Column="2"
+                        Orientation="Horizontal"
+                        Spacing="2"
+                        VerticalAlignment="Center">
+                <Button Classes="IconButton"
+                        Width="26"
+                        Height="26"
+                        MinWidth="26"
+                        MinHeight="26"
+                        Padding="4"
+                        Command="{Binding CancelBatchOperationCommand}"
+                        IsVisible="{Binding IsBatchOperationRunning}"
+                        ToolTip.Tip="{localization:Loc Batch_CancelOperation}">
+                    <iconPacks:PackIconLucide Kind="Square" Width="14" Height="14" />
+                </Button>
+                <Button Classes="IconButton"
+                        Width="26"
+                        Height="26"
+                        MinWidth="26"
+                        MinHeight="26"
+                        Padding="4"
+                        Command="{Binding ClearSelectionCommand}"
+                        IsVisible="{Binding !IsBatchOperationRunning}"
+                        ToolTip.Tip="{localization:Loc Batch_ClearSelection}">
+                    <iconPacks:PackIconLucide Kind="X" Width="14" Height="14" />
+                </Button>
+            </StackPanel>
+        </Grid>
+    </Border>
+</UserControl>
