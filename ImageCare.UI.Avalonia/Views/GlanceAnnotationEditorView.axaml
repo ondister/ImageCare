@@ -1,0 +1,63 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:controls="clr-namespace:ImageCare.UI.Avalonia.Controls"
+             xmlns:glance="clr-namespace:ImageCare.UI.Avalonia.ViewModels.Glance"
+             xmlns:localization="clr-namespace:ImageCare.UI.Avalonia.Localization"
+             mc:Ignorable="d"
+             d:DesignWidth="900"
+             x:Class="ImageCare.UI.Avalonia.Views.GlanceAnnotationEditorView"
+             x:DataType="glance:GlanceAnnotationEditorViewModel">
+
+    <StackPanel Spacing="8">
+        <Grid ColumnDefinitions="Auto,150,Auto,220,Auto" ColumnSpacing="6"
+              IsEnabled="{Binding CanEditSelectionAnnotations}">
+            <TextBlock Grid.Column="0"
+                       Text="{localization:Loc Annotations_Rating}"
+                       VerticalAlignment="Center" />
+            <Grid Grid.Column="1">
+                <controls:RatingControl Rating="{Binding SelectedRating, Mode=TwoWay}"
+                                        Width="150"
+                                        Height="22"
+                                        MinHeight="22"
+                                        VerticalAlignment="Center" />
+                <TextBlock Text="{localization:Loc Overview_MixedRating}"
+                           IsVisible="{Binding HasMixedRating}"
+                           Margin="10,0"
+                           VerticalAlignment="Center"
+                           IsHitTestVisible="False"
+                           Background="{DynamicResource Brush.PreviewCard}" />
+            </Grid>
+            <TextBlock Grid.Column="2"
+                       Text="{localization:Loc Search_Tags}"
+                       VerticalAlignment="Center" />
+            <TextBox Grid.Column="3"
+                     Text="{Binding NewTag, Mode=TwoWay}"
+                     PlaceholderText="{localization:Loc Overview_AddTagToSelection}" />
+            <Button Grid.Column="4"
+                    Content="{localization:Loc Settings_Add}"
+                    Command="{Binding AddTagCommand}"
+                    ToolTip.Tip="{localization:Loc Overview_AddTagToSelection}" />
+        </Grid>
+
+        <ItemsControl ItemsSource="{Binding SelectionTags}"
+                      IsVisible="{Binding HasSelectionTags}">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <WrapPanel Orientation="Horizontal" />
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <Button Margin="0,0,5,4"
+                            Padding="7,3"
+                            Content="{Binding}"
+                            Command="{Binding $parent[UserControl].DataContext.RemoveTagCommand}"
+                            CommandParameter="{Binding}"
+                            ToolTip.Tip="{localization:Loc Overview_RemoveTagFromSelection}" />
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+    </StackPanel>
+</UserControl>

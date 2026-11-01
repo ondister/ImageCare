@@ -1,0 +1,33 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:glance="clr-namespace:ImageCare.UI.Avalonia.ViewModels.Glance"
+             xmlns:localization="clr-namespace:ImageCare.UI.Avalonia.Localization"
+             mc:Ignorable="d"
+             d:DesignWidth="900"
+             x:Class="ImageCare.UI.Avalonia.Views.GlanceOperationProgressView"
+             x:DataType="glance:GlanceOperationViewModel">
+
+    <StackPanel Spacing="8">
+        <Grid ColumnDefinitions="*,Auto,Auto"
+              IsVisible="{Binding IsOverviewOperationRunning}"
+              ColumnSpacing="8">
+            <ProgressBar Grid.Column="0"
+                         Minimum="0"
+                         Maximum="{Binding BatchTotal}"
+                         Value="{Binding BatchProcessed}"
+                         VerticalAlignment="Center" />
+            <TextBlock Grid.Column="1"
+                       Text="{Binding BatchProgressText}"
+                       VerticalAlignment="Center" />
+            <Button Grid.Column="2"
+                    Content="{localization:Loc Batch_CancelOperation}"
+                    Command="{Binding CancelOverviewOperationCommand}"
+                    ToolTip.Tip="{localization:Loc Batch_CancelOperation}" />
+        </Grid>
+        <TextBlock Text="{Binding OverviewOperationStatus}"
+                   Opacity="0.7"
+                   TextWrapping="Wrap" />
+    </StackPanel>
+</UserControl>

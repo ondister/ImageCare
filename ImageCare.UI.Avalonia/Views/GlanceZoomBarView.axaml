@@ -1,0 +1,58 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:viewModels="clr-namespace:ImageCare.UI.Avalonia.ViewModels"
+             xmlns:iconPacks="https://github.com/MahApps/IconPacks.Avalonia"
+             xmlns:localization="clr-namespace:ImageCare.UI.Avalonia.Localization"
+             mc:Ignorable="d"
+             d:DesignWidth="1000"
+             x:Class="ImageCare.UI.Avalonia.Views.GlanceZoomBarView"
+             x:DataType="viewModels:GlancePanelViewModel">
+
+    <Grid ColumnDefinitions="Auto,Auto,*,Auto"
+          Margin="{StaticResource MarginAll.Small}">
+        <Grid Grid.Column="0"
+              ColumnDefinitions="Auto,Auto,Auto"
+              MaxHeight="36">
+            <Button Grid.Column="0"
+                    Classes="Small"
+                    Command="{Binding PreviewGrid.ZoomOutCommand}"
+                    ToolTip.Tip="{localization:Loc Action_ZoomOut}"
+                    Margin="{StaticResource MarginAll.Small}"
+                    Padding="{StaticResource Padding.Inner}">
+                <iconPacks:PackIconLucide Kind="CircleMinus" />
+            </Button>
+            <Label Grid.Column="1"
+                   Width="30"
+                   Margin="{StaticResource MarginAll.Small}"
+                   Content="{Binding PreviewGrid.ImagesPerLine}"
+                   HorizontalContentAlignment="Center"
+                   VerticalContentAlignment="Center" />
+            <Button Grid.Column="2"
+                    Classes="Small"
+                    Command="{Binding PreviewGrid.ZoomInCommand}"
+                    ToolTip.Tip="{localization:Loc Action_ZoomIn}"
+                    Padding="{StaticResource Padding.Inner}"
+                    Margin="{StaticResource MarginAll.Small}">
+                <iconPacks:PackIconLucide Kind="CirclePlus" />
+            </Button>
+        </Grid>
+        <ComboBox Grid.Column="1"
+                  Margin="{StaticResource MarginAll.Medium}"
+                  ItemsSource="{Binding PreviewGrid.AspectRatioViewModels}"
+                  SelectedItem="{Binding PreviewGrid.SelectedAspectRatio}" />
+        <Button Grid.Column="3"
+                Classes="Small"
+                Width="26"
+                Height="26"
+                Padding="5"
+                Margin="{StaticResource MarginAll.Small}"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Center"
+                Command="{Binding AdaptiveHelp.ShowHelpCommand}"
+                ToolTip.Tip="{localization:Loc Help_Open}">
+            <iconPacks:PackIconMaterial Kind="HelpCircleOutline" Width="13" Height="13" />
+        </Button>
+    </Grid>
+</UserControl>

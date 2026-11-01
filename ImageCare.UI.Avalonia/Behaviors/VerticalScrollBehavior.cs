@@ -6,7 +6,7 @@ using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.VisualTree;
 
-using ImageCare.UI.Avalonia.ViewModels;
+using ImageCare.UI.Avalonia.ViewModels.Glance;
 
 namespace ImageCare.UI.Avalonia.Behaviors;
 
@@ -124,7 +124,7 @@ public sealed class VerticalScrollBehavior
         private async void OnScrollChanged(object? sender, ScrollChangedEventArgs args)
         {
             if (_scrollViewer == null ||
-                _owner.DataContext is not GlancePanelViewModel viewModel ||
+                _owner.DataContext is not GlancePreviewGridViewModel viewModel ||
                 viewModel.ImagePreviews.Count == 0)
             {
                 return;

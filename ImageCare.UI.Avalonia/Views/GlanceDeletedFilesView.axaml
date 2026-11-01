@@ -1,0 +1,89 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:domain="clr-namespace:ImageCare.UI.Avalonia.ViewModels.Domain"
+             xmlns:glance="clr-namespace:ImageCare.UI.Avalonia.ViewModels.Glance"
+             xmlns:iconPacks="https://github.com/MahApps/IconPacks.Avalonia"
+             xmlns:localization="clr-namespace:ImageCare.UI.Avalonia.Localization"
+             mc:Ignorable="d"
+             d:DesignWidth="1000"
+             d:DesignHeight="600"
+             x:Class="ImageCare.UI.Avalonia.Views.GlanceDeletedFilesView"
+             x:DataType="glance:GlanceDeletedFilesViewModel">
+
+    <Grid RowDefinitions="Auto,*">
+        <Button Grid.Row="0"
+                HorizontalAlignment="Left"
+                Margin="{StaticResource MarginAll.Small}"
+                Command="{Binding RestoreAllCommand}"
+                IsVisible="{Binding HasDeletedFiles}"
+                ToolTip.Tip="{localization:Loc Overview_RestoreAll}">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+                <iconPacks:PackIconLucide Kind="Undo2" />
+                <TextBlock Text="{localization:Loc Overview_RestoreAll}" />
+            </StackPanel>
+        </Button>
+
+        <TextBlock Grid.Row="1"
+                   HorizontalAlignment="Center"
+                   VerticalAlignment="Center"
+                   Text="{localization:Loc Overview_NoDeleted}"
+                   IsVisible="{Binding !HasDeletedFiles}" />
+
+        <ListBox Grid.Row="1"
+                 ItemsSource="{Binding DeletedFiles}"
+                 IsVisible="{Binding HasDeletedFiles}">
+            <ListBox.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <VirtualizingStackPanel />
+                </ItemsPanelTemplate>
+            </ListBox.ItemsPanel>
+            <ListBox.ItemTemplate>
+                <DataTemplate DataType="domain:DeletedMediaFileViewModel">
+                    <Border Padding="10"
+                            Margin="2"
+                            BorderThickness="0,0,0,1"
+                            BorderBrush="{DynamicResource Brush.Splitter}">
+                        <Grid ColumnDefinitions="64,*,Auto">
+                            <Border Grid.Column="0"
+                                    Width="56"
+                                    Height="56"
+                                    CornerRadius="4"
+                                    ClipToBounds="True"
+                                    Background="{DynamicResource Brush.PreviewSurface}"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center">
+                                <Image Source="{Binding PreviewBitmap}"
+                                       Stretch="UniformToFill" />
+                            </Border>
+                            <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding FileName}"
+                                           FontWeight="SemiBold"
+                                           TextTrimming="CharacterEllipsis" />
+                                <StackPanel Orientation="Horizontal" Spacing="5">
+                                    <TextBlock Text="{localization:Loc Overview_OriginalFolder}" Opacity="0.7" />
+                                    <TextBlock Text="{Binding OriginalFolder}" TextTrimming="CharacterEllipsis" />
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Spacing="5">
+                                    <TextBlock Text="{localization:Loc Overview_DeletedAt}" Opacity="0.7" />
+                                    <TextBlock Text="{Binding DeletedAt}" />
+                                </StackPanel>
+                            </StackPanel>
+                            <Button Grid.Column="2"
+                                    Margin="8,0,0,0"
+                                    VerticalAlignment="Center"
+                                    Command="{Binding RestoreCommand}"
+                                    ToolTip.Tip="{localization:Loc Overview_Restore}">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <iconPacks:PackIconLucide Kind="Undo2" />
+                                    <TextBlock Text="{localization:Loc Overview_Restore}" />
+                                </StackPanel>
+                            </Button>
+                        </Grid>
+                    </Border>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+    </Grid>
+</UserControl>
