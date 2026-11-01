@@ -92,6 +92,66 @@ dotnet publish ImageCare.UI.Avalonia/ImageCare.UI.Avalonia.csproj --configuratio
 - Rating and tag edits operate on every selected annotatable image through `IMediaAnnotationsService`; read a fresh snapshot before each write, preserve unrelated tags/rating, continue after per-file failures, and expose cancellation/progress.
 - Copy, move, delete, and JPEG export reuse `IMediaBatchOperationsService`. Do not duplicate low-level file operations or bypass safe-delete confirmation. The opposite main-window folder is the copy/move destination.
 
+## Refactoring backlog
+
+`GlancePanelViewModel`/`GlancePanelView` are the reference composition pattern: a thin root plus focused facets and sub-views. The items below are structural debt, not known functional defects. Do not start them opportunistically inside a feature change; land each as a separate refactor with the full test suite green.
+
+### High priority
+
+1. `ViewModels/FoldersViewModel.cs` (1125 lines, 13 constructor dependencies) and `Views/FoldersView.axaml` (385 lines).
+   - Mixes folder-tree state, search session state, recent folders, folder-tags dialog, drives, watcher/reconciliation, navigation to preview, and create/rename/delete folder commands.
+   - Split into facets under `ViewModels/Folders/` (`FolderTreeViewModel`, `FolderSearchViewModel`, `RecentFoldersViewModel`, `FolderReconciliationCoordinator`); keep navigation and cross-facet wiring in the root. Split the view into tree, search overlay, and recent-folders parts.
+   - Watch for `SortedObservableCollection` ordering, reconciliation version bookkeeping, left/right `FileManagerPanel` identity, search cancellation tokens, and `RevealSelectedFolderRequested`.
+
+2. `ViewModels/SettingsViewModel.cs` (1021 lines, 8 dependencies) and `Views/SettingsView.axaml` (302 lines).
+   - Independent settings groups share one view-model: general/drag-drop/adaptive help, file associations, annotation index + pinned tags + media search roots, safe deletion, and the MCP server.
+   - Split per tab (`SettingsGeneralViewModel`, `FileAssociationsViewModel`, `AnnotationsSettingsViewModel`, `SafeDeletionSettingsViewModel`, `McpServerSettingsViewModel`) with per-tab views; the root owns `Open`/`Close` and `SaveConfiguration`.
+   - Watch for many setters calling `SaveConfiguration`, `AvailableTags` refresh, MCP controller lifecycle, and localization option rebuilds.
+
+3. `ImageCare.Core/Services/MediaPreviewOperationsService/WindowsMediaPreviewOperationsService.cs` (1145 lines, about 40 methods).
+   - God service mixing copy/move bundles, the safe-delete buffer and `deletion-manifest.json`, undo/restore/permanent delete, deletion-journal reconciliation, selected-preview navigation, and external-process launching.
+   - Split into `MediaTransferService` (copy/move, unique names, rollback), `SafeDeletionService` (buffer, manifest, journal, undo/restore/permanent delete), and a small navigation/external-process service; keep `IMediaPreviewOperationsService` as a facade so UI and MCP callers do not change.
+   - Preserve `deletion-manifest.json`, `ImageCare_Deleted_` naming, rollback, and buffer trimming. MCP `dryRun`/`MaxFilesPerDelete` are separate guards and must also stay. Existing tests: `WindowsMediaPreviewOperationsServiceTests`.
+
+4. Preview/Glance facet duplication.
+   - Rough normalized-line overlap: `PreviewAnnotationCache`/`GlanceAnnotationCache` 58%, `PreviewFolderContentCoordinator`/`GlanceFolderContentCoordinator` 43%, `PreviewImageStripViewModel`/`GlancePreviewGridViewModel` 32%, `PreviewBatchOperationsViewModel`/`GlanceBatchOperationsViewModel` 24%. Shared method names include `CopySelectionAsync`, `MoveSelectionAsync`, `DeleteSelectionAsync`, `ExportSelectionAsync`, `RunBatchAsync`, `AppendPreviewsAsync`, `LoadImageAsync`, `UnloadPreviewsOutsideRange`, `HandleScrollAsync`, and `ApplyClusterColors`.
+   - Extract shared, non-UI helpers incrementally, highest similarity first: one `MediaAnnotationCache`; a `MediaFolderContentCoordinator` base for folder loading and watcher reconciliation; a `MediaBatchOperationRunner` for progress, destination resolution, single-vs-multi dispatch, and notifications; and a `MediaPreviewLoader`/viewport helper for adaptive decode, the four-decode gate, unload-outside-range, sort, and cluster colors.
+   - Do not merge the view-models themselves: the grid (rows, zoom, images-per-line) and the strip (horizontal virtualization, drop handling) have different layout contracts. Share behaviour, not view state.
+
+### Medium priority
+
+5. `ImageCare.Core/Services/MediaAnnotationsIndex/SqliteMediaAnnotationsIndex.cs` (876 lines).
+   - One class owns initialization, schema DDL, upsert/search/tag queries, remove/move, directory reconciliation, and rebuild; the longest method is about 134 lines. Separate schema/connection lifetime from query and reconciliation collaborators behind the existing `IMediaAnnotationsIndex`. There are no migrations; the schema is created at runtime.
+
+6. `Services/AdaptiveHelpService.cs` (688 lines).
+   - Keep the service as the single event/presentation owner per the help-center rules, but extract pure collaborators: an `AdaptiveHelpCatalog` (hint definitions plus message/reason text) and an `AdaptiveHelpProgressStore` (get/create/normalize/progress mutation). Keep `AdaptiveHelpPolicy` framework-free and update `AdaptiveHelpPolicyTests`.
+
+7. `ViewModels/MainVideoViewModel.cs` (642 lines).
+   - Mixes libmpv event wiring, AVPlayer/macOS state sync, navigation subscriptions, and transport commands. Extract `IMediaPlayerAdapter` implementations (`MpvPlayerAdapter`, `MacPlayerAdapter`) that expose state/position/seekable/volume through one normalized event set; keep the view-model for commands and property projection. Preserve platform-conditional registration and the MP4 placeholder fallback.
+
+8. `ViewModels/Domain/DirectoryViewModel.cs` (544 lines).
+   - A per-node view-model that also owns lazy loading, rename UI, create/delete folder commands, subtree path rewriting, and icon state. Move folder mutations into a service/coordinator and keep the node as tree state plus lazy children. One instance exists per folder, so avoid resolving heavy dependencies per node.
+
+9. `ImageCare.Core/Services/MediaAnnotationsService/XmpMediaAnnotationsStorageService.cs` (562 lines).
+   - Handles sidecar discovery, sidecar read/write, embedded XMP read/write, and bundle resolution; the longest method is about 102 lines. Split sidecar and embedded-XMP paths behind the existing `IMediaAnnotationsStorageService`, keeping the "XMP next to media, excluded from media lists" contract.
+
+### Low priority / watch list
+
+- `PreviewPanelViewModel` (217 lines, 23 constructor dependencies) and `GlancePanelViewModel` (193 lines, 20 dependencies) are composition roots; high parameter counts are acceptable there, but introduce a parameter object/factory before adding more facets.
+- `Views/FoldersView.axaml` (385), `Views/SettingsView.axaml` (302), `Views/MediaSearchView.axaml` (220), and `Controls/MediaPreviewCard.axaml` (202) are the largest remaining views; split them with the same composition approach as `GlancePanelView`.
+- `MediaSearchViewModel` (396) mixes search, tag filters/suggestions, thumbnail loading, and navigation; split it if search grows.
+- `JpegExifMetadataWriter` (460, static) is cohesive low-level EXIF writing; leave it unless adding formats.
+- `ReviewSessionService` (481) and `ImageCareMcpHost` (384) are moderately large but cohesive; revisit only if the MCP tool surface grows.
+- `FileWatcherFolderStatisticsService` (427) mixes scanning, watcher setup, bucket maintenance, and media filtering; split watcher ingestion from statistics if clustering changes.
+
+### Rules for this backlog
+
+- Keep refactors separate from behaviour changes.
+- UI view-models have almost no direct test coverage (`ImageCare.UI.Avalonia.Tests` covers only collections, `ViewModelBase`, adaptive-help policy, and `FolderTagsEditorViewModel`). Add characterization tests for selection, batch operations, and reconciliation before moving code.
+- `AvaloniaUseCompiledBindingsByDefault=false`: after any XAML split, run the app and exercise the affected view; binding failures are runtime-only.
+- Preserve safe deletion, MCP destructive-operation guards, adaptive-help ownership rules, and the Preview/Glance layout contracts.
+- Suggested order: (1) shared annotation cache and folder coordinator, (2) Preview/Glance batch runner, (3) `FoldersViewModel` and view, (4) `SettingsViewModel` and view, (5) `WindowsMediaPreviewOperationsService`, (6) remaining items.
+
 ## MCP server
 
 - `ImageCareMcpHost` uses `WithToolsFromAssembly`. After adding or renaming a tool, update `Tests/ImageCare.Mcp.Tests/McpHostSmokeTests.ExpectedTools` and `docs/mcp-server.ru.md`.
