@@ -6,7 +6,6 @@ using ImageCare.Core.Domain.Logs;
 using ImageCare.Core.Domain.Notification;
 using ImageCare.Core.Domain.Preview;
 using ImageCare.Core.Services.FileAssociationsService;
-using ImageCare.Core.Services.FileSystemService;
 using ImageCare.Core.Services.FolderService;
 using ImageCare.Core.Services.MediaPreviewOperationsService;
 using ImageCare.Core.Services.MediaPreviewService;
@@ -14,6 +13,7 @@ using ImageCare.Core.Services.NotificationService;
 using ImageCare.UI.Avalonia.Localization;
 using ImageCare.UI.Avalonia.ViewModels.Domain;
 using ImageCare.UI.Avalonia.ViewModels.Domain.Logs;
+using ImageCare.UI.Avalonia.ViewModels.Folders;
 
 using Mapster;
 
@@ -168,7 +168,7 @@ public class RegisterMapper : IRegister
     {
         var mapper = _serviceLocator.Resolve<IMapper>();
         var folderService = _serviceLocator.Resolve<IFolderService>();
-        var fileSystemService = _serviceLocator.Resolve<IFileSystemService>();
+        var mutationCoordinator = _serviceLocator.Resolve<FolderMutationCoordinator>();
         var logger = _serviceLocator.Resolve<ILogger>();
 
         var children = src.DirectoryModels
@@ -182,7 +182,7 @@ public class RegisterMapper : IRegister
             src.AvailableFreeSpace,
             children,
             folderService,
-            fileSystemService,
+            mutationCoordinator,
             mapper,
             logger);
     }
@@ -191,7 +191,7 @@ public class RegisterMapper : IRegister
     {
         var mapper = _serviceLocator.Resolve<IMapper>();
         var folderService = _serviceLocator.Resolve<IFolderService>();
-        var fileSystemService = _serviceLocator.Resolve<IFileSystemService>();
+        var mutationCoordinator = _serviceLocator.Resolve<FolderMutationCoordinator>();
         var logger = _serviceLocator.Resolve<ILogger>();
 
         var children = src.DirectoryModels
@@ -203,7 +203,7 @@ public class RegisterMapper : IRegister
             src.Path,
             children,
             folderService,
-            fileSystemService,
+            mutationCoordinator,
             mapper,
             logger);
     }
@@ -212,7 +212,7 @@ public class RegisterMapper : IRegister
     {
         var mapper = _serviceLocator.Resolve<IMapper>();
         var folderService = _serviceLocator.Resolve<IFolderService>();
-        var fileSystemService = _serviceLocator.Resolve<IFileSystemService>();
+        var mutationCoordinator = _serviceLocator.Resolve<FolderMutationCoordinator>();
         var logger = _serviceLocator.Resolve<ILogger>();
 
         var children = src.DirectoryModels
@@ -224,7 +224,7 @@ public class RegisterMapper : IRegister
             src.Path,
             children,
             folderService,
-            fileSystemService,
+            mutationCoordinator,
             mapper,
             logger);
     }
@@ -233,7 +233,7 @@ public class RegisterMapper : IRegister
     {
         var mapper = _serviceLocator.Resolve<IMapper>();
         var folderService = _serviceLocator.Resolve<IFolderService>();
-        var fileSystemService = _serviceLocator.Resolve<IFileSystemService>();
+        var mutationCoordinator = _serviceLocator.Resolve<FolderMutationCoordinator>();
         var logger = _serviceLocator.Resolve<ILogger>();
 
         var children = src.DirectoryModels
@@ -245,7 +245,7 @@ public class RegisterMapper : IRegister
             src.Path,
             children,
             folderService,
-            fileSystemService,
+            mutationCoordinator,
             mapper,
             logger);
     }
@@ -254,7 +254,7 @@ public class RegisterMapper : IRegister
     {
         var mapper = _serviceLocator.Resolve<IMapper>();
         var folderService = _serviceLocator.Resolve<IFolderService>();
-        var fileSystemService = _serviceLocator.Resolve<IFileSystemService>();
+        var mutationCoordinator = _serviceLocator.Resolve<FolderMutationCoordinator>();
         var logger = _serviceLocator.Resolve<ILogger>();
 
         var children = src.DirectoryModels
@@ -266,7 +266,7 @@ public class RegisterMapper : IRegister
             src.Path,
             children,
             folderService,
-            fileSystemService,
+            mutationCoordinator,
             mapper,
             logger);
     }
@@ -275,7 +275,7 @@ public class RegisterMapper : IRegister
     {
         var mapper = _serviceLocator.Resolve<IMapper>();
         var folderService = _serviceLocator.Resolve<IFolderService>();
-        var fileSystemService = _serviceLocator.Resolve<IFileSystemService>();
+        var mutationCoordinator = _serviceLocator.Resolve<FolderMutationCoordinator>();
         var logger = _serviceLocator.Resolve<ILogger>();
 
         var children = src.DirectoryModels
@@ -287,7 +287,7 @@ public class RegisterMapper : IRegister
             src.Path,
             children,
             folderService,
-            fileSystemService,
+            mutationCoordinator,
             mapper,
             logger);
     }
@@ -296,7 +296,7 @@ public class RegisterMapper : IRegister
     {
         var mapper = _serviceLocator.Resolve<IMapper>();
         var folderService = _serviceLocator.Resolve<IFolderService>();
-        var fileSystemService = _serviceLocator.Resolve<IFileSystemService>();
+        var mutationCoordinator = _serviceLocator.Resolve<FolderMutationCoordinator>();
         var logger = _serviceLocator.Resolve<ILogger>();
 
         var children = src.DirectoryModels
@@ -308,7 +308,7 @@ public class RegisterMapper : IRegister
             src.Path,
             children,
             folderService,
-            fileSystemService,
+            mutationCoordinator,
             mapper,
             logger) { HasSupportedMedia = src.HasSupportedMedia };
     }

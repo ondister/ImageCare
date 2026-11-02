@@ -15,11 +15,11 @@
         <TreeView x:Name="FolderTree"
                   Grid.Row="0"
                   Background="Transparent"
-                  ItemsSource="{Binding FileSystemItemViewModels}"
-                  SelectedItem="{Binding SelectedFileSystemItem, Mode=TwoWay}"
+                  ItemsSource="{Binding Tree.FileSystemItemViewModels}"
+                  SelectedItem="{Binding Tree.SelectedFileSystemItem, Mode=TwoWay}"
                   SelectionMode="Single"
                   ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                  IsVisible="{Binding !IsInSearchSession}">
+                  IsVisible="{Binding !Search.IsInSearchSession}">
             <TreeView.Styles>
                 <Style Selector="TreeViewItem" x:DataType="domain:DirectoryViewModel">
                     <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
@@ -84,7 +84,7 @@
                                    ToolTip.Tip="{localization:Loc Folders_RecentHint}" />
                         <Button Grid.Column="2"
                                 Classes="TreeAction"
-                                Click="OnChoosePopularFolderClick"
+                                Command="{Binding DataContext.Recent.AddRecentFolderCommand, ElementName=This}"
                                 ToolTip.Tip="{localization:Loc Folders_AddRecent}">
                             <iconPacks:PackIconMaterial Kind="Plus"
                                                         Width="14"
@@ -164,8 +164,8 @@
                         <Border.ContextMenu>
                             <ContextMenu>
                                 <MenuItem Header="{localization:Loc Folders_AddRecent}"
-                                          Tag="{Binding}"
-                                          Click="OnAddFolderToRecentClick"
+                                          Command="{Binding DataContext.Recent.AddFolderToRecentCommand, ElementName=This}"
+                                          CommandParameter="{Binding}"
                                           IsVisible="{Binding !IsRecentEntry}" />
                                 <Separator IsVisible="{Binding !IsRecentEntry}" />
                                 <MenuItem Header="{localization:Loc Folders_EditFolderTags}"
@@ -261,7 +261,7 @@
                                 Classes="TreeAction"
                                 Margin="2,0"
                                 IsVisible="{Binding IsPinnedPopular}"
-                                Command="{Binding DataContext.RemoveRecentFolderCommand, ElementName=This}"
+                                Command="{Binding DataContext.Recent.RemoveRecentFolderCommand, ElementName=This}"
                                 CommandParameter="{Binding}"
                                 ToolTip.Tip="{localization:Loc Folders_RemoveRecent}">
                             <iconPacks:PackIconMaterial Kind="Close"
@@ -277,20 +277,20 @@
         <Border Grid.Row="0"
                 Padding="4"
                 Background="{DynamicResource ThemeBackgroundBrush}"
-                IsVisible="{Binding IsInSearchSession}">
+                IsVisible="{Binding Search.IsInSearchSession}">
             <Grid RowDefinitions="Auto,*">
                 <TextBlock Grid.Row="0"
-                           Text="{Binding SearchHeader}"
+                           Text="{Binding Search.SearchHeader}"
                            FontWeight="SemiBold"
                            Margin="6,4,6,8" />
                 <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-                    <ItemsControl ItemsSource="{Binding SearchResults}">
+                    <ItemsControl ItemsSource="{Binding Search.SearchResults}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate x:DataType="domain:DirectoryViewModel">
                                 <Button Margin="2"
                                         Padding="8,6"
                                         HorizontalContentAlignment="Stretch"
-                                        Command="{Binding DataContext.SetSearchResultCommand, ElementName=This}"
+                                        Command="{Binding DataContext.Search.SetSearchResultCommand, ElementName=This}"
                                         CommandParameter="{Binding}"
                                         ToolTip.Tip="{localization:Loc Action_OpenFolder}">
                                     <Grid ColumnDefinitions="24,*">
@@ -321,13 +321,13 @@
                 Grid.RowSpan="2"
                 Background="{DynamicResource ThemeBackgroundBrush}"
                 Opacity="0.92"
-                IsVisible="{Binding IsLoading}">
+                IsVisible="{Binding Tree.IsLoading}">
             <StackPanel HorizontalAlignment="Center"
                         VerticalAlignment="Center"
                         Spacing="12">
                 <avaloniaProgressRing:ProgressRing Width="48"
                                                    Height="48"
-                                                   IsActive="{Binding IsLoading}"
+                                                   IsActive="{Binding Tree.IsLoading}"
                                                    HorizontalAlignment="Center" />
                 <TextBlock MaxWidth="220"
                            Text="{localization:Loc Preview_LoadingFolder}"
@@ -342,7 +342,7 @@
                 Background="{DynamicResource ThemeControlMidBrush}"
                 CornerRadius="6"
                 Margin="2,4,2,0"
-                IsVisible="{Binding IsSearchEnabled}">
+                IsVisible="{Binding Search.IsSearchEnabled}">
             <Grid Height="30" ColumnDefinitions="*,Auto">
                 <Grid Grid.Column="0">
                     <TextBox x:Name="SearchTextBox"
@@ -352,17 +352,17 @@
                              Background="Transparent"
                              BorderThickness="0"
                              VerticalContentAlignment="Center"
-                             PlaceholderText="{Binding SearchTarget}"
-                             IsEnabled="{Binding !IsSearching}"
-                             Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged, Delay=300}">
+                             PlaceholderText="{Binding Search.SearchTarget}"
+                             IsEnabled="{Binding !Search.IsSearching}"
+                             Text="{Binding Search.SearchText, UpdateSourceTrigger=PropertyChanged, Delay=300}">
                         <TextBox.KeyBindings>
-                            <KeyBinding Command="{Binding PerformSearchCommand}" Gesture="Enter" />
+                            <KeyBinding Command="{Binding Search.PerformSearchCommand}" Gesture="Enter" />
                         </TextBox.KeyBindings>
                     </TextBox>
                     <Border Background="{DynamicResource ThemeControlMidBrush}"
                             CornerRadius="6"
                             Opacity="0.96"
-                            IsVisible="{Binding IsSearching}">
+                            IsVisible="{Binding Search.IsSearching}">
                         <StackPanel Orientation="Horizontal"
                                     HorizontalAlignment="Center"
                                     VerticalAlignment="Center"
@@ -378,17 +378,17 @@
                 <Button Grid.Column="1"
                         Classes="TreeAction"
                         Margin="2"
-                        Command="{Binding PerformSearchCommand}"
+                        Command="{Binding Search.PerformSearchCommand}"
                         ToolTip.Tip="{localization:Loc Folders_SearchFolders}"
-                        IsVisible="{Binding !IsInSearchSession}">
+                        IsVisible="{Binding !Search.IsInSearchSession}">
                     <iconPacks:PackIconMaterial Kind="FolderSearch" Width="16" Height="16" />
                 </Button>
                 <Button Grid.Column="1"
                         Classes="TreeAction"
                         Margin="2"
-                        Command="{Binding ClearSearchCommand}"
+                        Command="{Binding Search.ClearSearchCommand}"
                         ToolTip.Tip="{localization:Loc Action_ClearSearch}"
-                        IsVisible="{Binding IsInSearchSession}">
+                        IsVisible="{Binding Search.IsInSearchSession}">
                     <iconPacks:PackIconMaterial Kind="Close" Width="16" Height="16" />
                 </Button>
             </Grid>

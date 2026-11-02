@@ -20,7 +20,7 @@ using Serilog;
 
 namespace ImageCare.UI.Avalonia.Services;
 
-public sealed class ImageCareMcpServerController : System.IAsyncDisposable
+public sealed class ImageCareMcpServerController : IImageCareMcpServerController, System.IAsyncDisposable
 {
     private readonly IConfigurationService _configurationService;
     private readonly IFileSystemService _fileSystemService;

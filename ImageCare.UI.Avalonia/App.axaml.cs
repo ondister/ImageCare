@@ -37,6 +37,7 @@ using ImageCare.UI.Avalonia.Platforms.MacOS;
 using ImageCare.UI.Avalonia.Platforms.Windows;
 using ImageCare.UI.Avalonia.Services;
 using ImageCare.UI.Avalonia.ViewModels;
+using ImageCare.UI.Avalonia.ViewModels.Folders;
 using ImageCare.UI.Avalonia.Views;
 using Mapster;
 using MapsterMapper;
@@ -193,6 +194,7 @@ public class App : PrismApplication
         RegisterPlatformTypes(containerRegistry);
 
         containerRegistry.RegisterSingleton<IFolderService, LocalFileSystemFolderService>();
+        containerRegistry.RegisterSingleton<FolderMutationCoordinator>();
         containerRegistry.RegisterSingleton<IFolderHistoryService, LocalFolderHistoryService>();
         containerRegistry.RegisterSingleton<IMediaPreviewOperationsService, WindowsMediaPreviewOperationsService>();
         containerRegistry.RegisterSingleton<IMediaBatchOperationsService, MediaBatchOperationsService>();
@@ -209,6 +211,8 @@ public class App : PrismApplication
 
         containerRegistry.RegisterSingleton<INotificationService, LocalNotificationService>();
         containerRegistry.RegisterSingleton<AdaptiveHelpPolicy>();
+        containerRegistry.RegisterSingleton<AdaptiveHelpCatalog>();
+        containerRegistry.RegisterSingleton<AdaptiveHelpProgressStore>();
         containerRegistry.RegisterSingleton<AdaptiveHelpContextService>();
         containerRegistry.RegisterSingleton<AdaptiveHelpService>();
         containerRegistry.RegisterSingleton<IFileAssociationsService, ConfigurationFileAssociationsService>();

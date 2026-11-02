@@ -8,8 +8,8 @@ using System.Threading.Tasks;
 using System.Windows.Input;
 
 using ImageCare.Core.Domain.Folders;
-using ImageCare.Core.Services.FileSystemService;
 using ImageCare.Core.Services.FolderService;
+using ImageCare.UI.Avalonia.ViewModels.Folders;
 
 using MapsterMapper;
 
@@ -28,7 +28,7 @@ public enum DirectoryLoadState
 internal class DirectoryViewModel : ViewModelBase, IComparable<DirectoryViewModel>
 {
     private readonly IFolderService _folderService;
-    private readonly IFileSystemService _fileSystemService;
+    private readonly FolderMutationCoordinator _mutationCoordinator;
     private readonly ILogger _logger;
     private readonly IMapper _mapper;
     private bool _isExpanded;
@@ -51,12 +51,12 @@ internal class DirectoryViewModel : ViewModelBase, IComparable<DirectoryViewMode
                               string path,
                               IEnumerable<DirectoryViewModel> children,
                               IFolderService folderService,
-                              IFileSystemService fileSystemService,
+                              FolderMutationCoordinator mutationCoordinator,
                               IMapper mapper,
                               ILogger logger)
     {
         _folderService = folderService ?? throw new ArgumentNullException(nameof(folderService));
-        _fileSystemService = fileSystemService ?? throw new ArgumentNullException(nameof(fileSystemService));
+        _mutationCoordinator = mutationCoordinator ?? throw new ArgumentNullException(nameof(mutationCoordinator));
         _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
@@ -292,58 +292,7 @@ internal class DirectoryViewModel : ViewModelBase, IComparable<DirectoryViewMode
         _isRenaming = true;
         try
         {
-            var requestedName = EditableName?.Trim();
-            if (string.IsNullOrWhiteSpace(requestedName))
-            {
-                EditableName = Name;
-                return;
-            }
-
-            if (string.Equals(requestedName, Name, StringComparison.Ordinal))
-            {
-                return;
-            }
-
-            var oldDirectory = _mapper.Map<DirectoryModel>(this);
-            var newName = _fileSystemService.RenameFolder(requestedName, oldDirectory.Path);
-            if (string.IsNullOrEmpty(newName) || string.Equals(newName, Name, StringComparison.Ordinal))
-            {
-                EditableName = Name;
-                return;
-            }
-
-            var parentPath = System.IO.Path.GetDirectoryName(oldDirectory.Path)
-                             ?? throw new InvalidOperationException($"Cannot rename root directory '{oldDirectory.Path}'");
-            var renamedDirectory = new DirectoryModel(newName, System.IO.Path.Combine(parentPath, newName));
-
-            var expandedDirectories = EnumerateSubtree()
-                                     .Where(directory => directory.IsExpanded)
-                                     .Select(directory => _mapper.Map<DirectoryModel>(directory))
-                                     .ToArray();
-            foreach (var expandedDirectory in expandedDirectories)
-            {
-                _folderService.RemoveVisitingFolder(expandedDirectory, FileManagerPanel);
-            }
-
-            UpdateDirectory(renamedDirectory);
-            _parent?.ChildFileSystemItems.RefreshSort();
-
-            foreach (var expandedDirectory in EnumerateSubtree().Where(directory => directory.IsExpanded))
-            {
-                _folderService.AddVisitingFolder(
-                    _mapper.Map<DirectoryModel>(expandedDirectory),
-                    FileManagerPanel);
-            }
-
-            if (IsSelected)
-            {
-                _folderService.SetSelectedDirectory(new SelectedDirectory(renamedDirectory, FileManagerPanel));
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.Error(ex, "Failed to rename folder from {OldName} to {NewName}", Name, EditableName);
-            EditableName = Name;
+            _mutationCoordinator.Rename(this);
         }
         finally
         {
@@ -352,7 +301,7 @@ internal class DirectoryViewModel : ViewModelBase, IComparable<DirectoryViewMode
         }
     }
 
-    private IEnumerable<DirectoryViewModel> EnumerateSubtree()
+    internal IEnumerable<DirectoryViewModel> EnumerateSubtree()
     {
         var pending = new Stack<DirectoryViewModel>();
         pending.Push(this);
@@ -366,6 +315,23 @@ internal class DirectoryViewModel : ViewModelBase, IComparable<DirectoryViewMode
                 pending.Push(child);
             }
         }
+    }
+
+    internal FolderMutationCoordinator MutationCoordinator => _mutationCoordinator;
+
+    internal DirectoryModel ToDirectoryModel() => _mapper.Map<DirectoryModel>(this);
+
+    internal DirectoryViewModel MapDirectory(DirectoryModel directory) =>
+        _mapper.Map<DirectoryViewModel>(directory);
+
+    internal void ResetEditableName() => EditableName = Name;
+
+    internal void RefreshParentSort() => _parent?.ChildFileSystemItems.RefreshSort();
+
+    internal void DetachFromParent()
+    {
+        _parent?.ChildFileSystemItems.Remove(this);
+        _parent = null;
     }
 
     private void StartRenameFolder()
@@ -564,66 +530,9 @@ internal class DirectoryViewModel : ViewModelBase, IComparable<DirectoryViewMode
         await SeedFileSystemItemsAsync(cancellationToken);
     }
 
-    private void CreateFolder()
-    {
-        try
-        {
-            var createdSubFolder = _folderService.CreateSubFolder(_mapper.Map<DirectoryModel>(this));
-            if (createdSubFolder == null)
-            {
-                return;
-            }
+    private void CreateFolder() => _mutationCoordinator.Create(this);
 
-            var createdViewModel = ChildFileSystemItems.FirstOrDefault(child =>
-                child.Path.Equals(createdSubFolder.Path, StringComparison.OrdinalIgnoreCase));
-            if (createdViewModel == null)
-            {
-                createdViewModel = _mapper.Map<DirectoryViewModel>(createdSubFolder);
-                ChildFileSystemItems.Add(createdViewModel);
-            }
-
-            createdViewModel.IsEditing = true;
-        }
-        catch (Exception ex)
-        {
-            _logger.Error(ex, "Failed to create folder for: {SelectedPath}", Path);
-        }
-    }
-
-    private void DeleteFolder()
-    {
-        try
-        {
-            if (HasSupportedMedia)
-            {
-                return;
-            }
-
-            var deletedDirectory = _mapper.Map<DirectoryModel>(this);
-            _folderService.RemoveFolder(deletedDirectory);
-            if (_fileSystemService.DirectoryExists(deletedDirectory.Path))
-            {
-                return;
-            }
-
-            if (IsExpanded)
-            {
-                _folderService.RemoveVisitingFolder(deletedDirectory, FileManagerPanel);
-            }
-
-            if (IsSelected)
-            {
-                _folderService.SetSelectedDirectory(new SelectedDirectory(DirectoryModel.Empty, FileManagerPanel));
-            }
-
-            _parent?.ChildFileSystemItems.Remove(this);
-            _parent = null;
-        }
-        catch (Exception ex)
-        {
-            _logger.Error(ex, "Failed to delete folder: {Path}", Path);
-        }
-    }
+    private void DeleteFolder() => _mutationCoordinator.Delete(this);
 
     private bool CanCreateFolder()
     {

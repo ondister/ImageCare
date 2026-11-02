@@ -10,14 +10,16 @@ using HanumanInstitute.LibMpv.Avalonia;
 using HanumanInstitute.LibMpv.Core;
 
 using ImageCare.UI.Avalonia.Platforms.MacOS;
+using ImageCare.UI.Avalonia.Services.MediaPlayer;
 using ImageCare.UI.Avalonia.ViewModels;
 
 namespace ImageCare.UI.Avalonia.Views;
 
 public partial class MainVideoView : UserControl
 {
-    private readonly MacVideoPlayerView? _macPlayer;
+    private readonly IMediaPlayerAdapter? _playerAdapter;
     private MainVideoViewModel? _attachedViewModel;
+    private bool _isAttachedToVisualTree;
 
     public MainVideoView()
     {
@@ -25,8 +27,9 @@ public partial class MainVideoView : UserControl
 
         if (OperatingSystem.IsMacOS())
         {
-            _macPlayer = new MacVideoPlayerView();
-            VideoHost.Content = _macPlayer;
+            var macPlayer = new MacVideoPlayerView();
+            _playerAdapter = new MacPlayerAdapter(macPlayer);
+            VideoHost.Content = macPlayer;
         }
         else if (OperatingSystem.IsWindows())
         {
@@ -42,16 +45,22 @@ public partial class MainVideoView : UserControl
                 }
 
                 MpvApi.RootPath = nativePlayerDirectory;
-                var mpvView = new MpvView();
-                mpvView.Bind(MpvView.MpvContextProperty, new Binding(nameof(MainVideoViewModel.Mpv))
+                var mpvAdapter = new MpvPlayerAdapter();
+                var mpvView = new MpvView
+                {
+                    DataContext = mpvAdapter
+                };
+                mpvView.Bind(MpvView.MpvContextProperty, new Binding(nameof(MpvPlayerAdapter.Context))
                 {
                     Mode = BindingMode.OneWayToSource
                 });
+
+                _playerAdapter = mpvAdapter;
                 VideoHost.Content = mpvView;
             }
-            catch (Exception ex)
+            catch (Exception exception)
             {
-                Serilog.Log.Error(ex, "Failed to initialize the Windows video player");
+                Serilog.Log.Error(exception, "Failed to initialize the Windows video player");
                 VideoHost.Content = new TextBlock
                 {
                     Text = "Video playback is unavailable. See the application log for details.",
@@ -68,19 +77,36 @@ public partial class MainVideoView : UserControl
         DetachedFromVisualTree += OnDetachedFromVisualTree;
     }
 
-    private void OnDataContextChanged(object? sender, EventArgs e)
+    private void OnDataContextChanged(object? sender, EventArgs args)
     {
+        if (_isAttachedToVisualTree)
+        {
+            AttachPlayerToViewModel(DataContext as MainVideoViewModel);
+        }
+    }
+
+    private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs args)
+    {
+        if (_isAttachedToVisualTree)
+        {
+            return;
+        }
+
+        _isAttachedToVisualTree = true;
+        _playerAdapter?.Attach();
         AttachPlayerToViewModel(DataContext as MainVideoViewModel);
     }
 
-    private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
+    private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs args)
     {
-        AttachPlayerToViewModel(DataContext as MainVideoViewModel);
-    }
+        if (!_isAttachedToVisualTree)
+        {
+            return;
+        }
 
-    private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
-    {
         AttachPlayerToViewModel(null);
+        _playerAdapter?.Detach();
+        _isAttachedToVisualTree = false;
     }
 
     private void AttachPlayerToViewModel(MainVideoViewModel? viewModel)
@@ -92,14 +118,14 @@ public partial class MainVideoView : UserControl
 
         if (_attachedViewModel != null)
         {
-            _attachedViewModel.MacPlayer = null;
+            _attachedViewModel.Player = null;
         }
 
         _attachedViewModel = viewModel;
 
         if (_attachedViewModel != null)
         {
-            _attachedViewModel.MacPlayer = _macPlayer;
+            _attachedViewModel.Player = _playerAdapter;
         }
     }
 }

@@ -24,12 +24,12 @@ namespace ImageCare.UI.Avalonia.ViewModels.Preview;
 /// <summary>
 /// Drives the rating/tag editor shown above the preview strip. It owns the in-place
 /// annotation state of the primary preview but delegates the directory index to
-/// <see cref="PreviewAnnotationCache"/>.
+/// <see cref="MediaAnnotationCache"/>.
 /// </summary>
 internal sealed class PreviewAnnotationEditorViewModel : ViewModelBase
 {
     private readonly PreviewSelectionViewModel _selection;
-    private readonly PreviewAnnotationCache _annotationCache;
+    private readonly MediaAnnotationCache _annotationCache;
     private readonly IMediaAnnotationsService _annotationsService;
     private readonly IConfigurationService _configurationService;
     private readonly INotificationService _notificationService;
@@ -49,7 +49,7 @@ internal sealed class PreviewAnnotationEditorViewModel : ViewModelBase
 
     public PreviewAnnotationEditorViewModel(
         PreviewSelectionViewModel selection,
-        PreviewAnnotationCache annotationCache,
+        MediaAnnotationCache annotationCache,
         IMediaAnnotationsService annotationsService,
         IConfigurationService configurationService,
         INotificationService notificationService,

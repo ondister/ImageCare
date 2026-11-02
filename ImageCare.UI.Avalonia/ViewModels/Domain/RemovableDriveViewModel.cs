@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 
-using ImageCare.Core.Services.FileSystemService;
 using ImageCare.Core.Services.FolderService;
+using ImageCare.UI.Avalonia.ViewModels.Folders;
 
 using MapsterMapper;
 
@@ -23,10 +23,10 @@ internal sealed class RemovableDriveViewModel : DriveViewModel
                                    long availableFreeSpace,
                                    IEnumerable<DirectoryViewModel> children,
                                    IFolderService folderService,
-                                   IFileSystemService fileSystemService,
+                                   FolderMutationCoordinator mutationCoordinator,
                                    IMapper mapper,
                                    ILogger logger)
-        : base(name, path, children, folderService, fileSystemService, mapper, logger)
+        : base(name, path, children, folderService, mutationCoordinator, mapper, logger)
     {
         TotalSize = totalSize;
         AvailableFreeSpace = availableFreeSpace;

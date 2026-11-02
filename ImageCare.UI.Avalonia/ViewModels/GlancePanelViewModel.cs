@@ -35,7 +35,7 @@ internal sealed class GlancePanelViewModel : ViewModelBase, IDialogAware
     private readonly LocalizationManager _localization;
     private readonly AdaptiveHelpService _adaptiveHelpService;
     private readonly AdaptiveHelpContextService _helpContext;
-    private readonly GlanceAnnotationCache _annotationCache;
+    private readonly MediaAnnotationCache _annotationCache;
     private readonly ILogger _logger;
 
     private FileManagerPanel _overviewPanel = FileManagerPanel.Undefined;
@@ -77,7 +77,7 @@ internal sealed class GlancePanelViewModel : ViewModelBase, IDialogAware
         Operations = new GlanceOperationViewModel(localization, helpContext);
         Selection = new GlanceSelectionViewModel(localization, Operations, helpContext);
 
-        _annotationCache = new GlanceAnnotationCache(
+        _annotationCache = new MediaAnnotationCache(
             annotationsService,
             localization,
             logger,

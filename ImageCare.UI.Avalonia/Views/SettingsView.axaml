@@ -3,6 +3,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:viewModels="clr-namespace:ImageCare.UI.Avalonia.ViewModels"
+             xmlns:settings="clr-namespace:ImageCare.UI.Avalonia.ViewModels.Settings"
              xmlns:domain="clr-namespace:ImageCare.UI.Avalonia.ViewModels.Domain"
              xmlns:localization="clr-namespace:ImageCare.UI.Avalonia.Localization"
              mc:Ignorable="d"
@@ -18,8 +19,8 @@
                 <TextBlock Text="{localization:Loc Settings_InterfaceLanguage}"
                            FontWeight="Bold"
                            FontSize="{DynamicResource Font.Size.SectionHeader}" />
-                <ComboBox ItemsSource="{Binding AvailableLanguages}"
-                          SelectedItem="{Binding SelectedLanguage, Mode=TwoWay}"
+                <ComboBox ItemsSource="{Binding General.AvailableLanguages}"
+                          SelectedItem="{Binding General.SelectedLanguage, Mode=TwoWay}"
                           MinWidth="240"
                           HorizontalAlignment="Left">
                     <ComboBox.ItemTemplate>
@@ -35,7 +36,7 @@
                 <Separator Margin="{DynamicResource MarginVertical.Small}" />
 
                 <ToggleSwitch Content="{localization:Loc Settings_RestoreLastFolders}"
-                              IsChecked="{Binding RestoreLastFoldersOnStartup, Mode=TwoWay}" />
+                              IsChecked="{Binding General.RestoreLastFoldersOnStartup, Mode=TwoWay}" />
                 <TextBlock Text="{localization:Loc Settings_RestoreLastFoldersDescription}"
                            Opacity="0.7"
                            TextWrapping="Wrap" />
@@ -46,20 +47,20 @@
                            FontWeight="Bold"
                            FontSize="{DynamicResource Font.Size.SectionHeader}" />
                 <ToggleSwitch Content="{localization:Loc Settings_AdaptiveHelp}"
-                              IsChecked="{Binding AdaptiveHelpEnabled, Mode=TwoWay}" />
+                              IsChecked="{Binding General.AdaptiveHelpEnabled, Mode=TwoWay}" />
                 <TextBlock Text="{localization:Loc Settings_AdaptiveHelpDescription}"
                            Opacity="0.7"
                            TextWrapping="Wrap" />
-                <StackPanel Spacing="6" IsEnabled="{Binding AdaptiveHelpEnabled}">
+                <StackPanel Spacing="6" IsEnabled="{Binding General.AdaptiveHelpEnabled}">
                     <ToggleSwitch Content="{localization:Loc Settings_HelpReturningUsers}"
-                                  IsChecked="{Binding AdaptiveHelpReturningUserEnabled, Mode=TwoWay}" />
+                                  IsChecked="{Binding General.AdaptiveHelpReturningUserEnabled, Mode=TwoWay}" />
                     <ToggleSwitch Content="{localization:Loc Settings_HelpDifficulties}"
-                                  IsChecked="{Binding AdaptiveHelpDifficultyAssistanceEnabled, Mode=TwoWay}" />
+                                  IsChecked="{Binding General.AdaptiveHelpDifficultyAssistanceEnabled, Mode=TwoWay}" />
                     <ToggleSwitch Content="{localization:Loc Settings_HelpNewFeatures}"
-                                  IsChecked="{Binding AdaptiveHelpNewFeaturesEnabled, Mode=TwoWay}" />
+                                  IsChecked="{Binding General.AdaptiveHelpNewFeaturesEnabled, Mode=TwoWay}" />
                     <TextBlock Text="{localization:Loc Settings_HelpDetailLevel}" />
-                    <ComboBox ItemsSource="{Binding AdaptiveHelpDetailLevelOptions}"
-                              SelectedItem="{Binding SelectedAdaptiveHelpDetailLevel, Mode=TwoWay}"
+                    <ComboBox ItemsSource="{Binding General.AdaptiveHelpDetailLevelOptions}"
+                              SelectedItem="{Binding General.SelectedAdaptiveHelpDetailLevel, Mode=TwoWay}"
                               MinWidth="240"
                               HorizontalAlignment="Left">
                         <ComboBox.ItemTemplate>
@@ -70,9 +71,9 @@
                     </ComboBox>
                     <StackPanel Orientation="Horizontal" Spacing="8">
                         <Button Content="{localization:Loc Settings_HelpResetProgress}"
-                                Command="{Binding ResetAdaptiveHelpProgressCommand}" />
+                                Command="{Binding General.ResetAdaptiveHelpProgressCommand}" />
                         <Button Content="{localization:Loc Settings_HelpClearHistory}"
-                                Command="{Binding ClearAdaptiveHelpHistoryCommand}" />
+                                Command="{Binding General.ClearAdaptiveHelpHistoryCommand}" />
                     </StackPanel>
                 </StackPanel>
 
@@ -82,8 +83,8 @@
                            FontWeight="Bold"
                            FontSize="{DynamicResource Font.Size.SectionHeader}" />
                 <TextBlock Text="{localization:Loc Settings_DragDropModifier}" />
-                <ComboBox ItemsSource="{Binding DragDropModifierOptions}"
-                          SelectedItem="{Binding SelectedDragDropModifier, Mode=TwoWay}"
+                <ComboBox ItemsSource="{Binding General.DragDropModifierOptions}"
+                          SelectedItem="{Binding General.SelectedDragDropModifier, Mode=TwoWay}"
                           MinWidth="240"
                           HorizontalAlignment="Left">
                     <ComboBox.ItemTemplate>
@@ -93,7 +94,7 @@
                     </ComboBox.ItemTemplate>
                 </ComboBox>
                 <CheckBox Content="{localization:Loc Settings_CopyOnDragDropByDefault}"
-                          IsChecked="{Binding CopyOnDragDropByDefault, Mode=TwoWay}" />
+                          IsChecked="{Binding General.CopyOnDragDropByDefault, Mode=TwoWay}" />
                 <TextBlock Text="{localization:Loc Settings_DragDropDescription}"
                            Opacity="0.7"
                            TextWrapping="Wrap" />
@@ -101,42 +102,42 @@
                 <Separator Margin="{DynamicResource MarginVertical.Small}" />
 
                 <ToggleSwitch Content="{localization:Loc Settings_FolderTags}"
-                              IsChecked="{Binding FolderTagsEnabled, Mode=TwoWay}" />
+                              IsChecked="{Binding General.FolderTagsEnabled, Mode=TwoWay}" />
                 <TextBlock Text="{localization:Loc Settings_FolderTagsDescription}"
                            Opacity="0.7"
                            TextWrapping="Wrap" />
                 <CheckBox Content="{localization:Loc Settings_FolderTagsLog}"
-                          IsChecked="{Binding FolderTagApplicationLogEnabled, Mode=TwoWay}"
-                          IsEnabled="{Binding FolderTagsEnabled}" />
+                          IsChecked="{Binding General.FolderTagApplicationLogEnabled, Mode=TwoWay}"
+                          IsEnabled="{Binding General.FolderTagsEnabled}" />
 
                 <Separator Margin="{DynamicResource MarginVertical.Small}" />
 
                 <ToggleSwitch Content="{localization:Loc Settings_SafeDeletion}"
-                              IsChecked="{Binding SafeDeletionEnabled, Mode=TwoWay}" />
+                              IsChecked="{Binding SafeDeletion.Enabled, Mode=TwoWay}" />
                 <TextBlock Text="{localization:Loc Settings_SafeDeletionDescription}"
                            Opacity="0.7"
                            TextWrapping="Wrap" />
 
                 <Grid ColumnDefinitions="Auto,*,Auto"
                       ColumnSpacing="8"
-                      IsEnabled="{Binding SafeDeletionEnabled}">
+                      IsEnabled="{Binding SafeDeletion.Enabled}">
                     <TextBlock Grid.Column="0"
                                Text="{localization:Loc Settings_SafeDeletionFolder}"
                                VerticalAlignment="Center" />
                     <TextBox Grid.Column="1"
-                             Text="{Binding SafeDeletionDirectoryPath, Mode=TwoWay}"
+                             Text="{Binding SafeDeletion.DirectoryPath, Mode=TwoWay}"
                              MinWidth="360" />
                     <Button Grid.Column="2"
                             Content="{localization:Loc Settings_Browse}"
-                            Command="{Binding ChooseSafeDeletionDirectoryCommand}" />
+                            Command="{Binding SafeDeletion.ChooseDirectoryCommand}" />
                 </Grid>
 
                 <StackPanel Orientation="Horizontal"
                             Spacing="8"
-                            IsEnabled="{Binding SafeDeletionEnabled}">
+                            IsEnabled="{Binding SafeDeletion.Enabled}">
                     <TextBlock Text="{localization:Loc Settings_SafeDeletionMaxFiles}"
                                VerticalAlignment="Center" />
-                    <NumericUpDown Value="{Binding SafeDeletionMaxFileCount, Mode=TwoWay}"
+                    <NumericUpDown Value="{Binding SafeDeletion.MaxFileCount, Mode=TwoWay}"
                                    Minimum="1"
                                    Maximum="10000"
                                    Increment="1"
@@ -146,22 +147,22 @@
                 <Separator Margin="{DynamicResource MarginVertical.Small}" />
 
                 <ToggleSwitch Content="{localization:Loc Settings_McpServer}"
-                              IsChecked="{Binding McpServerEnabled, Mode=TwoWay}" />
+                              IsChecked="{Binding McpServer.Enabled, Mode=TwoWay}" />
                 <TextBlock Text="{localization:Loc Settings_McpServerDescription}"
                            Opacity="0.7"
                            TextWrapping="Wrap" />
                 <StackPanel Orientation="Horizontal"
                             Spacing="8"
-                            IsEnabled="{Binding McpServerEnabled}">
+                            IsEnabled="{Binding McpServer.Enabled}">
                     <TextBlock Text="{localization:Loc Settings_McpServerPort}"
                                VerticalAlignment="Center" />
-                    <NumericUpDown Value="{Binding McpServerPort, Mode=TwoWay}"
+                    <NumericUpDown Value="{Binding McpServer.Port, Mode=TwoWay}"
                                    Minimum="1024"
                                    Maximum="65535"
                                    Increment="1"
                                    Width="120" />
                 </StackPanel>
-                <TextBlock Text="{Binding McpServerStatus}"
+                <TextBlock Text="{Binding McpServer.Status}"
                            Opacity="0.7"
                            TextWrapping="Wrap" />
             </StackPanel>
@@ -169,7 +170,11 @@
         </TabItem>
 
         <TabItem Header="{localization:Loc Settings_FileAssociations}">
-            <Grid RowDefinitions="Auto,*,Auto" Margin="0" VerticalAlignment="Stretch">
+            <Grid RowDefinitions="Auto,*,Auto"
+                  Margin="0"
+                  VerticalAlignment="Stretch"
+                  DataContext="{Binding Associations}"
+                  x:DataType="settings:FileAssociationsViewModel">
                 <Border Grid.Row="0"
                         Background="{DynamicResource ThemeBackgroundBrush}"
                         CornerRadius="{DynamicResource BorderRadius.Small}"
@@ -293,7 +298,11 @@
         </TabItem>
 
         <TabItem Header="{localization:Loc Annotations_SettingsTab}">
-            <Grid RowDefinitions="Auto,*,Auto,*" RowSpacing="10" Margin="12">
+            <Grid RowDefinitions="Auto,*,Auto,*"
+                  RowSpacing="10"
+                  Margin="12"
+                  DataContext="{Binding Annotations}"
+                  x:DataType="settings:AnnotationsSettingsViewModel">
                 <StackPanel Grid.Row="0" Spacing="6">
                     <TextBlock Text="{localization:Loc Annotations_RootsTitle}" FontWeight="Bold" FontSize="{DynamicResource Font.Size.SectionHeader}" />
                     <TextBlock Text="{localization:Loc Annotations_RootsDescription}" Opacity="0.7" TextWrapping="Wrap" />

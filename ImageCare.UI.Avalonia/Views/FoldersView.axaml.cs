@@ -28,7 +28,7 @@ public partial class FoldersView : UserControl
 
     internal bool FocusPanel()
     {
-        if (_viewModel?.SelectedFileSystemItem is { } selectedItem)
+        if (_viewModel?.Tree.SelectedFileSystemItem is { } selectedItem)
         {
             FolderTree.ScrollIntoView(selectedItem);
             if (FolderTree.TreeContainerFromItem(selectedItem) is TreeViewItem container)
@@ -48,7 +48,7 @@ public partial class FoldersView : UserControl
     private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
         AttachViewModel(DataContext as FoldersViewModel);
-        if (_viewModel?.SelectedFileSystemItem is { } selectedItem)
+        if (_viewModel?.Tree.SelectedFileSystemItem is { } selectedItem)
         {
             OnRevealSelectedFolderRequested(selectedItem);
         }
@@ -139,25 +139,6 @@ public partial class FoldersView : UserControl
         path.Reverse();
         return path;
     }
-    private void OnChoosePopularFolderClick(object? sender, RoutedEventArgs e)
-    {
-        if (_viewModel?.AddRecentFolderCommand.CanExecute(null) == true)
-        {
-            _viewModel.AddRecentFolderCommand.Execute(null);
-        }
-    }
-
-    private void OnAddFolderToRecentClick(object? sender, RoutedEventArgs e)
-    {
-        var menuItem = sender as MenuItem;
-        var directory = menuItem?.Tag as DirectoryViewModel
-                        ?? menuItem?.DataContext as DirectoryViewModel;
-        if (directory != null && _viewModel?.AddFolderToRecentCommand.CanExecute(directory) == true)
-        {
-            _viewModel.AddFolderToRecentCommand.Execute(directory);
-        }
-    }
-
     private void OnEditFolderTagsClick(object? sender, RoutedEventArgs e)
     {
         var menuItem = sender as MenuItem;

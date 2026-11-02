@@ -89,9 +89,8 @@ internal sealed class PreviewPanelViewModel : NavigatedViewModelBase
             () => FileManagerPanel,
             preview => ImagePreviews.Contains(preview));
 
-        var annotationCache = new PreviewAnnotationCache(
+        var annotationCache = new MediaAnnotationCache(
             annotationsService,
-            fileSystemService,
             localization,
             logger,
             synchronizationContext);
@@ -164,8 +163,8 @@ internal sealed class PreviewPanelViewModel : NavigatedViewModelBase
 
         annotationCache.SetSources(
             () => MediaStrip.ImagePreviews,
-            () => Selection.SelectedPreview,
             () => MediaStrip.SelectedFolderPath,
+            () => Selection.SelectedPreview,
             () => FolderToken);
         annotationCache.SetReconcileRequest(FolderContent.ReconcileFolderAndRefreshAsync);
 

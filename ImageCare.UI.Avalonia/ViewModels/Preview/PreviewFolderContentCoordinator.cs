@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
 using System.Reactive.Disposables;
@@ -19,7 +18,6 @@ using ImageCare.Core.Services.FolderClusterizationService;
 using ImageCare.Core.Services.FolderService;
 using ImageCare.Core.Services.FolderStatisticsService;
 using ImageCare.Core.Services.MediaPreviewOperationsService;
-using ImageCare.UI.Avalonia.Collections;
 using ImageCare.UI.Avalonia.Services;
 using ImageCare.UI.Avalonia.ViewModels.Domain;
 
@@ -41,15 +39,15 @@ internal sealed class PreviewFolderContentCoordinator : IDisposable
     private readonly IFolderClusterizationService _folderClusterizationService;
     private readonly IMediaPreviewOperationsService _fileOperationsService;
     private readonly PreviewImageStripViewModel _mediaStrip;
-    private readonly PreviewAnnotationCache _annotationCache;
+    private readonly MediaAnnotationCache _annotationCache;
     private readonly TimelineViewModel _timeline;
     private readonly ILogger _logger;
     private readonly SynchronizationContext _synchronizationContext;
 
-    private readonly object _imagePathsLock = new();
+    private readonly MediaFolderFileIndex _fileIndex = new(
+        new FileModelCreationDateTimeComparer(MediaSortDirection.OldestFirst));
     private CompositeDisposable? _subscriptions;
     private CancellationTokenSource _folderSelectedCancellationTokenSource = new();
-    private SortedObservableCollection<FileModel> _imagePaths = new();
 
     public PreviewFolderContentCoordinator(
         IFolderService folderService,
@@ -59,7 +57,7 @@ internal sealed class PreviewFolderContentCoordinator : IDisposable
         IFolderClusterizationService folderClusterizationService,
         IMediaPreviewOperationsService fileOperationsService,
         PreviewImageStripViewModel mediaStrip,
-        PreviewAnnotationCache annotationCache,
+        MediaAnnotationCache annotationCache,
         TimelineViewModel timeline,
         ILogger logger,
         SynchronizationContext synchronizationContext)
@@ -159,10 +157,7 @@ internal sealed class PreviewFolderContentCoordinator : IDisposable
 
     private void OnSortDirectionChanged(object? sender, MediaSortDirection direction)
     {
-        lock (_imagePathsLock)
-        {
-            _imagePaths.SetComparer(new FileModelCreationDateTimeComparer(direction));
-        }
+        _fileIndex.ChangeComparer(new FileModelCreationDateTimeComparer(direction));
     }
 
     private void OnFolderSelected(SelectedDirectory selectedFileSystemItem)
@@ -215,12 +210,8 @@ internal sealed class PreviewFolderContentCoordinator : IDisposable
     {
         try
         {
-            lock (_imagePathsLock)
-            {
-                _mediaStrip.FilesLoading = true;
-                _imagePaths = new SortedObservableCollection<FileModel>(
-                    new FileModelCreationDateTimeComparer(_mediaStrip.SortDirection));
-            }
+            _mediaStrip.FilesLoading = true;
+            _fileIndex.Reset(new FileModelCreationDateTimeComparer(_mediaStrip.SortDirection));
 
             var files = await _folderService.GetFileModelAsync(selectedFileSystemItem, "*");
 
@@ -229,10 +220,7 @@ internal sealed class PreviewFolderContentCoordinator : IDisposable
                 .Where(file => MediaFormat.IsSupportedExtension(Path.GetExtension(file.FullName)))
                 .GroupBy(file => file.FullName, PreviewPathUtility.PathComparer)
                 .Select(group => group.First());
-            lock (_imagePathsLock)
-            {
-                _imagePaths.AddRange(distinctFiles);
-            }
+            _fileIndex.AddIfMissing(distinctFiles);
 
             _ = LoadInitialImagesAsync(token);
             _ = _folderStatisticsService.StartAsync(selectedFileSystemItem.Path, token);
@@ -256,19 +244,14 @@ internal sealed class PreviewFolderContentCoordinator : IDisposable
     {
         try
         {
-            if (_imagePaths.Count == 0)
+            var pathSnapshot = _fileIndex.Snapshot();
+            if (pathSnapshot.Length == 0)
             {
                 _mediaStrip.CompleteInitialLoad();
                 return;
             }
 
-            var initialCount = Math.Min(PreviewImageStripViewModel.PreloadCount * 2, _imagePaths.Count);
-            FileModel[] pathSnapshot;
-            lock (_imagePathsLock)
-            {
-                pathSnapshot = _imagePaths.ToArray();
-            }
-
+            var initialCount = Math.Min(PreviewImageStripViewModel.PreloadCount * 2, pathSnapshot.Length);
             var batchSize = Math.Max(1, initialCount);
             for (var offset = 0; offset < pathSnapshot.Length;)
             {
@@ -295,7 +278,7 @@ internal sealed class PreviewFolderContentCoordinator : IDisposable
                 batchSize = Math.Min(batchSize * 2, 4_096);
             }
 
-            if (_imagePaths.Count <= 5_000)
+            if (_fileIndex.Snapshot().Length <= 5_000)
             {
                 _folderClusterizationService.StartAsync(_mediaStrip.SelectedFolderPath, token)
                                            .Forget(_logger, nameof(IFolderClusterizationService.StartAsync));
@@ -331,12 +314,7 @@ internal sealed class PreviewFolderContentCoordinator : IDisposable
             .Select(group => group.Last())
             .ToArray();
 
-        lock (_imagePathsLock)
-        {
-            var existingPaths = _imagePaths.Select(file => file.FullName)
-                                           .ToHashSet(PreviewPathUtility.PathComparer);
-            _imagePaths.AddRange(newFiles.Where(file => existingPaths.Add(file.FullName)));
-        }
+        _fileIndex.AddIfMissing(newFiles);
 
         _ = ProcessCreatedFilesAsync(newFiles);
     }
@@ -387,13 +365,9 @@ internal sealed class PreviewFolderContentCoordinator : IDisposable
                 .Where(path => !_fileSystemService.FileExists(path))
                 .ToHashSet(PreviewPathUtility.PathComparer);
 
-            lock (_imagePathsLock)
-            {
-                _imagePaths.RemoveWhere(file => deletedPaths.Contains(file.FullName));
-            }
-
             foreach (var deletedPath in deletedPaths)
             {
+                _fileIndex.Remove(deletedPath);
                 _mediaStrip.RemoveImagePreviewByPath(deletedPath);
             }
         }
@@ -471,27 +445,12 @@ internal sealed class PreviewFolderContentCoordinator : IDisposable
 
     private void AddFilePath(FileModel fileModel)
     {
-        lock (_imagePathsLock)
-        {
-            if (_imagePaths.All(existing =>
-                    !PreviewPathUtility.PathsEqual(existing.FullName, fileModel.FullName)))
-            {
-                _imagePaths.Add(fileModel);
-            }
-        }
+        _fileIndex.AddIfMissing(fileModel);
     }
 
     private void RemoveFilePath(string filePath)
     {
-        lock (_imagePathsLock)
-        {
-            var existing = _imagePaths.FirstOrDefault(file =>
-                PreviewPathUtility.PathsEqual(file.FullName, filePath));
-            if (existing != null)
-            {
-                _imagePaths.Remove(existing);
-            }
-        }
+        _fileIndex.Remove(filePath);
     }
 
     private async Task RefreshCacheThenReconcileAsync(string directoryPath, CancellationToken token)
@@ -530,18 +489,7 @@ internal sealed class PreviewFolderContentCoordinator : IDisposable
                 return;
             }
 
-            var actual = files.ToDictionary(file => file.FullName, PreviewPathUtility.PathComparer);
-            string[] stale;
-            FileModel[] missing;
-            lock (_imagePathsLock)
-            {
-                stale = _imagePaths.Select(file => file.FullName)
-                    .Where(path => !actual.ContainsKey(path))
-                    .ToArray();
-                var known = _imagePaths.Select(file => file.FullName)
-                                       .ToHashSet(PreviewPathUtility.PathComparer);
-                missing = files.Where(file => !known.Contains(file.FullName)).ToArray();
-            }
+            var difference = _fileIndex.FindStaleAndMissing(files);
 
             var applied = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             _synchronizationContext.Post(
@@ -555,13 +503,14 @@ internal sealed class PreviewFolderContentCoordinator : IDisposable
                             return;
                         }
 
-                        foreach (var path in stale.Where(path => !_fileSystemService.FileExists(path)))
+                        foreach (var path in difference.StalePaths.Where(path =>
+                                     !_fileSystemService.FileExists(path)))
                         {
                             RemoveFilePath(path);
                             _mediaStrip.RemoveImagePreviewByPath(path);
                         }
 
-                        foreach (var file in missing.Where(file =>
+                        foreach (var file in difference.MissingFiles.Where(file =>
                                      _fileSystemService.FileExists(file.FullName)))
                         {
                             AddFilePath(file);
@@ -588,10 +537,7 @@ internal sealed class PreviewFolderContentCoordinator : IDisposable
 
     private void ClearPreviewPanel()
     {
-        lock (_imagePathsLock)
-        {
-            _imagePaths.Clear();
-        }
+        _fileIndex.Reset(new FileModelCreationDateTimeComparer(_mediaStrip.SortDirection));
 
         _mediaStrip.ClearPreviews();
         _timeline.Clear();

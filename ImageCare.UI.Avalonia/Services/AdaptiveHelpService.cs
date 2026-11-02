@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.IO;
 using System.Linq;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
@@ -27,120 +26,13 @@ using Serilog;
 namespace ImageCare.UI.Avalonia.Services;
 
 /// <summary>
-/// Owns adaptive-help state, recommendation rules and presentation data. Feature views only
+/// Owns adaptive-help event handling, recommendation decisions and presentation data. Feature views only
 /// publish their normal domain events; they do not decide which help content to display.
 /// </summary>
 internal sealed class AdaptiveHelpService : BindableBase, IDisposable
 {
     private const int CurrentExperienceVersion = 2;
     private static readonly TimeSpan ErrorWindow = TimeSpan.FromMinutes(5);
-
-    private static readonly IReadOnlyDictionary<string, HelpHint> Hints =
-        new Dictionary<string, HelpHint>(StringComparer.Ordinal)
-        {
-            [AdaptiveHelpPolicy.WelcomeHintId] = new(
-                AdaptiveHelpPolicy.WelcomeHintId,
-                "Help_WelcomeTitle",
-                "Help_WelcomeMessage",
-                HelpActionKind.FocusSource,
-                "Help_ActionChooseSource"),
-            [AdaptiveHelpPolicy.ReturningHintId] = new(
-                AdaptiveHelpPolicy.ReturningHintId,
-                "Help_ReturningTitle",
-                "Help_ReturningMessage",
-                HelpActionKind.FocusSource,
-                "Help_ActionContinue"),
-            [AdaptiveHelpPolicy.RestoreFoldersHintId] = new(
-                AdaptiveHelpPolicy.RestoreFoldersHintId,
-                "Help_RestoreFoldersTitle",
-                "Help_RestoreFoldersMessage",
-                HelpActionKind.RestoreFolders,
-                "Help_ActionRestoreFolders"),
-            [AdaptiveHelpPolicy.DifficultyHintId] = new(
-                AdaptiveHelpPolicy.DifficultyHintId,
-                "Help_DifficultyTitle",
-                "Help_DifficultyMessage",
-                HelpActionKind.OpenSettings,
-                "Help_ActionReviewSettings"),
-            [AdaptiveHelpPolicy.SelectSourceHintId] = new(
-                AdaptiveHelpPolicy.SelectSourceHintId,
-                "Help_SelectSourceTitle",
-                "Help_SelectSourceMessage",
-                HelpActionKind.FocusSource,
-                "Help_ActionChooseSource"),
-            [AdaptiveHelpPolicy.SelectTargetHintId] = new(
-                AdaptiveHelpPolicy.SelectTargetHintId,
-                "Help_SelectTargetTitle",
-                "Help_SelectTargetMessage",
-                HelpActionKind.FocusTarget,
-                "Help_ActionChooseTarget"),
-            [AdaptiveHelpPolicy.SelectMediaHintId] = new(
-                AdaptiveHelpPolicy.SelectMediaHintId,
-                "Help_SelectMediaTitle",
-                "Help_SelectMediaMessage",
-                HelpActionKind.FocusPreviews,
-                "Help_ActionGoToMedia"),
-            [AdaptiveHelpPolicy.TransferHintId] = new(
-                AdaptiveHelpPolicy.TransferHintId,
-                "Help_TransferTitle",
-                "Help_TransferMessage",
-                HelpActionKind.FocusPreviews,
-                "Help_ActionGoToSelection"),
-            [AdaptiveHelpPolicy.SearchHintId] = new(
-                AdaptiveHelpPolicy.SearchHintId,
-                "Help_SearchTitle",
-                "Help_SearchMessage",
-                HelpActionKind.OpenSearch,
-                "Help_ActionOpenSearch"),
-            [AdaptiveHelpPolicy.SafeDeletionHintId] = new(
-                AdaptiveHelpPolicy.SafeDeletionHintId,
-                "Help_SafeDeletionTitle",
-                "Help_SafeDeletionMessage",
-                HelpActionKind.OpenSettings,
-                "Help_ActionOpenSettings"),
-            [AdaptiveHelpPolicy.NewFeaturesHintId] = new(
-                AdaptiveHelpPolicy.NewFeaturesHintId,
-                "Help_NewFeaturesTitle",
-                "Help_NewFeaturesMessage",
-                HelpActionKind.OpenSearch,
-                "Help_ActionTrySearch"),
-            [AdaptiveHelpPolicy.SettingsHintId] = new(
-                AdaptiveHelpPolicy.SettingsHintId,
-                "Help_SettingsTitle",
-                "Help_SettingsMessage",
-                HelpActionKind.OpenSettings,
-                "Help_ActionOpenSettings"),
-            [AdaptiveHelpPolicy.OverviewSelectHintId] = new(
-                AdaptiveHelpPolicy.OverviewSelectHintId,
-                "Help_OverviewSelectTitle",
-                "Help_OverviewSelectMessage",
-                HelpActionKind.None,
-                string.Empty),
-            [AdaptiveHelpPolicy.OverviewAnnotationsHintId] = new(
-                AdaptiveHelpPolicy.OverviewAnnotationsHintId,
-                "Help_OverviewAnnotationsTitle",
-                "Help_OverviewAnnotationsMessage",
-                HelpActionKind.None,
-                string.Empty),
-            [AdaptiveHelpPolicy.OverviewBatchHintId] = new(
-                AdaptiveHelpPolicy.OverviewBatchHintId,
-                "Help_OverviewBatchTitle",
-                "Help_OverviewBatchMessage",
-                HelpActionKind.None,
-                string.Empty),
-            [AdaptiveHelpPolicy.OverviewBatchActiveHintId] = new(
-                AdaptiveHelpPolicy.OverviewBatchActiveHintId,
-                "Help_OverviewBatchActiveTitle",
-                "Help_OverviewBatchActiveMessage",
-                HelpActionKind.None,
-                string.Empty),
-            [AdaptiveHelpPolicy.ReadyHintId] = new(
-                AdaptiveHelpPolicy.ReadyHintId,
-                "Help_ReadyTitle",
-                "Help_ReadyMessage",
-                HelpActionKind.None,
-                string.Empty)
-        };
 
     private readonly IConfigurationService _configurationService;
     private readonly IFolderService _folderService;
@@ -150,6 +42,8 @@ internal sealed class AdaptiveHelpService : BindableBase, IDisposable
     private readonly AdaptiveHelpContextService _helpContext;
     private readonly ShellUiActionService _shellActions;
     private readonly AdaptiveHelpPolicy _policy;
+    private readonly AdaptiveHelpCatalog _catalog;
+    private readonly AdaptiveHelpProgressStore _progressStore;
     private readonly LocalizationManager _localization;
     private readonly SynchronizationContext _synchronizationContext;
     private readonly TimeProvider _timeProvider;
@@ -172,6 +66,8 @@ internal sealed class AdaptiveHelpService : BindableBase, IDisposable
         AdaptiveHelpContextService helpContext,
         ShellUiActionService shellActions,
         AdaptiveHelpPolicy policy,
+        AdaptiveHelpCatalog catalog,
+        AdaptiveHelpProgressStore progressStore,
         LocalizationManager localization,
         SynchronizationContext synchronizationContext,
         TimeProvider timeProvider,
@@ -185,6 +81,8 @@ internal sealed class AdaptiveHelpService : BindableBase, IDisposable
         _helpContext = helpContext;
         _shellActions = shellActions;
         _policy = policy;
+        _catalog = catalog;
+        _progressStore = progressStore;
         _localization = localization;
         _synchronizationContext = synchronizationContext;
         _timeProvider = timeProvider;
@@ -238,24 +136,20 @@ internal sealed class AdaptiveHelpService : BindableBase, IDisposable
         try
         {
             var configuration = _configurationService.Configuration.Value;
-            NormalizeState(configuration);
             var now = _timeProvider.GetUtcNow();
-            var previousSessionUtc = configuration.AdaptiveHelpLastSessionUtc;
-            var sessionHistory = configuration.AdaptiveHelpSessionHistoryUtc.ToArray();
             var currentVersion = GetApplicationVersion();
+            var session = _progressStore.RecordSession(
+                configuration,
+                now,
+                CurrentExperienceVersion,
+                currentVersion);
 
-            _isReturningSession = _policy.IsReturningUser(previousSessionUtc, sessionHistory, now);
-            _hasNewFeatures = !string.IsNullOrWhiteSpace(configuration.AdaptiveHelpLastSeenVersion)
-                && !string.Equals(configuration.AdaptiveHelpLastSeenVersion, currentVersion, StringComparison.Ordinal);
-
-            configuration.AdaptiveHelpLastSessionUtc = now;
-            configuration.AdaptiveHelpExperienceVersion = CurrentExperienceVersion;
-            configuration.AdaptiveHelpLastSeenVersion = currentVersion;
-            configuration.AdaptiveHelpSessionHistoryUtc.Add(now);
-            while (configuration.AdaptiveHelpSessionHistoryUtc.Count > 10)
-            {
-                configuration.AdaptiveHelpSessionHistoryUtc.RemoveAt(0);
-            }
+            _isReturningSession = _policy.IsReturningUser(
+                session.PreviousSessionUtc,
+                session.SessionHistoryUtc,
+                now);
+            _hasNewFeatures = !string.IsNullOrWhiteSpace(session.LastSeenVersion)
+                && !string.Equals(session.LastSeenVersion, currentVersion, StringComparison.Ordinal);
 
             _selectionCoordinator.SelectionChanged += OnSelectionChanged;
             _helpContext.Changed += OnHelpContextChanged;
@@ -292,7 +186,7 @@ internal sealed class AdaptiveHelpService : BindableBase, IDisposable
             }
             else
             {
-                SaveState();
+                _progressStore.Save();
             }
         }
         catch (Exception exception)
@@ -342,7 +236,7 @@ internal sealed class AdaptiveHelpService : BindableBase, IDisposable
             configuration.AdaptiveHelpLastShownUtc = _timeProvider.GetUtcNow();
         }
 
-        SaveState();
+        _progressStore.Save();
     }
 
     private void Hide()
@@ -350,18 +244,11 @@ internal sealed class AdaptiveHelpService : BindableBase, IDisposable
         if (IsAutomaticMode && Recommendations.FirstOrDefault() is { } recommendation)
         {
             var configuration = _configurationService.Configuration.Value;
-            var progress = GetOrCreateProgress(configuration, recommendation.Id);
-            progress.DismissCount++;
-            if (progress.DismissCount >= 2)
-            {
-                var dismissed = configuration.AdaptiveHelpDismissedHintIds ??= new List<string>();
-                if (!dismissed.Contains(recommendation.Id, StringComparer.Ordinal))
-                {
-                    dismissed.Add(recommendation.Id);
-                }
-            }
-
-            SaveState();
+            _progressStore.RecordDismissal(
+                configuration,
+                recommendation.Id,
+                dismissImmediately: false);
+            _progressStore.Save();
         }
 
         IsVisible = false;
@@ -381,7 +268,7 @@ internal sealed class AdaptiveHelpService : BindableBase, IDisposable
         RaisePropertyChanged(nameof(PanelTitle));
         RaisePropertyChanged(nameof(PanelSubtitle));
         BuildRecommendations(automatic: false, trackExposure: true);
-        SaveState();
+        _progressStore.Save();
     }
 
     private void OnFolderSelected(SelectedDirectory directory)
@@ -498,27 +385,28 @@ internal sealed class AdaptiveHelpService : BindableBase, IDisposable
             _helpContext.FolderOverviewSelectionCount,
             _helpContext.IsBatchOperationRunning);
         var decisions = _policy.Rank(context, configuration, automatic);
+        var returningThreshold = _policy.GetReturningThreshold(configuration.AdaptiveHelpSessionHistoryUtc);
 
         Recommendations.Clear();
         foreach (var decision in decisions)
         {
-            if (!Hints.TryGetValue(decision.HintId, out var hint))
+            if (!_catalog.TryGetHint(decision.HintId, out var hint))
             {
                 continue;
             }
 
             if (trackExposure)
             {
-                RecordExposure(hint.Id, now);
+                _progressStore.RecordExposure(configuration, hint.Id, now);
             }
 
             Recommendations.Add(
                 new AdaptiveHelpRecommendationViewModel(
                     hint.Id,
-                    _localization[hint.TitleKey],
-                    GetMessage(hint),
-                    GetReason(decision, context),
-                    string.IsNullOrEmpty(hint.ActionKey) ? string.Empty : _localization[hint.ActionKey],
+                    _catalog.GetTitle(hint),
+                    _catalog.GetMessage(hint, configuration),
+                    _catalog.GetReason(decision, context, returningThreshold),
+                    _catalog.GetActionText(hint),
                     _localization["Help_DontShowAgain"],
                     ExecuteActionAsync,
                     DismissRecommendation));
@@ -527,7 +415,7 @@ internal sealed class AdaptiveHelpService : BindableBase, IDisposable
 
     private async Task ExecuteActionAsync(string hintId)
     {
-        if (!Hints.TryGetValue(hintId, out var hint))
+        if (!_catalog.TryGetHint(hintId, out var hint))
         {
             return;
         }
@@ -536,27 +424,27 @@ internal sealed class AdaptiveHelpService : BindableBase, IDisposable
         {
             switch (hint.Action)
             {
-                case HelpActionKind.FocusSource:
+                case AdaptiveHelpActionKind.FocusSource:
                     _shellActions.FocusFolders(FileManagerPanel.Left);
                     break;
-                case HelpActionKind.FocusTarget:
+                case AdaptiveHelpActionKind.FocusTarget:
                     _shellActions.FocusFolders(FileManagerPanel.Right);
                     break;
-                case HelpActionKind.FocusPreviews:
+                case AdaptiveHelpActionKind.FocusPreviews:
                     var panel = _selectionCoordinator.FileManagerPanel == FileManagerPanel.Right
                         ? FileManagerPanel.Right
                         : FileManagerPanel.Left;
                     _shellActions.FocusPreviews(panel);
                     break;
-                case HelpActionKind.RestoreFolders:
+                case AdaptiveHelpActionKind.RestoreFolders:
                     await _shellActions.RestoreLastFoldersAsync();
                     RecordSuccessfulAction(AdaptiveHelpPolicy.RestoreFoldersHintId);
                     break;
-                case HelpActionKind.OpenSearch:
+                case AdaptiveHelpActionKind.OpenSearch:
                     _shellActions.OpenMediaSearch();
                     RecordSuccessfulAction(AdaptiveHelpPolicy.SearchHintId);
                     break;
-                case HelpActionKind.OpenSettings:
+                case AdaptiveHelpActionKind.OpenSettings:
                     _shellActions.OpenSettings();
                     break;
             }
@@ -572,14 +460,7 @@ internal sealed class AdaptiveHelpService : BindableBase, IDisposable
     private void DismissRecommendation(string hintId)
     {
         var configuration = _configurationService.Configuration.Value;
-        var dismissed = configuration.AdaptiveHelpDismissedHintIds ??= new List<string>();
-        if (!dismissed.Contains(hintId, StringComparer.Ordinal))
-        {
-            dismissed.Add(hintId);
-        }
-
-        var progress = GetOrCreateProgress(configuration, hintId);
-        progress.DismissCount++;
+        _progressStore.RecordDismissal(configuration, hintId, dismissImmediately: true);
         if (IsAutomaticMode)
         {
             IsVisible = false;
@@ -589,76 +470,7 @@ internal sealed class AdaptiveHelpService : BindableBase, IDisposable
             BuildRecommendations(automatic: false, trackExposure: false);
         }
 
-        SaveState();
-    }
-
-    private string GetMessage(HelpHint hint)
-    {
-        if (hint.Id is AdaptiveHelpPolicy.ReturningHintId or AdaptiveHelpPolicy.RestoreFoldersHintId)
-        {
-            return _localization.Get(hint.MessageKey, GetLastWorkspaceName());
-        }
-
-        if (hint.Id == AdaptiveHelpPolicy.TransferHintId)
-        {
-            var configuration = _configurationService.Configuration.Value;
-            var defaultOperation = configuration.CopyOnDragDropByDefault
-                ? _localization["Action_Copy"]
-                : _localization["Action_Move"];
-            var modifier = configuration.DragDropModifier switch
-            {
-                DragDropModifierKey.Alt => _localization["Settings_ModifierAlt"],
-                DragDropModifierKey.Shift => _localization["Settings_ModifierShift"],
-                DragDropModifierKey.Meta => _localization["Settings_ModifierMeta"],
-                _ => _localization["Settings_ModifierControl"]
-            };
-            return _localization.Get(hint.MessageKey, defaultOperation, modifier);
-        }
-
-        return _localization[hint.MessageKey];
-    }
-
-    private string GetReason(AdaptiveHelpDecision decision, AdaptiveHelpContext context)
-    {
-        return decision.ReasonKey switch
-        {
-            "Help_ReasonReturning" => _localization.Get(
-                decision.ReasonKey,
-                Math.Round(_policy.GetReturningThreshold(
-                    _configurationService.Configuration.Value.AdaptiveHelpSessionHistoryUtc).TotalDays)),
-            "Help_ReasonRepeatedErrors" => _localization.Get(decision.ReasonKey, context.RecentErrorCount),
-            "Help_ReasonSelectionReady" => _localization.Get(decision.ReasonKey, context.SelectedMediaCount),
-            "Help_ReasonOverviewSelection" => _localization.Get(decision.ReasonKey, context.FolderOverviewSelectionCount),
-            "Help_ReasonOverviewMultipleSelection" => _localization.Get(decision.ReasonKey, context.FolderOverviewSelectionCount),
-            _ => _localization[decision.ReasonKey]
-        };
-    }
-
-    private string GetLastWorkspaceName()
-    {
-        var configuration = _configurationService.Configuration.Value;
-        var path = !string.IsNullOrWhiteSpace(configuration.LastSourceDirectoryPath)
-            ? configuration.LastSourceDirectoryPath
-            : configuration.LastTargetDirectoryPath;
-        if (string.IsNullOrWhiteSpace(path))
-        {
-            return _localization["Help_LastWorkspaceUnknown"];
-        }
-
-        var normalizedPath = Path.TrimEndingDirectorySeparator(path);
-        var name = Path.GetFileName(normalizedPath);
-        return string.IsNullOrWhiteSpace(name) ? normalizedPath : name;
-    }
-
-    private void RecordExposure(string hintId, DateTimeOffset now)
-    {
-        var progress = GetOrCreateProgress(_configurationService.Configuration.Value, hintId);
-        progress.ExposureCount++;
-        progress.LastShownUtc = now;
-        if (progress.MasteryLevel == AdaptiveHelpMasteryLevel.NotUsed)
-        {
-            progress.MasteryLevel = AdaptiveHelpMasteryLevel.Tried;
-        }
+        _progressStore.Save();
     }
 
     private void RecordSuccessfulAction(string hintId)
@@ -668,36 +480,11 @@ internal sealed class AdaptiveHelpService : BindableBase, IDisposable
             return;
         }
 
-        var configuration = _configurationService.Configuration.Value;
-        var progress = GetOrCreateProgress(configuration, hintId);
-        progress.SuccessfulActionCount++;
-        progress.LastCompletedUtc = _timeProvider.GetUtcNow();
-        progress.MasteryLevel = progress.SuccessfulActionCount >= 3
-            ? AdaptiveHelpMasteryLevel.Mastered
-            : AdaptiveHelpMasteryLevel.Completed;
-
-        var completed = configuration.AdaptiveHelpCompletedHintIds ??= new List<string>();
-        if (!completed.Contains(hintId, StringComparer.Ordinal))
-        {
-            completed.Add(hintId);
-        }
-
-        SaveState();
-    }
-
-    private static AdaptiveHelpProgressEntry GetOrCreateProgress(Configuration configuration, string hintId)
-    {
-        var progressEntries = configuration.AdaptiveHelpProgress ??= new List<AdaptiveHelpProgressEntry>();
-        var progress = progressEntries.FirstOrDefault(item =>
-            string.Equals(item.HintId, hintId, StringComparison.Ordinal));
-        if (progress != null)
-        {
-            return progress;
-        }
-
-        progress = new AdaptiveHelpProgressEntry { HintId = hintId };
-        progressEntries.Add(progress);
-        return progress;
+        _progressStore.RecordSuccessfulAction(
+            _configurationService.Configuration.Value,
+            hintId,
+            _timeProvider.GetUtcNow());
+        _progressStore.Save();
     }
 
     private static bool HasRestorableFolders(Configuration configuration) =>
@@ -712,35 +499,6 @@ internal sealed class AdaptiveHelpService : BindableBase, IDisposable
         }
     }
 
-    private static void NormalizeState(Configuration configuration)
-    {
-        configuration.AdaptiveHelpCompletedHintIds ??= new List<string>();
-        configuration.AdaptiveHelpDismissedHintIds ??= new List<string>();
-        configuration.AdaptiveHelpSessionHistoryUtc ??= new List<DateTimeOffset>();
-        configuration.AdaptiveHelpProgress ??= new List<AdaptiveHelpProgressEntry>();
-
-        foreach (var completedHintId in configuration.AdaptiveHelpCompletedHintIds)
-        {
-            var progress = GetOrCreateProgress(configuration, completedHintId);
-            if (progress.MasteryLevel < AdaptiveHelpMasteryLevel.Completed)
-            {
-                progress.MasteryLevel = AdaptiveHelpMasteryLevel.Completed;
-            }
-        }
-    }
-
-    private void SaveState()
-    {
-        try
-        {
-            _configurationService.SaveConfiguration();
-        }
-        catch (Exception exception)
-        {
-            _logger.Error(exception, "Failed to save adaptive help state");
-        }
-    }
-
     private void OnObservableError(Exception exception)
     {
         _logger.Error(exception, "Error in adaptive help event stream");
@@ -748,22 +506,4 @@ internal sealed class AdaptiveHelpService : BindableBase, IDisposable
 
     private static string GetApplicationVersion() =>
         typeof(App).Assembly.GetName().Version?.ToString(3) ?? "0.0.0";
-
-    private sealed record HelpHint(
-        string Id,
-        string TitleKey,
-        string MessageKey,
-        HelpActionKind Action,
-        string ActionKey);
-
-    private enum HelpActionKind
-    {
-        None,
-        FocusSource,
-        FocusTarget,
-        FocusPreviews,
-        RestoreFolders,
-        OpenSearch,
-        OpenSettings
-    }
 }

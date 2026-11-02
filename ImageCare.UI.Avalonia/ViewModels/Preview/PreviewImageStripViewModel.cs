@@ -20,6 +20,7 @@ using ImageCare.Core.Services.MediaPreviewOperationsService;
 using ImageCare.Core.Services.MediaPreviewService;
 using ImageCare.UI.Avalonia.Behaviors;
 using ImageCare.UI.Avalonia.Collections;
+using ImageCare.UI.Avalonia.Services;
 using ImageCare.UI.Avalonia.ViewModels.Domain;
 
 using MapsterMapper;
@@ -40,20 +41,17 @@ internal sealed class PreviewImageStripViewModel : ViewModelBase
     /// <summary>Number of cards kept loaded on either side of the viewport.</summary>
     public const int PreloadCount = 20;
 
-    private readonly IMediaPreviewService _imageService;
     private readonly IFileSystemService _fileSystemService;
     private readonly IMediaPreviewOperationsService _fileOperationsService;
     private readonly IConfigurationService _configurationService;
     private readonly PreviewSelectionViewModel _selection;
-    private readonly PreviewAnnotationCache _annotationCache;
+    private readonly MediaAnnotationCache _annotationCache;
     private readonly ImagePreviewDropHandler _imagePreviewDropHandler;
-    private readonly IMapper _mapper;
+    private readonly MediaPreviewLoader _previewLoader;
     private readonly ILogger _logger;
     private readonly SynchronizationContext _synchronizationContext;
     private readonly Func<CancellationToken> _folderToken;
 
-    private readonly object _loadedPreviewsLock = new();
-    private readonly HashSet<MediaPreviewViewModel> _loadedPreviews = [];
     private readonly LatestOperationCancellation _scrollCancellation = new();
 
     private bool _isScrollResetRequested;
@@ -70,21 +68,20 @@ internal sealed class PreviewImageStripViewModel : ViewModelBase
         IMediaPreviewOperationsService fileOperationsService,
         IConfigurationService configurationService,
         PreviewSelectionViewModel selection,
-        PreviewAnnotationCache annotationCache,
+        MediaAnnotationCache annotationCache,
         ImagePreviewDropHandler imagePreviewDropHandler,
         IMapper mapper,
         ILogger logger,
         SynchronizationContext synchronizationContext,
         Func<CancellationToken> folderToken)
     {
-        _imageService = imageService;
         _fileSystemService = fileSystemService;
         _fileOperationsService = fileOperationsService;
         _configurationService = configurationService;
         _selection = selection;
         _annotationCache = annotationCache;
         _imagePreviewDropHandler = imagePreviewDropHandler;
-        _mapper = mapper;
+        _previewLoader = new MediaPreviewLoader(imageService, mapper);
         _logger = logger;
         _synchronizationContext = synchronizationContext;
         _folderToken = folderToken;
@@ -240,18 +237,15 @@ internal sealed class PreviewImageStripViewModel : ViewModelBase
             new ParallelOptions { MaxDegreeOfParallelism = 4, CancellationToken = token },
             async (fileModel, cancellationToken) =>
             {
-                var previewImage = await _imageService.GetMediaPreviewAsync(
+                var mediaPreviewViewModel = await _previewLoader.CreateAsync<MediaPreviewViewModel>(
                     fileModel,
                     cancellationToken).ConfigureAwait(false);
-                if (previewImage == null)
+                if (mediaPreviewViewModel == null)
                 {
                     return;
                 }
 
-                var mediaPreviewViewModel = _mapper.Map<MediaPreviewViewModel>(previewImage);
                 _annotationCache.ApplyCached(mediaPreviewViewModel);
-                mediaPreviewViewModel.FileDate = fileModel.CreatedDateTime ?? DateTime.MinValue;
-                mediaPreviewViewModel.DateTimeString = mediaPreviewViewModel.FileDate.ToString("dd.MM.yyyy HH:mm");
                 previews.Add(mediaPreviewViewModel);
             }).ConfigureAwait(false);
 
@@ -296,29 +290,12 @@ internal sealed class PreviewImageStripViewModel : ViewModelBase
         try
         {
             token.ThrowIfCancellationRequested();
-
-            var imagePath = previewVm.Url;
-            var mediaPreview = await _imageService.GetMediaPreviewAsync(imagePath, token);
-
-            if (mediaPreview == null)
-            {
-                return;
-            }
-
-            var metadata = await _imageService.GetMediaMetadataAsync(mediaPreview, token);
-            previewVm.MetadataString = metadata.GetString();
-            previewVm.DateTimeString = metadata.CreationDateTime.ToString("dd.MM.yyyy HH:mm");
-            previewVm.Metadata = metadata;
-            previewVm.RotateAngle = metadata.Orientation.ToRotationAngle();
-
-            await previewVm.LoadPreviewAsync(token);
-            if (previewVm.PreviewBitmap != null)
-            {
-                lock (_loadedPreviewsLock)
-                {
-                    _loadedPreviews.Add(previewVm);
-                }
-            }
+            await _previewLoader.LoadAsync(
+                previewVm,
+                512,
+                MediaPreviewSize.Medium,
+                refreshMetadata: true,
+                token);
         }
         catch (OperationCanceledException)
         {
@@ -334,15 +311,9 @@ internal sealed class PreviewImageStripViewModel : ViewModelBase
     {
         try
         {
-            var mediaPreviewViewModel = _mapper.Map<MediaPreviewViewModel>(previewImage);
+            var mediaPreviewViewModel = _previewLoader.Create<MediaPreviewViewModel>(previewImage);
             _annotationCache.ApplyCached(mediaPreviewViewModel);
-
-            var metadata = await _imageService.GetMediaMetadataAsync(previewImage);
-            mediaPreviewViewModel.FileDate = metadata.CreationDateTime;
-            mediaPreviewViewModel.MetadataString = metadata.GetString();
-            mediaPreviewViewModel.DateTimeString = metadata.CreationDateTime.ToString("dd.MM.yyyy HH:mm");
-            mediaPreviewViewModel.Metadata = metadata;
-            mediaPreviewViewModel.RotateAngle = metadata.Orientation.ToRotationAngle();
+            await _previewLoader.LoadMetadataAsync(mediaPreviewViewModel, previewImage);
 
             var added = false;
             _synchronizationContext.Send(
@@ -365,7 +336,11 @@ internal sealed class PreviewImageStripViewModel : ViewModelBase
 
             if (added)
             {
-                await mediaPreviewViewModel.LoadPreviewAsync(CancellationToken.None);
+                await _previewLoader.LoadBitmapAsync(
+                    mediaPreviewViewModel,
+                    512,
+                    MediaPreviewSize.Medium,
+                    CancellationToken.None);
             }
         }
         catch (Exception ex)
@@ -384,7 +359,7 @@ internal sealed class PreviewImageStripViewModel : ViewModelBase
                 return;
             }
 
-            var imagePreview = await _imageService.GetMediaPreviewAsync(filePath);
+            var imagePreview = await _previewLoader.GetMediaPreviewAsync(filePath);
 
             if (imagePreview == null || !_fileSystemService.FileExists(filePath))
             {
@@ -431,11 +406,7 @@ internal sealed class PreviewImageStripViewModel : ViewModelBase
 
             var indexToRemove = ImagePreviews.IndexOf(imagePreviewViewModel);
             var wasSelected = ReferenceEquals(_selection.SelectedPreview, imagePreviewViewModel);
-            imagePreviewViewModel.UnloadPreview();
-            lock (_loadedPreviewsLock)
-            {
-                _loadedPreviews.Remove(imagePreviewViewModel);
-            }
+            _previewLoader.Unload(imagePreviewViewModel);
 
             ImagePreviews.Remove(imagePreviewViewModel);
 
@@ -468,15 +439,7 @@ internal sealed class PreviewImageStripViewModel : ViewModelBase
 
     public void ClearPreviews()
     {
-        foreach (var preview in ImagePreviews)
-        {
-            preview.UnloadPreview();
-        }
-
-        lock (_loadedPreviewsLock)
-        {
-            _loadedPreviews.Clear();
-        }
+        _previewLoader.UnloadAll(ImagePreviews);
 
         ImagePreviews.Clear();
         _selection.SelectedPreview = null;
@@ -727,19 +690,6 @@ internal sealed class PreviewImageStripViewModel : ViewModelBase
             retained.Add(ImagePreviews[index]);
         }
 
-        MediaPreviewViewModel[] toUnload;
-        lock (_loadedPreviewsLock)
-        {
-            toUnload = _loadedPreviews.Where(preview => !retained.Contains(preview)).ToArray();
-            foreach (var preview in toUnload)
-            {
-                _loadedPreviews.Remove(preview);
-            }
-        }
-
-        foreach (var preview in toUnload)
-        {
-            preview.UnloadPreview();
-        }
+        _previewLoader.UnloadOutside(retained);
     }
 }

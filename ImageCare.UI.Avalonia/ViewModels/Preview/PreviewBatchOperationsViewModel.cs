@@ -42,6 +42,7 @@ internal sealed class PreviewBatchOperationsViewModel : ViewModelBase
     private readonly IConfigurationService _configurationService;
     private readonly INotificationService _notificationService;
     private readonly FileTransferCoordinator _fileTransferCoordinator;
+    private readonly MediaBatchOperationRunner _batchOperationRunner;
     private readonly LocalizationManager _localization;
     private readonly IMapper _mapper;
     private readonly ILogger _logger;
@@ -78,6 +79,7 @@ internal sealed class PreviewBatchOperationsViewModel : ViewModelBase
         _configurationService = configurationService;
         _notificationService = notificationService;
         _fileTransferCoordinator = fileTransferCoordinator;
+        _batchOperationRunner = new MediaBatchOperationRunner(notificationService, localization, logger);
         _localization = localization;
         _mapper = mapper;
         _logger = logger;
@@ -432,24 +434,15 @@ internal sealed class PreviewBatchOperationsViewModel : ViewModelBase
         BatchProcessed = 0;
         BatchTotal = items.Count;
         IsBatchOperationRunning = true;
-        _notificationService.SendNotification(new Notification(startTitle, string.Empty));
 
         try
         {
-            var progress = new Progress<MediaBatchOperationProgress>(OnBatchProgress);
-            var summary = await operation(progress, cancellation.Token);
-            ReportBatchSummary(kind, summary);
-        }
-        catch (OperationCanceledException)
-        {
-            _notificationService.SendNotification(
-                new Notification(_localization["Batch_CancelledTitle"], string.Empty));
-        }
-        catch (Exception ex)
-        {
-            _logger.Error(ex, "Batch {Operation} failed", kind);
-            _notificationService.SendNotification(
-                new ErrorNotification(_localization["Batch_FailedTitle"], ex.Message));
+            await _batchOperationRunner.RunAsync(
+                kind,
+                startTitle,
+                cancellation.Token,
+                OnBatchProgress,
+                operation);
         }
         finally
         {
@@ -481,44 +474,6 @@ internal sealed class PreviewBatchOperationsViewModel : ViewModelBase
     }
 
     private void CancelBatchOperation() => _batchOperationCancellation?.Cancel();
-
-    private void ReportBatchSummary(
-        MediaBatchOperationKind kind,
-        MediaBatchOperationSummary summary)
-    {
-        var completedTitle = _localization.Get(
-            kind switch
-            {
-                MediaBatchOperationKind.Copy => "Batch_Completed_Copy",
-                MediaBatchOperationKind.Move => "Batch_Completed_Move",
-                MediaBatchOperationKind.Delete => "Batch_Completed_Delete",
-                MediaBatchOperationKind.ExportJpeg => "Batch_Completed_Export",
-                _ => "Batch_FailedTitle"
-            },
-            summary.Succeeded,
-            summary.Total);
-
-        if (summary.Cancelled)
-        {
-            _notificationService.SendNotification(
-                new Notification(_localization["Batch_CancelledTitle"], completedTitle));
-            return;
-        }
-
-        if (summary.Failed > 0)
-        {
-            var detail = summary.Failures.Count == 0
-                ? _localization["Batch_FailedTitle"]
-                : _localization.Get(
-                    "Batch_FailedDetail",
-                    summary.Failed,
-                    summary.Failures[0].Error);
-            _notificationService.SendNotification(new ErrorNotification(completedTitle, detail));
-            return;
-        }
-
-        _notificationService.SendNotification(new SuccessNotification(completedTitle, string.Empty));
-    }
 
     private void NotifyBatchProblem(string messageKey)
     {

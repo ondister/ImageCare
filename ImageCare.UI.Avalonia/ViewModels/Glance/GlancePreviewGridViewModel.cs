@@ -16,6 +16,7 @@ using ImageCare.Core.Services.FolderClusterizationService;
 using ImageCare.Core.Services.MediaPreviewService;
 using ImageCare.UI.Avalonia.Collections;
 using ImageCare.UI.Avalonia.Controls;
+using ImageCare.UI.Avalonia.Services;
 using ImageCare.UI.Avalonia.ViewModels.Domain;
 using ImageCare.UI.Avalonia.ViewModels.Preview;
 
@@ -33,15 +34,12 @@ internal sealed class GlancePreviewGridViewModel : ViewModelBase
 {
     private const int PreloadRowsCount = 10;
 
-    private readonly IMediaPreviewService _imageService;
     private readonly IConfigurationService _configurationService;
     private readonly GlanceSelectionViewModel _selection;
-    private readonly GlanceAnnotationCache _annotationCache;
-    private readonly IMapper _mapper;
+    private readonly MediaAnnotationCache _annotationCache;
+    private readonly MediaPreviewLoader _previewLoader;
     private readonly ILogger _logger;
     private readonly SynchronizationContext _synchronizationContext;
-    private readonly object _loadedPreviewsLock = new();
-    private readonly HashSet<MediaPreviewViewModel> _loadedPreviews = [];
     private readonly LatestOperationCancellation _scrollCancellation = new();
 
     private CancellationTokenSource _imageLoadCts = new();
@@ -62,16 +60,15 @@ internal sealed class GlancePreviewGridViewModel : ViewModelBase
         IMediaPreviewService imageService,
         IConfigurationService configurationService,
         GlanceSelectionViewModel selection,
-        GlanceAnnotationCache annotationCache,
+        MediaAnnotationCache annotationCache,
         IMapper mapper,
         ILogger logger,
         SynchronizationContext synchronizationContext)
     {
-        _imageService = imageService;
         _configurationService = configurationService;
         _selection = selection;
         _annotationCache = annotationCache;
-        _mapper = mapper;
+        _previewLoader = new MediaPreviewLoader(imageService, mapper);
         _logger = logger;
         _synchronizationContext = synchronizationContext;
 
@@ -248,17 +245,14 @@ internal sealed class GlancePreviewGridViewModel : ViewModelBase
             new ParallelOptions { MaxDegreeOfParallelism = 4, CancellationToken = token },
             async (fileModel, cancellationToken) =>
             {
-                var previewImage = await _imageService.GetMediaPreviewAsync(
+                var mediaPreviewViewModel = await _previewLoader.CreateAsync<GlanceMediaPreviewViewModel>(
                     fileModel,
                     cancellationToken).ConfigureAwait(false);
-                if (previewImage == null)
+                if (mediaPreviewViewModel == null)
                 {
                     return;
                 }
 
-                var mediaPreviewViewModel = _mapper.Map<GlanceMediaPreviewViewModel>(previewImage);
-                mediaPreviewViewModel.FileDate = fileModel.CreatedDateTime ?? DateTime.MinValue;
-                mediaPreviewViewModel.DateTimeString = mediaPreviewViewModel.FileDate.ToString("dd.MM.yyyy HH:mm");
                 previews.Add(mediaPreviewViewModel);
             }).ConfigureAwait(false);
 
@@ -308,34 +302,12 @@ internal sealed class GlancePreviewGridViewModel : ViewModelBase
         try
         {
             token.ThrowIfCancellationRequested();
-
-            if (previewVm.Metadata == null)
-            {
-                var imagePath = previewVm.Url;
-                var mediaPreview = await _imageService.GetMediaPreviewAsync(imagePath, token);
-                if (mediaPreview == null)
-                {
-                    return;
-                }
-
-                var metadata = await _imageService.GetMediaMetadataAsync(mediaPreview, token);
-                previewVm.MetadataString = metadata.GetString();
-                previewVm.DateTimeString = metadata.CreationDateTime.ToString("dd.MM.yyyy HH:mm");
-                previewVm.Metadata = metadata;
-                previewVm.RotateAngle = metadata.Orientation.ToRotationAngle();
-            }
-
-            await previewVm.LoadPreviewAsync(
+            await _previewLoader.LoadAsync(
+                previewVm,
                 targetWidth,
                 targetWidth > 512 ? MediaPreviewSize.Large : MediaPreviewSize.Medium,
+                refreshMetadata: false,
                 token);
-            if (previewVm.PreviewBitmap != null)
-            {
-                lock (_loadedPreviewsLock)
-                {
-                    _loadedPreviews.Add(previewVm);
-                }
-            }
         }
         catch (OperationCanceledException)
         {
@@ -356,7 +328,7 @@ internal sealed class GlancePreviewGridViewModel : ViewModelBase
                 return;
             }
 
-            var imagePreview = await _imageService.GetMediaPreviewAsync(filePath);
+            var imagePreview = await _previewLoader.GetMediaPreviewAsync(filePath);
             if (imagePreview == null)
             {
                 return;
@@ -387,11 +359,7 @@ internal sealed class GlancePreviewGridViewModel : ViewModelBase
             }
 
             var indexToRemove = ImagePreviews.IndexOf(imagePreviewViewModel);
-            imagePreviewViewModel.UnloadPreview();
-            lock (_loadedPreviewsLock)
-            {
-                _loadedPreviews.Remove(imagePreviewViewModel);
-            }
+            _previewLoader.Unload(imagePreviewViewModel);
 
             ImagePreviews.Remove(imagePreviewViewModel);
             _selection.RemoveMissingSelections();
@@ -410,15 +378,7 @@ internal sealed class GlancePreviewGridViewModel : ViewModelBase
 
     public void Clear()
     {
-        foreach (var preview in ImagePreviews)
-        {
-            preview.UnloadPreview();
-        }
-
-        lock (_loadedPreviewsLock)
-        {
-            _loadedPreviews.Clear();
-        }
+        _previewLoader.UnloadAll(ImagePreviews);
 
         ImagePreviews.Clear();
     }
@@ -476,14 +436,8 @@ internal sealed class GlancePreviewGridViewModel : ViewModelBase
     {
         try
         {
-            var mediaPreviewViewModel = _mapper.Map<GlanceMediaPreviewViewModel>(previewImage);
-
-            var metadata = await _imageService.GetMediaMetadataAsync(previewImage);
-            mediaPreviewViewModel.FileDate = metadata.CreationDateTime;
-            mediaPreviewViewModel.MetadataString = metadata.GetString();
-            mediaPreviewViewModel.DateTimeString = metadata.CreationDateTime.ToString("dd.MM.yyyy HH:mm");
-            mediaPreviewViewModel.Metadata = metadata;
-            mediaPreviewViewModel.RotateAngle = metadata.Orientation.ToRotationAngle();
+            var mediaPreviewViewModel = _previewLoader.Create<GlanceMediaPreviewViewModel>(previewImage);
+            await _previewLoader.LoadMetadataAsync(mediaPreviewViewModel, previewImage);
 
             var added = false;
             _synchronizationContext.Send(
@@ -502,7 +456,8 @@ internal sealed class GlancePreviewGridViewModel : ViewModelBase
             if (added)
             {
                 var targetWidth = GetOverviewPreviewWidth();
-                await mediaPreviewViewModel.LoadPreviewAsync(
+                await _previewLoader.LoadBitmapAsync(
+                    mediaPreviewViewModel,
                     targetWidth,
                     targetWidth > 512 ? MediaPreviewSize.Large : MediaPreviewSize.Medium,
                     CancellationToken.None);
@@ -632,20 +587,7 @@ internal sealed class GlancePreviewGridViewModel : ViewModelBase
             retained.Add(ImagePreviews[index]);
         }
 
-        MediaPreviewViewModel[] toUnload;
-        lock (_loadedPreviewsLock)
-        {
-            toUnload = _loadedPreviews.Where(preview => !retained.Contains(preview)).ToArray();
-            foreach (var preview in toUnload)
-            {
-                _loadedPreviews.Remove(preview);
-            }
-        }
-
-        foreach (var preview in toUnload)
-        {
-            preview.UnloadPreview();
-        }
+        _previewLoader.UnloadOutside(retained);
     }
 
     private int GetTotalRows()
