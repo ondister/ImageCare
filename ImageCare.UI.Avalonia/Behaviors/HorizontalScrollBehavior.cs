@@ -6,6 +6,7 @@ using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.VisualTree;
 
+using ImageCare.UI.Avalonia.Controls;
 using ImageCare.UI.Avalonia.ViewModels.Preview;
 
 namespace ImageCare.UI.Avalonia.Behaviors;
@@ -142,7 +143,10 @@ public sealed class HorizontalScrollBehavior
             }
 
             _lastOffset = _scrollViewer.Offset.X;
-            await viewModel.HandleScrollAsync(_scrollViewer.Offset.X, _scrollViewer.Viewport.Width);
+            var contentOffset = _owner is PreviewsListBox previewsListBox
+                ? Math.Max(0, _scrollViewer.Offset.X - previewsListBox.CarouselLeadingInset)
+                : _scrollViewer.Offset.X;
+            await viewModel.HandleScrollAsync(contentOffset, _scrollViewer.Viewport.Width);
         }
     }
 }

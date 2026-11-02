@@ -2,6 +2,8 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Threading;
 
+using ImageCare.UI.Avalonia.Controls;
+
 namespace ImageCare.UI.Avalonia.Behaviors;
 
 internal sealed class ScrollToIndexBehavior
@@ -24,6 +26,16 @@ internal sealed class ScrollToIndexBehavior
     {
         if (args.NewValue is not int index || index < 0 || index >= listBox.Items.Count)
         {
+            return;
+        }
+
+        if (listBox is PreviewsListBox previewsListBox)
+        {
+            if (listBox.Items[index] is { } item)
+            {
+                previewsListBox.CenterItem(item);
+            }
+
             return;
         }
 

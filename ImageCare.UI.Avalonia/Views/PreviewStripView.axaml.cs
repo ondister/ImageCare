@@ -23,11 +23,7 @@ public partial class PreviewStripView : UserControl
 	{
 		if (PreviewsList.SelectedItem is { } selected)
 		{
-			PreviewsList.ScrollIntoView(selected);
-			if (PreviewsList.ContainerFromItem(selected) is Control container)
-			{
-				return container.Focus();
-			}
+			PreviewsList.CenterItem(selected, focus: true);
 		}
 
 		return PreviewsList.Focus();

@@ -139,14 +139,18 @@ public class DeletionManifestStoreTests
         var manifestPath = _store.GetManifestPath();
         Directory.CreateDirectory(manifestPath);
 
-        Assert.That(
+        // File.Move reports a directory occupying the destination as IOException on Unix
+        // and UnauthorizedAccessException on Windows.
+        var exception = Assert.Catch<Exception>(
             () => _store.Save([
                 new DeletedMediaFile("source", "buffer", DateTime.UtcNow)
-            ]),
-            Throws.TypeOf<IOException>());
+            ]));
 
         Assert.Multiple(() =>
         {
+            Assert.That(
+                exception,
+                Is.TypeOf<IOException>().Or.TypeOf<UnauthorizedAccessException>());
             Assert.That(Directory.Exists(manifestPath), Is.True);
             Assert.That(File.Exists(manifestPath + ".tmp"), Is.False);
         });
